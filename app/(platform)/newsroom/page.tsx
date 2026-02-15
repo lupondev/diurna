@@ -35,7 +35,6 @@ export default async function NewsroomPage() {
           <h1>Newsroom</h1>
           <p>{articles.length} article{articles.length !== 1 ? 's' : ''} in your newsroom</p>
         </div>
-        <Link href="/editor" className="nr-new-btn">✨ New Article</Link>
       </div>
 
       {/* Stats */}
