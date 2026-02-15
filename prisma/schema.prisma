@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ══════════════════════════════════
+// MULTI-TENANT CORE
+// ══════════════════════════════════
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  sites     Site[]
+  users     UserOnOrganization[]
+  auditLogs AuditLog[]
+}
+
+model Site {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String
+  domain         String?
+  language       String       @default("bs")
+  timezone       String       @default("Europe/Sarajevo")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  articles   Article[]
+  widgets    Widget[]
+  categories Category[]
+
+  @@unique([organizationId, slug])
+}
+
+// ══════════════════════════════════
+// AUTH & USERS
+// ══════════════════════════════════
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+
+  accounts Account[]
+  sessions Session[]
+  orgs     UserOnOrganization[]
+}
+
+model UserOnOrganization {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           OrgRole      @default(JOURNALIST)
+  permissions    String[]
+  joinedAt       DateTime     @default(now())
+  deletedAt      DateTime?
+
+  @@unique([userId, organizationId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ══════════════════════════════════
+// CONTENT
+// ══════════════════════════════════
+
+model Article {
+  id        String        @id @default(cuid())
+  siteId    String
+  site      Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title     String
+  slug      String
+  content   Json
+  excerpt   String?
+  status    ArticleStatus @default(DRAFT)
+  authorId  String?
+
+  aiGenerated  Boolean  @default(false)
+  aiModel      String?
+  aiPrompt     String?
+  aiRevisions  AIRevision[]
+
+  publishedAt  DateTime?
+  scheduledAt  DateTime?
+
+  metaTitle       String?
+  metaDescription String?
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@unique([siteId, slug])
+  @@index([siteId, status])
+  @@index([siteId, publishedAt])
+}
+
+model AIRevision {
+  id        String  @id @default(cuid())
+  articleId String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  version   Int
+  content   Json
+  prompt    String
+  model     String
+  tokensIn  Int?
+  tokensOut Int?
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  siteId    String
+  site      Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name      String
+  slug      String
+  icon      String?
+  order     Int       @default(0)
+  deletedAt DateTime?
+
+  articles Article[]
+
+  @@unique([siteId, slug])
+}
+
+model Widget {
+  id        String     @id @default(cuid())
+  siteId    String
+  site      Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name      String
+  type      WidgetType
+  config    Json
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+}
+
+// ══════════════════════════════════
+// AUDIT LOG
+// ══════════════════════════════════
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  action         String
+  entityType     String
+  entityId       String?
+  meta           Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+}
+
+// ══════════════════════════════════
+// ENUMS
+// ══════════════════════════════════
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  EDITOR
+  JOURNALIST
+}
+
+enum ArticleStatus {
+  DRAFT
+  IN_REVIEW
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum WidgetType {
+  MATCH_WIDGET
+  STANDINGS
+  POLL
+  QUIZ
+  LIVE_SCORE
+  STATS_TABLE
+}
