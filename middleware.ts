@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const host = req.headers.get('host') || ''
+  const { pathname } = req.nextUrl
 
+  // ─── Auth check for platform routes ───
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register')
+  const isPublicRoute = pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || isAuthPage
+
+  if (!isPublicRoute) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+    if (!token) {
+      const loginUrl = new URL('/login', req.url)
+      loginUrl.searchParams.set('callbackUrl', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+  }
+
+  // ─── Org slug detection ───
   let orgSlug: string | null = null
 
   if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
-    // DEV MODE: org1.localhost:3000 or fallback to DEFAULT_ORG_SLUG
     const parts = host.split('.')
     if (parts.length > 1 && !parts[0].startsWith('localhost')) {
       orgSlug = parts[0]
@@ -14,19 +29,16 @@ export function middleware(req: NextRequest) {
       orgSlug = process.env.DEFAULT_ORG_SLUG || null
     }
   } else {
-    // PRODUCTION: {slug}.diurna.app
     const subdomain = host.split('.')[0]
     if (subdomain !== 'www' && subdomain !== 'app') {
       orgSlug = subdomain
     }
   }
 
-  // Forward slug via REQUEST headers (not response!)
   const requestHeaders = new Headers(req.headers)
   if (orgSlug) {
     requestHeaders.set('x-org-slug', orgSlug)
   }
-  // Delete any client-spoofed header
   requestHeaders.delete('x-org-id')
 
   return NextResponse.next({
@@ -35,5 +47,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api/auth|api/public|embed|favicon.ico|static).*)'],
+  matcher: ['/((?!_next|favicon.ico|static).*)'],
 }

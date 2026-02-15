@@ -1,112 +1,104 @@
 import Link from 'next/link'
-import { getArticles } from '@/lib/db'
+import { getArticles, getDashboardStats } from '@/lib/db'
+import './newsroom.css'
 
 export default async function NewsroomPage() {
-  const articles = await getArticles()
+  const [articles, stats] = await Promise.all([
+    getArticles(),
+    getDashboardStats(),
+  ])
+
+  const getStatusInfo = (status: string, aiGenerated: boolean) => {
+    if (aiGenerated) return { cls: 'ai', icon: '🤖', badge: 'ai', label: 'AI Generated' }
+    switch (status) {
+      case 'PUBLISHED': return { cls: 'pub', icon: '✓', badge: 'pub', label: 'Published' }
+      case 'SCHEDULED': return { cls: 'sch', icon: '⏰', badge: 'sch', label: 'Scheduled' }
+      case 'IN_REVIEW': return { cls: 'rev', icon: '👁️', badge: 'rev', label: 'In Review' }
+      default: return { cls: 'dra', icon: '📝', badge: 'dra', label: 'Draft' }
+    }
+  }
+
+  const statCards = [
+    { label: 'Total Articles', value: articles.length, icon: '📰', cls: 'all' },
+    { label: 'Published', value: stats.published, icon: '✓', cls: 'pub' },
+    { label: 'Drafts', value: stats.drafts, icon: '📝', cls: 'dra' },
+    { label: 'AI Generated', value: stats.aiGenerated, icon: '🤖', cls: 'ai' },
+  ]
+
+  const filters = ['All', 'Published', 'Draft', 'Scheduled', 'In Review']
 
   return (
-    <div style={{ padding: '24px 32px 60px' }} className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Newsroom</h1>
-          <p className="text-muted-foreground">{articles.length} article{articles.length !== 1 ? 's' : ''}</p>
+    <div className="nr-page">
+      {/* Header */}
+      <div className="nr-header">
+        <div className="nr-header-left">
+          <h1>Newsroom</h1>
+          <p>{articles.length} article{articles.length !== 1 ? 's' : ''} in your newsroom</p>
         </div>
-        <Link
-          href="/editor"
-          className="rounded-lg bg-mint px-4 py-2 text-sm font-medium text-white hover:bg-mint-dark transition-colors"
-        >
-          + New Article
-        </Link>
+        <Link href="/editor" className="nr-new-btn">✨ New Article</Link>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2">
-        {['All', 'Draft', 'Published', 'Scheduled', 'In Review'].map((tab) => (
-          <button
-            key={tab}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              tab === 'All'
-                ? 'bg-mint text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {tab}
-          </button>
+      {/* Stats */}
+      <div className="nr-stats">
+        {statCards.map((s) => (
+          <div key={s.label} className="nr-stat">
+            <div className={`nr-stat-icon ${s.cls}`}>{s.icon}</div>
+            <div>
+              <div className="nr-stat-val">{s.value}</div>
+              <div className="nr-stat-label">{s.label}</div>
+            </div>
+          </div>
         ))}
       </div>
 
+      {/* Filters */}
+      <div className="nr-filters">
+        {filters.map((f, i) => (
+          <span key={f} className={`nr-chip${i === 0 ? ' act' : ''}`}>{f}</span>
+        ))}
+        <input type="text" className="nr-search" placeholder="Search articles..." />
+      </div>
+
+      {/* Articles */}
       {articles.length === 0 ? (
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <div className="text-center py-16">
-            <span className="text-5xl">📝</span>
-            <h3 className="mt-4 text-lg font-semibold">No articles yet</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Create your first article with AI or write it manually.
-            </p>
-            <Link
-              href="/editor"
-              className="mt-4 inline-block rounded-lg bg-mint px-6 py-2.5 text-sm font-medium text-white hover:bg-mint-dark transition-colors"
-            >
-              Create First Article
-            </Link>
+        <div className="nr-card">
+          <div className="nr-empty">
+            <div className="nr-empty-icon">📝</div>
+            <p className="nr-empty-title">No articles yet</p>
+            <p className="nr-empty-desc">Create your first article with AI or write it manually</p>
+            <Link href="/editor" className="nr-new-btn">✨ Create First Article</Link>
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-gray-50/50">
-                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Title</th>
-                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Category</th>
-                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Status</th>
-                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Updated</th>
-                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 w-10"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {articles.map((article) => (
-                <tr key={article.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <Link href={`/editor/${article.id}`} className="group">
-                      <p className="text-sm font-medium group-hover:text-mint transition-colors">
-                        {article.title}
-                        {article.aiGenerated && <span className="ml-1.5" title="AI Generated">🤖</span>}
-                      </p>
-                      {article.excerpt && (
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-md">{article.excerpt}</p>
-                      )}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs text-muted-foreground">{article.category?.name || '—'}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                      article.status === 'PUBLISHED' ? 'bg-green-50 text-green-700'
-                      : article.status === 'DRAFT' ? 'bg-gray-100 text-gray-600'
-                      : article.status === 'SCHEDULED' ? 'bg-blue-50 text-blue-700'
-                      : article.status === 'IN_REVIEW' ? 'bg-yellow-50 text-yellow-700'
-                      : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {article.status.replace('_', ' ').toLowerCase()}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(article.updatedAt).toLocaleDateString('en-GB', {
-                        day: 'numeric', month: 'short', year: 'numeric'
-                      })}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/editor/${article.id}`} className="text-xs text-mint hover:underline">
-                      Edit
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="nr-card">
+          <div className="nr-card-head">
+            <span className="nr-card-title">All Articles</span>
+            <span className="nr-card-count">{articles.length} items</span>
+          </div>
+          {articles.map((article) => {
+            const si = getStatusInfo(article.status as string, article.aiGenerated)
+            return (
+              <Link key={article.id} href={`/editor/${article.id}`} className="nr-art">
+                <div className={`nr-art-thumb ${si.cls}`}>{si.icon}</div>
+                <div className="nr-art-info">
+                  <div className="nr-art-title">{article.title}</div>
+                  <div className="nr-art-meta">
+                    <span className={`nr-art-badge ${si.badge}`}>{si.label}</span>
+                    <span className="nr-art-cat">{article.category?.name || 'Uncategorized'}</span>
+                    {article.aiGenerated && <span className={`nr-art-badge ai`}>🤖 AI</span>}
+                  </div>
+                </div>
+                <div className="nr-art-right">
+                  <span className="nr-art-date">
+                    {new Date(article.updatedAt).toLocaleDateString('en-GB', {
+                      day: 'numeric', month: 'short', year: 'numeric',
+                    })}
+                  </span>
+                  <span className="nr-art-edit">Edit →</span>
+                </div>
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>

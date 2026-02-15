@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signOut, useSession } from 'next-auth/react'
 
 const sections = [
   {
@@ -39,6 +40,10 @@ const sections = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
+
+  const userName = session?.user?.name || 'User'
+  const userInitial = userName.charAt(0).toUpperCase()
 
   return (
     <aside className="sb">
@@ -95,13 +100,37 @@ export function Sidebar() {
       </nav>
 
       <div className="sb-ft">
-        <Link href="/settings" className="sb-u">
-          <div className="sb-av">H</div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--g900)' }}>Harun</div>
+        <div className="sb-u" style={{ cursor: 'default' }}>
+          <div className="sb-av">{userInitial}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--g900)' }}>{userName}</div>
             <div style={{ fontSize: 10, color: 'var(--g500)' }}>Pro Plan</div>
           </div>
-        </Link>
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            title="Sign out"
+            style={{
+              padding: '5px 8px',
+              borderRadius: 'var(--rm)',
+              fontSize: 14,
+              color: 'var(--g400)',
+              transition: 'all .12s',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--coral-l)'
+              e.currentTarget.style.color = 'var(--coral)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'none'
+              e.currentTarget.style.color = 'var(--g400)'
+            }}
+          >
+            ↪
+          </button>
+        </div>
       </div>
     </aside>
   )
