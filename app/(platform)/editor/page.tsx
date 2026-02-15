@@ -1,18 +1,72 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import './editor.css'
 
-// Dynamic import to avoid SSR issues with Tiptap
 const TiptapEditor = dynamic(() => import('@/components/editor/tiptap-editor'), {
   ssr: false,
-  loading: () => <div className="rounded-xl border bg-white p-6 shadow-sm min-h-[400px] animate-pulse" />,
+  loading: () => <div style={{ minHeight: 400, background: 'var(--wh)', border: '1px solid var(--brd)', borderRadius: 'var(--rl)', animation: 'pulse 2s infinite' }} />,
 })
+
+const trendingItems = [
+  { text: 'El Clásico: Real Madrid vs Barcelona', prompt: 'Write a match preview for Real Madrid vs Barcelona — El Clásico, include prediction, key battles, H2H stats, fan poll and quiz', tag: 'hot', tagLabel: 'HOT', countdown: '4h 23m' },
+  { text: 'Man City vs Liverpool — match report', prompt: 'Post-match report Man City vs Liverpool with player ratings and tactical analysis', tag: 'live', tagLabel: 'LIVE', articles: '847 articles' },
+  { text: 'Mbappé transfer saga — done deal?', prompt: 'Transfer news: Mbappé to Real Madrid — latest updates, fee, contract details', tag: 'hot', tagLabel: 'HOT', articles: '1.2K articles' },
+  { text: 'UCL quarter-final predictions', prompt: 'Champions League QF predictions with stats', tag: 'ai', tagLabel: 'AI PICK' },
+  { text: 'Top 10 strikers in Europe', prompt: 'Top 10 strikers in Europe 2024/25 with stats', articles: '326 articles' },
+  { text: 'Arsenal tactical masterclass vs Chelsea', prompt: 'Arsenal tactical breakdown vs Chelsea', tag: 'ai', tagLabel: 'AI PICK' },
+  { text: 'Der Klassiker: Bayern vs Dortmund', prompt: 'Bayern vs Dortmund Der Klassiker preview', countdown: '1d 6h' },
+  { text: 'PL title race analysis', prompt: 'Premier League title race — who wins?', tag: 'hot', tagLabel: 'HOT', articles: '2.4K' },
+  { text: 'Lamine Yamal — the next big thing', prompt: 'Lamine Yamal player profile with stats', tag: 'ai', tagLabel: 'AI PICK' },
+  { text: 'Serie A Round 28 preview', prompt: 'Serie A Round 28 full preview — all matches', articles: '189 articles' },
+]
+
+const matches = [
+  { home: 'Real Madrid', away: 'Barcelona', homeCrest: '⚪', awayCrest: '🔴', league: 'La Liga', time: 'Today, 21:00' },
+  { home: 'Man City', away: 'Liverpool', homeCrest: '🔵', awayCrest: '🔴', league: 'Premier League', live: "LIVE 67'" },
+  { home: 'Bayern', away: 'Dortmund', homeCrest: '🔴', awayCrest: '🟡', league: 'Bundesliga', time: 'Tomorrow 18:30' },
+]
+
+const chips = [
+  { label: '⚽ Preview', prompt: 'Match preview' },
+  { label: '📝 Report', prompt: 'Post-match report' },
+  { label: '🔄 Transfer', prompt: 'Transfer news' },
+  { label: '📊 Analysis', prompt: 'Tactical analysis' },
+  { label: '🏆 Rankings', prompt: 'Top 10 rankings' },
+  { label: '👤 Profile', prompt: 'Player profile' },
+]
+
+const attachWidgets = [
+  { icon: '⚽', name: 'Match', value: 'match widget' },
+  { icon: '🗳️', name: 'Poll', value: 'fan poll' },
+  { icon: '🧠', name: 'Quiz', value: 'interactive quiz' },
+  { icon: '📸', name: 'Gallery', value: 'image gallery' },
+  { icon: '📊', name: 'Stats', value: 'stats table' },
+  { icon: '⭐', name: 'Ratings', value: 'player ratings' },
+  { icon: '📹', name: 'Video', value: 'video embed' },
+  { icon: '📋', name: 'Survey', value: 'reader survey' },
+]
+
+const genSteps = [
+  'Fetching match data',
+  'Analyzing H2H & form',
+  'Writing article (~1,800 words)',
+  'Creating widgets & quiz',
+  'Generating gallery',
+  'Placing ad slots',
+  'Final review ✅',
+]
 
 export default function EditorPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<'choose' | 'manual' | 'ai'>('choose')
+  const [screen, setScreen] = useState<'prompt' | 'generating' | 'editor'>('prompt')
+  const [prompt, setPrompt] = useState('')
+  const [showAttach, setShowAttach] = useState(false)
+  const [selectedMatch, setSelectedMatch] = useState<number | null>(null)
+  const [showMore, setShowMore] = useState(false)
+  const [genStep, setGenStep] = useState(0)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState<Record<string, unknown>>({})
   const [saving, setSaving] = useState(false)
@@ -20,8 +74,8 @@ export default function EditorPage() {
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
   const [categoryId, setCategoryId] = useState('')
   const [aiResult, setAiResult] = useState<{ model?: string; tokensIn?: number; tokensOut?: number } | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Fetch default site and categories
   useEffect(() => {
     fetch('/api/site')
       .then((r) => r.json())
@@ -33,6 +87,90 @@ export default function EditorPage() {
       })
       .catch(console.error)
   }, [])
+
+  function setP(text: string) {
+    setPrompt(text)
+    textareaRef.current?.focus()
+  }
+
+  function addToPrompt(widget: string) {
+    const v = prompt.trim()
+    setPrompt(v + (v ? ', ' : '') + widget)
+    setShowAttach(false)
+    textareaRef.current?.focus()
+  }
+
+  function pickMatch(index: number) {
+    setSelectedMatch(index)
+    const m = matches[index]
+    if (!prompt.trim()) {
+      setPrompt(`Write a match preview for ${m.home} vs ${m.away} with H2H stats, quiz, poll, and gallery`)
+    }
+    textareaRef.current?.focus()
+  }
+
+  function getPreviewWidgets(): string[] {
+    const l = prompt.toLowerCase()
+    const w: string[] = []
+    if (l.includes('preview') || l.includes('match')) w.push('Match Widget')
+    if (l.includes('h2h') || l.includes('stats')) w.push('H2H Stats')
+    if (l.includes('poll')) w.push('Poll')
+    if (l.includes('quiz')) w.push('Quiz')
+    if (l.includes('gallery')) w.push('Gallery')
+    if (l.includes('rating')) w.push('Ratings')
+    if (l.includes('video')) w.push('Video')
+    if (l.includes('survey')) w.push('Survey')
+    if (!w.length) w.push('Match Widget', 'Poll')
+    return w
+  }
+
+  async function startGenerate() {
+    if (!prompt.trim()) return
+    setScreen('generating')
+    setGenStep(0)
+
+    // Animate steps
+    for (let i = 0; i < genSteps.length; i++) {
+      await new Promise((r) => setTimeout(r, 400 + Math.random() * 300))
+      setGenStep(i + 1)
+    }
+
+    // Call the API
+    try {
+      const res = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'custom',
+          customPrompt: prompt,
+          tone: 'professional',
+          language: 'en',
+          wordCount: 1500,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Generation failed')
+
+      const paragraphs = (data.content || '').split('\n\n').filter(Boolean)
+      const tiptapContent = {
+        type: 'doc',
+        content: paragraphs.map((p: string) => ({
+          type: 'paragraph',
+          content: [{ type: 'text', text: p }],
+        })),
+      }
+
+      setTitle(data.title || 'Generated Article')
+      setContent(tiptapContent)
+      setAiResult({ model: data.model, tokensIn: data.tokensIn, tokensOut: data.tokensOut })
+      setScreen('editor')
+    } catch {
+      // On error, go to editor with empty content
+      setTitle(prompt)
+      setContent({})
+      setScreen('editor')
+    }
+  }
 
   async function handleSave(status: 'DRAFT' | 'PUBLISHED') {
     if (!title.trim() || !siteId) return
@@ -62,338 +200,198 @@ export default function EditorPage() {
     }
   }
 
-  if (mode === 'choose') {
+  // ─── S2: Generating ───
+  if (screen === 'generating') {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">AI Co-Pilot</h1>
-          <p className="text-muted-foreground">Create articles with AI or write manually</p>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <button
-            onClick={() => setMode('ai')}
-            className="rounded-xl border bg-white p-6 shadow-sm text-left hover:border-mint transition-colors"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-2xl">🤖</span>
-              <h2 className="text-lg font-semibold">AI Generate</h2>
+      <div className="s2-screen">
+        <div className="spinner" />
+        <div className="s2-text">Writing your article...</div>
+        <div className="s2-steps">
+          {genSteps.map((step, i) => (
+            <div key={i} className={`gs ${i < genStep ? 'done' : ''} ${i === genStep ? 'active' : ''}`}>
+              <span className="ck">✓</span>
+              <span className="dt">●</span>
+              {step}
             </div>
-            <p className="text-sm text-muted-foreground">
-              Generate a match report, preview, or transfer news using AI.
-            </p>
-          </button>
-
-          <button
-            onClick={() => setMode('manual')}
-            className="rounded-xl border bg-white p-6 shadow-sm text-left hover:border-mint transition-colors"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-2xl">✍️</span>
-              <h2 className="text-lg font-semibold">Write Manually</h2>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Open the editor and write your article from scratch.
-            </p>
-          </button>
+          ))}
         </div>
       </div>
     )
   }
 
-  if (mode === 'ai') {
-    return <AIGenerateFlow
-      onGenerated={(article) => {
-        setTitle(article.title)
-        setContent(article.content)
-        setAiResult(article)
-        setMode('manual')
-      }}
-      onBack={() => setMode('choose')}
-    />
+  // ─── S3: Editor ───
+  if (screen === 'editor') {
+    return (
+      <div>
+        <div className="ed-top">
+          <button className="ed-back" onClick={() => { setScreen('prompt'); setAiResult(null) }}>← New</button>
+          <div className="ed-title-bar">
+            {title || 'Untitled'}
+            {aiResult && <span className="badge-ai">AI</span>}
+          </div>
+          <button className="ed-btn ed-btn-secondary" onClick={() => handleSave('DRAFT')} disabled={saving || !title.trim()}>
+            💾 {saving ? 'Saving...' : 'Draft'}
+          </button>
+          <button className="ed-btn ed-btn-primary" onClick={() => handleSave('PUBLISHED')} disabled={saving || !title.trim()}>
+            ⚡ Publish
+          </button>
+        </div>
+
+        <div className="ed-form">
+          <input
+            type="text"
+            className="ed-title-input"
+            placeholder="Article title..."
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+          <div className="ed-meta">
+            <select className="ed-select" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+              <option value="">No category</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+          <TiptapEditor
+            onChange={(json) => setContent(json)}
+            placeholder="Start writing your article..."
+          />
+        </div>
+
+        {aiResult && (
+          <div className="ai-result-info">
+            <span>🤖 Generated by {aiResult.model}</span>
+            <span>· {aiResult.tokensIn} in / {aiResult.tokensOut} out tokens</span>
+          </div>
+        )}
+      </div>
+    )
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={() => setMode('choose')} className="text-sm text-muted-foreground hover:text-foreground">
-            ← Back
-          </button>
-          <h1 className="text-lg font-bold">New Article</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleSave('DRAFT')}
-            disabled={saving || !title.trim()}
-            className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Draft'}
-          </button>
-          <button
-            onClick={() => handleSave('PUBLISHED')}
-            disabled={saving || !title.trim()}
-            className="rounded-lg bg-mint px-4 py-2 text-sm font-medium text-white hover:bg-mint-dark transition-colors disabled:opacity-50"
-          >
-            Publish
-          </button>
-        </div>
-      </div>
+  // ─── S1: Prompt ───
+  const showPreview = prompt.length > 10
+  const widgets = getPreviewWidgets()
 
-      {/* Title + meta */}
-      <div className="rounded-xl border bg-white p-4 shadow-sm space-y-3">
-        <input
-          type="text"
-          placeholder="Article title..."
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full text-2xl font-bold placeholder:text-gray-300 focus:outline-none"
-        />
-        <div className="flex gap-3">
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="rounded-lg border px-3 py-1.5 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-mint"
-          >
-            <option value="">No category</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
+  return (
+    <div className="s1">
+      <div className="s1-main">
+        {/* Trending sidebar */}
+        <div className="tp">
+          <div className="tp-title"><span>🔥</span> Trending Now</div>
+          <div className="tp-list">
+            {trendingItems.slice(0, showMore ? 15 : 10).map((item, i) => (
+              <div key={i} className="ti" onClick={() => setP(item.prompt)}>
+                <span className="ti-num">{String(i + 1).padStart(2, '0')}</span>
+                <div className="ti-body">
+                  <div className="ti-text">{item.text}</div>
+                  <div className="ti-meta">
+                    {item.tag && <span className={`ti-tag ${item.tag}`}>{item.tagLabel}</span>}
+                    {item.countdown && <span className="ti-cd">{item.countdown}</span>}
+                    {item.articles && <span className="ti-art">{item.articles}</span>}
+                  </div>
+                </div>
+              </div>
             ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Editor */}
-      <TiptapEditor
-        onChange={(json) => setContent(json)}
-        placeholder="Start writing your article..."
-      />
-
-      {aiResult && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>🤖 Generated by {aiResult.model}</span>
-          <span>· {aiResult.tokensIn} in / {aiResult.tokensOut} out tokens</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── AI Generate Flow ────────────────────────────────────────
-
-function AIGenerateFlow({
-  onGenerated,
-  onBack,
-}: {
-  onGenerated: (article: { title: string; content: Record<string, unknown>; model: string; tokensIn: number; tokensOut: number }) => void
-  onBack: () => void
-}) {
-  const [type, setType] = useState<string>('match-report')
-  const [generating, setGenerating] = useState(false)
-  const [error, setError] = useState('')
-
-  // Form fields
-  const [homeTeam, setHomeTeam] = useState('')
-  const [awayTeam, setAwayTeam] = useState('')
-  const [score, setScore] = useState('')
-  const [league, setLeague] = useState('')
-  const [keyEvents, setKeyEvents] = useState('')
-  const [playerName, setPlayerName] = useState('')
-  const [fromClub, setFromClub] = useState('')
-  const [toClub, setToClub] = useState('')
-  const [fee, setFee] = useState('')
-  const [customPrompt, setCustomPrompt] = useState('')
-  const [tone, setTone] = useState('professional')
-  const [language, setLanguage] = useState('bs')
-
-  async function handleGenerate() {
-    setGenerating(true)
-    setError('')
-    try {
-      const res = await fetch('/api/ai/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type, homeTeam, awayTeam, score, league, keyEvents,
-          playerName, fromClub, toClub, fee, customPrompt,
-          tone, language, wordCount: 600,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Generation failed')
-
-      // Convert text content to Tiptap JSON
-      const paragraphs = (data.content || '').split('\n\n').filter(Boolean)
-      const tiptapContent = {
-        type: 'doc',
-        content: paragraphs.map((p: string) => ({
-          type: 'paragraph',
-          content: [{ type: 'text', text: p }],
-        })),
-      }
-
-      onGenerated({
-        title: data.title || 'Generated Article',
-        content: tiptapContent,
-        model: data.model,
-        tokensIn: data.tokensIn,
-        tokensOut: data.tokensOut,
-      })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Generation failed')
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const articleTypes = [
-    { value: 'match-report', label: '⚽ Match Report', desc: 'Post-match analysis and recap' },
-    { value: 'match-preview', label: '🔮 Match Preview', desc: 'Pre-match preview and prediction' },
-    { value: 'transfer-news', label: '💰 Transfer News', desc: 'Player transfer announcement' },
-    { value: 'analysis', label: '📊 Analysis', desc: 'Tactical or statistical breakdown' },
-    { value: 'custom', label: '✍️ Custom', desc: 'Describe what you want' },
-  ]
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <button onClick={onBack} className="text-sm text-muted-foreground hover:text-foreground">← Back</button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">AI Generate</h1>
-          <p className="text-muted-foreground">Choose article type and fill in details</p>
-        </div>
-      </div>
-
-      {/* Article type selector */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {articleTypes.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => setType(t.value)}
-            className={`rounded-xl border p-4 text-left transition-colors ${
-              type === t.value ? 'border-mint bg-mint-light' : 'bg-white hover:border-gray-300'
-            }`}
-          >
-            <p className="font-medium text-sm">{t.label}</p>
-            <p className="text-xs text-muted-foreground mt-1">{t.desc}</p>
-          </button>
-        ))}
-      </div>
-
-      {/* Dynamic form based on type */}
-      <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
-        {(type === 'match-report' || type === 'match-preview') && (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Home Team</label>
-                <input value={homeTeam} onChange={(e) => setHomeTeam(e.target.value)} placeholder="FK Sarajevo" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Away Team</label>
-                <input value={awayTeam} onChange={(e) => setAwayTeam(e.target.value)} placeholder="FK Željezničar" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint" />
-              </div>
-            </div>
-            {type === 'match-report' && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Score</label>
-                  <input value={score} onChange={(e) => setScore(e.target.value)} placeholder="2-1" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">League</label>
-                  <input value={league} onChange={(e) => setLeague(e.target.value)} placeholder="Premijer Liga BiH" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint" />
-                </div>
-              </div>
+            {!showMore && (
+              <button className="load-more-btn" onClick={() => setShowMore(true)}>▾ Load 5 more</button>
             )}
-            {type === 'match-report' && (
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Key Events (optional)</label>
-                <input value={keyEvents} onChange={(e) => setKeyEvents(e.target.value)} placeholder="Goal 23' Demirović, Red card 67' Kovačević" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint" />
-              </div>
-            )}
-          </>
-        )}
+          </div>
+        </div>
 
-        {type === 'transfer-news' && (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Player Name</label>
-                <input value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder="Ermedin Demirović" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Transfer Fee (optional)</label>
-                <input value={fee} onChange={(e) => setFee(e.target.value)} placeholder="€5M" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint" />
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">From Club</label>
-                <input value={fromClub} onChange={(e) => setFromClub(e.target.value)} placeholder="FC Augsburg" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">To Club</label>
-                <input value={toClub} onChange={(e) => setToClub(e.target.value)} placeholder="VfB Stuttgart" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint" />
-              </div>
-            </div>
-          </>
-        )}
+        {/* Prompt center */}
+        <div className="pc">
+          <div className="brand">
+            <h1>AI Co-Pilot<span>.</span></h1>
+            <p>Describe what you want — AI handles the rest</p>
+          </div>
 
-        {(type === 'analysis' || type === 'custom') && (
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">
-              {type === 'custom' ? 'Describe what you want' : 'Analysis topic'}
-            </label>
+          {/* Prompt box */}
+          <div className="pb">
             <textarea
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder={type === 'custom' ? 'Write a feature about...' : 'Tactical analysis of how FK Sarajevo uses high press...'}
+              ref={textareaRef}
               rows={3}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint"
+              placeholder="e.g. Write a match preview for El Clasico with H2H stats, fan poll, quiz, and gallery..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) startGenerate() }}
             />
+            {showAttach && (
+              <div className="ap">
+                <div className="ap-title">Add to your article</div>
+                <div className="ap-grid">
+                  {attachWidgets.map((w) => (
+                    <div key={w.name} className="ap-item" onClick={() => addToPrompt(w.value)}>
+                      <div className="ap-icon">{w.icon}</div>
+                      <div className="ap-name">{w.name}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="pb-foot">
+              <div className="pb-left">
+                <button className={`pb-btn ${showAttach ? 'active' : ''}`} onClick={() => setShowAttach(!showAttach)}>
+                  <span className="tip">Add widgets</span>🧩
+                </button>
+                <button className="pb-btn" onClick={() => addToPrompt('image gallery')}>
+                  <span className="tip">Gallery</span>📸
+                </button>
+                <button className="pb-btn" onClick={() => addToPrompt('fan poll')}>
+                  <span className="tip">Poll</span>🗳️
+                </button>
+                <button className="pb-btn" onClick={() => addToPrompt('quiz')}>
+                  <span className="tip">Quiz</span>🧠
+                </button>
+              </div>
+              <button className="gen-btn" onClick={startGenerate}>🤖 Generate</button>
+            </div>
           </div>
-        )}
 
-        {/* Common options */}
-        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Tone</label>
-            <select value={tone} onChange={(e) => setTone(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint">
-              <option value="professional">Professional</option>
-              <option value="casual">Casual</option>
-              <option value="tabloid">Tabloid</option>
-              <option value="analytical">Analytical</option>
-            </select>
+          {/* Preview card */}
+          {showPreview && (
+            <div className="prev-card">
+              <div className="pci">⚡</div>
+              <div className="pcb">
+                <div className="pct">AI will generate:</div>
+                <div className="pcd">~1,500 words · {Math.ceil(1500 / 250)} min read · {widgets.length} widgets</div>
+                <div className="pcp">
+                  {widgets.map((w) => (
+                    <span key={w} className="pill">{w}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Quick type chips */}
+          <div className="chips">
+            {chips.map((c) => (
+              <button key={c.label} className="chip" onClick={() => setP(c.prompt)}>{c.label}</button>
+            ))}
           </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Language</label>
-            <select value={language} onChange={(e) => setLanguage(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mint">
-              <option value="bs">Bosanski</option>
-              <option value="hr">Hrvatski</option>
-              <option value="sr">Srpski</option>
-              <option value="en">English</option>
-            </select>
+
+          {/* Today's Matches */}
+          <div className="ms">
+            <div className="ms-label">Today&apos;s Matches</div>
+            <div className="mc-list">
+              {matches.map((m, i) => (
+                <div key={i} className={`mc ${selectedMatch === i ? 'sel' : ''}`} onClick={() => pickMatch(i)}>
+                  <div className="mc-teams">
+                    <div className="mc-t"><div className="mc-crest">{m.homeCrest}</div>{m.home}</div>
+                    <div className="mc-vs">VS</div>
+                    <div className="mc-t"><div className="mc-crest">{m.awayCrest}</div>{m.away}</div>
+                  </div>
+                  <div className="mc-meta">
+                    <div className="mc-league">{m.league}</div>
+                    {m.live ? <div className="live-b">{m.live}</div> : <div className="mc-time">{m.time}</div>}
+                  </div>
+                  <span className="mc-arrow">→</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-
-        {error && (
-          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
-        )}
-
-        <button
-          onClick={handleGenerate}
-          disabled={generating}
-          className="w-full rounded-lg bg-mint px-4 py-3 text-sm font-medium text-white hover:bg-mint-dark transition-colors disabled:opacity-50"
-        >
-          {generating ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="animate-spin">🤖</span> Generating with Claude...
-            </span>
-          ) : (
-            '🤖 Generate Article'
-          )}
-        </button>
       </div>
     </div>
   )

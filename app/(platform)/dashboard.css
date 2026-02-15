@@ -43,7 +43,7 @@
 /* Chart */
 .db-chart-wrap { padding: 18px; height: 200px; }
 .db-chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 140px; }
-.db-chart-col { flex: 1; display: flex; gap: 2px; align-items: flex-end; }
+.db-chart-col { flex: 1; display: flex; gap: 2px; align-items: flex-end; height: 100%; }
 .db-chart-bar { flex: 1; border-radius: 3px 3px 0 0; transition: all .3s var(--ease); cursor: pointer; position: relative; min-height: 4px; }
 .db-chart-bar:hover { opacity: .8; filter: brightness(1.1); }
 .db-chart-bar .ct { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--g900); color: var(--wh); font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 4px; white-space: nowrap; z-index: 10; }
