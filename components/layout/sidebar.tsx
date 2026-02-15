@@ -8,32 +8,24 @@ const sections = [
   {
     label: 'Main',
     items: [
-      { label: 'Dashboard', icon: '📊', href: '/', phase: 'mvp' },
-      { label: 'Newsroom', icon: '📰', href: '/newsroom', phase: 'mvp', badge: '12' },
-      { label: 'AI Co-Pilot', icon: '🤖', href: '/editor', phase: 'mvp' },
+      { label: 'Dashboard', icon: '📊', href: '/' },
+      { label: 'Newsroom', icon: '📰', href: '/newsroom', badge: '12' },
+      { label: 'AI Co-Pilot', icon: '🤖', href: '/editor' },
     ],
   },
   {
     label: 'Content',
     items: [
-      { label: 'Widgets', icon: '🧩', href: '/widgets', phase: '2' },
-      { label: 'Widget Creator', icon: '🛠️', href: '/widgets/create', phase: '2' },
-      { label: 'Calendar', icon: '📅', href: '/calendar', phase: '2' },
-      { label: 'Analytics', icon: '📈', href: '/analytics', phase: '2' },
-    ],
-  },
-  {
-    label: 'Templates',
-    items: [
-      { label: 'Midnight Pro', icon: '🌙', href: '/templates/midnight', phase: '3' },
-      { label: 'Clean Editorial', icon: '☀️', href: '/templates/editorial', phase: '3' },
+      { label: 'Widgets', icon: '🧩', href: '/widgets' },
+      { label: 'Calendar', icon: '📅', href: '/calendar' },
+      { label: 'Analytics', icon: '📈', href: '/analytics' },
     ],
   },
   {
     label: 'Settings',
     items: [
-      { label: 'Team', icon: '👥', href: '/team', phase: 'mvp' },
-      { label: 'Settings', icon: '⚙️', href: '/settings', phase: 'mvp' },
+      { label: 'Team', icon: '👥', href: '/team' },
+      { label: 'Settings', icon: '⚙️', href: '/settings' },
     ],
   },
 ]
@@ -71,17 +63,6 @@ export function Sidebar() {
                 item.href === '/'
                   ? pathname === '/'
                   : pathname.startsWith(item.href)
-              const isComingSoon = item.phase !== 'mvp'
-
-              if (isComingSoon) {
-                return (
-                  <span key={item.href} className="ni disabled">
-                    <span className="ni-i">{item.icon}</span>
-                    {item.label}
-                    <span className="ni-soon">SOON</span>
-                  </span>
-                )
-              }
 
               return (
                 <Link
