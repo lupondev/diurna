@@ -1,48 +1,63 @@
 import { PrismaClient } from '@prisma/client'
 
-const SOFT_DELETE_MODELS = new Set([
-  'Organization',
-  'Site',
-  'Article',
-  'Category',
-  'Widget',
-  'UserOnOrganization',
-])
+const SOFT_DELETE_MODELS = [
+  'organization',
+  'site',
+  'article',
+  'category',
+  'widget',
+  'userOnOrganization',
+] as const
 
-const prismaClientSingleton = () => {
-  const client = new PrismaClient()
+function createPrismaClient() {
+  const base = new PrismaClient()
 
-  client.$use(async (params, next) => {
-    if (!SOFT_DELETE_MODELS.has(params.model ?? '')) {
-      return next(params)
-    }
-
-    // Intercept delete → soft delete
-    if (params.action === 'delete') {
-      params.action = 'update'
-      params.args.data = { deletedAt: new Date() }
-    }
-    if (params.action === 'deleteMany') {
-      params.action = 'updateMany'
-      params.args.data = { ...(params.args.data || {}), deletedAt: new Date() }
-    }
-
-    // Intercept reads → exclude soft deleted
-    // NOTE: findUnique is NOT filtered — it only accepts unique fields
-    if (['findMany', 'findFirst', 'count'].includes(params.action)) {
-      if (!params.args) params.args = {}
-      if (!params.args.where) params.args.where = {}
-      if (params.args.where.deletedAt === undefined) {
-        params.args.where.deletedAt = null
-      }
-    }
-
-    return next(params)
+  const extended = base.$extends({
+    query: {
+      $allModels: {
+        async findMany({ model, args, query }) {
+          if (SOFT_DELETE_MODELS.includes(model.charAt(0).toLowerCase() + model.slice(1) as any)) {
+            args.where = { ...args.where, deletedAt: args.where?.deletedAt === undefined ? null : args.where.deletedAt }
+          }
+          return query(args)
+        },
+        async findFirst({ model, args, query }) {
+          if (SOFT_DELETE_MODELS.includes(model.charAt(0).toLowerCase() + model.slice(1) as any)) {
+            args.where = { ...args.where, deletedAt: args.where?.deletedAt === undefined ? null : args.where.deletedAt }
+          }
+          return query(args)
+        },
+        async count({ model, args, query }) {
+          if (SOFT_DELETE_MODELS.includes(model.charAt(0).toLowerCase() + model.slice(1) as any)) {
+            args.where = { ...args.where, deletedAt: args.where?.deletedAt === undefined ? null : args.where.deletedAt }
+          }
+          return query(args)
+        },
+        async delete({ model, args, query }) {
+          if (SOFT_DELETE_MODELS.includes(model.charAt(0).toLowerCase() + model.slice(1) as any)) {
+            return (base as any)[model.charAt(0).toLowerCase() + model.slice(1)].update({
+              ...args,
+              data: { deletedAt: new Date() },
+            })
+          }
+          return query(args)
+        },
+        async deleteMany({ model, args, query }) {
+          if (SOFT_DELETE_MODELS.includes(model.charAt(0).toLowerCase() + model.slice(1) as any)) {
+            return (base as any)[model.charAt(0).toLowerCase() + model.slice(1)].updateMany({
+              ...args,
+              data: { deletedAt: new Date() },
+            })
+          }
+          return query(args)
+        },
+      },
+    },
   })
 
-  return client
+  return extended
 }
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined }
-export const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
+const globalForPrisma = globalThis as unknown as { prisma: ReturnType<typeof createPrismaClient> | undefined }
+export const prisma = globalForPrisma.prisma ?? createPrismaClient()
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
