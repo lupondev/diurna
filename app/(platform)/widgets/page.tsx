@@ -221,6 +221,52 @@ function PlayerPreview() {
   )
 }
 
+const relatedArticles = [
+  { icon: '🏟️', title: 'Bayern Munich Confirm Manager Decision', time: '2h ago' },
+  { icon: '⚽', title: 'Haaland Hat-trick Fires City to Win', time: '4h ago' },
+  { icon: '📊', title: 'El Clásico Tactical Preview & Prediction', time: '6h ago' },
+]
+
+function RelatedArticlesSmall() {
+  return (
+    <div className="wg-related">
+      <div className="wg-related-head">
+        <span className="wg-related-title">More from SportNews Pro</span>
+        <span className="wg-related-arrow">→</span>
+      </div>
+      {relatedArticles.slice(0, 2).map((a) => (
+        <div key={a.title} className="wg-related-item">
+          <div className="wg-related-thumb">{a.icon}</div>
+          <div className="wg-related-info">
+            <div className="wg-related-item-title">{a.title}</div>
+            <div className="wg-related-time">{a.time}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function RelatedArticlesFull() {
+  return (
+    <div className="wg-preview-body-related">
+      <div className="wg-preview-body-related-head">
+        <span className="wg-preview-body-related-title">More from SportNews Pro</span>
+        <span className="wg-preview-body-related-arrow">→</span>
+      </div>
+      {relatedArticles.map((a) => (
+        <div key={a.title} className="wg-preview-body-related-item">
+          <div className="wg-preview-body-related-thumb">{a.icon}</div>
+          <div className="wg-preview-body-related-info">
+            <div className="wg-preview-body-related-item-title">{a.title}</div>
+            <div className="wg-preview-body-related-time">{a.time}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const previewComponents: Record<string, () => React.JSX.Element> = {
   'live-score': LiveScorePreview,
   'standings': StandingsPreview,
@@ -234,6 +280,12 @@ function buildEmbedCode(widgetScript: string): string {
   return `<div style="display:flex;flex-direction:column;align-items:center;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff">
   <!-- Widget -->
   ${widgetScript}
+  <!-- Divider -->
+  <div style="width:100%;height:1px;background:#e5e7eb"></div>
+  <!-- Related Articles (drives traffic back to your site) -->
+  <div id="diurna-related" style="width:100%;padding:12px 16px">
+    <script src="https://cdn.diurna.io/widgets/related.js" data-count="3" data-source="auto"></script>
+  </div>
   <!-- Divider -->
   <div style="width:100%;height:1px;background:#e5e7eb"></div>
   <!-- 300x250 Ad Slot (Lupon Media SSP) -->
@@ -288,6 +340,8 @@ export default function WidgetsPage() {
                     <Preview />
                   </div>
                   <div className="wg-ad-divider" />
+                  <RelatedArticlesSmall />
+                  <div className="wg-ad-divider" />
                   <div className="wg-ad-slot">
                     <div className="wg-ad-label">Powered by Lupon Media SSP</div>
                     <MockAd scale={0.6} />
@@ -324,7 +378,7 @@ export default function WidgetsPage() {
                 {copied ? '✅ Copied!' : '📋 Copy to Clipboard'}
               </button>
               <div className="wg-embed-hint">
-                <strong>Includes 300x250 ad slot below the widget</strong> powered by Lupon Media SSP. The ad renders beneath the widget in one cohesive unit, generating revenue from programmatic demand.
+                <strong>Includes related articles + 300x250 ad slot below the widget</strong> powered by Lupon Media SSP. Related articles drive traffic back to your site, and the ad generates revenue via programmatic demand — all in one cohesive unit.
               </div>
             </div>
           </div>
@@ -347,6 +401,8 @@ export default function WidgetsPage() {
                     <PreviewComp />
                   </div>
                   <div className="wg-preview-body-divider" />
+                  <RelatedArticlesFull />
+                  <div className="wg-preview-body-divider" />
                   <div className="wg-preview-body-ad">
                     <div className="wg-preview-body-ad-label">Powered by Lupon Media SSP</div>
                     <MockAd />
@@ -355,7 +411,7 @@ export default function WidgetsPage() {
               </div>
               <div className="wg-preview-foot">
                 <div className="wg-preview-foot-info">
-                  Widget + ad renders as one cohesive unit on your site. <strong>Ad slot below generates revenue via Lupon Media SSP.</strong>
+                  Widget + related articles + ad renders as one cohesive unit on your site. <strong>Related articles drive traffic, ad slot generates revenue via Lupon Media SSP.</strong>
                 </div>
                 <div className="wg-preview-foot-actions">
                   <button className="wg-preview-foot-btn secondary" onClick={() => setPreviewModal(null)}>Close</button>

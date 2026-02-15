@@ -62,7 +62,7 @@
 .wc-theme-btn:hover:not(.act) { border-color: var(--g300); }
 
 /* Right Panel - Preview */
-.wc-preview { background: var(--g900); padding: 32px; display: flex; flex-direction: column; }
+.wc-preview { background: var(--g900); padding: 32px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
 .wc-preview-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
 .wc-preview-title { font-size: 14px; font-weight: 700; color: var(--wh); }
 .wc-device-toggle { display: flex; background: rgba(255,255,255,.1); border-radius: var(--rm); padding: 4px; }
