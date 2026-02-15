@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -24,17 +25,58 @@ function getMeta(pathname: string) {
   return pageMeta['/']
 }
 
+const notifications = [
+  { icon: '📰', text: 'New article published', detail: '"El Clásico Preview" is now live', time: '2m ago', unread: true },
+  { icon: '🤖', text: 'AI Co-Pilot finished generating', detail: 'Match report ready for review', time: '18m ago', unread: true },
+  { icon: '👥', text: 'Team member joined', detail: 'Sarah K. accepted your invite', time: '1h ago', unread: false },
+  { icon: '📊', text: 'Weekly analytics ready', detail: 'Widget impressions up 24% this week', time: '3h ago', unread: false },
+]
+
 export function Topbar() {
   const pathname = usePathname()
   const meta = getMeta(pathname)
+  const [showNotifs, setShowNotifs] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setShowNotifs(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   return (
     <header className="tb">
       <h1 className="tb-title">{meta.icon} {meta.title}</h1>
       <div className="tb-right">
-        <button className="tb-btn">
-          🔔<span className="dot" />
-        </button>
+        <div className="tb-notif-wrap" ref={ref}>
+          <button className="tb-btn" onClick={() => setShowNotifs(!showNotifs)}>
+            🔔<span className="dot" />
+          </button>
+          {showNotifs && (
+            <div className="tb-notif-dropdown">
+              <div className="tb-notif-head">
+                <span className="tb-notif-title">Notifications</span>
+                <span className="tb-notif-count">{notifications.filter(n => n.unread).length} new</span>
+              </div>
+              {notifications.map((n, i) => (
+                <div key={i} className={`tb-notif-item${n.unread ? ' unread' : ''}`}>
+                  <div className="tb-notif-icon">{n.icon}</div>
+                  <div className="tb-notif-body">
+                    <div className="tb-notif-text">{n.text}</div>
+                    <div className="tb-notif-detail">{n.detail}</div>
+                    <div className="tb-notif-time">{n.time}</div>
+                  </div>
+                  {n.unread && <div className="tb-notif-dot" />}
+                </div>
+              ))}
+              <div className="tb-notif-footer">View all notifications</div>
+            </div>
+          )}
+        </div>
         <Link href="/editor" className="btn-m">✨ New Article</Link>
       </div>
     </header>

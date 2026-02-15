@@ -81,9 +81,27 @@ a { text-decoration: none; color: inherit; }
 .tb { display: flex; align-items: center; padding: 16px 32px; background: var(--wh); border-bottom: 1px solid var(--brd); gap: 12px; flex-shrink: 0; }
 .tb-title { font-size: 18px; font-weight: 800; color: var(--g900); }
 .tb-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.tb-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: var(--rm); color: var(--g500); font-size: 16px; position: relative; transition: all .12s; }
+.tb-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: var(--rm); color: var(--g500); font-size: 16px; position: relative; transition: all .12s; background: none; border: none; cursor: pointer; }
 .tb-btn:hover { background: var(--g100); }
 .tb-btn .dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: var(--coral); border-radius: 50%; border: 2px solid var(--wh); }
+.tb-notif-wrap { position: relative; }
+.tb-notif-dropdown { position: absolute; top: calc(100% + 8px); right: 0; width: 340px; background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); box-shadow: 0 12px 32px rgba(0,0,0,.12); z-index: 100; animation: tbNotifIn .15s ease; overflow: hidden; }
+@keyframes tbNotifIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.tb-notif-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--g100); }
+.tb-notif-title { font-size: 14px; font-weight: 800; color: var(--g900); }
+.tb-notif-count { font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 2px 8px; background: var(--coral-l); color: var(--coral); border-radius: 10px; }
+.tb-notif-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; transition: background .12s; cursor: pointer; border-bottom: 1px solid var(--g50); }
+.tb-notif-item:hover { background: var(--g50); }
+.tb-notif-item.unread { background: var(--mint-l); }
+.tb-notif-item.unread:hover { background: #D1FAE5; }
+.tb-notif-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--g100); border-radius: var(--rm); font-size: 15px; flex-shrink: 0; }
+.tb-notif-body { flex: 1; min-width: 0; }
+.tb-notif-text { font-size: 13px; font-weight: 700; color: var(--g900); }
+.tb-notif-detail { font-size: 12px; color: var(--g500); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-notif-time { font-family: var(--mono); font-size: 10px; color: var(--g400); margin-top: 3px; }
+.tb-notif-dot { width: 8px; height: 8px; background: var(--mint); border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.tb-notif-footer { padding: 10px 16px; text-align: center; font-size: 12px; font-weight: 700; color: var(--mint-d); cursor: pointer; transition: background .12s; }
+.tb-notif-footer:hover { background: var(--g50); }
 .btn-m { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 13px; font-weight: 700; background: var(--mint); color: var(--wh); border-radius: var(--rm); transition: all .15s; text-decoration: none; }
 .btn-m:hover { background: var(--mint-d); transform: translateY(-1px); box-shadow: 0 4px 12px var(--mint-g); }
 

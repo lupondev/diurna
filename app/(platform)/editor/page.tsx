@@ -70,6 +70,7 @@ export default function EditorPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState<Record<string, unknown>>({})
   const [saving, setSaving] = useState(false)
+  const [articleStatus, setArticleStatus] = useState<'DRAFT' | 'IN_REVIEW' | 'PUBLISHED'>('DRAFT')
   const [siteId, setSiteId] = useState<string | null>(null)
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
   const [categoryId, setCategoryId] = useState('')
@@ -172,7 +173,7 @@ export default function EditorPage() {
     }
   }
 
-  async function handleSave(status: 'DRAFT' | 'PUBLISHED') {
+  async function handleSave(status: 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED') {
     if (!title.trim() || !siteId) return
     setSaving(true)
     try {
@@ -228,12 +229,18 @@ export default function EditorPage() {
           <div className="ed-title-bar">
             {title || 'Untitled'}
             {aiResult && <span className="badge-ai">AI</span>}
+            <span className={`badge-status ${articleStatus.toLowerCase().replace('_', '-')}`}>
+              {articleStatus === 'DRAFT' ? 'Draft' : articleStatus === 'IN_REVIEW' ? 'In Review' : 'Published'}
+            </span>
           </div>
-          <button className="ed-btn ed-btn-secondary" onClick={() => handleSave('DRAFT')} disabled={saving || !title.trim()}>
-            💾 {saving ? 'Saving...' : 'Draft'}
+          <button className="ed-btn ed-btn-secondary" onClick={() => { setArticleStatus('DRAFT'); handleSave('DRAFT') }} disabled={saving || !title.trim()}>
+            💾 {saving && articleStatus === 'DRAFT' ? 'Saving...' : 'Save Draft'}
           </button>
-          <button className="ed-btn ed-btn-primary" onClick={() => handleSave('PUBLISHED')} disabled={saving || !title.trim()}>
-            ⚡ Publish
+          <button className="ed-btn ed-btn-review" onClick={() => { setArticleStatus('IN_REVIEW'); handleSave('IN_REVIEW') }} disabled={saving || !title.trim()}>
+            📝 {saving && articleStatus === 'IN_REVIEW' ? 'Saving...' : 'Submit for Review'}
+          </button>
+          <button className="ed-btn ed-btn-primary" onClick={() => { setArticleStatus('PUBLISHED'); handleSave('PUBLISHED') }} disabled={saving || !title.trim()}>
+            ⚡ {saving && articleStatus === 'PUBLISHED' ? 'Saving...' : 'Publish'}
           </button>
         </div>
 

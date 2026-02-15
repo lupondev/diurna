@@ -111,9 +111,15 @@
 .ed-back:hover { background: var(--g100); color: var(--g700); }
 .ed-title-bar { font-size: 13px; font-weight: 700; color: var(--g900); flex: 1; display: flex; align-items: center; gap: 8px; }
 .badge-ai { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: var(--elec-l); color: var(--elec); }
+.badge-status { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+.badge-status.draft { background: var(--g100); color: var(--g500); }
+.badge-status.in-review { background: var(--gold-l); color: #B45309; }
+.badge-status.published { background: var(--mint-l); color: var(--mint-d); }
 .ed-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: var(--rm); transition: all .12s; cursor: pointer; border: none; }
 .ed-btn-secondary { background: var(--wh); border: 1px solid var(--brd); color: var(--g700); }
 .ed-btn-secondary:hover { background: var(--g50); }
+.ed-btn-review { background: var(--gold-l); color: #B45309; border: 1px solid transparent; }
+.ed-btn-review:hover { background: #FDE68A; }
 .ed-btn-primary { background: var(--mint); color: var(--wh); }
 .ed-btn-primary:hover { background: var(--mint-d); }
 .ed-btn:disabled { opacity: .5; cursor: not-allowed; }
