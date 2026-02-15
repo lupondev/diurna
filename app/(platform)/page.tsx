@@ -72,7 +72,7 @@ export default async function DashboardPage() {
                     DRAFT: { bg: '#F4F4F5', color: '#71717A', label: 'Draft', thumbBg: '#F4F4F5', icon: '📊' },
                     SCHEDULED: { bg: '#FFF9E6', color: '#FFB800', label: 'Scheduled', thumbBg: '#FFF9E6', icon: '🔄' },
                     IN_REVIEW: { bg: '#FFFBEB', color: '#F59E0B', label: 'In Review', thumbBg: '#FFFBEB', icon: '👁️' },
-                  }[article.status] || { bg: '#F4F4F5', color: '#71717A', label: 'Draft', thumbBg: '#F4F4F5', icon: '📊' }
+                  }[article.status as string] || { bg: '#F4F4F5', color: '#71717A', label: 'Draft', thumbBg: '#F4F4F5', icon: '📊' }
                   const isAI = article.aiGenerated
                   return (
                     <Link key={article.id} href={`/editor/${article.id}`} className="art-item">
