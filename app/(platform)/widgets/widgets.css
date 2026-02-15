@@ -14,6 +14,11 @@
 
 /* Preview area */
 .wg-preview { padding: 24px; background: linear-gradient(135deg, #f8f9fb 0%, #f0f2f5 100%); min-height: 280px; display: flex; align-items: center; justify-content: center; }
+.wg-preview-unit { display: flex; flex-direction: column; align-items: center; border: 1px solid var(--g200); border-radius: var(--rl); overflow: hidden; background: var(--wh); }
+.wg-preview-widget { padding: 0; }
+.wg-ad-divider { width: 100%; height: 1px; background: var(--g200); }
+.wg-ad-slot { display: flex; flex-direction: column; align-items: center; padding: 12px 16px 16px; }
+.wg-ad-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--g400); margin-bottom: 8px; }
 
 /* Widget info */
 .wg-info { padding: 20px 24px; border-top: 1px solid var(--g100); }
@@ -122,6 +127,31 @@
 .wg-embed-code { width: 100%; padding: 14px; font-family: var(--mono); font-size: 12px; background: var(--g900); color: var(--mint); border: none; border-radius: var(--rm); resize: none; line-height: 1.6; }
 .wg-embed-copy { margin-top: 12px; width: 100%; padding: 10px; font-size: 13px; font-weight: 700; background: var(--mint); color: var(--wh); border: none; border-radius: var(--rm); cursor: pointer; transition: all .15s; }
 .wg-embed-copy:hover { background: var(--mint-d); }
+.wg-embed-hint { margin-top: 12px; font-size: 11px; color: var(--g400); line-height: 1.5; }
+.wg-embed-hint strong { color: var(--g600); }
+
+/* Preview modal */
+.wg-preview-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.5); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); animation: wgFadeIn .2s ease; }
+.wg-preview-modal { background: var(--wh); border-radius: var(--rx); width: 800px; max-width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,.15); animation: wgModalIn .3s ease; }
+.wg-preview-head { padding: 20px 24px; border-bottom: 1px solid var(--brd); display: flex; align-items: center; justify-content: space-between; }
+.wg-preview-title { font-size: 16px; font-weight: 800; color: var(--g900); display: flex; align-items: center; gap: 8px; }
+.wg-preview-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--r); color: var(--g400); font-size: 18px; background: none; border: none; cursor: pointer; transition: all .12s; }
+.wg-preview-close:hover { background: var(--g100); color: var(--g700); }
+.wg-preview-body { padding: 32px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fb 0%, #f0f2f5 100%); min-height: 320px; }
+.wg-preview-body-unit { display: flex; flex-direction: column; align-items: center; border: 1px solid var(--g200); border-radius: var(--rl); overflow: hidden; background: var(--wh); }
+.wg-preview-body-widget { transform: scale(1.15); transform-origin: top center; }
+.wg-preview-body-divider { width: 100%; height: 1px; background: var(--g200); }
+.wg-preview-body-ad { display: flex; flex-direction: column; align-items: center; padding: 12px 20px 20px; }
+.wg-preview-body-ad-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--g400); margin-bottom: 10px; }
+.wg-preview-foot { padding: 16px 24px; border-top: 1px solid var(--brd); display: flex; align-items: center; justify-content: space-between; }
+.wg-preview-foot-info { font-size: 12px; color: var(--g400); }
+.wg-preview-foot-info strong { color: var(--g700); }
+.wg-preview-foot-actions { display: flex; gap: 8px; }
+.wg-preview-foot-btn { padding: 8px 16px; font-size: 12px; font-weight: 700; border-radius: var(--rm); border: none; cursor: pointer; transition: all .15s; font-family: inherit; }
+.wg-preview-foot-btn.primary { background: var(--mint); color: var(--wh); }
+.wg-preview-foot-btn.primary:hover { background: var(--mint-d); }
+.wg-preview-foot-btn.secondary { background: var(--g100); color: var(--g700); }
+.wg-preview-foot-btn.secondary:hover { background: var(--g200); }
 
 /* Responsive */
 @media (max-width: 1024px) { .wg-grid { grid-template-columns: repeat(2, 1fr); } }

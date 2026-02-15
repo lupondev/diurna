@@ -3,6 +3,33 @@
 import { useState } from 'react'
 import './widgets.css'
 
+function MockAd({ scale = 1 }: { scale?: number }) {
+  return (
+    <div style={{
+      width: 300 * scale,
+      height: 250 * scale,
+      background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+      borderRadius: 12 * scale,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'white',
+      fontFamily: 'sans-serif',
+      overflow: 'hidden',
+      position: 'relative',
+      flexShrink: 0,
+    }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3 * scale, background: 'linear-gradient(90deg, #00D4AA, #5B5FFF)' }} />
+      <div style={{ fontSize: 32 * scale, marginBottom: 8 * scale }}>⚡</div>
+      <div style={{ fontSize: 18 * scale, fontWeight: 800, letterSpacing: 1 }}>NIKE FOOTBALL</div>
+      <div style={{ fontSize: 11 * scale, color: '#888', marginTop: 4 * scale }}>Just Do It</div>
+      <div style={{ marginTop: 12 * scale, padding: `${6 * scale}px ${20 * scale}px`, background: '#00D4AA', borderRadius: 6 * scale, fontSize: 11 * scale, fontWeight: 700 }}>SHOP NOW</div>
+      <div style={{ position: 'absolute', bottom: 6 * scale, right: 8 * scale, fontSize: 8 * scale, color: '#555' }}>Ad &bull; Lupon Media SSP</div>
+    </div>
+  )
+}
+
 type Widget = {
   name: string
   desc: string
@@ -203,8 +230,25 @@ const previewComponents: Record<string, () => React.JSX.Element> = {
   'player': PlayerPreview,
 }
 
+function buildEmbedCode(widgetScript: string): string {
+  return `<div style="display:flex;flex-direction:column;align-items:center;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff">
+  <!-- Widget -->
+  ${widgetScript}
+  <!-- Divider -->
+  <div style="width:100%;height:1px;background:#e5e7eb"></div>
+  <!-- 300x250 Ad Slot (Lupon Media SSP) -->
+  <div style="display:flex;flex-direction:column;align-items:center;padding:12px 20px 20px">
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:10px">Powered by Lupon Media SSP</div>
+    <div id="diurna-ad-300x250">
+      <script src="https://cdn.luponmedia.com/ssp/ad-slot.js" data-size="300x250" data-placement="widget-below"></script>
+    </div>
+  </div>
+</div>`
+}
+
 export default function WidgetsPage() {
-  const [embedModal, setEmbedModal] = useState<string | null>(null)
+  const [embedModal, setEmbedModal] = useState<{ code: string; name: string } | null>(null)
+  const [previewModal, setPreviewModal] = useState<{ preview: string; name: string; embedCode: string } | null>(null)
   const [copied, setCopied] = useState(false)
 
   function handleCopy(code: string) {
@@ -212,6 +256,15 @@ export default function WidgetsPage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
+  }
+
+  function openEmbed(w: Widget) {
+    setCopied(false)
+    setEmbedModal({ code: buildEmbedCode(w.embedCode), name: w.name })
+  }
+
+  function openPreview(w: Widget) {
+    setPreviewModal({ preview: w.preview, name: w.name, embedCode: w.embedCode })
   }
 
   return (
@@ -230,7 +283,16 @@ export default function WidgetsPage() {
           return (
             <div key={w.name} className="wg-card">
               <div className="wg-preview">
-                <Preview />
+                <div className="wg-preview-unit">
+                  <div className="wg-preview-widget">
+                    <Preview />
+                  </div>
+                  <div className="wg-ad-divider" />
+                  <div className="wg-ad-slot">
+                    <div className="wg-ad-label">Powered by Lupon Media SSP</div>
+                    <MockAd scale={0.6} />
+                  </div>
+                </div>
               </div>
               <div className="wg-info">
                 <div className="wg-name">
@@ -239,8 +301,8 @@ export default function WidgetsPage() {
                 </div>
                 <div className="wg-desc">{w.desc}</div>
                 <div className="wg-actions">
-                  <button className="wg-btn primary" onClick={() => setEmbedModal(w.embedCode)}>Embed</button>
-                  <button className="wg-btn secondary">Preview</button>
+                  <button className="wg-btn primary" onClick={() => openEmbed(w)}>Embed</button>
+                  <button className="wg-btn secondary" onClick={() => openPreview(w)}>Preview</button>
                 </div>
               </div>
             </div>
@@ -253,18 +315,61 @@ export default function WidgetsPage() {
         <div className="wg-embed-overlay" onClick={(e) => { if (e.target === e.currentTarget) setEmbedModal(null) }}>
           <div className="wg-embed-modal">
             <div className="wg-embed-head">
-              <div className="wg-embed-title">📋 Embed Code</div>
+              <div className="wg-embed-title">📋 Embed Code — {embedModal.name}</div>
               <button className="wg-embed-close" onClick={() => setEmbedModal(null)}>✕</button>
             </div>
             <div className="wg-embed-body">
-              <textarea className="wg-embed-code" rows={4} readOnly value={embedModal} />
-              <button className="wg-embed-copy" onClick={() => handleCopy(embedModal)}>
+              <textarea className="wg-embed-code" rows={8} readOnly value={embedModal.code} />
+              <button className="wg-embed-copy" onClick={() => handleCopy(embedModal.code)}>
                 {copied ? '✅ Copied!' : '📋 Copy to Clipboard'}
               </button>
+              <div className="wg-embed-hint">
+                <strong>Includes 300x250 ad slot below the widget</strong> powered by Lupon Media SSP. The ad renders beneath the widget in one cohesive unit, generating revenue from programmatic demand.
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Preview Modal */}
+      {previewModal && (() => {
+        const PreviewComp = previewComponents[previewModal.preview]
+        return (
+          <div className="wg-preview-overlay" onClick={(e) => { if (e.target === e.currentTarget) setPreviewModal(null) }}>
+            <div className="wg-preview-modal">
+              <div className="wg-preview-head">
+                <div className="wg-preview-title">👁️ {previewModal.name} — Live Preview</div>
+                <button className="wg-preview-close" onClick={() => setPreviewModal(null)}>✕</button>
+              </div>
+              <div className="wg-preview-body">
+                <div className="wg-preview-body-unit">
+                  <div className="wg-preview-body-widget">
+                    <PreviewComp />
+                  </div>
+                  <div className="wg-preview-body-divider" />
+                  <div className="wg-preview-body-ad">
+                    <div className="wg-preview-body-ad-label">Powered by Lupon Media SSP</div>
+                    <MockAd />
+                  </div>
+                </div>
+              </div>
+              <div className="wg-preview-foot">
+                <div className="wg-preview-foot-info">
+                  Widget + ad renders as one cohesive unit on your site. <strong>Ad slot below generates revenue via Lupon Media SSP.</strong>
+                </div>
+                <div className="wg-preview-foot-actions">
+                  <button className="wg-preview-foot-btn secondary" onClick={() => setPreviewModal(null)}>Close</button>
+                  <button className="wg-preview-foot-btn primary" onClick={() => {
+                    setPreviewModal(null)
+                    setCopied(false)
+                    setEmbedModal({ code: buildEmbedCode(previewModal.embedCode), name: previewModal.name })
+                  }}>Get Embed Code</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
