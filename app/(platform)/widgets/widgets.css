@@ -21,8 +21,9 @@
 .wg-related-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .wg-related-title { font-size: 10px; font-weight: 700; color: var(--g500); text-transform: uppercase; letter-spacing: .04em; }
 .wg-related-arrow { font-size: 10px; color: var(--mint-d); font-weight: 700; }
-.wg-related-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
-.wg-related-thumb { width: 36px; height: 36px; background: var(--g100); border-radius: var(--r); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.wg-related-item { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: var(--r); text-decoration: none; transition: background .15s; }
+.wg-related-item:hover { background: var(--g50); }
+.wg-related-thumb { width: 36px; height: 36px; border-radius: var(--r); object-fit: cover; flex-shrink: 0; }
 .wg-related-info { flex: 1; min-width: 0; }
 .wg-related-item-title { font-size: 11px; font-weight: 600; color: var(--g800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wg-related-time { font-size: 9px; color: var(--g400); }
@@ -154,8 +155,9 @@
 .wg-preview-body-related-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .wg-preview-body-related-title { font-size: 11px; font-weight: 700; color: var(--g500); text-transform: uppercase; letter-spacing: .04em; }
 .wg-preview-body-related-arrow { font-size: 11px; color: var(--mint-d); font-weight: 700; }
-.wg-preview-body-related-item { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
-.wg-preview-body-related-thumb { width: 44px; height: 44px; background: var(--g100); border-radius: var(--rm); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.wg-preview-body-related-item { display: flex; align-items: center; gap: 12px; padding: 8px 6px; border-radius: var(--r); text-decoration: none; transition: background .15s; }
+.wg-preview-body-related-item:hover { background: var(--g50); }
+.wg-preview-body-related-thumb { width: 44px; height: 44px; border-radius: var(--rm); object-fit: cover; flex-shrink: 0; }
 .wg-preview-body-related-info { flex: 1; min-width: 0; }
 .wg-preview-body-related-item-title { font-size: 13px; font-weight: 600; color: var(--g800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wg-preview-body-related-time { font-size: 10px; color: var(--g400); }

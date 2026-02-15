@@ -222,9 +222,9 @@ function PlayerPreview() {
 }
 
 const relatedArticles = [
-  { icon: '🏟️', title: 'Bayern Munich Confirm Manager Decision', time: '2h ago' },
-  { icon: '⚽', title: 'Haaland Hat-trick Fires City to Win', time: '4h ago' },
-  { icon: '📊', title: 'El Clásico Tactical Preview & Prediction', time: '6h ago' },
+  { img: 'https://picsum.photos/seed/sport1/80/80', title: 'Bayern Munich Confirm Manager Decision', time: '2h ago' },
+  { img: 'https://picsum.photos/seed/sport2/80/80', title: 'Haaland Hat-trick Fires City to Win', time: '4h ago' },
+  { img: 'https://picsum.photos/seed/sport3/80/80', title: 'El Clásico Tactical Preview & Prediction', time: '6h ago' },
 ]
 
 function RelatedArticlesSmall() {
@@ -235,13 +235,13 @@ function RelatedArticlesSmall() {
         <span className="wg-related-arrow">→</span>
       </div>
       {relatedArticles.slice(0, 2).map((a) => (
-        <div key={a.title} className="wg-related-item">
-          <div className="wg-related-thumb">{a.icon}</div>
+        <a key={a.title} href="#" className="wg-related-item" onClick={(e) => e.preventDefault()}>
+          <img className="wg-related-thumb" src={a.img} alt="" />
           <div className="wg-related-info">
             <div className="wg-related-item-title">{a.title}</div>
             <div className="wg-related-time">{a.time}</div>
           </div>
-        </div>
+        </a>
       ))}
     </div>
   )
@@ -255,13 +255,13 @@ function RelatedArticlesFull() {
         <span className="wg-preview-body-related-arrow">→</span>
       </div>
       {relatedArticles.map((a) => (
-        <div key={a.title} className="wg-preview-body-related-item">
-          <div className="wg-preview-body-related-thumb">{a.icon}</div>
+        <a key={a.title} href="#" className="wg-preview-body-related-item" onClick={(e) => e.preventDefault()}>
+          <img className="wg-preview-body-related-thumb" src={a.img} alt="" />
           <div className="wg-preview-body-related-info">
             <div className="wg-preview-body-related-item-title">{a.title}</div>
             <div className="wg-preview-body-related-time">{a.time}</div>
           </div>
-        </div>
+        </a>
       ))}
     </div>
   )
