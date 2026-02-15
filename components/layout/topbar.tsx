@@ -7,14 +7,26 @@ const pageMeta: Record<string, { icon: string; title: string }> = {
   '/': { icon: '📊', title: 'Dashboard' },
   '/newsroom': { icon: '📰', title: 'Newsroom' },
   '/editor': { icon: '🤖', title: 'AI Co-Pilot' },
+  '/widgets': { icon: '🧩', title: 'Widgets' },
+  '/widget-creator': { icon: '🛠️', title: 'Widget Creator' },
+  '/calendar': { icon: '📅', title: 'Calendar' },
+  '/analytics': { icon: '📈', title: 'Analytics' },
   '/team': { icon: '👥', title: 'Team' },
   '/settings': { icon: '⚙️', title: 'Settings' },
+  '/templates/midnight': { icon: '🌙', title: 'Midnight Pro Template' },
+  '/templates/editorial': { icon: '📰', title: 'Clean Editorial Template' },
+}
+
+function getMeta(pathname: string) {
+  if (pageMeta[pathname]) return pageMeta[pathname]
+  if (pathname.startsWith('/editor')) return pageMeta['/editor']
+  if (pathname.startsWith('/templates')) return { icon: '🎨', title: 'Template Preview' }
+  return pageMeta['/']
 }
 
 export function Topbar() {
   const pathname = usePathname()
-  const meta = pageMeta[pathname] ||
-    (pathname.startsWith('/editor') ? pageMeta['/editor'] : pageMeta['/'])
+  const meta = getMeta(pathname)
 
   return (
     <header className="tb">

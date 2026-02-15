@@ -17,8 +17,16 @@ const sections = [
     label: 'Content',
     items: [
       { label: 'Widgets', icon: '🧩', href: '/widgets' },
+      { label: 'Widget Creator', icon: '🛠️', href: '/widget-creator' },
       { label: 'Calendar', icon: '📅', href: '/calendar' },
       { label: 'Analytics', icon: '📈', href: '/analytics' },
+    ],
+  },
+  {
+    label: 'Templates',
+    items: [
+      { label: 'Midnight Pro', icon: '🌙', href: '/templates/midnight' },
+      { label: 'Clean Editorial', icon: '📰', href: '/templates/editorial' },
     ],
   },
   {
