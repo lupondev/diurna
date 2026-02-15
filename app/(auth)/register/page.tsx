@@ -27,12 +27,12 @@ export default function RegisterPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(typeof data.error === 'string' ? data.error : 'Registration failed')
 
-      // Auto sign in
+      // Auto sign in then redirect to onboarding
       const signInRes = await signIn('credentials', { email, password, redirect: false })
       if (signInRes?.error) {
         router.push('/login')
       } else {
-        router.push('/')
+        router.push('/onboarding')
         router.refresh()
       }
     } catch (err) {

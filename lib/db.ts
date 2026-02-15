@@ -1,18 +1,17 @@
 import { prisma } from './prisma'
 import { ArticleStatus } from '@prisma/client'
 
-// NOTE: These helpers don't filter by org yet (no auth).
-// When auth is added, wrap with getOrgId() per SPEC §4.3
-
 export async function getArticles(filters?: {
   status?: ArticleStatus
   siteId?: string
+  organizationId?: string
 }) {
   return prisma.article.findMany({
     where: {
       deletedAt: null,
       ...(filters?.status && { status: filters.status }),
       ...(filters?.siteId && { siteId: filters.siteId }),
+      ...(filters?.organizationId && { site: { organizationId: filters.organizationId } }),
     },
     include: {
       category: { select: { name: true, slug: true } },
@@ -43,12 +42,18 @@ export async function getArticleById(id: string) {
   })
 }
 
-export async function getDashboardStats() {
+export async function getDashboardStats(organizationId?: string) {
+  const orgFilter = organizationId
+    ? { site: { organizationId } }
+    : {}
+
   const [published, drafts, aiGenerated, teamMembers] = await Promise.all([
-    prisma.article.count({ where: { status: 'PUBLISHED', deletedAt: null } }),
-    prisma.article.count({ where: { status: 'DRAFT', deletedAt: null } }),
-    prisma.article.count({ where: { aiGenerated: true, deletedAt: null } }),
-    prisma.userOnOrganization.count({ where: { deletedAt: null } }),
+    prisma.article.count({ where: { status: 'PUBLISHED', deletedAt: null, ...orgFilter } }),
+    prisma.article.count({ where: { status: 'DRAFT', deletedAt: null, ...orgFilter } }),
+    prisma.article.count({ where: { aiGenerated: true, deletedAt: null, ...orgFilter } }),
+    organizationId
+      ? prisma.userOnOrganization.count({ where: { organizationId, deletedAt: null } })
+      : prisma.userOnOrganization.count({ where: { deletedAt: null } }),
   ])
   return { published, drafts, aiGenerated, teamMembers }
 }
@@ -60,16 +65,22 @@ export async function getCategories(siteId: string) {
   })
 }
 
-export async function getDefaultSite() {
+export async function getDefaultSite(organizationId?: string) {
   return prisma.site.findFirst({
-    where: { deletedAt: null },
+    where: {
+      deletedAt: null,
+      ...(organizationId && { organizationId }),
+    },
     orderBy: { createdAt: 'asc' },
   })
 }
 
-export async function getTeamMembers() {
+export async function getTeamMembers(organizationId?: string) {
   return prisma.userOnOrganization.findMany({
-    where: { deletedAt: null },
+    where: {
+      deletedAt: null,
+      ...(organizationId && { organizationId }),
+    },
     include: {
       user: { select: { id: true, name: true, email: true, image: true } },
     },

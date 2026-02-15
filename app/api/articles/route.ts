@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
@@ -29,6 +31,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = CreateArticleSchema.parse(body)
 
+    const session = await getServerSession(authOptions)
+
     // Generate unique slug
     let slug = slugify(data.title)
     const existing = await prisma.article.findFirst({
@@ -47,6 +51,7 @@ export async function POST(req: NextRequest) {
         status: data.status,
         siteId: data.siteId,
         categoryId: data.categoryId || null,
+        authorId: session?.user?.id || null,
         aiGenerated: data.aiGenerated,
         aiModel: data.aiModel,
         aiPrompt: data.aiPrompt,
@@ -66,8 +71,14 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions)
+    const orgId = session?.user?.organizationId
+
     const articles = await prisma.article.findMany({
-      where: { deletedAt: null },
+      where: {
+        deletedAt: null,
+        ...(orgId && { site: { organizationId: orgId } }),
+      },
       include: {
         category: { select: { name: true } },
         site: { select: { name: true } },

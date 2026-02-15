@@ -6,8 +6,8 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // ─── Auth check for platform routes ───
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register')
-  const isPublicRoute = pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || isAuthPage
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/onboarding')
+  const isPublicRoute = pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || isAuthPage
 
   if (!isPublicRoute) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })

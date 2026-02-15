@@ -1,11 +1,15 @@
 import Link from 'next/link'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { getDashboardStats, getArticles } from '@/lib/db'
 import { LiveMatches } from '@/components/dashboard/live-matches'
 import './dashboard.css'
 
 export default async function DashboardPage() {
-  const stats = await getDashboardStats()
-  const articles = await getArticles()
+  const session = await getServerSession(authOptions)
+  const orgId = session?.user?.organizationId || undefined
+  const stats = await getDashboardStats(orgId)
+  const articles = await getArticles({ organizationId: orgId })
 
   const statCards = [
     { label: 'Page Views', value: '48.2K', change: '↑ 24%', icon: '👁️', iconCls: 'views',

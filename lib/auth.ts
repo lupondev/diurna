@@ -22,13 +22,26 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          include: {
+            orgs: {
+              where: { deletedAt: null },
+              orderBy: { joinedAt: 'asc' },
+              take: 1,
+            },
+          },
         })
         if (!user?.passwordHash) return null
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash)
         if (!valid) return null
 
-        return { id: user.id, email: user.email, name: user.name, image: user.image }
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          organizationId: user.orgs[0]?.organizationId ?? null,
+        }
       },
     }),
   ],
@@ -36,12 +49,14 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.organizationId = (user as unknown as { organizationId?: string | null }).organizationId ?? null
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
+        session.user.organizationId = token.organizationId as string | null
       }
       return session
     },

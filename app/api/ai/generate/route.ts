@@ -1,6 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { generateContent } from '@/lib/ai/client'
 import { z } from 'zod'
+
+// Simple in-memory rate limiter: 10 generations per user per day
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const DAILY_LIMIT = 10
+
+function checkRateLimit(userId: string): { allowed: boolean; remaining: number } {
+  const now = Date.now()
+  const entry = rateLimitMap.get(userId)
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + 24 * 60 * 60 * 1000 })
+    return { allowed: true, remaining: DAILY_LIMIT - 1 }
+  }
+
+  if (entry.count >= DAILY_LIMIT) {
+    return { allowed: false, remaining: 0 }
+  }
+
+  entry.count++
+  return { allowed: true, remaining: DAILY_LIMIT - entry.count }
+}
 
 const GenerateSchema = z.object({
   type: z.enum(['match-report', 'transfer-news', 'match-preview', 'analysis', 'custom']),
@@ -84,6 +107,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Auth + rate limit
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id || 'anonymous'
+
+    const { allowed, remaining } = checkRateLimit(userId)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Daily AI generation limit reached (10/day). Try again tomorrow.' },
+        { status: 429 }
+      )
+    }
+
     const body = await req.json()
     const data = GenerateSchema.parse(body)
     const { system, prompt } = buildPrompt(data)
@@ -115,6 +150,7 @@ export async function POST(req: NextRequest) {
       tokensIn: result.tokensIn,
       tokensOut: result.tokensOut,
       prompt,
+      remaining,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

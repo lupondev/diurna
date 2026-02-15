@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { getDefaultSite, getCategories } from '@/lib/db'
 
 export async function GET() {
   try {
-    const site = await getDefaultSite()
+    const session = await getServerSession(authOptions)
+    const orgId = session?.user?.organizationId || undefined
+    const site = await getDefaultSite(orgId)
     if (!site) {
       return NextResponse.json({ error: 'No site found' }, { status: 404 })
     }
