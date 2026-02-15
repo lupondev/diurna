@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getDashboardStats, getArticles } from '@/lib/db'
+import { LiveMatches } from '@/components/dashboard/live-matches'
 import './dashboard.css'
 
 export default async function DashboardPage() {
@@ -210,46 +211,8 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Live Now */}
-          <div className="db-card">
-            <div className="db-card-head">
-              <span className="db-card-title">⚽ Live Now</span>
-              <span className="db-live-badge">LIVE</span>
-            </div>
-            <div className="db-card-body">
-              <div className="db-match">
-                <div className="db-match-teams">
-                  <div className="db-match-team"><span>🔵</span> Man City</div>
-                  <div className="db-match-team"><span>🔴</span> Liverpool</div>
-                </div>
-                <div className="db-match-score">
-                  <div className="db-match-score-val">2 - 1</div>
-                  <div className="db-match-min">78&apos;</div>
-                </div>
-                <Link href="/editor" className="db-match-btn">Cover</Link>
-              </div>
-              <div className="db-match">
-                <div className="db-match-teams">
-                  <div className="db-match-team"><span>⚪</span> Real Madrid</div>
-                  <div className="db-match-team"><span>🔴🔵</span> Barcelona</div>
-                </div>
-                <div className="db-match-score">
-                  <div className="db-match-time">21:00</div>
-                </div>
-                <Link href="/editor" className="db-match-btn">Setup AI</Link>
-              </div>
-              <div className="db-match">
-                <div className="db-match-teams">
-                  <div className="db-match-team"><span>⚫🔵</span> Inter Milan</div>
-                  <div className="db-match-team"><span>⚪⚫</span> Juventus</div>
-                </div>
-                <div className="db-match-score">
-                  <div className="db-match-time">20:45</div>
-                </div>
-                <Link href="/editor" className="db-match-btn">Setup AI</Link>
-              </div>
-            </div>
-          </div>
+          {/* Live Now / Today's Matches */}
+          <LiveMatches />
 
           {/* AI Co-Pilot */}
           <div className="db-copilot">
