@@ -35,7 +35,7 @@ type Widget = {
   desc: string
   tag?: { label: string; cls: string }
   embedCode: string
-  preview: 'live-score' | 'standings' | 'h2h' | 'poll' | 'timeline' | 'player'
+  preview: string
 }
 
 const widgets: Widget[] = [
@@ -80,6 +80,40 @@ const widgets: Widget[] = [
     tag: { label: 'Pro', cls: 'pro' },
     embedCode: '<script src="https://cdn.diurna.io/widgets/player.js" data-player="vinicius-jr" data-theme="light"></script>',
     preview: 'player',
+  },
+  {
+    name: 'Match Center',
+    desc: 'Comprehensive match view with live score, events timeline, lineups, and match statistics.',
+    tag: { label: 'New', cls: 'new' },
+    embedCode: '<script src="https://cdn.diurna.io/widgets/match-center.js" data-match="auto" data-theme="light"></script>',
+    preview: 'match-center',
+  },
+  {
+    name: 'Top Scorers',
+    desc: 'League top scorers table with goals, assists, and matches played for the top 10 players.',
+    tag: { label: 'Popular', cls: 'popular' },
+    embedCode: '<script src="https://cdn.diurna.io/widgets/top-scorers.js" data-league="premier-league" data-theme="light"></script>',
+    preview: 'top-scorers',
+  },
+  {
+    name: 'Team Form',
+    desc: 'Last 5 match results with W/D/L indicators, opponent names, scores, and league position.',
+    embedCode: '<script src="https://cdn.diurna.io/widgets/team-form.js" data-team="man-city" data-theme="light"></script>',
+    preview: 'team-form',
+  },
+  {
+    name: 'Player Trading Card',
+    desc: 'Trading card style player profile with photo, nationality, team badge, and season stats grid.',
+    tag: { label: 'Pro', cls: 'pro' },
+    embedCode: '<script src="https://cdn.diurna.io/widgets/player-card.js" data-player="haaland" data-theme="dark"></script>',
+    preview: 'player-card',
+  },
+  {
+    name: 'Match Prediction',
+    desc: 'AI-powered match prediction with win probability, predicted score, and key factors analysis.',
+    tag: { label: 'AI', cls: 'pro' },
+    embedCode: '<script src="https://cdn.diurna.io/widgets/prediction.js" data-match="auto" data-theme="light"></script>',
+    preview: 'prediction',
   },
 ]
 
@@ -221,6 +255,140 @@ function PlayerPreview() {
   )
 }
 
+function MatchCenterPreview() {
+  return (
+    <div className="wg-mc">
+      <div className="wg-mc-header">
+        <span>🏴 Premier League</span>
+        <span className="wg-mc-live"><span className="wg-ls-dot" />LIVE 67&apos;</span>
+      </div>
+      <div className="wg-mc-score">
+        <div className="wg-mc-team"><div className="wg-mc-logo">🔵</div>Man City</div>
+        <div className="wg-mc-result">2 - 1</div>
+        <div className="wg-mc-team"><div className="wg-mc-logo">🔴</div>Liverpool</div>
+      </div>
+      <div className="wg-mc-tabs">
+        <span className="wg-mc-tab act">Events</span>
+        <span className="wg-mc-tab">Lineups</span>
+        <span className="wg-mc-tab">Stats</span>
+      </div>
+      <div className="wg-mc-events">
+        <div className="wg-mc-evt"><span className="wg-mc-min">12&apos;</span><span>⚽</span><span>Haaland</span></div>
+        <div className="wg-mc-evt"><span className="wg-mc-min">34&apos;</span><span>🟨</span><span>Robertson</span></div>
+        <div className="wg-mc-evt right"><span>Salah</span><span>⚽</span><span className="wg-mc-min">45&apos;</span></div>
+        <div className="wg-mc-evt"><span className="wg-mc-min">67&apos;</span><span>⚽</span><span>Foden</span></div>
+      </div>
+      <div className="wg-mc-stats">
+        <div className="wg-mc-stat-row"><span>58%</span><div className="wg-mc-bar"><div className="wg-mc-bar-fill home" style={{ width: '58%' }} /><div className="wg-mc-bar-fill away" style={{ width: '42%' }} /></div><span>42%</span></div>
+        <div className="wg-mc-stat-label">Possession</div>
+        <div className="wg-mc-stat-row"><span>14</span><div className="wg-mc-bar"><div className="wg-mc-bar-fill home" style={{ width: '64%' }} /><div className="wg-mc-bar-fill away" style={{ width: '36%' }} /></div><span>8</span></div>
+        <div className="wg-mc-stat-label">Shots</div>
+      </div>
+    </div>
+  )
+}
+
+function TopScorersPreview() {
+  const scorers = [
+    { rank: 1, name: 'E. Haaland', team: '🔵 Man City', goals: 22, assists: 5, apps: 24 },
+    { rank: 2, name: 'M. Salah', team: '🔴 Liverpool', goals: 19, assists: 12, apps: 25 },
+    { rank: 3, name: 'A. Isak', team: '⚫ Newcastle', goals: 17, assists: 4, apps: 24 },
+    { rank: 4, name: 'B. Saka', team: '🔴 Arsenal', goals: 15, assists: 10, apps: 25 },
+    { rank: 5, name: 'C. Palmer', team: '🔵 Chelsea', goals: 14, assists: 8, apps: 23 },
+  ]
+  return (
+    <div className="wg-ts">
+      <div className="wg-ts-header">🏴 Top Scorers — Premier League</div>
+      <div className="wg-ts-thead"><span>#</span><span>Player</span><span>G</span><span>A</span><span>MP</span></div>
+      {scorers.map((s, i) => (
+        <div key={s.rank} className={`wg-ts-row${i % 2 === 1 ? ' alt' : ''}`}>
+          <span className="wg-ts-rank">{s.rank}</span>
+          <div className="wg-ts-player"><div className="wg-ts-avatar">👤</div><div><div className="wg-ts-name">{s.name}</div><div className="wg-ts-team">{s.team}</div></div></div>
+          <span className="wg-ts-goals">{s.goals}</span>
+          <span className="wg-ts-stat">{s.assists}</span>
+          <span className="wg-ts-stat">{s.apps}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function TeamFormPreview() {
+  const results = [
+    { opp: 'Arsenal', score: '2-1', result: 'W' },
+    { opp: 'Chelsea', score: '1-1', result: 'D' },
+    { opp: 'Wolves', score: '4-0', result: 'W' },
+    { opp: 'Spurs', score: '0-1', result: 'L' },
+    { opp: 'Everton', score: '3-1', result: 'W' },
+  ]
+  return (
+    <div className="wg-tf">
+      <div className="wg-tf-header">
+        <div className="wg-tf-team-info"><div className="wg-tf-logo">🔵</div><div><div className="wg-tf-team-name">Manchester City</div><div className="wg-tf-pos">1st in Premier League</div></div></div>
+      </div>
+      <div className="wg-tf-form">
+        {results.map((r) => (
+          <div key={r.opp} className={`wg-tf-dot ${r.result.toLowerCase()}`}>{r.result}</div>
+        ))}
+      </div>
+      <div className="wg-tf-matches">
+        {results.map((r) => (
+          <div key={r.opp} className="wg-tf-match">
+            <span className={`wg-tf-result ${r.result.toLowerCase()}`}>{r.result}</span>
+            <span className="wg-tf-opp">vs {r.opp}</span>
+            <span className="wg-tf-score">{r.score}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PlayerCardPreview() {
+  return (
+    <div className="wg-pc">
+      <div className="wg-pc-header">
+        <div className="wg-pc-photo">⚡</div>
+        <div className="wg-pc-badge">🔵</div>
+      </div>
+      <div className="wg-pc-info">
+        <div className="wg-pc-name">Erling Haaland</div>
+        <div className="wg-pc-detail">🇳🇴 Norway · ST · #9</div>
+      </div>
+      <div className="wg-pc-stats">
+        <div className="wg-pc-s"><div className="wg-pc-sv">22</div><div className="wg-pc-sl">Goals</div></div>
+        <div className="wg-pc-s"><div className="wg-pc-sv">5</div><div className="wg-pc-sl">Assists</div></div>
+        <div className="wg-pc-s"><div className="wg-pc-sv">24</div><div className="wg-pc-sl">Apps</div></div>
+        <div className="wg-pc-s"><div className="wg-pc-sv">8.6</div><div className="wg-pc-sl">Rating</div></div>
+      </div>
+    </div>
+  )
+}
+
+function PredictionPreview() {
+  return (
+    <div className="wg-pred">
+      <div className="wg-pred-header">🤖 Match Prediction</div>
+      <div className="wg-pred-teams">
+        <div className="wg-pred-team"><div className="wg-pred-logo">🔵</div><span>Man City</span></div>
+        <div className="wg-pred-score">2 - 1</div>
+        <div className="wg-pred-team"><div className="wg-pred-logo">🔴</div><span>Liverpool</span></div>
+      </div>
+      <div className="wg-pred-bar">
+        <div className="wg-pred-seg home" style={{ width: '52%' }}>52%</div>
+        <div className="wg-pred-seg draw" style={{ width: '22%' }}>22%</div>
+        <div className="wg-pred-seg away" style={{ width: '26%' }}>26%</div>
+      </div>
+      <div className="wg-pred-factors">
+        <div className="wg-pred-factor">📈 City unbeaten in 8 home games</div>
+        <div className="wg-pred-factor">⚡ Haaland scored in last 5 matches</div>
+        <div className="wg-pred-factor">📊 H2H: City lead 3-1 this season</div>
+      </div>
+      <div className="wg-pred-badge">Powered by Diurna AI</div>
+    </div>
+  )
+}
+
 const relatedArticles = [
   { img: 'https://picsum.photos/seed/sport1/80/80', title: 'Bayern Munich Confirm Manager Decision', time: '2h ago' },
   { img: 'https://picsum.photos/seed/sport2/80/80', title: 'Haaland Hat-trick Fires City to Win', time: '4h ago' },
@@ -274,6 +442,11 @@ const previewComponents: Record<string, () => React.JSX.Element> = {
   'poll': PollPreview,
   'timeline': TimelinePreview,
   'player': PlayerPreview,
+  'match-center': MatchCenterPreview,
+  'top-scorers': TopScorersPreview,
+  'team-form': TeamFormPreview,
+  'player-card': PlayerCardPreview,
+  'prediction': PredictionPreview,
 }
 
 function buildEmbedCode(widgetScript: string): string {
