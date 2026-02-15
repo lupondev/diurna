@@ -5,7 +5,7 @@ export default async function NewsroomPage() {
   const articles = await getArticles()
 
   return (
-    <div className="space-y-6">
+    <div style={{ padding: '24px 32px 60px' }} className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Newsroom</h1>

@@ -12,7 +12,7 @@ export default function PlatformLayout({
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar />
-        <main className="flex-1 overflow-y-auto bg-gray-50/50 p-6">
+        <main className="flex-1 overflow-y-auto bg-[#F8F9FB]">
           {children}
         </main>
         <PlatformFooter />
