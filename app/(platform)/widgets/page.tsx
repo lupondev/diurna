@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import './widgets.css'
 
 function MockAd({ scale = 1 }: { scale?: number }) {
@@ -475,6 +476,11 @@ export default function WidgetsPage() {
   const [embedModal, setEmbedModal] = useState<{ code: string; name: string } | null>(null)
   const [previewModal, setPreviewModal] = useState<{ preview: string; name: string; embedCode: string } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   function handleCopy(code: string) {
     navigator.clipboard.writeText(code).then(() => {
@@ -528,8 +534,8 @@ export default function WidgetsPage() {
                 </div>
                 <div className="wg-desc">{w.desc}</div>
                 <div className="wg-actions">
-                  <button className="wg-btn primary" onClick={() => openEmbed(w)}>Embed</button>
-                  <button className="wg-btn secondary" onClick={() => openPreview(w)}>Preview</button>
+                  <button type="button" className="wg-btn primary" onClick={() => openEmbed(w)}>Embed</button>
+                  <button type="button" className="wg-btn secondary" onClick={() => openPreview(w)}>Preview</button>
                 </div>
               </div>
             </div>
@@ -537,17 +543,17 @@ export default function WidgetsPage() {
         })}
       </div>
 
-      {/* Embed Modal */}
-      {embedModal && (
+      {/* Embed Modal (portal to body) */}
+      {mounted && embedModal && createPortal(
         <div className="wg-embed-overlay" onClick={(e) => { if (e.target === e.currentTarget) setEmbedModal(null) }}>
           <div className="wg-embed-modal">
             <div className="wg-embed-head">
               <div className="wg-embed-title">📋 Embed Code — {embedModal.name}</div>
-              <button className="wg-embed-close" onClick={() => setEmbedModal(null)}>✕</button>
+              <button type="button" className="wg-embed-close" onClick={() => setEmbedModal(null)}>✕</button>
             </div>
             <div className="wg-embed-body">
               <textarea className="wg-embed-code" rows={8} readOnly value={embedModal.code} />
-              <button className="wg-embed-copy" onClick={() => handleCopy(embedModal.code)}>
+              <button type="button" className="wg-embed-copy" onClick={() => handleCopy(embedModal.code)}>
                 {copied ? '✅ Copied!' : '📋 Copy to Clipboard'}
               </button>
               <div className="wg-embed-hint">
@@ -555,50 +561,54 @@ export default function WidgetsPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Preview Modal */}
-      {previewModal && (() => {
-        const PreviewComp = previewComponents[previewModal.preview]
-        return (
-          <div className="wg-preview-overlay" onClick={(e) => { if (e.target === e.currentTarget) setPreviewModal(null) }}>
-            <div className="wg-preview-modal">
-              <div className="wg-preview-head">
-                <div className="wg-preview-title">👁️ {previewModal.name} — Live Preview</div>
-                <button className="wg-preview-close" onClick={() => setPreviewModal(null)}>✕</button>
-              </div>
-              <div className="wg-preview-body">
-                <div className="wg-preview-body-unit">
-                  <div className="wg-preview-body-widget">
-                    <PreviewComp />
-                  </div>
-                  <div className="wg-preview-body-divider" />
-                  <RelatedArticlesFull />
-                  <div className="wg-preview-body-divider" />
-                  <div className="wg-preview-body-ad">
-                    <div className="wg-preview-body-ad-label">Powered by Lupon Media SSP</div>
-                    <MockAd />
+      {/* Preview Modal (portal to body) */}
+      {mounted && previewModal && createPortal(
+        (() => {
+          const PreviewComp = previewComponents[previewModal.preview]
+          return (
+            <div className="wg-preview-overlay" onClick={(e) => { if (e.target === e.currentTarget) setPreviewModal(null) }}>
+              <div className="wg-preview-modal">
+                <div className="wg-preview-head">
+                  <div className="wg-preview-title">👁️ {previewModal.name} — Live Preview</div>
+                  <button type="button" className="wg-preview-close" onClick={() => setPreviewModal(null)}>✕</button>
+                </div>
+                <div className="wg-preview-body">
+                  <div className="wg-preview-body-unit">
+                    <div className="wg-preview-body-widget">
+                      <PreviewComp />
+                    </div>
+                    <div className="wg-preview-body-divider" />
+                    <RelatedArticlesFull />
+                    <div className="wg-preview-body-divider" />
+                    <div className="wg-preview-body-ad">
+                      <div className="wg-preview-body-ad-label">Powered by Lupon Media SSP</div>
+                      <MockAd />
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="wg-preview-foot">
-                <div className="wg-preview-foot-info">
-                  Widget + related articles + ad renders as one cohesive unit on your site. <strong>Related articles drive traffic, ad slot generates revenue via Lupon Media SSP.</strong>
-                </div>
-                <div className="wg-preview-foot-actions">
-                  <button className="wg-preview-foot-btn secondary" onClick={() => setPreviewModal(null)}>Close</button>
-                  <button className="wg-preview-foot-btn primary" onClick={() => {
-                    setPreviewModal(null)
-                    setCopied(false)
-                    setEmbedModal({ code: buildEmbedCode(previewModal.embedCode), name: previewModal.name })
-                  }}>Get Embed Code</button>
+                <div className="wg-preview-foot">
+                  <div className="wg-preview-foot-info">
+                    Widget + related articles + ad renders as one cohesive unit on your site. <strong>Related articles drive traffic, ad slot generates revenue via Lupon Media SSP.</strong>
+                  </div>
+                  <div className="wg-preview-foot-actions">
+                    <button type="button" className="wg-preview-foot-btn secondary" onClick={() => setPreviewModal(null)}>Close</button>
+                    <button type="button" className="wg-preview-foot-btn primary" onClick={() => {
+                      setPreviewModal(null)
+                      setCopied(false)
+                      setEmbedModal({ code: buildEmbedCode(previewModal.embedCode), name: previewModal.name })
+                    }}>Get Embed Code</button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )
-      })()}
+          )
+        })(),
+        document.body
+      )}
     </div>
   )
 }
