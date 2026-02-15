@@ -66,3 +66,16 @@ export async function getDefaultSite() {
     orderBy: { createdAt: 'asc' },
   })
 }
+
+export async function getTeamMembers() {
+  return prisma.userOnOrganization.findMany({
+    where: { deletedAt: null },
+    include: {
+      user: { select: { id: true, name: true, email: true, image: true } },
+    },
+    orderBy: [
+      { role: 'asc' },
+      { joinedAt: 'asc' },
+    ],
+  })
+}
