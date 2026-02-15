@@ -1,10 +1,21 @@
 import type { Metadata } from 'next'
-import { Plus_Jakarta_Sans } from 'next/font/google'
+import { Plus_Jakarta_Sans, JetBrains_Mono, Instrument_Serif } from 'next/font/google'
 import './globals.css'
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
   variable: '--font-sans',
+})
+
+const jetbrains = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+})
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-display',
 })
 
 export const metadata: Metadata = {
@@ -19,7 +30,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${jakarta.variable} font-sans antialiased`}>
+      <body className={`${jakarta.variable} ${jetbrains.variable} ${instrumentSerif.variable} antialiased`}>
         {children}
       </body>
     </html>
