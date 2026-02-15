@@ -1,16 +1,255 @@
+'use client'
+
+import { useState } from 'react'
+import './settings.css'
+
 export default function SettingsPage() {
+  const [dirty, setDirty] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  // General
+  const [siteName, setSiteName] = useState('SportNews Pro')
+  const [siteUrl, setSiteUrl] = useState('sportnews.com')
+  const [description, setDescription] = useState('Breaking sports news, powered by AI')
+  const [language, setLanguage] = useState('bs')
+  const [timezone, setTimezone] = useState('Europe/Sarajevo')
+
+  // Branding
+  const [brandColor, setBrandColor] = useState('#00D4AA')
+
+  // SEO
+  const [metaTitle, setMetaTitle] = useState('SportNews Pro — AI-Powered Sports News')
+  const [metaDesc, setMetaDesc] = useState('Breaking sports news, match previews, transfer updates and tactical analysis. Powered by AI.')
+  const [ogImage, setOgImage] = useState('')
+
+  // Integrations
+  const [gaId, setGaId] = useState('')
+  const [twitter, setTwitter] = useState('')
+  const [facebook, setFacebook] = useState('')
+  const [instagram, setInstagram] = useState('')
+  const [youtube, setYoutube] = useState('')
+
+  function change<T>(setter: (v: T) => void) {
+    return (v: T) => { setter(v); setDirty(true); setSaved(false) }
+  }
+
+  function handleSave() {
+    setDirty(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  function handleDiscard() {
+    setDirty(false)
+    setSiteName('SportNews Pro')
+    setSiteUrl('sportnews.com')
+    setDescription('Breaking sports news, powered by AI')
+    setLanguage('bs')
+    setTimezone('Europe/Sarajevo')
+    setBrandColor('#00D4AA')
+    setMetaTitle('SportNews Pro — AI-Powered Sports News')
+    setMetaDesc('Breaking sports news, match previews, transfer updates and tactical analysis. Powered by AI.')
+  }
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Configure your publication</p>
+    <div className="st-page">
+
+      {/* ═══ GENERAL ═══ */}
+      <div className="st-section">
+        <div className="st-section-head">
+          <div className="st-section-title">🏢 General Settings</div>
+          <div className="st-section-desc">Core configuration for your publication identity and defaults.</div>
+        </div>
+
+        <div className="st-card">
+          <div className="st-card-head">
+            <div className="st-card-title">Publication Identity</div>
+          </div>
+          <div className="st-card-desc">How your publication appears to readers and across the platform.</div>
+          <div className="st-row">
+            <span className="st-label">Site Name</span>
+            <input className="st-input" value={siteName} onChange={(e) => change(setSiteName)(e.target.value)} />
+          </div>
+          <div className="st-row">
+            <span className="st-label">Site URL</span>
+            <input className="st-input mono" value={siteUrl} onChange={(e) => change(setSiteUrl)(e.target.value)} />
+          </div>
+          <div className="st-row">
+            <span className="st-label">Description</span>
+            <textarea className="st-textarea" value={description} onChange={(e) => change(setDescription)(e.target.value)} rows={2} />
+          </div>
+        </div>
+
+        <div className="st-card">
+          <div className="st-card-head">
+            <div className="st-card-title">Regional &amp; Language</div>
+          </div>
+          <div className="st-card-desc">Defaults for content creation and display.</div>
+          <div className="st-row">
+            <span className="st-label">Primary Language</span>
+            <select className="st-select" value={language} onChange={(e) => change(setLanguage)(e.target.value)}>
+              <option value="bs">Bosnian (bs)</option>
+              <option value="en">English (en)</option>
+              <option value="hr">Croatian (hr)</option>
+              <option value="sr">Serbian (sr)</option>
+              <option value="de">German (de)</option>
+              <option value="tr">Turkish (tr)</option>
+            </select>
+          </div>
+          <div className="st-row">
+            <span className="st-label">Timezone</span>
+            <select className="st-select" value={timezone} onChange={(e) => change(setTimezone)(e.target.value)}>
+              <option value="Europe/Sarajevo">Europe/Sarajevo (CET)</option>
+              <option value="Europe/London">Europe/London (GMT)</option>
+              <option value="America/New_York">America/New_York (EST)</option>
+              <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-xl border bg-white p-6 shadow-sm">
-        <p className="text-center text-muted-foreground py-12">
-          Settings will be configured here.
-        </p>
+      {/* ═══ BRANDING ═══ */}
+      <div className="st-section">
+        <div className="st-section-head">
+          <div className="st-section-title">🎨 Branding</div>
+          <div className="st-section-desc">Customize the look and feel of your publication.</div>
+        </div>
+
+        <div className="st-card">
+          <div className="st-card-head">
+            <div className="st-card-title">Logo &amp; Colors</div>
+          </div>
+          <div className="st-card-desc">Your publication&apos;s visual identity.</div>
+          <div className="st-row">
+            <span className="st-label">Logo</span>
+            <div className="st-upload" title="Click to upload">⚽</div>
+          </div>
+          <div className="st-row">
+            <span className="st-label">Brand Color</span>
+            <div className="st-color-row">
+              <input
+                type="color"
+                value={brandColor}
+                onChange={(e) => change(setBrandColor)(e.target.value)}
+                className="st-color-swatch"
+                style={{ background: brandColor }}
+              />
+              <span className="st-color-code">{brandColor}</span>
+            </div>
+          </div>
+          <div className="st-row">
+            <span className="st-label">Favicon</span>
+            <div className="st-upload" title="Click to upload" style={{ width: 36, height: 36, fontSize: 14 }}>📰</div>
+          </div>
+        </div>
       </div>
+
+      {/* ═══ SEO ═══ */}
+      <div className="st-section">
+        <div className="st-section-head">
+          <div className="st-section-title">🔍 SEO Defaults</div>
+          <div className="st-section-desc">Default meta tags applied across your publication when not overridden per-article.</div>
+        </div>
+
+        <div className="st-card">
+          <div className="st-card-head">
+            <div className="st-card-title">Meta Tags</div>
+          </div>
+          <div className="st-card-desc">Search engine and social media appearance defaults.</div>
+          <div className="st-row">
+            <span className="st-label">Default Meta Title</span>
+            <input className="st-input" value={metaTitle} onChange={(e) => change(setMetaTitle)(e.target.value)} />
+          </div>
+          <div className="st-row">
+            <span className="st-label">Meta Description</span>
+            <textarea className="st-textarea" value={metaDesc} onChange={(e) => change(setMetaDesc)(e.target.value)} rows={2} />
+          </div>
+          <div className="st-row">
+            <span className="st-label">OG Image URL</span>
+            <input className="st-input mono" value={ogImage} onChange={(e) => change(setOgImage)(e.target.value)} placeholder="https://sportnews.com/og-image.jpg" />
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ INTEGRATIONS ═══ */}
+      <div className="st-section">
+        <div className="st-section-head">
+          <div className="st-section-title">🔌 Integrations</div>
+          <div className="st-section-desc">Connect external services and social accounts.</div>
+        </div>
+
+        <div className="st-card">
+          <div className="st-card-head">
+            <div className="st-card-title">Analytics</div>
+          </div>
+          <div className="st-card-desc">Track your publication&apos;s performance with analytics tools.</div>
+          <div className="st-row">
+            <span className="st-label">Google Analytics ID</span>
+            <input className="st-input mono" value={gaId} onChange={(e) => change(setGaId)(e.target.value)} placeholder="G-XXXXXXXXXX" />
+          </div>
+        </div>
+
+        <div className="st-card">
+          <div className="st-card-head">
+            <div className="st-card-title">Social Media Links</div>
+          </div>
+          <div className="st-card-desc">Link your social accounts for cross-posting and attribution.</div>
+          <div className="st-social">
+            <div className="st-social-icon tw">𝕏</div>
+            <span className="st-social-name">X / Twitter</span>
+            <input value={twitter} onChange={(e) => change(setTwitter)(e.target.value)} placeholder="@sportnewspro" />
+          </div>
+          <div className="st-social">
+            <div className="st-social-icon fb">f</div>
+            <span className="st-social-name">Facebook</span>
+            <input value={facebook} onChange={(e) => change(setFacebook)(e.target.value)} placeholder="facebook.com/sportnewspro" />
+          </div>
+          <div className="st-social">
+            <div className="st-social-icon ig">IG</div>
+            <span className="st-social-name">Instagram</span>
+            <input value={instagram} onChange={(e) => change(setInstagram)(e.target.value)} placeholder="@sportnewspro" />
+          </div>
+          <div className="st-social">
+            <div className="st-social-icon yt">▶</div>
+            <span className="st-social-name">YouTube</span>
+            <input value={youtube} onChange={(e) => change(setYoutube)(e.target.value)} placeholder="youtube.com/@sportnewspro" />
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ DANGER ZONE ═══ */}
+      <div className="st-section">
+        <div className="st-section-head">
+          <div className="st-section-title">⚠️ Danger Zone</div>
+          <div className="st-section-desc">Irreversible actions. Proceed with extreme caution.</div>
+        </div>
+
+        <div className="st-danger">
+          <div className="st-danger-title">🗑️ Delete Publication</div>
+          <div className="st-danger-desc">
+            Permanently delete this publication and all its data including articles, widgets, and analytics.
+            This action cannot be undone.
+          </div>
+          <button className="st-danger-btn" onClick={() => alert('This action is not available in the current version.')}>
+            Delete Publication
+          </button>
+        </div>
+      </div>
+
+      {/* ═══ SAVE BAR ═══ */}
+      {(dirty || saved) && (
+        <div className="st-save-bar">
+          <div className="st-save-text">
+            {saved ? <><strong>✅ Settings saved</strong></> : <><strong>Unsaved changes</strong> — save or discard</>}
+          </div>
+          {!saved && (
+            <div className="st-save-actions">
+              <button className="st-save-discard" onClick={handleDiscard}>Discard</button>
+              <button className="st-save-btn" onClick={handleSave}>💾 Save Changes</button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
