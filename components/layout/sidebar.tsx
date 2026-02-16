@@ -10,7 +10,8 @@ const sections = [
     items: [
       { label: 'Dashboard', icon: '📊', href: '/' },
       { label: 'Newsroom', icon: '📰', href: '/newsroom', badge: '12' },
-      { label: 'AI Co-Pilot', icon: '🤖', href: '/editor' },
+      { label: 'AI Co-Pilot', icon: '🤖', href: '/copilot' },
+      { label: 'Editor', icon: '✍️', href: '/editor' },
     ],
   },
   {
