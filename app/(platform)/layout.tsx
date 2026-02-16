@@ -1,6 +1,7 @@
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { PlatformFooter } from '@/components/layout/platform-footer'
+import { MobileShell } from '@/components/layout/mobile-shell'
 
 export default function PlatformLayout({
   children,
@@ -8,15 +9,17 @@ export default function PlatformLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Topbar />
-        <main className="flex-1 overflow-y-auto bg-[#F8F9FB]">
-          {children}
-        </main>
-        <PlatformFooter />
+    <MobileShell>
+      <div className="platform-layout">
+        <Sidebar />
+        <div className="platform-main">
+          <Topbar />
+          <main className="platform-content">
+            {children}
+          </main>
+          <PlatformFooter />
+        </div>
       </div>
-    </div>
+    </MobileShell>
   )
 }
