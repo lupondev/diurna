@@ -42,6 +42,7 @@ export const authOptions: NextAuthOptions = {
           image: user.image,
           organizationId: user.orgs[0]?.organizationId ?? null,
           onboardingCompleted: user.onboardingCompleted,
+          role: user.orgs[0]?.role ?? 'JOURNALIST',
         }
       },
     }),
@@ -52,18 +53,30 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
         token.organizationId = (user as unknown as { organizationId?: string | null }).organizationId ?? null
         token.onboardingCompleted = (user as unknown as { onboardingCompleted?: boolean }).onboardingCompleted ?? false
+        token.role = (user as unknown as { role?: string }).role ?? 'JOURNALIST'
       }
 
-      // Re-fetch onboardingCompleted from DB so the token stays current
-      // after the onboarding API sets it to true (avoids redirect loop)
-      if (token.id && !token.onboardingCompleted) {
+      // Re-fetch from DB so the token stays current
+      if (token.id && (!token.onboardingCompleted || !token.role)) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { onboardingCompleted: true },
+            select: {
+              onboardingCompleted: true,
+              orgs: {
+                where: { deletedAt: null },
+                orderBy: { joinedAt: 'asc' },
+                take: 1,
+                select: { role: true, organizationId: true },
+              },
+            },
           })
           if (dbUser) {
             token.onboardingCompleted = dbUser.onboardingCompleted
+            if (dbUser.orgs[0]) {
+              token.role = dbUser.orgs[0].role
+              token.organizationId = dbUser.orgs[0].organizationId
+            }
           }
         } catch {
           // Non-fatal — keep existing token value
@@ -77,6 +90,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.organizationId = token.organizationId as string | null
         session.user.onboardingCompleted = token.onboardingCompleted as boolean
+        session.user.role = token.role as string
       }
       return session
     },

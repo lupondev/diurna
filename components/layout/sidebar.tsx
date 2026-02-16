@@ -4,7 +4,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 
-const sections = [
+type NavItem = { label: string; icon: string; href: string; badge?: string }
+type NavSection = { label: string; items: NavItem[]; roles?: string[] }
+
+const sections: NavSection[] = [
   {
     label: 'Main',
     items: [
@@ -32,6 +35,16 @@ const sections = [
     ],
   },
   {
+    label: 'Admin',
+    roles: ['OWNER', 'ADMIN'],
+    items: [
+      { label: 'Users', icon: '👥', href: '/admin/users' },
+      { label: 'Invites', icon: '✉️', href: '/admin/invites' },
+      { label: 'Audit Log', icon: '📋', href: '/admin/audit-log' },
+      { label: 'Site Settings', icon: '⚙️', href: '/admin/site' },
+    ],
+  },
+  {
     label: 'Settings',
     items: [
       { label: 'Team', icon: '👥', href: '/team' },
@@ -46,6 +59,7 @@ export function Sidebar() {
 
   const userName = session?.user?.name || 'User'
   const userInitial = userName.charAt(0).toUpperCase()
+  const userRole = (session?.user as { role?: string } | undefined)?.role || ''
 
   return (
     <aside className="sb">
@@ -65,7 +79,7 @@ export function Sidebar() {
       </div>
 
       <nav className="sb-nav">
-        {sections.map((section) => (
+        {sections.filter((s) => !s.roles || s.roles.includes(userRole)).map((section) => (
           <div key={section.label} className="ns">
             <div className="nl">{section.label}</div>
             {section.items.map((item) => {

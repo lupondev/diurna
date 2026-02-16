@@ -9,6 +9,7 @@ declare module 'next-auth' {
       image?: string | null
       organizationId?: string | null
       onboardingCompleted?: boolean
+      role?: string
     }
   }
 }
@@ -18,5 +19,6 @@ declare module 'next-auth/jwt' {
     id: string
     organizationId?: string | null
     onboardingCompleted?: boolean
+    role?: string
   }
 }

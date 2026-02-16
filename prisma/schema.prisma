@@ -24,6 +24,7 @@ model Organization {
   sites     Site[]
   users     UserOnOrganization[]
   auditLogs AuditLog[]
+  invites   Invite[]
 }
 
 model Site {
@@ -315,6 +316,26 @@ model AnalyticsEvent {
 
   @@index([widgetId, eventType])
   @@index([createdAt])
+}
+
+// ══════════════════════════════════
+// INVITES
+// ══════════════════════════════════
+
+model Invite {
+  id             String       @id @default(cuid())
+  email          String
+  role           OrgRole      @default(JOURNALIST)
+  token          String       @unique
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedById    String
+  usedAt         DateTime?
+  createdAt      DateTime     @default(now())
+  expiresAt      DateTime
+
+  @@index([organizationId])
+  @@index([token])
 }
 
 // ══════════════════════════════════

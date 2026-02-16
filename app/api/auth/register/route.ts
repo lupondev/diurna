@@ -7,6 +7,7 @@ const RegisterSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
+  inviteToken: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -21,6 +22,42 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await bcrypt.hash(data.password, 12)
 
+    // Handle invite token flow
+    if (data.inviteToken) {
+      const invite = await prisma.invite.findUnique({ where: { token: data.inviteToken } })
+
+      if (!invite || invite.usedAt || new Date(invite.expiresAt) < new Date()) {
+        return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 400 })
+      }
+
+      if (invite.email !== data.email) {
+        return NextResponse.json({ error: 'Email does not match invite' }, { status: 400 })
+      }
+
+      const user = await prisma.user.create({
+        data: {
+          email: data.email,
+          name: data.name,
+          passwordHash,
+          orgs: {
+            create: {
+              organizationId: invite.organizationId,
+              role: invite.role,
+            },
+          },
+        },
+      })
+
+      // Mark invite as used
+      await prisma.invite.update({
+        where: { id: invite.id },
+        data: { usedAt: new Date() },
+      })
+
+      return NextResponse.json({ id: user.id, email: user.email }, { status: 201 })
+    }
+
+    // Default flow: create new org
     let org = await prisma.organization.findFirst({ where: { slug: 'demo' } })
     if (!org) {
       const slug = data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30)

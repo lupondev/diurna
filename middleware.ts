@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
+// Role hierarchy for route access
+const ROLE_ACCESS: Record<string, string[]> = {
+  '/admin': ['OWNER', 'ADMIN'],
+  '/copilot': ['OWNER', 'ADMIN', 'EDITOR'],
+  '/calendar': ['OWNER', 'ADMIN', 'EDITOR'],
+}
+
 export async function middleware(req: NextRequest) {
   const host = req.headers.get('host') || ''
   const { pathname } = req.nextUrl
@@ -22,6 +29,16 @@ export async function middleware(req: NextRequest) {
     // Redirect non-onboarded users to onboarding (skip API routes)
     if (!token.onboardingCompleted && !pathname.startsWith('/onboarding') && !pathname.startsWith('/api/')) {
       return NextResponse.redirect(new URL('/onboarding', req.url))
+    }
+
+    // ─── Role-based route protection ───
+    const userRole = (token.role as string) || 'JOURNALIST'
+    for (const [routePrefix, allowedRoles] of Object.entries(ROLE_ACCESS)) {
+      if (pathname.startsWith(routePrefix) && !allowedRoles.includes(userRole)) {
+        const url = new URL('/newsroom', req.url)
+        url.searchParams.set('error', 'unauthorized')
+        return NextResponse.redirect(url)
+      }
     }
   }
 
