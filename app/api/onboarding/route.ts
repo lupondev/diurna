@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
           TIMEOUT_MS,
           'Update user (existing site)'
         )
-        return NextResponse.json({ success: true, redirectUrl: '/dashboard' }, { status: 201 })
+        return NextResponse.json({ success: true, redirectUrl: '/newsroom' }, { status: 201 })
       }
     } catch (err) {
       console.error('Onboarding step 1.5 (check existing site) failed:', err)
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to finalize setup. Please try again.' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, redirectUrl: '/dashboard' }, { status: 201 })
+    return NextResponse.json({ success: true, redirectUrl: '/newsroom' }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 })
