@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 const articles = [
   { badge: 'live', badgeLabel: '● LIVE', cat: 'Premier League', title: 'Man City vs Liverpool: Title Race Showdown at the Etihad', time: '2 hours ago', comments: 89, img: '🏟️' },
@@ -18,13 +20,42 @@ const standings = [
 ]
 
 const trending = [
-  { num: '01', title: 'Mbappé Transfer Saga: Latest Updates', reads: '2.4K reading' },
+  { num: '01', title: 'Mbapp\u00e9 Transfer Saga: Latest Updates', reads: '2.4K reading' },
   { num: '02', title: 'Champions League Quarter-Final Draw', reads: '1.8K reading' },
   { num: '03', title: 'Haaland Breaks Scoring Record', reads: '1.2K reading' },
   { num: '04', title: 'Premier League Title Race Analysis', reads: '980 reading' },
 ]
 
+const navItems = [
+  { label: 'Home', href: '/site' },
+  { label: 'Premier League', href: '/site/category/premier-league' },
+  { label: 'La Liga', href: '/site/category/la-liga' },
+  { label: 'Champions League', href: '/site/category/champions-league' },
+  { label: 'Bundesliga', href: '/site/category/bundesliga' },
+  { label: 'Serie A', href: '/site/category/serie-a' },
+  { label: 'Transfers', href: '/site/category/transfers' },
+]
+
 export default function MidnightTemplate() {
+  const router = useRouter()
+  const [applying, setApplying] = useState(false)
+
+  async function applyTheme() {
+    setApplying(true)
+    try {
+      const res = await fetch('/api/site', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: 'midnight' }),
+      })
+      if (res.ok) router.push('/site')
+    } catch (e) {
+      console.error('Apply theme error:', e)
+    } finally {
+      setApplying(false)
+    }
+  }
+
   return (
     <div style={{
       '--bg-primary': '#0A0A0F', '--bg-secondary': '#12121A', '--bg-card': '#16161F',
@@ -34,30 +65,33 @@ export default function MidnightTemplate() {
     } as React.CSSProperties}>
       <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontFamily: 'var(--sans)' }}>
 
-        {/* Back to dashboard bar */}
-        <div style={{ padding: '12px 24px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/widgets" style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}>← Back to Dashboard</Link>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-tertiary)' }}>Template Preview: Midnight Pro</span>
+        {/* Preview Banner */}
+        <div style={{ padding: '14px 24px', background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderBottom: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>This is a preview of the Midnight Pro theme</span>
+          <button onClick={applyTheme} disabled={applying} style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, background: 'var(--accent)', color: '#0A0A0F', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+            {applying ? 'Applying...' : 'Apply Theme'}
+          </button>
+          <Link href="/settings" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-tertiary)', textDecoration: 'none', marginLeft: 8 }}>Back to Settings</Link>
         </div>
 
         {/* Header */}
         <header style={{ background: 'rgba(10,10,15,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 100 }}>
           <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0' }}>
-              <span style={{ fontFamily: 'var(--disp)', fontSize: '1.75rem', color: 'var(--text-primary)' }}>SportNews<span style={{ color: 'var(--accent)' }}>.</span></span>
+              <Link href="/site" style={{ fontFamily: 'var(--disp)', fontSize: '1.75rem', color: 'var(--text-primary)', textDecoration: 'none' }}>SportNews<span style={{ color: 'var(--accent)' }}>.</span></Link>
               <div style={{ display: 'flex', gap: 12 }}>
-                <button style={{ padding: '10px 20px', fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Sign In</button>
-                <button style={{ padding: '10px 20px', fontSize: 14, fontWeight: 600, background: 'var(--accent)', color: 'var(--bg-primary)', border: 'none', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Subscribe</button>
+                <Link href="/login" style={{ padding: '10px 20px', fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}>Sign In</Link>
+                <Link href="/site#subscribe" style={{ padding: '10px 20px', fontSize: 14, fontWeight: 600, background: 'var(--accent)', color: 'var(--bg-primary)', borderRadius: 10, textDecoration: 'none', display: 'inline-block' }}>Subscribe</Link>
               </div>
             </div>
             <nav style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 0', overflowX: 'auto' }}>
-              {['Home', 'Premier League', 'La Liga', 'Champions League', 'Bundesliga', 'Serie A', 'Transfers'].map((l, i) => (
-                <span key={l} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, color: i === 0 ? 'var(--accent)' : 'var(--text-secondary)', background: i === 0 ? 'var(--accent-light)' : 'transparent', borderRadius: 10, whiteSpace: 'nowrap' }}>{l}</span>
+              {navItems.map((l, i) => (
+                <Link key={l.label} href={l.href} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, color: i === 0 ? 'var(--accent)' : 'var(--text-secondary)', background: i === 0 ? 'var(--accent-light)' : 'transparent', borderRadius: 10, whiteSpace: 'nowrap', textDecoration: 'none' }}>{l.label}</Link>
               ))}
-              <span style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 8px' }} />
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(255,107,107,0.15)', borderRadius: 10, fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--coral)' }}>
-                <span style={{ width: 6, height: 6, background: 'var(--coral)', borderRadius: '50%' }} />3 LIVE
-              </span>
+              <span style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 8px', display: 'inline-block' }} />
+              <Link href="/site" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(255,107,107,0.15)', borderRadius: 10, fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--coral)', textDecoration: 'none' }}>
+                <span style={{ width: 6, height: 6, background: 'var(--coral)', borderRadius: '50%', display: 'inline-block' }} />3 LIVE
+              </Link>
             </nav>
           </div>
         </header>
@@ -67,7 +101,7 @@ export default function MidnightTemplate() {
           <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center' }}>
             <span style={{ padding: '6px 16px', background: 'var(--coral)', color: 'var(--bg-primary)', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, borderRadius: 10, marginRight: 20, flexShrink: 0 }}>BREAKING</span>
             <div style={{ fontSize: 14, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-              <strong style={{ color: 'var(--text-primary)' }}>Mbappé to Real Madrid:</strong> Official announcement expected today
+              <strong style={{ color: 'var(--text-primary)' }}>Mbapp&eacute; to Real Madrid:</strong> Official announcement expected today
             </div>
           </div>
         </div>
@@ -78,7 +112,7 @@ export default function MidnightTemplate() {
             <div>
               {/* Hero */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20, marginBottom: 40 }}>
-                <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', background: 'var(--bg-card)', aspectRatio: '16/10', display: 'flex', alignItems: 'flex-end' }}>
+                <Link href="/site" style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', background: 'var(--bg-card)', aspectRatio: '16/10', display: 'flex', alignItems: 'flex-end', textDecoration: 'none', color: 'inherit' }}>
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%)' }} />
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80, opacity: .3 }}>⚽</div>
                   <div style={{ position: 'relative', padding: 32, background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, transparent 100%)', width: '100%' }}>
@@ -88,18 +122,18 @@ export default function MidnightTemplate() {
                       <span>Expert Analysis</span><span>15 min read</span><span>248 comments</span>
                     </div>
                   </div>
-                </div>
+                </Link>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                   {[
-                    { cat: 'Transfer News', title: 'Mbappé Agrees Personal Terms with Real Madrid', color: '#2a4a6b' },
+                    { cat: 'Transfer News', title: 'Mbapp\u00e9 Agrees Personal Terms with Real Madrid', color: '#2a4a6b' },
                     { cat: 'Champions League', title: 'Bayern Edge Past Arsenal in Thriller', color: '#4a2a2a' },
                   ].map((c) => (
-                    <div key={c.title} style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', flex: 1, minHeight: 180, background: c.color, display: 'flex', alignItems: 'flex-end' }}>
+                    <Link key={c.title} href="/site" style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', flex: 1, minHeight: 180, background: c.color, display: 'flex', alignItems: 'flex-end', textDecoration: 'none', color: 'inherit' }}>
                       <div style={{ padding: 20, width: '100%' }}>
                         <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{c.cat}</span>
                         <h2 style={{ fontFamily: 'var(--disp)', fontSize: '1.1rem', lineHeight: 1.3, marginTop: 6 }}>{c.title}</h2>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -108,11 +142,11 @@ export default function MidnightTemplate() {
               <div style={{ marginBottom: 40 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
                   <h2 style={{ fontFamily: 'var(--disp)', fontSize: '1.5rem' }}>Latest News</h2>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>View all →</span>
+                  <Link href="/site" style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}>View all &rarr;</Link>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
                   {articles.map((a) => (
-                    <div key={a.title} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', transition: 'all .2s' }}>
+                    <Link key={a.title} href="/site" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', transition: 'all .2s', textDecoration: 'none', color: 'inherit', display: 'block' }}>
                       <div style={{ position: 'relative', aspectRatio: '16/9', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>
                         {a.img}
                         {a.badge && (
@@ -130,7 +164,7 @@ export default function MidnightTemplate() {
                           <span>{a.time}</span><span>{a.comments} comments</span>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -141,14 +175,14 @@ export default function MidnightTemplate() {
               {/* Live Scores */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700 }}>⚽ Live Scores</h3>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>See all</span>
+                  <h3 style={{ fontSize: 14, fontWeight: 700 }}>Live Scores</h3>
+                  <Link href="/site" style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}>See all</Link>
                 </div>
                 <div style={{ padding: '16px 20px' }}>
                   {[
-                    { league: 'Premier League', home: '🔵 Man City', away: 'Liverpool 🔴', score: '2 - 1', status: "78'", live: true },
-                    { league: 'La Liga', home: '⚪ Real Madrid', away: 'Barcelona 🔵🔴', score: '1 - 1', status: "62'", live: true },
-                    { league: 'Serie A', home: '⚫🔵 Inter', away: 'Juventus ⚪⚫', score: '20:45', status: '', live: false },
+                    { league: 'Premier League', home: 'Man City', away: 'Liverpool', score: '2 - 1', status: "78'", live: true },
+                    { league: 'La Liga', home: 'Real Madrid', away: 'Barcelona', score: '1 - 1', status: "62'", live: true },
+                    { league: 'Serie A', home: 'Inter', away: 'Juventus', score: '20:45', status: '', live: false },
                   ].map((m) => (
                     <div key={m.league} style={{ padding: 16, background: 'var(--bg-secondary)', borderRadius: 14, marginBottom: 12, borderLeft: m.live ? '3px solid var(--coral)' : 'none' }}>
                       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: 12 }}>{m.league}</div>
@@ -168,8 +202,8 @@ export default function MidnightTemplate() {
               {/* Standings */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700 }}>🏆 Premier League</h3>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>Full table</span>
+                  <h3 style={{ fontSize: 14, fontWeight: 700 }}>Premier League</h3>
+                  <Link href="/site" style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}>Full table</Link>
                 </div>
                 <div style={{ padding: '16px 20px' }}>
                   {standings.map((t) => (
@@ -190,17 +224,17 @@ export default function MidnightTemplate() {
               {/* Trending */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700 }}>📈 Trending</h3>
+                  <h3 style={{ fontSize: 14, fontWeight: 700 }}>Trending</h3>
                 </div>
                 <div style={{ padding: '16px 20px' }}>
                   {trending.map((t) => (
-                    <div key={t.num} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
+                    <Link key={t.num} href="/site" style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 0', borderBottom: '1px solid var(--border)', textDecoration: 'none', color: 'inherit' }}>
                       <span style={{ fontFamily: 'var(--mono)', fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent)' }}>{t.num}</span>
                       <div>
                         <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4, marginBottom: 4 }}>{t.title}</div>
                         <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{t.reads}</span>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>

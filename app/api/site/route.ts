@@ -11,6 +11,7 @@ const UpdateSiteSchema = z.object({
   gaId: z.string().max(50).optional().nullable(),
   language: z.string().min(2).max(10).optional(),
   timezone: z.string().max(50).optional(),
+  theme: z.enum(['editorial', 'midnight']).optional(),
 })
 
 export async function GET() {
@@ -34,6 +35,7 @@ export async function GET() {
       gaId: site.gaId,
       language: site.language,
       timezone: site.timezone,
+      theme: site.theme,
       categories: categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
     })
   } catch (error) {
@@ -64,6 +66,7 @@ export async function PATCH(req: NextRequest) {
         ...(data.gaId !== undefined && { gaId: data.gaId || null }),
         ...(data.language !== undefined && { language: data.language }),
         ...(data.timezone !== undefined && { timezone: data.timezone }),
+        ...(data.theme !== undefined && { theme: data.theme }),
       },
     })
 
@@ -75,6 +78,7 @@ export async function PATCH(req: NextRequest) {
       gaId: updated.gaId,
       language: updated.language,
       timezone: updated.timezone,
+      theme: updated.theme,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

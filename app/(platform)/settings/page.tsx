@@ -50,6 +50,7 @@ export default function SettingsPage() {
         if (data.gaId) setGaId(data.gaId)
         if (data.language) setLanguage(data.language)
         if (data.timezone) setTimezone(data.timezone)
+        if (data.theme) setTheme(data.theme)
       })
       .catch(() => {})
   }, [])
@@ -118,6 +119,9 @@ export default function SettingsPage() {
     }
   }
 
+  // Theme
+  const [theme, setTheme] = useState('editorial')
+
   // Branding
   const [brandColor, setBrandColor] = useState('#00D4AA')
 
@@ -149,6 +153,7 @@ export default function SettingsPage() {
           gaId,
           language,
           timezone,
+          theme,
         }),
       })
       if (res.ok) {
@@ -264,6 +269,69 @@ export default function SettingsPage() {
             <span className="st-label">Favicon</span>
             <div className="st-upload" title="Click to upload" style={{ width: 36, height: 36, fontSize: 14 }}>+</div>
           </div>
+        </div>
+      </div>
+
+      {/* THEME */}
+      <div className="st-section">
+        <div className="st-section-head">
+          <div className="st-section-title">Theme</div>
+          <div className="st-section-desc">Choose how your public site looks to readers. Preview each theme before applying.</div>
+        </div>
+
+        <div className="st-theme-grid">
+          <button
+            className={`st-theme-card ${theme === 'editorial' ? 'active' : ''}`}
+            onClick={() => change(setTheme)('editorial')}
+            type="button"
+          >
+            <div className="st-theme-preview editorial">
+              <div className="st-theme-preview-header">
+                <span className="st-theme-preview-logo">SportNews.</span>
+                <div className="st-theme-preview-nav">
+                  <span /><span /><span /><span />
+                </div>
+              </div>
+              <div className="st-theme-preview-hero" />
+              <div className="st-theme-preview-grid">
+                <span /><span /><span />
+              </div>
+            </div>
+            <div className="st-theme-info">
+              <div className="st-theme-name">Clean Editorial</div>
+              <div className="st-theme-desc">Light, clean design with a focus on readability</div>
+            </div>
+            {theme === 'editorial' && <div className="st-theme-active-badge">Active</div>}
+          </button>
+
+          <button
+            className={`st-theme-card ${theme === 'midnight' ? 'active' : ''}`}
+            onClick={() => change(setTheme)('midnight')}
+            type="button"
+          >
+            <div className="st-theme-preview midnight">
+              <div className="st-theme-preview-header">
+                <span className="st-theme-preview-logo">SportNews.</span>
+                <div className="st-theme-preview-nav">
+                  <span /><span /><span /><span />
+                </div>
+              </div>
+              <div className="st-theme-preview-hero" />
+              <div className="st-theme-preview-grid">
+                <span /><span /><span />
+              </div>
+            </div>
+            <div className="st-theme-info">
+              <div className="st-theme-name">Midnight Pro</div>
+              <div className="st-theme-desc">Dark, immersive design for modern sports coverage</div>
+            </div>
+            {theme === 'midnight' && <div className="st-theme-active-badge">Active</div>}
+          </button>
+        </div>
+
+        <div className="st-theme-actions">
+          <a href="/templates/editorial" className="st-theme-preview-link">Preview Editorial</a>
+          <a href="/templates/midnight" className="st-theme-preview-link">Preview Midnight</a>
         </div>
       </div>
 

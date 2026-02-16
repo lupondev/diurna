@@ -95,6 +95,37 @@
 .st-nl-sub-badge.active { background: var(--suc-l); color: var(--suc); }
 .st-nl-sub-badge.inactive { background: var(--g100); color: var(--g500); }
 
+/* Theme picker */
+.st-theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+.st-theme-card { position: relative; background: var(--wh); border: 2px solid var(--brd); border-radius: var(--rl); padding: 0; overflow: hidden; cursor: pointer; text-align: left; transition: all .2s; font-family: inherit; }
+.st-theme-card:hover { border-color: var(--g400); box-shadow: var(--sh); }
+.st-theme-card.active { border-color: var(--mint); box-shadow: 0 0 0 3px var(--mint-g); }
+.st-theme-preview { height: 140px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.st-theme-preview.editorial { background: #F8FAFC; }
+.st-theme-preview.midnight { background: #0A0A0F; }
+.st-theme-preview-header { display: flex; align-items: center; justify-content: space-between; }
+.st-theme-preview-logo { font-family: var(--disp); font-size: 11px; font-weight: 600; }
+.st-theme-preview.editorial .st-theme-preview-logo { color: #0F172A; }
+.st-theme-preview.midnight .st-theme-preview-logo { color: #fff; }
+.st-theme-preview-nav { display: flex; gap: 4px; }
+.st-theme-preview-nav span { width: 20px; height: 4px; border-radius: 2px; }
+.st-theme-preview.editorial .st-theme-preview-nav span { background: #E2E8F0; }
+.st-theme-preview.midnight .st-theme-preview-nav span { background: #2A2A35; }
+.st-theme-preview-hero { height: 48px; border-radius: 6px; }
+.st-theme-preview.editorial .st-theme-preview-hero { background: linear-gradient(135deg, #1e3a5f, #0f2744); }
+.st-theme-preview.midnight .st-theme-preview-hero { background: linear-gradient(135deg, #1e3a5f, #0f2744); }
+.st-theme-preview-grid { display: flex; gap: 4px; flex: 1; }
+.st-theme-preview-grid span { flex: 1; border-radius: 4px; }
+.st-theme-preview.editorial .st-theme-preview-grid span { background: #fff; border: 1px solid #E2E8F0; }
+.st-theme-preview.midnight .st-theme-preview-grid span { background: #16161F; border: 1px solid #2A2A35; }
+.st-theme-info { padding: 14px 16px; border-top: 1px solid var(--brd); }
+.st-theme-name { font-size: 13px; font-weight: 700; color: var(--g800); margin-bottom: 2px; }
+.st-theme-desc { font-size: 11px; color: var(--g500); }
+.st-theme-active-badge { position: absolute; top: 12px; right: 12px; padding: 3px 10px; font-size: 10px; font-weight: 700; background: var(--mint-l); color: var(--mint-d); border-radius: 10px; }
+.st-theme-actions { display: flex; gap: 12px; margin-bottom: 12px; }
+.st-theme-preview-link { font-size: 12px; font-weight: 600; color: var(--mint-d); text-decoration: none; padding: 6px 14px; background: var(--mint-l); border-radius: var(--rm); transition: all .12s; }
+.st-theme-preview-link:hover { background: var(--mint-g); }
+
 /* Danger zone */
 .st-danger { background: var(--wh); border: 1px solid var(--coral); border-radius: var(--rl); padding: 20px 24px; }
 .st-danger-title { font-size: 13px; font-weight: 700; color: var(--coral); display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
