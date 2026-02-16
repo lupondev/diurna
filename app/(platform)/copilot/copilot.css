@@ -129,4 +129,56 @@
 
 /* Responsive */
 @media (max-width: 1024px) { .cop-strat-grid { grid-template-columns: 1fr; } .cop-rules { grid-template-columns: 1fr; } }
-@media (max-width: 768px) { .cop { padding: 16px; } .cop-modes { grid-template-columns: 1fr; } .cop-stats { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) {
+  .cop { padding: 16px 14px 40px; }
+  .cop-hd h1 { font-size: 18px; }
+  .cop-hd p { font-size: 12px; }
+  .cop-modes { grid-template-columns: 1fr; gap: 8px; }
+  .cop-mode { padding: 14px 16px; text-align: left; display: flex; align-items: center; gap: 12px; }
+  .cop-mode-icon { font-size: 22px; margin-bottom: 0; flex-shrink: 0; }
+  .cop-mode-name { font-size: 13px; }
+  .cop-mode-desc { font-size: 10px; }
+  .cop-stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .cop-stat { padding: 12px 14px; }
+  .cop-stat-val { font-size: 22px; }
+  .cop-progress { flex-direction: column; gap: 8px; padding: 14px 16px; }
+  .cop-prog-text { font-size: 12px; }
+  .cop-prog-bar { width: 100%; }
+  /* Queue mobile */
+  .cop-q-item { flex-wrap: wrap; gap: 10px; padding: 12px 14px; }
+  .cop-q-conf { width: 36px; height: 36px; font-size: 11px; border-radius: 10px; }
+  .cop-q-info { min-width: 0; flex: 1 1 calc(100% - 50px); }
+  .cop-q-info-title { font-size: 12px; white-space: normal; }
+  .cop-q-actions { width: 100%; justify-content: flex-end; }
+  /* Content Strategy */
+  .cop-strat { padding: 18px 16px; }
+  .cop-chips { gap: 5px; }
+  .cop-chip { padding: 5px 10px; font-size: 10px; }
+  .cop-radios { gap: 6px; }
+  .cop-radio { padding: 7px 10px; font-size: 11px; }
+  .cop-slider-label { min-width: 90px; font-size: 11px; }
+  .cop-mix-legend { gap: 10px; }
+  .cop-mix-leg-item { font-size: 9px; }
+  /* Rules */
+  .cop-rule { padding: 14px 16px; }
+  .cop-rule-name { font-size: 13px; flex-wrap: wrap; }
+  .cop-rule-slot { flex-wrap: wrap; gap: 4px; }
+  .cop-rule-slot-type { min-width: 60px; }
+  /* Add rule form */
+  .cop-form-row { grid-template-columns: 1fr; }
+  .cop-add-rule { padding: 16px; }
+  /* Fixture rows */
+  .cop-fix-row { flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
+  .cop-fix-date { font-size: 10px; min-width: auto; }
+  .cop-fix-teams { font-size: 12px; }
+  .cop-fix-detail { padding: 0 14px 12px 14px; }
+  .cop-fix-slot { flex-wrap: wrap; gap: 4px; }
+}
+@media (max-width: 480px) {
+  .cop { padding: 12px 10px 32px; }
+  .cop-hd h1 { font-size: 16px; }
+  .cop-stat-val { font-size: 20px; }
+  .cop-mode { gap: 10px; padding: 12px 14px; }
+  .cop-mode-icon { font-size: 20px; }
+  .cop-q-head { flex-direction: column; gap: 8px; align-items: flex-start; }
+}

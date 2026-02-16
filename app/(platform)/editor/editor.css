@@ -364,3 +364,57 @@
   .te-tb-btn { padding: 3px 5px; }
   .te-tb-label { display: none; }
 }
+@media (max-width: 768px) {
+  .te-sidebar { display: none; }
+  .s1-main { padding: 16px 14px; gap: 16px; flex-direction: column; }
+  .tp { display: none; }
+  .pc { max-width: 100%; }
+  .brand h1 { font-size: 1.8rem; }
+  .brand p { font-size: 13px; }
+  .pb textarea { padding: 14px 16px 8px; font-size: 14px; }
+  .ap-grid { grid-template-columns: repeat(2, 1fr); }
+  .gen-btn { width: 100%; justify-content: center; }
+  .chips { gap: 5px; }
+  .chip { padding: 6px 10px; font-size: 11px; }
+  .mc { padding: 10px 12px; gap: 10px; }
+  .mc-t { font-size: 12px; }
+  .mc-crest { width: 18px; height: 18px; font-size: 9px; }
+  /* Editor top bar */
+  .ed-top { flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .ed-title-bar { font-size: 12px; min-width: 0; }
+  .ed-btn { font-size: 11px; padding: 5px 10px; white-space: nowrap; }
+  /* Toolbar horizontal scroll */
+  .te-toolbar { overflow: hidden; }
+  .te-tb-row { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .te-tb-row::-webkit-scrollbar { display: none; }
+  .te-tb-btn { flex-shrink: 0; }
+  .te-tb-sep { flex-shrink: 0; }
+  .te-tb-label { display: none; }
+  /* Editor area */
+  .ed-form { border-radius: var(--rm); }
+  .ed-title-input { padding: 14px 16px; font-size: 18px; }
+  .ed-meta { flex-wrap: wrap; gap: 8px; padding: 8px 16px; }
+  .ed-select { font-size: 11px; }
+  .te-prose { padding: 16px; font-size: 14px; }
+  /* Status bar */
+  .te-status { flex-wrap: wrap; gap: 4px; padding: 6px 10px; }
+  .te-status-left { font-size: 9px; }
+  /* Modals */
+  .ed-modal { width: 100%; max-width: 100%; border-radius: 0; min-height: 100vh; }
+  .orig-scores { grid-template-columns: 1fr; }
+  /* Editor slug & tags */
+  .ed-slug-row { flex-direction: column; gap: 4px; }
+  .ed-tags-row { flex-direction: column; gap: 6px; }
+  .ed-tag-input { width: 100%; }
+  /* Unsplash */
+  .te-unsplash-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .brand h1 { font-size: 1.5rem; }
+  .s1-main { padding: 12px 10px; }
+  .pb textarea { font-size: 13px; min-height: 60px; }
+  .ed-top { gap: 4px; }
+  .ed-btn { font-size: 10px; padding: 4px 8px; }
+  .ed-title-input { font-size: 16px; padding: 12px; }
+  .te-prose { padding: 12px; font-size: 13px; }
+}

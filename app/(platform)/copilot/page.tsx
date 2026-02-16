@@ -611,9 +611,9 @@ export default function CopilotPage() {
 
           <label className="cop-lbl">Article Slots</label>
           {newRuleSlots.map((slot, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+            <div key={i} className="cop-slot-row" style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <select
-                className="cop-select" style={{ flex: 1 }}
+                className="cop-select" style={{ flex: 1, minWidth: 120 }}
                 value={slot.type}
                 onChange={e => updateNewRuleSlot(i, 'type', e.target.value)}
               >
@@ -631,7 +631,7 @@ export default function CopilotPage() {
                 )}
               </select>
               <input
-                className="cop-input" style={{ flex: 2 }}
+                className="cop-input" style={{ flex: 2, minWidth: 150 }}
                 value={slot.template}
                 onChange={e => updateNewRuleSlot(i, 'template', e.target.value)}
                 placeholder="Template description"

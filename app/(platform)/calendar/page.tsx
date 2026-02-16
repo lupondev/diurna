@@ -295,8 +295,12 @@ function ScheduleModal({ onClose, onSave, defaultDate }: {
   return (
     <Overlay onClose={onClose}>
       <div style={{
-        background: '#fff', borderRadius: 16, width: '100%', maxWidth: 480,
-        padding: 28, boxShadow: '0 24px 48px rgba(0,0,0,.15)',
+        background: '#fff', borderRadius: typeof window !== 'undefined' && window.innerWidth <= 768 ? 0 : 16,
+        width: '100%', maxWidth: typeof window !== 'undefined' && window.innerWidth <= 768 ? '100%' : 480,
+        height: typeof window !== 'undefined' && window.innerWidth <= 768 ? '100%' : 'auto',
+        padding: typeof window !== 'undefined' && window.innerWidth <= 768 ? '20px 16px' : 28,
+        boxShadow: '0 24px 48px rgba(0,0,0,.15)',
+        overflowY: 'auto',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: '#18181B' }}>Schedule Article</h2>
@@ -477,6 +481,25 @@ export default function CalendarPage() {
   const [showOutputModal, setShowOutputModal] = useState(false)
   const [scheduledArticles, setScheduledArticles] = useState<ScheduledArticle[]>([])
   const [dailyTarget, setDailyTarget] = useState(5)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile and auto-switch to List view
+  useEffect(() => {
+    const check = () => {
+      const mobile = window.innerWidth <= 768
+      setIsMobile(mobile)
+    }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Auto-switch to List view on mobile
+  useEffect(() => {
+    if (isMobile && activeView === 'Week') {
+      setActiveView('List')
+    }
+  }, [isMobile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -754,23 +777,28 @@ export default function CalendarPage() {
             background: 'var(--wh)', border: '1px solid var(--brd)', borderRadius: 12,
             overflow: 'hidden',
           }}>
-            {/* Header */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: '100px 80px 1fr 100px 80px',
-              padding: '10px 16px', borderBottom: '1px solid var(--g100)',
-              fontSize: 10, fontWeight: 700, color: 'var(--g400)', textTransform: 'uppercase', letterSpacing: '.06em',
-            }}>
-              <div>Date</div>
-              <div>Time</div>
-              <div>Title</div>
-              <div>Type</div>
-              <div>Status</div>
-            </div>
+            {/* Header - hidden on mobile */}
+            {!isMobile && (
+              <div style={{
+                display: 'grid', gridTemplateColumns: '100px 80px 1fr 100px 80px',
+                padding: '10px 16px', borderBottom: '1px solid var(--g100)',
+                fontSize: 10, fontWeight: 700, color: 'var(--g400)', textTransform: 'uppercase', letterSpacing: '.06em',
+              }}>
+                <div>Date</div>
+                <div>Time</div>
+                <div>Title</div>
+                <div>Type</div>
+                <div>Status</div>
+              </div>
+            )}
             {/* Rows */}
             {listData.map((item) => (
               <div
                 key={item.id}
-                style={{
+                style={isMobile ? {
+                  padding: '10px 14px', borderBottom: '1px solid var(--g50)',
+                  cursor: 'pointer', transition: 'background .12s',
+                } : {
                   display: 'grid', gridTemplateColumns: '100px 80px 1fr 100px 80px',
                   padding: '10px 16px', borderBottom: '1px solid var(--g50)',
                   fontSize: 12, alignItems: 'center', transition: 'background .12s', cursor: 'pointer',
@@ -778,29 +806,59 @@ export default function CalendarPage() {
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--g50)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <div style={{ fontWeight: 600, color: 'var(--g500)', fontSize: 11 }}>{item.dayLabel}</div>
-                <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--g400)', fontSize: 11 }}>{item.time}</div>
-                <div style={{ fontWeight: 600, color: 'var(--g800)', paddingRight: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {item.title}
-                </div>
-                <div>
-                  {item.tags.map((t, ti) => (
-                    <span key={ti} className={`cal-slot-tag ${t.cls}`} style={{ marginRight: 3 }}>{t.label}</span>
-                  ))}
-                </div>
-                <div>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    fontSize: 10, fontWeight: 700, textTransform: 'capitalize',
-                    color: item.status === 'published' ? 'var(--suc)' : item.status === 'scheduled' ? 'var(--elec)' : item.status === 'generating' ? 'var(--gold)' : 'var(--g400)',
-                  }}>
-                    <span style={{
-                      width: 6, height: 6, borderRadius: '50%',
-                      background: item.status === 'published' ? 'var(--suc)' : item.status === 'scheduled' ? 'var(--elec)' : item.status === 'generating' ? 'var(--gold)' : 'var(--g300)',
-                    }} />
-                    {item.status}
-                  </span>
-                </div>
+                {isMobile ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--g400)', fontSize: 10 }}>{item.time}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--g500)', fontSize: 10 }}>{item.dayLabel}</span>
+                      <span style={{
+                        marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 3,
+                        fontSize: 9, fontWeight: 700, textTransform: 'capitalize',
+                        color: item.status === 'published' ? 'var(--suc)' : item.status === 'scheduled' ? 'var(--elec)' : item.status === 'generating' ? 'var(--gold)' : 'var(--g400)',
+                      }}>
+                        <span style={{
+                          width: 5, height: 5, borderRadius: '50%',
+                          background: item.status === 'published' ? 'var(--suc)' : item.status === 'scheduled' ? 'var(--elec)' : item.status === 'generating' ? 'var(--gold)' : 'var(--g300)',
+                        }} />
+                        {item.status}
+                      </span>
+                    </div>
+                    <div style={{ fontWeight: 600, color: 'var(--g800)', fontSize: 12, marginBottom: 4, lineHeight: 1.3 }}>
+                      {item.title}
+                    </div>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {item.tags.map((t, ti) => (
+                        <span key={ti} className={`cal-slot-tag ${t.cls}`}>{t.label}</span>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontWeight: 600, color: 'var(--g500)', fontSize: 11 }}>{item.dayLabel}</div>
+                    <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--g400)', fontSize: 11 }}>{item.time}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--g800)', paddingRight: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.title}
+                    </div>
+                    <div>
+                      {item.tags.map((t, ti) => (
+                        <span key={ti} className={`cal-slot-tag ${t.cls}`} style={{ marginRight: 3 }}>{t.label}</span>
+                      ))}
+                    </div>
+                    <div>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        fontSize: 10, fontWeight: 700, textTransform: 'capitalize',
+                        color: item.status === 'published' ? 'var(--suc)' : item.status === 'scheduled' ? 'var(--elec)' : item.status === 'generating' ? 'var(--gold)' : 'var(--g400)',
+                      }}>
+                        <span style={{
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: item.status === 'published' ? 'var(--suc)' : item.status === 'scheduled' ? 'var(--elec)' : item.status === 'generating' ? 'var(--gold)' : 'var(--g300)',
+                        }} />
+                        {item.status}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
             {listData.length === 0 && (

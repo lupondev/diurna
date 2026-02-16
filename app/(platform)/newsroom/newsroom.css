@@ -323,15 +323,41 @@
 @media (max-width: 768px) {
   .nr5-stats { flex-wrap: wrap; padding: 12px 16px; gap: 8px; }
   .nr5-stat { flex: 1 1 calc(50% - 4px); min-width: 0; }
-  .nr5-head { flex-wrap: wrap; padding: 12px 16px; }
+  .nr5-stat-val { font-size: 1.2rem; }
+  .nr5-head { flex-wrap: wrap; padding: 12px 16px; gap: 10px; }
+  .nr5-head-left { width: 100%; }
   .nr5-search-box { width: 100%; order: 3; }
-  .nr5-filters { padding: 10px 16px; }
-  .nr5-filter-right { flex-wrap: wrap; }
-  .nr5-feed { padding: 16px; }
+  .nr5-head-actions { width: 100%; }
+  .nr5-btn { width: 100%; justify-content: center; }
+  .nr5-filters { padding: 10px 14px; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .nr5-filters::-webkit-scrollbar { display: none; }
+  .nr5-chip { flex-shrink: 0; }
+  .nr5-filter-right { flex-wrap: wrap; margin-left: 0; width: 100%; }
+  .nr5-feed { padding: 14px; }
   .nr5-shortcuts { display: none; }
   .smart-hotbar { display: none; }
-  .smart-trending { padding: 16px; }
+  .smart-trending { padding: 14px; }
   .smart-grid { grid-template-columns: 1fr; }
-  .smart-tabs { padding: 10px 16px; }
+  .smart-tabs { padding: 10px 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .smart-tabs::-webkit-scrollbar { display: none; }
+  .smart-tab { flex-shrink: 0; }
   .smart-tab-right { display: none; }
+  .smart-card { padding: 16px; }
+  .smart-card-actions { flex-direction: column; }
+  .smart-generate-btn { width: 100%; }
+  .smart-manual-btn { width: 100%; text-align: center; }
+  /* Article card mobile */
+  .nr5-article-inner { grid-template-columns: 1fr; gap: 10px; }
+  .nr5-article-side { flex-direction: row; border-left: none; padding-left: 0; padding-top: 10px; border-top: 1px solid var(--brd); justify-content: flex-start; }
+  .nr5-article-title { font-size: 1rem; }
+  .nr5-dist { padding: 8px 14px; }
+}
+@media (max-width: 480px) {
+  .nr5-title { font-size: 1rem; }
+  .nr5-stat { padding: 10px 12px; }
+  .nr5-stat-val { font-size: 1rem; }
+  .nr5-article-inner { padding: 14px; }
+  .smart-card-top { flex-direction: column; align-items: flex-start; }
+  .smart-score-circle { width: 40px; height: 40px; }
+  .smart-score-num { font-size: 0.9rem; }
 }

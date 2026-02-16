@@ -264,13 +264,13 @@ export default function LandingPage() {
           >
             <Link
               href="/register"
-              className="px-8 py-3.5 text-sm font-semibold bg-gradient-to-r from-blue-500 to-violet-500 rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all hover:-translate-y-0.5"
+              className="w-full sm:w-auto text-center px-8 py-3.5 text-sm font-semibold bg-gradient-to-r from-blue-500 to-violet-500 rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all hover:-translate-y-0.5"
             >
               Start Free Trial
             </Link>
             <button
               onClick={() => scrollTo('demo')}
-              className="px-8 py-3.5 text-sm font-semibold border border-white/[0.12] rounded-xl text-white/80 hover:bg-white/[0.04] hover:border-white/20 transition-all flex items-center gap-2"
+              className="w-full sm:w-auto px-8 py-3.5 text-sm font-semibold border border-white/[0.12] rounded-xl text-white/80 hover:bg-white/[0.04] hover:border-white/20 transition-all flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M6.3 2.84A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.27l9.344-5.891a1.5 1.5 0 000-2.538L6.3 2.841z" />
@@ -284,7 +284,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.8, ease: 'easeOut' }}
-            className="max-w-[960px] mx-auto"
+            className="hidden sm:block max-w-[960px] mx-auto"
           >
             <div
               className="mockup-float rounded-2xl border border-white/[0.08] bg-[#111113] overflow-hidden"
@@ -321,7 +321,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Hot topics bar */}
-                <div className="flex gap-2 mb-4 overflow-hidden">
+                <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
                   {mockupTopics.map((t, i) => (
                     <div key={i} className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.04] border border-white/[0.06] rounded-full">
                       <span className="text-[9px]">{'\u{1F525}'}</span>
@@ -332,8 +332,8 @@ export default function LandingPage() {
                 </div>
 
                 {/* Smart cards grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
-                  {mockupCards.map((card, i) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                  {mockupCards.slice(0, typeof window !== 'undefined' && window.innerWidth < 640 ? 3 : 6).map((card, i) => (
                     <div key={i} className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 relative">
                       <div className={`absolute top-2 right-2 w-7 h-7 rounded-full ${card.color} flex items-center justify-center text-[9px] font-mono font-bold`}>
                         {card.score}
@@ -427,7 +427,7 @@ export default function LandingPage() {
           <FadeIn delay={0.1}>
             <div className="max-w-[720px] mx-auto">
               {/* Tabs */}
-              <div className="flex gap-1 bg-white/[0.04] rounded-xl p-1 mb-6 w-fit mx-auto">
+              <div className="flex gap-1 bg-white/[0.04] rounded-xl p-1 mb-6 w-fit mx-auto overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
                 {(['standings', 'fixtures', 'scorers'] as const).map((tab) => (
                   <button
                     key={tab}
@@ -578,7 +578,7 @@ export default function LandingPage() {
             </h2>
           </FadeIn>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-4 relative">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4 relative">
             {/* Connecting line */}
             <div className="hidden md:block absolute top-10 left-[20%] right-[20%] h-px bg-gradient-to-r from-blue-500/40 via-violet-500/40 to-pink-500/40" />
 
@@ -605,7 +605,7 @@ export default function LandingPage() {
       <section className="py-16 md:py-20 bg-[#0D0D0F] border-y border-white/[0.04]">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
           <FadeIn>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12 mb-12">
               {[
                 { target: 50, suffix: '+', prefix: '', label: 'Football Leagues' },
                 { target: 13, suffix: '', prefix: '', label: 'Widget Types' },
@@ -613,7 +613,7 @@ export default function LandingPage() {
                 { target: 2, suffix: ' min', prefix: '< ', label: 'Per Article' },
               ].map((stat) => (
                 <div key={stat.label}>
-                  <div className="text-4xl md:text-5xl font-mono font-bold text-white mb-2">
+                  <div className="text-3xl sm:text-4xl md:text-5xl font-mono font-bold text-white mb-2">
                     {stat.prefix}<AnimatedCounter target={stat.target} suffix={stat.suffix} />
                   </div>
                   <div className="text-sm text-white/40">{stat.label}</div>
@@ -646,7 +646,7 @@ export default function LandingPage() {
             </p>
           </FadeIn>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-[960px] mx-auto items-start">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 max-w-[960px] mx-auto items-start">
             {/* Starter */}
             <FadeIn>
               <div className="h-full rounded-2xl border border-white/[0.06] bg-[#111113] p-7 flex flex-col">
@@ -763,7 +763,7 @@ export default function LandingPage() {
             </p>
             <Link
               href="/register"
-              className="inline-flex px-10 py-4 text-base font-semibold bg-gradient-to-r from-blue-500 to-violet-500 rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all hover:-translate-y-0.5"
+              className="inline-flex w-full sm:w-auto justify-center px-10 py-4 text-base font-semibold bg-gradient-to-r from-blue-500 to-violet-500 rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all hover:-translate-y-0.5"
             >
               Start Free Trial
             </Link>
