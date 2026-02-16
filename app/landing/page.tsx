@@ -69,10 +69,10 @@ const mockupCards = [
 function FadeIn({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 0.6, delay, ease: [0.16, 1, 0.3, 1] }}
+      viewport={{ once: true, amount: 0 }}
+      transition={{ duration: 0.6, delay, ease: 'easeOut' }}
       className={className}
     >
       {children}
@@ -82,7 +82,7 @@ function FadeIn({ children, className = '', delay = 0 }: { children: React.React
 
 function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null)
-  const isInView = useInView(ref, { once: true })
+  const isInView = useInView(ref, { once: true, amount: 0 })
   const [count, setCount] = useState(0)
 
   useEffect(() => {
@@ -226,7 +226,7 @@ export default function LandingPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.1, duration: 0.8, ease: 'easeOut' }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-medium text-white/50 mb-8"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
@@ -237,7 +237,7 @@ export default function LandingPage() {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.2, duration: 0.8, ease: 'easeOut' }}
             className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight leading-[1.05] mb-6"
           >
             The <span className="gradient-text">AI Newsroom</span> for
@@ -248,7 +248,7 @@ export default function LandingPage() {
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.3, duration: 0.8, ease: 'easeOut' }}
             className="text-base md:text-lg text-white/50 max-w-[640px] mx-auto mb-10 leading-relaxed"
           >
             From trending topics to published articles in minutes. AI-powered content
@@ -259,7 +259,7 @@ export default function LandingPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.4, duration: 0.8, ease: 'easeOut' }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 md:mb-20"
           >
             <Link
@@ -283,7 +283,7 @@ export default function LandingPage() {
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.6, duration: 0.8, ease: 'easeOut' }}
             className="max-w-[960px] mx-auto"
           >
             <div
@@ -360,7 +360,7 @@ export default function LandingPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.8, duration: 0.8, ease: 'easeOut' }}
             className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-[800px] mx-auto"
           >
             {[
@@ -381,7 +381,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* FEATURES GRID                      */}
       {/* ═══════════════════════════════════ */}
-      <section id="features" className="py-24 md:py-32">
+      <section id="features" className="py-20 md:py-24">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-16">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400 mb-4">Features</p>
@@ -412,7 +412,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* LIVE WIDGET DEMO                   */}
       {/* ═══════════════════════════════════ */}
-      <section id="demo" className="py-24 md:py-32 bg-[#0D0D0F] border-y border-white/[0.04]">
+      <section id="demo" className="py-20 md:py-24 bg-[#0D0D0F] border-y border-white/[0.04]">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-12">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400 mb-4">Live Demo</p>
@@ -569,7 +569,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* HOW IT WORKS                       */}
       {/* ═══════════════════════════════════ */}
-      <section className="py-24 md:py-32">
+      <section className="py-20 md:py-24">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-16 md:mb-20">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400 mb-4">How It Works</p>
@@ -602,7 +602,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* SOCIAL PROOF / STATS               */}
       {/* ═══════════════════════════════════ */}
-      <section className="py-24 md:py-32 bg-[#0D0D0F] border-y border-white/[0.04]">
+      <section className="py-20 md:py-24 bg-[#0D0D0F] border-y border-white/[0.04]">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
           <FadeIn>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
@@ -634,7 +634,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* PRICING                            */}
       {/* ═══════════════════════════════════ */}
-      <section id="pricing" className="py-24 md:py-32">
+      <section id="pricing" className="py-20 md:py-24">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-16">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400 mb-4">Pricing</p>
@@ -748,7 +748,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* FINAL CTA                          */}
       {/* ═══════════════════════════════════ */}
-      <section className="py-24 md:py-32 relative overflow-hidden">
+      <section className="py-20 md:py-24 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-blue-500/[0.06] blur-[120px] pointer-events-none" />
         <div className="absolute top-1/2 left-[40%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-violet-500/[0.06] blur-[100px] pointer-events-none" />
 
