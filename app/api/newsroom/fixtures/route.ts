@@ -119,5 +119,27 @@ function generateMockLive() {
         { minute: 61, type: 'yellow', detail: 'Yellow card for Rodri', team: 'Manchester City' },
       ],
     },
+    {
+      id: 2002, elapsed: 38, league: 'Premier League',
+      homeTeam: 'Arsenal', awayTeam: 'Liverpool',
+      homeGoals: 1, awayGoals: 1, status: '1H',
+      events: [
+        { minute: 15, type: 'goal', detail: 'Saka curls one in from the edge of the box', team: 'Arsenal' },
+        { minute: 29, type: 'goal', detail: 'Salah equalizes with a clinical finish', team: 'Liverpool' },
+        { minute: 33, type: 'yellow', detail: 'Yellow card for Rice', team: 'Arsenal' },
+      ],
+    },
+    {
+      id: 2003, elapsed: 72, league: 'La Liga',
+      homeTeam: 'Barcelona', awayTeam: 'Atletico Madrid',
+      homeGoals: 3, awayGoals: 0, status: '2H',
+      events: [
+        { minute: 8, type: 'goal', detail: 'Lamine Yamal opens the scoring', team: 'Barcelona' },
+        { minute: 27, type: 'goal', detail: 'Lewandowski doubles the lead from the penalty spot', team: 'Barcelona' },
+        { minute: 41, type: 'red', detail: 'Red card for Savic — violent conduct', team: 'Atletico Madrid' },
+        { minute: 55, type: 'goal', detail: 'Pedri makes it three with a tap-in', team: 'Barcelona' },
+        { minute: 68, type: 'yellow', detail: 'Yellow card for Gavi', team: 'Barcelona' },
+      ],
+    },
   ]
 }

@@ -63,6 +63,19 @@ export async function GET() {
     return NextResponse.json(result)
   } catch (error) {
     console.error('Reddit error:', error)
-    return NextResponse.json({ error: 'Failed to fetch Reddit' }, { status: 500 })
+    return NextResponse.json({ posts: getMockRedditPosts(), total: 8, source: 'mock', fetchedAt: new Date().toISOString() })
   }
+}
+
+function getMockRedditPosts() {
+  return [
+    { title: 'Salah breaks Premier League assist record with stunning through ball', score: 12400, comments: 1823, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 1800000).toISOString() },
+    { title: '[Fabrizio Romano] Arsenal complete signing of midfielder — here we go confirmed', score: 9800, comments: 2105, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 3600000).toISOString() },
+    { title: 'Post Match Thread: Real Madrid 3-2 Barcelona [La Liga]', score: 8200, comments: 4521, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 7200000).toISOString() },
+    { title: 'VAR decision in City vs Liverpool sparks massive debate', score: 7600, comments: 3200, link: 'https://reddit.com', subreddit: 'PremierLeague', pubDate: new Date(Date.now() - 10800000).toISOString() },
+    { title: 'Haaland scores hat-trick to go top of Golden Boot race', score: 6100, comments: 890, link: 'https://reddit.com', subreddit: 'PremierLeague', pubDate: new Date(Date.now() - 14400000).toISOString() },
+    { title: 'Bayern Munich sack manager after Champions League exit', score: 5400, comments: 1450, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 18000000).toISOString() },
+    { title: 'Newcastle announce record-breaking sponsorship deal', score: 3200, comments: 670, link: 'https://reddit.com', subreddit: 'PremierLeague', pubDate: new Date(Date.now() - 21600000).toISOString() },
+    { title: 'Compilation of all red cards this season — the worst tackles', score: 2800, comments: 520, link: 'https://reddit.com', subreddit: 'football', pubDate: new Date(Date.now() - 43200000).toISOString() },
+  ]
 }

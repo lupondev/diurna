@@ -1,9 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { StoryGapDetector, VelocityTracker } from '@/components/newsroom/intelligence-sidebar'
 import './newsroom.css'
 
 type TagInfo = { tag: { id: string; name: string } }
@@ -83,23 +81,30 @@ function getSourceStyle(source: string) {
   return { bg: 'var(--g200)', color: 'var(--g700)' }
 }
 
-const categoryColors: Record<string, string> = {
-  'Sport': 'cat-green', 'Sports': 'cat-green', 'Football': 'cat-green',
-  'Politics': 'cat-purple', 'Tech': 'cat-blue', 'Technology': 'cat-blue',
-  'Business': 'cat-gold', 'Entertainment': 'cat-coral', 'Show': 'cat-coral',
-  'Breaking': 'cat-breaking', 'General': 'cat-default',
+function getDomain(link: string) {
+  try { return new URL(link).hostname.replace('www.', '') } catch { return '' }
+}
+
+const SPORT_KEYWORDS = [
+  'football', 'soccer', 'match', 'league', 'cup', 'transfer', 'goal', 'score',
+  'premier league', 'la liga', 'champions league', 'serie a', 'bundesliga', 'ligue 1',
+  'arsenal', 'chelsea', 'liverpool', 'manchester', 'man city', 'man utd', 'tottenham', 'newcastle',
+  'real madrid', 'barcelona', 'bayern', 'psg', 'juventus', 'inter milan', 'ac milan', 'dortmund',
+  'player', 'coach', 'manager', 'stadium', 'referee', 'var', 'penalty', 'red card',
+  'world cup', 'euro', 'uefa', 'fifa', 'fa cup', 'carabao',
+  'haaland', 'mbappe', 'salah', 'messi', 'ronaldo', 'bellingham', 'saka', 'vinicius',
+  'nfl', 'nba', 'tennis', 'f1', 'formula', 'olympics', 'cricket', 'rugby',
+  'athletic', 'sport', 'game', 'team', 'season', 'fixture', 'derby', 'final',
+  'injury', 'signing', 'contract', 'loan', 'relegation', 'promotion', 'champion',
+]
+
+function isSportsTopic(title: string): boolean {
+  const lower = title.toLowerCase()
+  return SPORT_KEYWORDS.some(kw => lower.includes(kw))
 }
 
 const categoryIcons: Record<string, string> = {
   'Sport': '⚽', 'Politics': '🏛️', 'Tech': '💻', 'Business': '📊', 'Entertainment': '🎬', 'General': '📰',
-}
-
-const typeLabels: Record<string, string> = {
-  'breaking': '⚡ Breaking', 'report': '📝 Report', 'analysis': '🔬 Analysis', 'preview': '👁️ Preview',
-}
-
-const velocityIcons: Record<string, string> = {
-  'rising': '📈', 'peaked': '🔥', 'falling': '📉',
 }
 
 const SMART_GEN_STEPS = [
@@ -108,6 +113,65 @@ const SMART_GEN_STEPS = [
   'Creating poll & quiz...',
   'Optimizing SEO...',
   'Finalizing article package...',
+]
+
+function isTopicHot(title: string, allItems: BreakingItem[]) {
+  const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1000
+  const words = title.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+  const recentItems = allItems.filter(i => {
+    const d = new Date(i.pubDate).getTime()
+    return !isNaN(d) && d > threeHoursAgo
+  })
+  let matches = 0
+  for (const item of recentItems) {
+    if (item.title === title) continue
+    const itemWords = item.title.toLowerCase().split(/\s+/)
+    const shared = words.filter(w => itemWords.includes(w))
+    if (shared.length >= 2) matches++
+  }
+  return matches >= 5
+}
+
+const MOCK_BREAKING: BreakingItem[] = [
+  { title: 'Arsenal extend Premier League lead with dominant win over Wolves', source: 'BBC Sport', link: 'https://bbc.co.uk/sport/football', pubDate: new Date(Date.now() - 1800000).toISOString() },
+  { title: 'Haaland scores hat-trick as Man City thrash Everton 5-0', source: 'Sky Sports', link: 'https://skysports.com/football', pubDate: new Date(Date.now() - 3600000).toISOString() },
+  { title: 'Liverpool confirm Salah contract extension through 2027', source: 'ESPN', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 5400000).toISOString() },
+  { title: 'Real Madrid eye summer move for Premier League midfielder', source: 'The Guardian', link: 'https://theguardian.com/football', pubDate: new Date(Date.now() - 7200000).toISOString() },
+  { title: 'Champions League draw: Barcelona face Bayern Munich in quarter-finals', source: 'ESPN FC', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 9000000).toISOString() },
+  { title: 'VAR controversy overshadows Manchester derby as City snatch late equalizer', source: 'BBC Sport', link: 'https://bbc.co.uk/sport/football', pubDate: new Date(Date.now() - 10800000).toISOString() },
+  { title: 'Newcastle United announce record commercial deal worth £40m per year', source: 'Sky Sports', link: 'https://skysports.com/football', pubDate: new Date(Date.now() - 14400000).toISOString() },
+  { title: 'Tottenham sack manager after five consecutive Premier League defeats', source: 'The Athletic', link: 'https://theathletic.com/football', pubDate: new Date(Date.now() - 18000000).toISOString() },
+  { title: 'Mbappe suffers hamstring injury, could miss Champions League tie', source: 'Marca', link: 'https://marca.com', pubDate: new Date(Date.now() - 21600000).toISOString() },
+  { title: 'Chelsea youngster breaks through with stunning debut goal against Aston Villa', source: 'ESPN', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 25200000).toISOString() },
+]
+
+const MOCK_TRANSFERS: BreakingItem[] = [
+  { title: '[Fabrizio Romano] Arsenal complete signing of Spain international — here we go confirmed', source: 'The Guardian', link: 'https://theguardian.com/football', pubDate: new Date(Date.now() - 3600000).toISOString() },
+  { title: 'Manchester United agree £65m fee for Bundesliga striker', source: 'Sky Sports', link: 'https://skysports.com/football', pubDate: new Date(Date.now() - 7200000).toISOString() },
+  { title: 'Chelsea target Ajax defender as squad overhaul continues', source: 'ESPN', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 10800000).toISOString() },
+  { title: 'Liverpool identify La Liga winger as Salah long-term successor', source: 'The Athletic', link: 'https://theathletic.com/football', pubDate: new Date(Date.now() - 14400000).toISOString() },
+  { title: 'Real Madrid to trigger €120m release clause for Premier League star', source: 'Marca', link: 'https://marca.com', pubDate: new Date(Date.now() - 18000000).toISOString() },
+  { title: 'PSG offer Barcelona forward in swap deal for midfielder', source: 'ESPN FC', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 21600000).toISOString() },
+  { title: 'Tottenham close in on Serie A midfielder for £30m transfer', source: 'BBC Sport', link: 'https://bbc.co.uk/sport/football', pubDate: new Date(Date.now() - 25200000).toISOString() },
+  { title: 'Newcastle enter race for Napoli winger rated at €80m', source: 'The Guardian', link: 'https://theguardian.com/football', pubDate: new Date(Date.now() - 36000000).toISOString() },
+]
+
+const MOCK_YOUTUBE: YouTubeVideo[] = [
+  { title: 'HIGHLIGHTS | Real Madrid 3-1 Barcelona | El Clasico', channel: 'Real Madrid', videoId: '6stlCkUDG_s', link: 'https://www.youtube.com/watch?v=6stlCkUDG_s', thumbnail: 'https://i.ytimg.com/vi/6stlCkUDG_s/mqdefault.jpg', pubDate: new Date(Date.now() - 3600000).toISOString() },
+  { title: 'Champions League BEST GOALS of the Week!', channel: 'UEFA Champions League', videoId: 'MFb3PCVyiGk', link: 'https://www.youtube.com/watch?v=MFb3PCVyiGk', thumbnail: 'https://i.ytimg.com/vi/MFb3PCVyiGk/mqdefault.jpg', pubDate: new Date(Date.now() - 7200000).toISOString() },
+  { title: 'Transfer News LIVE: Latest Signings and Deals', channel: 'Sky Sports', videoId: 'Wz_DNrKVifQ', link: 'https://www.youtube.com/watch?v=Wz_DNrKVifQ', thumbnail: 'https://i.ytimg.com/vi/Wz_DNrKVifQ/mqdefault.jpg', pubDate: new Date(Date.now() - 14400000).toISOString() },
+  { title: 'Premier League Preview: Matchday 28 Analysis', channel: 'ESPN FC', videoId: 'JHkA3te0dEY', link: 'https://www.youtube.com/watch?v=JHkA3te0dEY', thumbnail: 'https://i.ytimg.com/vi/JHkA3te0dEY/mqdefault.jpg', pubDate: new Date(Date.now() - 21600000).toISOString() },
+  { title: 'Top 10 Goals | Premier League 2024/25', channel: 'Premier League', videoId: 'TkwF2dOGjY4', link: 'https://www.youtube.com/watch?v=TkwF2dOGjY4', thumbnail: 'https://i.ytimg.com/vi/TkwF2dOGjY4/mqdefault.jpg', pubDate: new Date(Date.now() - 54000000).toISOString() },
+  { title: 'Tactical Breakdown: How Arsenal Dominated the League', channel: 'The Athletic FC', videoId: 'v0IjjKXGvLQ', link: 'https://www.youtube.com/watch?v=v0IjjKXGvLQ', thumbnail: 'https://i.ytimg.com/vi/v0IjjKXGvLQ/mqdefault.jpg', pubDate: new Date(Date.now() - 86400000).toISOString() },
+]
+
+const MOCK_REDDIT: RedditPost[] = [
+  { title: 'Salah breaks Premier League assist record with stunning through ball', score: 12400, comments: 1823, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 1800000).toISOString() },
+  { title: '[Fabrizio Romano] Arsenal complete signing of midfielder — here we go confirmed', score: 9800, comments: 2105, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 3600000).toISOString() },
+  { title: 'Post Match Thread: Real Madrid 3-2 Barcelona [La Liga]', score: 8200, comments: 4521, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 7200000).toISOString() },
+  { title: 'VAR decision in City vs Liverpool sparks massive debate', score: 7600, comments: 3200, link: 'https://reddit.com', subreddit: 'PremierLeague', pubDate: new Date(Date.now() - 10800000).toISOString() },
+  { title: 'Haaland scores hat-trick to go top of Golden Boot race', score: 6100, comments: 890, link: 'https://reddit.com', subreddit: 'PremierLeague', pubDate: new Date(Date.now() - 14400000).toISOString() },
+  { title: 'Bayern Munich sack manager after Champions League exit', score: 5400, comments: 1450, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 18000000).toISOString() },
 ]
 
 export default function NewsroomPage() {
@@ -119,10 +183,13 @@ export default function NewsroomPage() {
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
   const [trendingLoading, setTrendingLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'trending' | 'breaking' | 'fixtures' | 'youtube' | 'fanbuzz' | 'transfers' | 'stats'>('trending')
+  const [activeTab, setActiveTab] = useState<'breaking' | 'transfers' | 'live' | 'youtube' | 'fanbuzz'>('breaking')
   const [generatingTopic, setGeneratingTopic] = useState<string | null>(null)
   const [genStep, setGenStep] = useState(0)
   const [genError, setGenError] = useState<string | null>(null)
+
+  const [activeTrend, setActiveTrend] = useState<string | null>(null)
+  const [opportunitiesOpen, setOpportunitiesOpen] = useState(true)
 
   const [breakingNews, setBreakingNews] = useState<BreakingItem[]>([])
   const [breakingLoading, setBreakingLoading] = useState(false)
@@ -131,15 +198,10 @@ export default function NewsroomPage() {
   const [fixturesLoading, setFixturesLoading] = useState(false)
   const [redditPosts, setRedditPosts] = useState<RedditPost[]>([])
   const [redditLoading, setRedditLoading] = useState(false)
-  const [standings, setStandings] = useState<{ rank: number; team: string; points: number; played: number; won: number; drawn: number; lost: number; gf: number; ga: number; gd: number }[]>([])
-  const [topScorers, setTopScorers] = useState<{ name: string; team: string; goals: number; appearances: number }[]>([])
-  const [statsLoading, setStatsLoading] = useState(false)
   const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideo[]>([])
   const [youtubeLoading, setYoutubeLoading] = useState(false)
   const [transferNews, setTransferNews] = useState<BreakingItem[]>([])
   const [transfersLoading, setTransfersLoading] = useState(false)
-
-  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   useEffect(() => {
     setTrendingLoading(true)
@@ -152,18 +214,20 @@ export default function NewsroomPage() {
       .then((r) => r.json())
       .then((data) => { setArticles(data.articles || data || []); setLoading(false) })
       .catch(() => setLoading(false))
+
+    setBreakingLoading(true)
+    fetch('/api/newsroom/google-news')
+      .then((r) => r.json())
+      .then((data) => {
+        const items = data.items || []
+        setBreakingNews(items.length > 0 ? items : MOCK_BREAKING)
+      })
+      .catch(() => setBreakingNews(MOCK_BREAKING))
+      .finally(() => setBreakingLoading(false))
   }, [])
 
   useEffect(() => {
-    if (activeTab === 'breaking' && breakingNews.length === 0 && !breakingLoading) {
-      setBreakingLoading(true)
-      fetch('/api/newsroom/google-news')
-        .then((r) => r.json())
-        .then((data) => setBreakingNews(data.items || []))
-        .catch(() => {})
-        .finally(() => setBreakingLoading(false))
-    }
-    if (activeTab === 'fixtures' && fixtures.length === 0 && !fixturesLoading) {
+    if (activeTab === 'live' && fixtures.length === 0 && !fixturesLoading) {
       setFixturesLoading(true)
       fetch('/api/newsroom/fixtures')
         .then((r) => r.json())
@@ -175,32 +239,33 @@ export default function NewsroomPage() {
       setRedditLoading(true)
       fetch('/api/newsroom/reddit')
         .then((r) => r.json())
-        .then((data) => setRedditPosts(data.posts || []))
-        .catch(() => {})
+        .then((data) => {
+          const posts = data.posts || []
+          setRedditPosts(posts.length > 0 ? posts : MOCK_REDDIT)
+        })
+        .catch(() => setRedditPosts(MOCK_REDDIT))
         .finally(() => setRedditLoading(false))
-    }
-    if (activeTab === 'stats' && standings.length === 0 && !statsLoading) {
-      setStatsLoading(true)
-      fetch('/api/newsroom/stats')
-        .then((r) => r.json())
-        .then((data) => { setStandings(data.standings || []); setTopScorers(data.topScorers || []) })
-        .catch(() => {})
-        .finally(() => setStatsLoading(false))
     }
     if (activeTab === 'youtube' && youtubeVideos.length === 0 && !youtubeLoading) {
       setYoutubeLoading(true)
       fetch('/api/newsroom/youtube')
         .then((r) => r.json())
-        .then((data) => setYoutubeVideos(data.videos || []))
-        .catch(() => {})
+        .then((data) => {
+          const vids = data.videos || []
+          setYoutubeVideos(vids.length > 0 ? vids : MOCK_YOUTUBE)
+        })
+        .catch(() => setYoutubeVideos(MOCK_YOUTUBE))
         .finally(() => setYoutubeLoading(false))
     }
     if (activeTab === 'transfers' && transferNews.length === 0 && !transfersLoading) {
       setTransfersLoading(true)
       fetch('/api/newsroom/google-news?q=football+transfer+official+confirmed')
         .then((r) => r.json())
-        .then((data) => setTransferNews(data.items || []))
-        .catch(() => {})
+        .then((data) => {
+          const items = data.items || []
+          setTransferNews(items.length > 0 ? items : MOCK_TRANSFERS)
+        })
+        .catch(() => setTransferNews(MOCK_TRANSFERS))
         .finally(() => setTransfersLoading(false))
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -243,25 +308,51 @@ export default function NewsroomPage() {
   }
 
   const searchLower = search.toLowerCase()
-  const filteredBreaking = breakingNews.filter(i => !search || i.title.toLowerCase().includes(searchLower))
-  const filteredFixtures = fixtures.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower))
-  const filteredLive = liveMatches.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower))
-  const filteredReddit = redditPosts.filter(i => !search || i.title.toLowerCase().includes(searchLower))
-  const filteredYoutube = youtubeVideos.filter(i => !search || i.title.toLowerCase().includes(searchLower) || i.channel.toLowerCase().includes(searchLower))
-  const filteredTransfers = transferNews.filter(i => !search || i.title.toLowerCase().includes(searchLower))
-  const filteredTrending = trendingTopics.filter(i => !search || i.title.toLowerCase().includes(searchLower))
+  const trendLower = activeTrend?.toLowerCase() || ''
 
-  const topTrending = trendingTopics.slice(0, 5)
+  function matchesTrend(text: string) {
+    if (!trendLower) return true
+    return text.toLowerCase().includes(trendLower)
+  }
+
+  const filteredBreaking = breakingNews.filter(i => (!search || i.title.toLowerCase().includes(searchLower)) && matchesTrend(i.title))
+  const filteredLive = liveMatches.filter(i => (!search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower)) && (matchesTrend(i.homeTeam) || matchesTrend(i.awayTeam) || matchesTrend(i.league)))
+  const filteredFixtures = fixtures.filter(i => (!search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower)) && (matchesTrend(i.homeTeam) || matchesTrend(i.awayTeam) || matchesTrend(i.league)))
+  const filteredReddit = redditPosts.filter(i => (!search || i.title.toLowerCase().includes(searchLower)) && matchesTrend(i.title))
+  const filteredYoutube = youtubeVideos.filter(i => (!search || i.title.toLowerCase().includes(searchLower) || i.channel.toLowerCase().includes(searchLower)) && matchesTrend(i.title))
+  const filteredTransfers = transferNews.filter(i => (!search || i.title.toLowerCase().includes(searchLower)) && matchesTrend(i.title))
+
+  const sportsTrending = useMemo(() => {
+    return trendingTopics.filter(t => t.category === 'Sport' || isSportsTopic(t.title))
+  }, [trendingTopics])
+
+  const topTrending = sportsTrending.slice(0, 5)
 
   const tabs = [
-    { key: 'trending' as const, icon: '🔥', label: 'TRENDING', count: trendingTopics.length },
     { key: 'breaking' as const, icon: '📰', label: 'BREAKING', count: breakingNews.length },
-    { key: 'fixtures' as const, icon: '⚽', label: 'FIXTURES', count: fixtures.length + liveMatches.length },
+    { key: 'transfers' as const, icon: '🔄', label: 'TRANSFERS', count: transferNews.length },
+    { key: 'live' as const, icon: '⚽', label: 'LIVE', count: liveMatches.length },
     { key: 'youtube' as const, icon: '📺', label: 'YOUTUBE', count: youtubeVideos.length },
     { key: 'fanbuzz' as const, icon: '💬', label: 'FAN BUZZ', count: redditPosts.length },
-    { key: 'transfers' as const, icon: '🔄', label: 'TRANSFERS', count: transferNews.length },
-    { key: 'stats' as const, icon: '📊', label: 'STATS', count: standings.length },
   ]
+
+  const opportunities = useMemo(() => {
+    if (sportsTrending.length === 0 || loading) return []
+    const articleTitlesLower = articles.map(a => a.title.toLowerCase()).join(' ')
+    const gaps: { topic: string; sources: number }[] = []
+    for (const trend of sportsTrending) {
+      const tLower = trend.title.toLowerCase()
+      if (!articleTitlesLower.includes(tLower) && !articles.some(a => {
+        const aWords = a.title.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+        const tWords = tLower.split(/\s+/).filter(w => w.length > 3)
+        const overlap = tWords.filter(w => aWords.includes(w)).length
+        return overlap >= 2
+      })) {
+        gaps.push({ topic: trend.title, sources: trend.sourcesCount })
+      }
+    }
+    return gaps.slice(0, 3)
+  }, [sportsTrending, articles, loading])
 
   return (
     <div className="nr5">
@@ -283,12 +374,6 @@ export default function NewsroomPage() {
           {search && <button className="nr5-search-clear" onClick={() => setSearch('')}>✕</button>}
           <span className="nr5-search-shortcut">/</span>
         </div>
-        <div className="nr5-head-actions">
-          <button className="nr5-btn nr5-btn-secondary" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            {sidebarOpen ? '◨' : '◧'} Intel
-          </button>
-          <Link href="/editor" className="nr5-btn nr5-btn-primary">✨ New Article</Link>
-        </div>
       </div>
 
       {topTrending.length > 0 && (
@@ -296,12 +381,19 @@ export default function NewsroomPage() {
           <div className="smart-hotbar-label">🔥 TRENDING NOW</div>
           <div className="smart-hotbar-items">
             {topTrending.map((topic) => (
-              <button key={topic.id} className="smart-hotbar-item" onClick={() => setActiveTab('trending')}>
+              <button
+                key={topic.id}
+                className={`smart-hotbar-item ${activeTrend === topic.title ? 'active' : ''}`}
+                onClick={() => setActiveTrend(activeTrend === topic.title ? null : topic.title)}
+              >
                 <span className={`smart-hotbar-score ${topic.score >= 80 ? 'hot' : topic.score >= 50 ? 'warm' : 'cool'}`}>{topic.score}</span>
                 <span className="smart-hotbar-text">{topic.title}</span>
-                <span className="smart-hotbar-cat">{categoryIcons[topic.category] || '📰'}</span>
+                <span className="smart-hotbar-cat">{categoryIcons[topic.category] || '⚽'}</span>
               </button>
             ))}
+            {activeTrend && (
+              <button className="smart-hotbar-clear" onClick={() => setActiveTrend(null)}>✕ Clear</button>
+            )}
           </div>
         </div>
       )}
@@ -315,93 +407,31 @@ export default function NewsroomPage() {
         ))}
       </div>
 
-      <div className={`nr5-main-layout ${sidebarOpen ? 'with-sidebar' : ''}`}>
+      <div className="nr5-main-layout">
         <div className="nr5-main-content">
-          {activeTab === 'trending' && (
-            <div className="smart-trending">
-              {trendingLoading ? (
-                <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Scanning Google Trends, competitors, live matches...</div></div>
-              ) : filteredTrending.length === 0 ? (
-                <div className="smart-empty"><div className="smart-empty-icon">🧠</div><div className="smart-empty-title">{search ? 'No matching topics' : 'No trending topics found'}</div><div className="smart-empty-desc">{search ? 'Try a different search' : 'Add competitor RSS feeds in Settings to enhance intelligence'}</div></div>
-              ) : (
-                <div className="smart-grid">
-                  {filteredTrending.map((topic) => {
-                    const isGenerating = generatingTopic === topic.id
-                    const scoreClass = topic.score >= 80 ? 'hot' : topic.score >= 50 ? 'warm' : 'cool'
-                    return (
-                      <div key={topic.id} className={`smart-card ${isGenerating ? 'generating' : ''}`}>
-                        {isGenerating && (
-                          <div className="smart-card-overlay">
-                            <div className="smart-card-gen-steps">
-                              {SMART_GEN_STEPS.map((step, i) => (
-                                <div key={i} className={`smart-gen-step ${i < genStep ? 'done' : ''} ${i === genStep ? 'active' : ''}`}>
-                                  <span className="smart-gen-dot">{i < genStep ? '✓' : i === genStep ? '●' : '○'}</span>
-                                  {step}
-                                </div>
-                              ))}
-                              {genError && <div className="smart-gen-error">{genError}</div>}
-                            </div>
-                          </div>
-                        )}
-                        <div className="smart-card-top">
-                          <div className={`smart-score-circle ${scoreClass}`}><span className="smart-score-num">{topic.score}</span></div>
-                          <div className="smart-card-meta">
-                            <span className={`smart-cat-badge ${categoryColors[topic.category] || 'cat-default'}`}>{categoryIcons[topic.category] || '📰'} {topic.category}</span>
-                            <span className="smart-velocity">{velocityIcons[topic.velocity] || ''} {topic.velocity}</span>
-                          </div>
-                        </div>
-                        <h3 className="smart-card-title">{topic.title}</h3>
-                        <div className="smart-card-info">
-                          <span className="smart-card-sources">{topic.sourcesCount} source{topic.sourcesCount !== 1 ? 's' : ''}</span>
-                          {topic.traffic && <span className="smart-card-traffic">{topic.traffic} searches</span>}
-                          <span className="smart-card-type">{typeLabels[topic.suggestedType] || topic.suggestedType}</span>
-                        </div>
-                        <div className="smart-card-estimate">{topic.estimatedViews}</div>
-                        <div className="smart-card-sources-list">
-                          {topic.sources.slice(0, 3).map((s, i) => (<span key={i} className="smart-source-tag">{s}</span>))}
-                          {topic.sources.length > 3 && <span className="smart-source-more">+{topic.sources.length - 3}</span>}
-                        </div>
-                        <div className="smart-card-actions">
-                          <button className="smart-generate-btn" onClick={() => generateFromTopic(topic)} disabled={!!generatingTopic}>
-                            {isGenerating ? 'Generating...' : '🤖 Generate Article'}
-                          </button>
-                          <button className="smart-manual-btn" onClick={() => router.push(`/editor?prompt=${encodeURIComponent(`Write a ${topic.suggestedType} about: ${topic.title}`)}`)} >
-                            ✏️ Manual
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
           {activeTab === 'breaking' && (
             <div className="smart-trending">
               {breakingLoading ? (
                 <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Fetching Google News...</div></div>
               ) : filteredBreaking.length === 0 ? (
-                <div className="smart-empty"><div className="smart-empty-icon">📰</div><div className="smart-empty-title">{search ? 'No matching news' : 'No breaking news found'}</div></div>
+                <div className="smart-empty"><div className="smart-empty-icon">📰</div><div className="smart-empty-title">{search || activeTrend ? 'No matching news' : 'No breaking news found'}</div></div>
               ) : (
                 <div className="breaking-list">
                   {filteredBreaking.map((item, i) => {
                     const srcStyle = getSourceStyle(item.source)
+                    const hot = isTopicHot(item.title, breakingNews)
+                    const domain = getDomain(item.link)
                     return (
-                      <div key={i} className="breaking-card">
-                        <div className="breaking-thumb" style={{ background: `linear-gradient(135deg, #0f172a 0%, #1e293b 100%)` }}>
-                          <span className="breaking-thumb-icon">📰</span>
+                      <div key={i} className="breaking-card-v3">
+                        <div className="breaking-v3-top">
+                          <span className="breaking-source" style={{ background: srcStyle.bg, color: srcStyle.color }}>{item.source}</span>
+                          {hot && <span className="velocity-badge-hot">HOT</span>}
+                          <span className="breaking-time">{getTimeAgo(item.pubDate)}</span>
                         </div>
-                        <div className="breaking-body">
-                          <div className="breaking-top">
-                            <span className="breaking-source" style={{ background: srcStyle.bg, color: srcStyle.color }}>{item.source}</span>
-                            <span className="breaking-time">{getTimeAgo(item.pubDate)}</span>
-                          </div>
-                          <h3 className="breaking-title">{item.title}</h3>
-                          <div className="breaking-actions">
-                            <button className="breaking-btn rewrite" onClick={() => rewriteArticle(item.title)}>✍️ Rewrite</button>
-                            <a href={item.link} target="_blank" rel="noopener noreferrer" className="breaking-btn source">🔗 Source</a>
-                          </div>
+                        <h3 className="breaking-title">{item.title}</h3>
+                        <div className="breaking-v3-bottom">
+                          <button className="breaking-btn rewrite" onClick={() => rewriteArticle(item.title)}>✍️ Rewrite</button>
+                          {domain && <a href={item.link} target="_blank" rel="noopener noreferrer" className="breaking-btn source">{domain} →</a>}
                         </div>
                       </div>
                     )
@@ -411,13 +441,48 @@ export default function NewsroomPage() {
             </div>
           )}
 
-          {activeTab === 'fixtures' && (
+          {activeTab === 'transfers' && (
+            <div className="smart-trending">
+              {transfersLoading ? (
+                <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Scanning transfer news...</div></div>
+              ) : filteredTransfers.length === 0 ? (
+                <div className="smart-empty"><div className="smart-empty-icon">🔄</div><div className="smart-empty-title">{search || activeTrend ? 'No matching transfers' : 'No transfer news found'}</div></div>
+              ) : (
+                <div className="breaking-list">
+                  {filteredTransfers.map((item, i) => {
+                    const srcStyle = getSourceStyle(item.source)
+                    const hot = isTopicHot(item.title, transferNews)
+                    const domain = getDomain(item.link)
+                    return (
+                      <div key={i} className="breaking-card-v3">
+                        <div className="breaking-v3-top">
+                          <span className="breaking-source" style={{ background: srcStyle.bg, color: srcStyle.color }}>{item.source}</span>
+                          {hot && <span className="velocity-badge-hot">HOT</span>}
+                          <span className="breaking-time">{getTimeAgo(item.pubDate)}</span>
+                        </div>
+                        <h3 className="breaking-title">{item.title}</h3>
+                        <div className="breaking-v3-bottom">
+                          <button className="breaking-btn rewrite" onClick={() => {
+                            sessionStorage.setItem('editorTopic', item.title)
+                            router.push(`/editor?prompt=${encodeURIComponent(`Write a transfer analysis: ${item.title}`)}`)
+                          }}>✍️ Rewrite</button>
+                          {domain && <a href={item.link} target="_blank" rel="noopener noreferrer" className="breaking-btn source">{domain} →</a>}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'live' && (
             <div className="smart-trending">
               {fixturesLoading ? (
                 <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Loading fixtures...</div></div>
               ) : (
                 <>
-                  {filteredLive.length > 0 && (
+                  {filteredLive.length > 0 ? (
                     <>
                       <div className="section-label live">🔴 LIVE NOW</div>
                       <div className="smart-grid">
@@ -443,14 +508,6 @@ export default function NewsroomPage() {
                                 ))}
                               </div>
                             )}
-                            {m.events && m.events.some(e => e.type === 'red' || (m.homeGoals !== null && m.awayGoals !== null && Math.abs(m.homeGoals - m.awayGoals) >= 2)) && (
-                              <div className="moment-alert">
-                                ⚡ MOMENT ALERT — Unusual scoreline detected
-                                <button className="moment-btn" onClick={() => generateFromTopic({ id: `moment-${m.id}`, title: `${m.homeTeam} ${m.homeGoals}-${m.awayGoals} ${m.awayTeam} — ${m.league} Live Report`, score: 95, sources: ['Live Match'], sourcesCount: 1, category: 'Sport', suggestedType: 'breaking', velocity: 'rising', estimatedViews: '', traffic: '', recency: 0 })} disabled={!!generatingTopic}>
-                                  Quick Generate
-                                </button>
-                              </div>
-                            )}
                             <div className="smart-card-actions">
                               <button className="smart-generate-btn" onClick={() => generateFromTopic({ id: `live-${m.id}`, title: `${m.homeTeam} ${m.homeGoals}-${m.awayGoals} ${m.awayTeam} - ${m.league} Live`, score: 90, sources: ['Live Match'], sourcesCount: 1, category: 'Sport', suggestedType: 'breaking', velocity: 'rising', estimatedViews: '', traffic: '', recency: 0 })} disabled={!!generatingTopic}>
                                 ⚡ Live Report
@@ -460,38 +517,56 @@ export default function NewsroomPage() {
                         ))}
                       </div>
                     </>
-                  )}
-                  <div className="section-label">📅 UPCOMING FIXTURES</div>
-                  <div className="smart-grid">
-                    {filteredFixtures.map((f) => {
-                      const matchDate = new Date(f.date)
-                      const diffMs = matchDate.getTime() - Date.now()
-                      const diffH = Math.max(0, Math.floor(diffMs / 3600000))
-                      const diffD = Math.floor(diffH / 24)
-                      const countdown = diffD > 0 ? `${diffD}d ${diffH % 24}h` : diffH > 0 ? `${diffH}h` : 'Soon'
-                      return (
-                        <div key={f.id} className="smart-card">
-                          <div className="fixture-header">
-                            <span className="fixture-league">{f.league}</span>
-                            <span className="fixture-countdown">⏱ {countdown}</span>
-                          </div>
-                          <div className="live-score-row" style={{ margin: '16px 0' }}>
-                            <div className="live-team">{f.homeTeam}</div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g400)' }}>vs</div>
-                            <div className="live-team">{f.awayTeam}</div>
-                          </div>
-                          <div className="fixture-date">
-                            {matchDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} • {matchDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                          <div className="smart-card-actions">
-                            <button className="smart-generate-btn" onClick={() => generateFromTopic({ id: `fix-${f.id}`, title: `${f.homeTeam} vs ${f.awayTeam} - ${f.league} Preview`, score: 70, sources: ['API-Football'], sourcesCount: 1, category: 'Sport', suggestedType: 'preview', velocity: 'rising', estimatedViews: '', traffic: '', recency: 0 })} disabled={!!generatingTopic}>
-                              📝 Generate Preview
-                            </button>
-                          </div>
+                  ) : (
+                    <div className="smart-empty">
+                      <div className="smart-empty-icon">⚽</div>
+                      <div className="smart-empty-title">No live matches right now</div>
+                      {fixtures.length > 0 && (
+                        <div className="smart-empty-desc">
+                          Next: {fixtures[0].homeTeam} vs {fixtures[0].awayTeam} in {(() => {
+                            const d = new Date(fixtures[0].date).getTime() - Date.now()
+                            const h = Math.max(0, Math.floor(d / 3600000))
+                            return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : `${h}h`
+                          })()}
                         </div>
-                      )
-                    })}
-                  </div>
+                      )}
+                    </div>
+                  )}
+                  {filteredFixtures.length > 0 && (
+                    <>
+                      <div className="section-label">📅 UPCOMING FIXTURES</div>
+                      <div className="smart-grid">
+                        {filteredFixtures.map((f) => {
+                          const matchDate = new Date(f.date)
+                          const diffMs = matchDate.getTime() - Date.now()
+                          const diffH = Math.max(0, Math.floor(diffMs / 3600000))
+                          const diffD = Math.floor(diffH / 24)
+                          const countdown = diffD > 0 ? `${diffD}d ${diffH % 24}h` : diffH > 0 ? `${diffH}h` : 'Soon'
+                          return (
+                            <div key={f.id} className="smart-card">
+                              <div className="fixture-header">
+                                <span className="fixture-league">{f.league}</span>
+                                <span className="fixture-countdown">⏱ {countdown}</span>
+                              </div>
+                              <div className="live-score-row" style={{ margin: '16px 0' }}>
+                                <div className="live-team">{f.homeTeam}</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g400)' }}>vs</div>
+                                <div className="live-team">{f.awayTeam}</div>
+                              </div>
+                              <div className="fixture-date">
+                                {matchDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} • {matchDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                              <div className="smart-card-actions">
+                                <button className="smart-generate-btn" onClick={() => generateFromTopic({ id: `fix-${f.id}`, title: `${f.homeTeam} vs ${f.awayTeam} - ${f.league} Preview`, score: 70, sources: ['API-Football'], sourcesCount: 1, category: 'Sport', suggestedType: 'preview', velocity: 'rising', estimatedViews: '', traffic: '', recency: 0 })} disabled={!!generatingTopic}>
+                                  📝 Generate Preview
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -502,7 +577,7 @@ export default function NewsroomPage() {
               {youtubeLoading ? (
                 <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Loading YouTube feeds...</div></div>
               ) : filteredYoutube.length === 0 ? (
-                <div className="smart-empty"><div className="smart-empty-icon">📺</div><div className="smart-empty-title">{search ? 'No matching videos' : 'No videos found'}</div></div>
+                <div className="smart-empty"><div className="smart-empty-icon">📺</div><div className="smart-empty-title">{search || activeTrend ? 'No matching videos' : 'No videos found'}</div></div>
               ) : (
                 <div className="smart-grid">
                   {filteredYoutube.map((vid, i) => (
@@ -517,19 +592,13 @@ export default function NewsroomPage() {
                         <span className="smart-velocity">{getTimeAgo(vid.pubDate)}</span>
                       </div>
                       <div className="smart-card-actions">
+                        <a href={vid.link} target="_blank" rel="noopener noreferrer" className="breaking-btn source">▶ Watch</a>
                         <button className="breaking-btn rewrite" onClick={() => {
                           sessionStorage.setItem('editorTopic', vid.title)
                           router.push(`/editor?prompt=${encodeURIComponent(`Write an article inspired by this video: ${vid.title}`)}`)
                         }}>
                           ✍️ Article from Video
                         </button>
-                        <button className="breaking-btn source" onClick={() => {
-                          navigator.clipboard.writeText(`<iframe width="560" height="315" src="https://www.youtube.com/embed/${vid.videoId}" frameborder="0" allowfullscreen></iframe>`)
-                          alert('Embed code copied!')
-                        }}>
-                          📺 Embed
-                        </button>
-                        <a href={vid.link} target="_blank" rel="noopener noreferrer" className="breaking-btn source">🔗 Watch</a>
                       </div>
                     </div>
                   ))}
@@ -543,7 +612,7 @@ export default function NewsroomPage() {
               {redditLoading ? (
                 <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Scanning Reddit football communities...</div></div>
               ) : filteredReddit.length === 0 ? (
-                <div className="smart-empty"><div className="smart-empty-icon">💬</div><div className="smart-empty-title">{search ? 'No matching discussions' : 'No fan discussions found'}</div></div>
+                <div className="smart-empty"><div className="smart-empty-icon">💬</div><div className="smart-empty-title">{search || activeTrend ? 'No matching discussions' : 'No fan discussions found'}</div></div>
               ) : (
                 <div className="smart-grid">
                   {filteredReddit.map((post, i) => {
@@ -568,7 +637,7 @@ export default function NewsroomPage() {
                         </div>
                         <div className="smart-card-actions">
                           <button className="smart-generate-btn" onClick={() => generateFromTopic({ id: `rd-${i}`, title: post.title, score: Math.min(99, Math.floor((post.score || 0) / 100)), sources: [`r/${post.subreddit}`], sourcesCount: 1, category: 'Sport', suggestedType: 'report', velocity: 'rising', estimatedViews: '', traffic: '', recency: 0 })} disabled={!!generatingTopic}>
-                            🤖 Generate Article
+                            ✍️ Write About This
                           </button>
                           <a href={post.link} target="_blank" rel="noopener noreferrer" className="smart-manual-btn">🔗 Reddit</a>
                         </div>
@@ -579,116 +648,30 @@ export default function NewsroomPage() {
               )}
             </div>
           )}
-
-          {activeTab === 'transfers' && (
-            <div className="smart-trending">
-              {transfersLoading ? (
-                <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Scanning transfer news...</div></div>
-              ) : filteredTransfers.length === 0 ? (
-                <div className="smart-empty"><div className="smart-empty-icon">🔄</div><div className="smart-empty-title">{search ? 'No matching transfers' : 'No transfer news found'}</div></div>
-              ) : (
-                <div className="breaking-list">
-                  {filteredTransfers.map((item, i) => {
-                    const srcStyle = getSourceStyle(item.source)
-                    return (
-                      <div key={i} className="breaking-card">
-                        <div className="breaking-thumb transfer-thumb">
-                          <span className="breaking-thumb-icon">🔄</span>
-                        </div>
-                        <div className="breaking-body">
-                          <div className="breaking-top">
-                            <span className="breaking-source" style={{ background: srcStyle.bg, color: srcStyle.color }}>{item.source}</span>
-                            <span className="breaking-time">{getTimeAgo(item.pubDate)}</span>
-                          </div>
-                          <h3 className="breaking-title">{item.title}</h3>
-                          <div className="breaking-actions">
-                            <button className="breaking-btn rewrite" onClick={() => {
-                              sessionStorage.setItem('editorTopic', item.title)
-                              router.push(`/editor?prompt=${encodeURIComponent(`Write a transfer analysis: ${item.title}`)}`)
-                            }}>✍️ Write Analysis</button>
-                            <a href={item.link} target="_blank" rel="noopener noreferrer" className="breaking-btn source">🔗 Source</a>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'stats' && (
-            <div className="smart-trending" style={{ padding: '0 24px 24px' }}>
-              {statsLoading ? (
-                <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Loading Premier League stats...</div></div>
-              ) : (
-                <div className="stats-layout">
-                  <div className="stats-table-wrap">
-                    <div className="stats-table-head">🏆 Premier League Standings</div>
-                    <table className="stats-table">
-                      <thead>
-                        <tr>
-                          <th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th className="pts">Pts</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {standings.map((t) => (
-                          <tr key={t.rank}>
-                            <td className={t.rank <= 4 ? 'top4' : ''}>{t.rank}</td>
-                            <td className="team-name">{t.team}</td>
-                            <td>{t.played}</td><td>{t.won}</td><td>{t.drawn}</td><td>{t.lost}</td>
-                            <td className={t.gd > 0 ? 'pos' : 'neg'}>{t.gd > 0 ? '+' : ''}{t.gd}</td>
-                            <td className="pts-val">{t.points}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="scorers-wrap">
-                    <div className="stats-table-head">⚽ Top Scorers</div>
-                    {topScorers.map((p, i) => (
-                      <div key={i} className="scorer-row">
-                        <div className={`scorer-rank ${i < 3 ? 'top3' : ''}`}>{i + 1}</div>
-                        <div className="scorer-info">
-                          <div className="scorer-name">{p.name}</div>
-                          <div className="scorer-team">{p.team}</div>
-                        </div>
-                        <div className="scorer-stats">
-                          <div className="scorer-goals">{p.goals}</div>
-                          <div className="scorer-apps">{p.appearances} apps</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
-
-        {sidebarOpen && (
-          <aside className="intel-sidebar">
-            <StoryGapDetector breakingNews={breakingNews} articles={articles} />
-            <VelocityTracker breakingNews={breakingNews} articles={articles} />
-            <div className="intel-panel">
-              <div className="intel-panel-head">
-                <span className="intel-panel-icon">📊</span>
-                <span className="intel-panel-title">Quick Stats</span>
-              </div>
-              <div className="intel-panel-body">
-                <div className="intel-stat-row"><span>Published</span><span className="intel-stat-val">{articles.filter(a => a.status === 'PUBLISHED').length}</span></div>
-                <div className="intel-stat-row"><span>Drafts</span><span className="intel-stat-val">{articles.filter(a => a.status === 'DRAFT').length}</span></div>
-                <div className="intel-stat-row"><span>AI Generated</span><span className="intel-stat-val">{articles.filter(a => a.aiGenerated).length}</span></div>
-                <div className="intel-stat-row"><span>News Sources</span><span className="intel-stat-val">{breakingNews.length}</span></div>
-              </div>
-            </div>
-          </aside>
-        )}
       </div>
+
+      {opportunitiesOpen && opportunities.length > 0 && (
+        <div className="opportunities-bar">
+          <div className="opportunities-label">💡 GAPS</div>
+          <div className="opportunities-items">
+            {opportunities.map((gap, i) => (
+              <div key={i} className="opportunity-card">
+                <div className="opportunity-topic">{gap.topic}</div>
+                <div className="opportunity-meta">trending in {gap.sources} sources · you have 0 articles</div>
+                <button className="opportunity-btn" onClick={() => {
+                  sessionStorage.setItem('editorTopic', gap.topic)
+                  router.push(`/editor?prompt=${encodeURIComponent(`Write an article about: ${gap.topic}`)}`)
+                }}>Fill Gap</button>
+              </div>
+            ))}
+          </div>
+          <button className="opportunities-close" onClick={() => setOpportunitiesOpen(false)}>✕</button>
+        </div>
+      )}
 
       <div className="nr5-shortcuts">
         <div className="nr5-sc"><kbd>/</kbd> Search</div>
-        <div className="nr5-sc"><kbd>T</kbd> Toggle sidebar</div>
       </div>
     </div>
   )
