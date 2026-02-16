@@ -5,7 +5,7 @@ import { getDefaultSite } from '@/lib/db'
 import { getAuthUrl } from '@/lib/facebook'
 import { prisma } from '@/lib/prisma'
 
-// GET: return FB auth URL or current connection status
+// GET: return FB auth URL and all connected pages
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -19,9 +19,9 @@ export async function GET() {
       return NextResponse.json({ error: 'No site found' }, { status: 404 })
     }
 
-    // Check existing connection
     const connection = await prisma.socialConnection.findUnique({
       where: { siteId_provider: { siteId: site.id, provider: 'facebook' } },
+      include: { pages: { orderBy: { pageName: 'asc' } } },
     })
 
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
@@ -30,9 +30,13 @@ export async function GET() {
 
     return NextResponse.json({
       authUrl,
-      connected: !!connection,
-      pageName: connection?.pageName || null,
-      pageId: connection?.pageId || null,
+      connected: !!connection && connection.pages.length > 0,
+      pages: connection?.pages.map((p) => ({
+        id: p.id,
+        pageId: p.pageId,
+        pageName: p.pageName,
+        isActive: p.isActive,
+      })) || [],
     })
   } catch (error) {
     console.error('FB status error:', error)
@@ -40,7 +44,32 @@ export async function GET() {
   }
 }
 
-// DELETE: disconnect Facebook
+// PATCH: toggle a page's active status
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { pageId, isActive } = await req.json()
+    if (!pageId || typeof isActive !== 'boolean') {
+      return NextResponse.json({ error: 'Missing pageId or isActive' }, { status: 400 })
+    }
+
+    await prisma.socialPage.update({
+      where: { id: pageId },
+      data: { isActive },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('FB toggle error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// DELETE: disconnect Facebook (remove connection + all pages)
 export async function DELETE() {
   try {
     const session = await getServerSession(authOptions)
@@ -61,48 +90,6 @@ export async function DELETE() {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('FB disconnect error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-// POST: select a page after OAuth (receives pageId from client)
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const orgId = session.user.organizationId || undefined
-    const site = await getDefaultSite(orgId)
-    if (!site) {
-      return NextResponse.json({ error: 'No site found' }, { status: 404 })
-    }
-
-    const { pageId, pageName, pageToken } = await req.json()
-    if (!pageId || !pageToken) {
-      return NextResponse.json({ error: 'Missing pageId or pageToken' }, { status: 400 })
-    }
-
-    await prisma.socialConnection.upsert({
-      where: { siteId_provider: { siteId: site.id, provider: 'facebook' } },
-      create: {
-        siteId: site.id,
-        provider: 'facebook',
-        accessToken: pageToken,
-        pageId,
-        pageName: pageName || null,
-      },
-      update: {
-        accessToken: pageToken,
-        pageId,
-        pageName: pageName || null,
-      },
-    })
-
-    return NextResponse.json({ success: true, pageName })
-  } catch (error) {
-    console.error('FB save page error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

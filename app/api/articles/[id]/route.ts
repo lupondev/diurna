@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { postToPage } from '@/lib/facebook'
+import { postToMultiplePages } from '@/lib/facebook'
 import { z } from 'zod'
 
 const UpdateArticleSchema = z.object({
@@ -56,19 +56,24 @@ export async function PATCH(
       },
     })
 
-    // Auto-post to Facebook when publishing for the first time
+    // Auto-post to ALL active Facebook pages when publishing for the first time
     if (data.status === 'PUBLISHED' && existing && existing.status !== 'PUBLISHED') {
       try {
         const fbConnection = await prisma.socialConnection.findUnique({
           where: { siteId_provider: { siteId: existing.siteId, provider: 'facebook' } },
+          include: { pages: { where: { isActive: true } } },
         })
-        if (fbConnection?.pageId && fbConnection.accessToken) {
+        if (fbConnection && fbConnection.pages.length > 0) {
           const baseUrl = existing.site?.domain
             ? (existing.site.domain.startsWith('http') ? existing.site.domain : `https://${existing.site.domain}`)
             : process.env.NEXTAUTH_URL || 'http://localhost:3000'
           const articleUrl = `${baseUrl}/${existing.site?.slug}/${existing.slug}`
           const title = data.title || existing.title
-          await postToPage(fbConnection.pageId, fbConnection.accessToken, title, articleUrl)
+          const results = await postToMultiplePages(fbConnection.pages, title, articleUrl)
+          const failures = results.filter((r) => !r.success)
+          if (failures.length > 0) {
+            console.warn('Facebook auto-post partial failures:', failures)
+          }
         }
       } catch (fbError) {
         // Don't fail the publish if FB post fails

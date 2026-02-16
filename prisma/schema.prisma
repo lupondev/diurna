@@ -49,17 +49,33 @@ model Site {
 }
 
 model SocialConnection {
-  id          String   @id @default(cuid())
-  siteId      String
-  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  provider    String
-  accessToken String
-  pageId      String?
-  pageName    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  siteId       String
+  site         Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  provider     String
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  pages SocialPage[]
 
   @@unique([siteId, provider])
+}
+
+model SocialPage {
+  id           String           @id @default(cuid())
+  connectionId String
+  connection   SocialConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  pageId       String
+  pageName     String
+  pageToken    String
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([connectionId, pageId])
 }
 
 // ══════════════════════════════════

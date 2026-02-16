@@ -5,6 +5,13 @@ import { useSearchParams } from 'next/navigation'
 import { SUPPORTED_LANGUAGES } from '@/lib/languages'
 import './settings.css'
 
+interface FbPage {
+  id: string
+  pageId: string
+  pageName: string
+  isActive: boolean
+}
+
 export default function SettingsPage() {
   const [dirty, setDirty] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -12,10 +19,9 @@ export default function SettingsPage() {
 
   // Facebook
   const [fbConnected, setFbConnected] = useState(false)
-  const [fbPageName, setFbPageName] = useState<string | null>(null)
   const [fbAuthUrl, setFbAuthUrl] = useState('')
-  const [fbPages, setFbPages] = useState<Array<{ id: string; name: string; token: string }>>([])
-  const [fbSaving, setFbSaving] = useState(false)
+  const [fbPages, setFbPages] = useState<FbPage[]>([])
+  const [fbToggling, setFbToggling] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
   // General
@@ -40,50 +46,46 @@ export default function SettingsPage() {
   }, [])
 
   // Facebook connection status
-  useEffect(() => {
+  function loadFbStatus() {
     fetch('/api/social/facebook')
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (!data) return
         setFbAuthUrl(data.authUrl || '')
         setFbConnected(data.connected || false)
-        setFbPageName(data.pageName || null)
+        setFbPages(data.pages || [])
       })
       .catch(() => {})
-  }, [])
+  }
 
-  // Handle FB OAuth callback params
+  useEffect(() => { loadFbStatus() }, [])
+
+  // Handle FB OAuth callback
   useEffect(() => {
     const fbStatus = searchParams.get('fb')
-    const pagesParam = searchParams.get('pages')
-
-    if (fbStatus === 'success' && pagesParam) {
-      try {
-        const pages = JSON.parse(decodeURIComponent(pagesParam))
-        setFbPages(pages)
-      } catch { /* ignore */ }
-      // Clean URL
+    if (fbStatus === 'success') {
+      loadFbStatus()
       window.history.replaceState({}, '', '/settings')
     }
   }, [searchParams])
 
-  async function connectFbPage(page: { id: string; name: string; token: string }) {
-    setFbSaving(true)
+  async function toggleFbPage(page: FbPage) {
+    setFbToggling(page.id)
     try {
       const res = await fetch('/api/social/facebook', {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pageId: page.id, pageName: page.name, pageToken: page.token }),
+        body: JSON.stringify({ pageId: page.id, isActive: !page.isActive }),
       })
       if (res.ok) {
-        setFbConnected(true)
-        setFbPageName(page.name)
-        setFbPages([])
+        setFbPages((prev) => prev.map((p) =>
+          p.id === page.id ? { ...p, isActive: !p.isActive } : p
+        ))
       }
     } catch (error) {
-      console.error('FB connect error:', error)
+      console.error('FB toggle error:', error)
     } finally {
-      setFbSaving(false)
+      setFbToggling(null)
     }
   }
 
@@ -92,7 +94,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/social/facebook', { method: 'DELETE' })
       if (res.ok) {
         setFbConnected(false)
-        setFbPageName(null)
+        setFbPages([])
       }
     } catch (error) {
       console.error('FB disconnect error:', error)
@@ -156,13 +158,15 @@ export default function SettingsPage() {
     setMetaDesc('Breaking sports news, match previews, transfer updates and tactical analysis. Powered by AI.')
   }
 
+  const activeCount = fbPages.filter((p) => p.isActive).length
+
   return (
     <div className="st-page">
 
-      {/* ═══ GENERAL ═══ */}
+      {/* GENERAL */}
       <div className="st-section">
         <div className="st-section-head">
-          <div className="st-section-title">🏢 General Settings</div>
+          <div className="st-section-title">General Settings</div>
           <div className="st-section-desc">Core configuration for your publication identity and defaults.</div>
         </div>
 
@@ -210,10 +214,10 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* ═══ BRANDING ═══ */}
+      {/* BRANDING */}
       <div className="st-section">
         <div className="st-section-head">
-          <div className="st-section-title">🎨 Branding</div>
+          <div className="st-section-title">Branding</div>
           <div className="st-section-desc">Customize the look and feel of your publication.</div>
         </div>
 
@@ -224,7 +228,7 @@ export default function SettingsPage() {
           <div className="st-card-desc">Your publication&apos;s visual identity.</div>
           <div className="st-row">
             <span className="st-label">Logo</span>
-            <div className="st-upload" title="Click to upload">⚽</div>
+            <div className="st-upload" title="Click to upload">+</div>
           </div>
           <div className="st-row">
             <span className="st-label">Brand Color</span>
@@ -241,15 +245,15 @@ export default function SettingsPage() {
           </div>
           <div className="st-row">
             <span className="st-label">Favicon</span>
-            <div className="st-upload" title="Click to upload" style={{ width: 36, height: 36, fontSize: 14 }}>📰</div>
+            <div className="st-upload" title="Click to upload" style={{ width: 36, height: 36, fontSize: 14 }}>+</div>
           </div>
         </div>
       </div>
 
-      {/* ═══ SEO ═══ */}
+      {/* SEO */}
       <div className="st-section">
         <div className="st-section-head">
-          <div className="st-section-title">🔍 SEO Defaults</div>
+          <div className="st-section-title">SEO Defaults</div>
           <div className="st-section-desc">Default meta tags applied across your publication when not overridden per-article.</div>
         </div>
 
@@ -273,10 +277,10 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* ═══ INTEGRATIONS ═══ */}
+      {/* INTEGRATIONS */}
       <div className="st-section">
         <div className="st-section-head">
-          <div className="st-section-title">🔌 Integrations</div>
+          <div className="st-section-title">Integrations</div>
           <div className="st-section-desc">Connect external services and social accounts.</div>
         </div>
 
@@ -295,36 +299,42 @@ export default function SettingsPage() {
           <div className="st-card-head">
             <div className="st-card-title">Facebook Auto-Post</div>
           </div>
-          <div className="st-card-desc">Connect a Facebook Page to auto-post articles when published.</div>
-          {fbConnected ? (
-            <div className="st-fb-connected">
-              <div className="st-fb-status">
-                <div className="st-social-icon fb">f</div>
-                <div>
-                  <div className="st-fb-page-name">{fbPageName || 'Connected Page'}</div>
-                  <div className="st-fb-status-text">Connected — articles will auto-post on publish</div>
-                </div>
-              </div>
-              <button className="st-fb-disconnect" onClick={disconnectFb}>Disconnect</button>
-            </div>
-          ) : fbPages.length > 0 ? (
-            <div className="st-fb-pages">
-              <div className="st-fb-pages-title">Select a page to connect:</div>
+          <div className="st-card-desc">
+            Connect your Facebook Pages to auto-post articles when published.
+            {fbConnected && <span className="st-fb-count">{activeCount} of {fbPages.length} pages active</span>}
+          </div>
+
+          {fbConnected && fbPages.length > 0 ? (
+            <div className="st-fb-pages-list">
               {fbPages.map((page) => (
-                <button
-                  key={page.id}
-                  className="st-fb-page-btn"
-                  onClick={() => connectFbPage(page)}
-                  disabled={fbSaving}
-                >
-                  <div className="st-social-icon fb">f</div>
-                  <span>{page.name}</span>
-                </button>
+                <div key={page.id} className={`st-fb-page-row ${page.isActive ? 'active' : ''}`}>
+                  <div className="st-fb-page-info">
+                    <div className="st-social-icon fb">f</div>
+                    <div>
+                      <div className="st-fb-page-name">{page.pageName}</div>
+                      <div className="st-fb-status-text">
+                        {page.isActive ? 'Auto-posting enabled' : 'Paused'}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    className={`st-toggle ${page.isActive ? 'on' : ''}`}
+                    onClick={() => toggleFbPage(page)}
+                    disabled={fbToggling === page.id}
+                    aria-label={`Toggle ${page.pageName}`}
+                  >
+                    <span className="st-toggle-knob" />
+                  </button>
+                </div>
               ))}
+              <div className="st-fb-actions">
+                <a href={fbAuthUrl || '#'} className="st-fb-reconnect">Reconnect</a>
+                <button className="st-fb-disconnect" onClick={disconnectFb}>Disconnect All</button>
+              </div>
             </div>
           ) : (
             <div className="st-row">
-              <span className="st-label">Facebook Page</span>
+              <span className="st-label">Facebook Pages</span>
               <a href={fbAuthUrl || '#'} className="st-fb-connect-btn">
                 <span className="st-social-icon fb" style={{ width: 22, height: 22, fontSize: 11 }}>f</span>
                 Connect Facebook
@@ -339,7 +349,7 @@ export default function SettingsPage() {
           </div>
           <div className="st-card-desc">Link your social accounts for cross-posting and attribution.</div>
           <div className="st-social">
-            <div className="st-social-icon tw">𝕏</div>
+            <div className="st-social-icon tw">X</div>
             <span className="st-social-name">X / Twitter</span>
             <input value={twitter} onChange={(e) => change(setTwitter)(e.target.value)} placeholder="@sportnewspro" />
           </div>
@@ -354,22 +364,22 @@ export default function SettingsPage() {
             <input value={instagram} onChange={(e) => change(setInstagram)(e.target.value)} placeholder="@sportnewspro" />
           </div>
           <div className="st-social">
-            <div className="st-social-icon yt">▶</div>
+            <div className="st-social-icon yt">&#9654;</div>
             <span className="st-social-name">YouTube</span>
             <input value={youtube} onChange={(e) => change(setYoutube)(e.target.value)} placeholder="youtube.com/@sportnewspro" />
           </div>
         </div>
       </div>
 
-      {/* ═══ DANGER ZONE ═══ */}
+      {/* DANGER ZONE */}
       <div className="st-section">
         <div className="st-section-head">
-          <div className="st-section-title">⚠️ Danger Zone</div>
+          <div className="st-section-title">Danger Zone</div>
           <div className="st-section-desc">Irreversible actions. Proceed with extreme caution.</div>
         </div>
 
         <div className="st-danger">
-          <div className="st-danger-title">🗑️ Delete Publication</div>
+          <div className="st-danger-title">Delete Publication</div>
           <div className="st-danger-desc">
             Permanently delete this publication and all its data including articles, widgets, and analytics.
             This action cannot be undone.
@@ -380,16 +390,16 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* ═══ SAVE BAR ═══ */}
+      {/* SAVE BAR */}
       {(dirty || saved) && (
         <div className="st-save-bar">
           <div className="st-save-text">
-            {saved ? <><strong>✅ Settings saved</strong></> : <><strong>Unsaved changes</strong> — save or discard</>}
+            {saved ? <><strong>Settings saved</strong></> : <><strong>Unsaved changes</strong> — save or discard</>}
           </div>
           {!saved && (
             <div className="st-save-actions">
               <button className="st-save-discard" onClick={handleDiscard}>Discard</button>
-              <button className="st-save-btn" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : '💾 Save Changes'}</button>
+              <button className="st-save-btn" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</button>
             </div>
           )}
         </div>

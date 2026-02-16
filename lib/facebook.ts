@@ -62,3 +62,21 @@ export async function postToPage(
   }
   return res.json()
 }
+
+export async function postToMultiplePages(
+  pages: Array<{ pageId: string; pageName: string; pageToken: string }>,
+  message: string,
+  link?: string,
+): Promise<Array<{ pageId: string; pageName: string; success: boolean; postId?: string; error?: string }>> {
+  const results = await Promise.allSettled(
+    pages.map((page) => postToPage(page.pageId, page.pageToken, message, link))
+  )
+
+  return results.map((result, i) => {
+    const page = pages[i]
+    if (result.status === 'fulfilled') {
+      return { pageId: page.pageId, pageName: page.pageName, success: true, postId: result.value.id }
+    }
+    return { pageId: page.pageId, pageName: page.pageName, success: false, error: result.reason?.message || 'Unknown error' }
+  })
+}
