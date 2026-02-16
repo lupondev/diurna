@@ -2,8 +2,23 @@ import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
 import { SubscribeWidget } from '@/components/subscribe-widget'
 import Link from 'next/link'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getDefaultSite()
+  const siteName = site?.name || 'Diurna'
+  return {
+    title: siteName,
+    description: `Latest news and articles from ${siteName}`,
+    openGraph: {
+      title: siteName,
+      description: `Latest news and articles from ${siteName}`,
+      type: 'website',
+    },
+  }
+}
 
 export default async function PublicHomePage() {
   const site = await getDefaultSite()

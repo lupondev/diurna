@@ -100,16 +100,20 @@ Cover form, key players, and prediction.`
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth + rate limit
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
-        { error: 'ANTHROPIC_API_KEY not configured' },
+        { error: 'AI service not configured' },
         { status: 500 }
       )
     }
 
-    // Auth + rate limit
-    const session = await getServerSession(authOptions)
-    const userId = session?.user?.id || 'anonymous'
+    const userId = session.user.id
 
     const { allowed, remaining } = checkRateLimit(userId)
     if (!allowed) {
@@ -158,7 +162,7 @@ export async function POST(req: NextRequest) {
     }
     console.error('AI generate error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'AI generation failed' },
+      { error: 'AI generation failed' },
       { status: 500 }
     )
   }

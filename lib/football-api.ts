@@ -1,9 +1,32 @@
 const API_HOST = 'v3.football.api-sports.io'
 const API_KEY = process.env.FOOTBALL_API_KEY || ''
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const MAX_CACHE_SIZE = 100
 
 type CacheEntry = { data: unknown; ts: number }
 const cache = new Map<string, CacheEntry>()
+
+function evictStaleEntries() {
+  const now = Date.now()
+  const keysToDelete: string[] = []
+  cache.forEach((entry, key) => {
+    if (now - entry.ts >= CACHE_TTL) {
+      keysToDelete.push(key)
+    }
+  })
+  keysToDelete.forEach((key) => cache.delete(key))
+
+  // If still over limit, remove oldest entries
+  if (cache.size > MAX_CACHE_SIZE) {
+    const entries: Array<[string, CacheEntry]> = []
+    cache.forEach((entry, key) => entries.push([key, entry]))
+    entries.sort((a, b) => a[1].ts - b[1].ts)
+    const removeCount = cache.size - MAX_CACHE_SIZE
+    for (let i = 0; i < removeCount; i++) {
+      cache.delete(entries[i][0])
+    }
+  }
+}
 
 async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}): Promise<T> {
   const qs = new URLSearchParams(params).toString()
@@ -25,6 +48,7 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}
   }
 
   const json = await res.json()
+  evictStaleEntries()
   cache.set(cacheKey, { data: json, ts: Date.now() })
   return json as T
 }

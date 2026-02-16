@@ -21,8 +21,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const article = await prisma.article.findFirst({
-      where: { id: params.id, deletedAt: null },
+      where: { id: params.id, deletedAt: null, site: { organizationId: session.user.organizationId } },
       include: {
         category: true,
         site: true,
@@ -46,13 +51,17 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await req.json()
     const data = UpdateArticleSchema.parse(body)
-    const session = await getServerSession(authOptions)
 
     // Check if this is transitioning to PUBLISHED (need old status)
-    const existing = await prisma.article.findUnique({
-      where: { id: params.id },
+    const existing = await prisma.article.findFirst({
+      where: { id: params.id, site: { organizationId: session.user.organizationId } },
       select: { status: true, siteId: true, title: true, slug: true, content: true, site: { select: { domain: true, slug: true } } },
     })
 
@@ -68,7 +77,7 @@ export async function PATCH(
           articleId: params.id,
           title: existing.title,
           content: existing.content || {},
-          savedBy: session?.user?.id || null,
+          savedBy: session.user.id,
           version: (lastVersion?.version || 0) + 1,
         },
       })
@@ -148,6 +157,19 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Verify article belongs to user's org before deleting
+    const article = await prisma.article.findFirst({
+      where: { id: params.id, site: { organizationId: session.user.organizationId } },
+    })
+    if (!article) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
     // Soft delete
     await prisma.article.update({
       where: { id: params.id },

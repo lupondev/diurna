@@ -3,6 +3,17 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { resend } from '@/lib/resend'
+import crypto from 'crypto'
+
+function generateUnsubscribeToken(subscriberId: string): string {
+  const secret = process.env.NEXTAUTH_SECRET || 'fallback-secret'
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(subscriberId)
+    .digest('hex')
+    .slice(0, 16)
+  return Buffer.from(`${subscriberId}:${signature}`).toString('base64')
+}
 
 function extractExcerpt(content: Record<string, unknown>): string {
   try {
@@ -94,7 +105,7 @@ export async function POST(req: NextRequest) {
       const batch = subscribers.slice(i, i + 50)
       const results = await Promise.allSettled(
         batch.map((sub) => {
-          const unsubscribeUrl = `${baseUrl}/api/newsletter/unsubscribe?token=${Buffer.from(sub.id).toString('base64')}`
+          const unsubscribeUrl = `${baseUrl}/api/newsletter/unsubscribe?token=${generateUnsubscribeToken(sub.id)}`
           return resend.emails.send({
             from: `${siteName} <onboarding@resend.dev>`,
             to: sub.email,

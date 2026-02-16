@@ -1,4 +1,14 @@
 import { getDefaultSite } from '@/lib/db'
+import type { Metadata } from 'next'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getDefaultSite()
+  const siteName = site?.name || 'Diurna'
+  return {
+    title: `Impressum - ${siteName}`,
+    description: `Legal information and publisher details for ${siteName}.`,
+  }
+}
 
 export default async function ImpressumPage() {
   const site = await getDefaultSite()

@@ -28,10 +28,13 @@ function slugify(text: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await req.json()
     const data = CreateArticleSchema.parse(body)
-
-    const session = await getServerSession(authOptions)
 
     // Generate unique slug
     let slug = slugify(data.title)
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest) {
         status: data.status,
         siteId: data.siteId,
         categoryId: data.categoryId || null,
-        authorId: session?.user?.id || null,
+        authorId: session.user.id,
         aiGenerated: data.aiGenerated,
         aiModel: data.aiModel,
         aiPrompt: data.aiPrompt,
@@ -72,12 +75,15 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    const orgId = session?.user?.organizationId
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const orgId = session.user.organizationId
 
     const articles = await prisma.article.findMany({
       where: {
         deletedAt: null,
-        ...(orgId && { site: { organizationId: orgId } }),
+        site: { organizationId: orgId },
       },
       include: {
         category: { select: { name: true } },

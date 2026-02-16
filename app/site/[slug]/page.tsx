@@ -5,8 +5,30 @@ import { SubscribeWidget } from '@/components/subscribe-widget'
 import { ShareButtons } from '@/components/public/share-buttons'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const site = await getDefaultSite()
+  if (!site) return { title: 'Not Found' }
+
+  const article = await prisma.article.findFirst({
+    where: { siteId: site.id, slug: params.slug, status: 'PUBLISHED', deletedAt: null },
+    select: { title: true, excerpt: true },
+  })
+  if (!article) return { title: 'Not Found' }
+
+  return {
+    title: `${article.title} - ${site.name}`,
+    description: article.excerpt || undefined,
+    openGraph: {
+      title: article.title,
+      description: article.excerpt || undefined,
+      type: 'article',
+    },
+  }
+}
 
 export default async function ArticlePage({ params }: { params: { slug: string } }) {
   const site = await getDefaultSite()

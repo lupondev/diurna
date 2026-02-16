@@ -38,7 +38,7 @@ function buildPrompt(data: z.infer<typeof WidgetGenerateSchema>): { system: stri
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 })
     }
 
     const session = await getServerSession(authOptions)

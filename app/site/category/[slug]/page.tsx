@@ -2,8 +2,29 @@ import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const site = await getDefaultSite()
+  if (!site) return { title: 'Not Found' }
+
+  const category = await prisma.category.findFirst({
+    where: { siteId: site.id, slug: params.slug, deletedAt: null },
+    select: { name: true },
+  })
+  if (!category) return { title: 'Not Found' }
+
+  return {
+    title: `${category.name} - ${site.name}`,
+    description: `Browse ${category.name} articles on ${site.name}`,
+    openGraph: {
+      title: `${category.name} - ${site.name}`,
+      description: `Browse ${category.name} articles on ${site.name}`,
+    },
+  }
+}
 
 const PER_PAGE = 12
 

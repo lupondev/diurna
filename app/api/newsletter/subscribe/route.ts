@@ -7,24 +7,27 @@ import { z } from 'zod'
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    const orgId = session?.user?.organizationId
-
-    let siteId: string | undefined
-    if (orgId) {
-      const site = await prisma.site.findFirst({
-        where: { organizationId: orgId },
-        select: { id: true },
-      })
-      siteId = site?.id
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const orgId = session.user.organizationId
+
+    const site = await prisma.site.findFirst({
+      where: { organizationId: orgId },
+      select: { id: true },
+    })
+    if (!site) {
+      return NextResponse.json({ error: 'No site found' }, { status: 404 })
+    }
+    const siteId = site.id
 
     const [active, total] = await Promise.all([
-      prisma.subscriber.count({ where: { ...(siteId && { siteId }), isActive: true } }),
-      prisma.subscriber.count({ where: siteId ? { siteId } : undefined }),
+      prisma.subscriber.count({ where: { siteId, isActive: true } }),
+      prisma.subscriber.count({ where: { siteId } }),
     ])
 
     const recent = await prisma.subscriber.findMany({
-      where: siteId ? { siteId } : undefined,
+      where: { siteId },
       orderBy: { subscribedAt: 'desc' },
       take: 5,
       select: { id: true, email: true, name: true, isActive: true, subscribedAt: true },

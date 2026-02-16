@@ -1,5 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import crypto from 'crypto'
+
+function verifyUnsubscribeToken(token: string): string | null {
+  try {
+    const decoded = Buffer.from(token, 'base64').toString('utf-8')
+    const parts = decoded.split(':')
+    if (parts.length !== 2) return null
+
+    const [subscriberId, signature] = parts
+    const secret = process.env.NEXTAUTH_SECRET || 'fallback-secret'
+    const expectedSig = crypto
+      .createHmac('sha256', secret)
+      .update(subscriberId)
+      .digest('hex')
+      .slice(0, 16)
+
+    if (signature !== expectedSig) return null
+    return subscriberId
+  } catch {
+    return null
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -8,21 +30,33 @@ export async function GET(req: NextRequest) {
       return new NextResponse(html('Missing unsubscribe token.', false), { headers: { 'Content-Type': 'text/html' } })
     }
 
-    // Token is base64(subscriberId)
-    let subscriberId: string
-    try {
-      subscriberId = Buffer.from(token, 'base64').toString('utf-8')
-    } catch {
+    const subscriberId = verifyUnsubscribeToken(token)
+
+    // Fallback: support legacy base64-only tokens during transition
+    let finalId = subscriberId
+    if (!finalId) {
+      try {
+        const legacyId = Buffer.from(token, 'base64').toString('utf-8')
+        // Only accept if it looks like a valid CUID/UUID (no colons)
+        if (legacyId && !legacyId.includes(':') && legacyId.length >= 20) {
+          finalId = legacyId
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (!finalId) {
       return new NextResponse(html('Invalid unsubscribe link.', false), { headers: { 'Content-Type': 'text/html' } })
     }
 
-    const subscriber = await prisma.subscriber.findUnique({ where: { id: subscriberId } })
+    const subscriber = await prisma.subscriber.findUnique({ where: { id: finalId } })
     if (!subscriber) {
       return new NextResponse(html('Subscriber not found.', false), { headers: { 'Content-Type': 'text/html' } })
     }
 
     await prisma.subscriber.update({
-      where: { id: subscriberId },
+      where: { id: finalId },
       data: { isActive: false, unsubscribedAt: new Date() },
     })
 

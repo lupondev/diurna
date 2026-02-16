@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import {
   getTodayMatches,
   getLiveScores,
@@ -7,6 +9,11 @@ import {
 } from '@/lib/football-api'
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = req.nextUrl
   const action = searchParams.get('action')
 
@@ -48,7 +55,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Invalid action. Use: today, live, standings, h2h' }, { status: 400 })
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('Football API error:', error)
+    return NextResponse.json({ error: 'Failed to fetch football data' }, { status: 500 })
   }
 }

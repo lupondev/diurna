@@ -1,4 +1,14 @@
 import { getDefaultSite } from '@/lib/db'
+import type { Metadata } from 'next'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getDefaultSite()
+  const siteName = site?.name || 'Diurna'
+  return {
+    title: `About - ${siteName}`,
+    description: `Learn more about ${siteName} and our editorial team.`,
+  }
+}
 
 export default async function AboutPage() {
   const site = await getDefaultSite()

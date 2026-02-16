@@ -1,4 +1,14 @@
 import { getDefaultSite } from '@/lib/db'
+import type { Metadata } from 'next'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getDefaultSite()
+  const siteName = site?.name || 'Diurna'
+  return {
+    title: `Privacy Policy - ${siteName}`,
+    description: `Privacy policy for ${siteName}. Learn how we handle your data.`,
+  }
+}
 
 export default async function PrivacyPage() {
   const site = await getDefaultSite()
