@@ -341,7 +341,17 @@ function EditorSidebar({
   )
 }
 
-/* ─── Media Library Modal ─── */
+/* ─── Unsplash Image Result ─── */
+interface UnsplashImage {
+  id: string
+  small: string
+  regular: string
+  alt: string
+  author: string
+  authorUrl: string
+}
+
+/* ─── Media Library Modal with Unsplash Search ─── */
 function MediaLibraryModal({
   onClose,
   onSelect,
@@ -349,8 +359,17 @@ function MediaLibraryModal({
   onClose: () => void
   onSelect: (url: string, alt: string) => void
 }) {
+  const [tab, setTab] = useState<'upload' | 'search'>('upload')
   const [media, setMedia] = useState<Array<{ id: string; url: string; filename: string; alt?: string | null }>>([])
   const [loading, setLoading] = useState(true)
+
+  // Unsplash search state
+  const [query, setQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<UnsplashImage[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searchPage, setSearchPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/media')
@@ -359,45 +378,124 @@ function MediaLibraryModal({
       .catch(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    if (tab === 'search' && searchRef.current) {
+      searchRef.current.focus()
+    }
+  }, [tab])
+
+  async function handleSearch(page = 1) {
+    if (!query.trim()) return
+    setSearching(true)
+    try {
+      const res = await fetch(`/api/images/search?query=${encodeURIComponent(query)}&page=${page}`)
+      const data = await res.json()
+      if (res.ok) {
+        setSearchResults(page === 1 ? data.results : [...searchResults, ...data.results])
+        setSearchPage(page)
+        setTotalPages(data.totalPages)
+      }
+    } catch { /* noop */ }
+    finally { setSearching(false) }
+  }
+
+  function handleUnsplashSelect(img: UnsplashImage) {
+    const attribution = `Photo by ${img.author} on Unsplash`
+    onSelect(img.regular, attribution)
+  }
+
   return (
     <div className="ed-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="ed-modal" style={{ width: 640 }}>
+      <div className="ed-modal" style={{ width: 700 }}>
         <div className="ed-modal-head">
-          <div className="ed-modal-title">Media Library</div>
+          <div className="ed-modal-title">Insert Image</div>
           <button className="ed-modal-close" onClick={onClose}>x</button>
         </div>
+
+        {/* Tabs */}
+        <div className="te-img-tabs">
+          <button type="button" className={`te-img-tab ${tab === 'upload' ? 'active' : ''}`} onClick={() => setTab('upload')}>Media Library</button>
+          <button type="button" className={`te-img-tab ${tab === 'search' ? 'active' : ''}`} onClick={() => setTab('search')}>Unsplash Search</button>
+        </div>
+
         <div className="ed-modal-body">
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: 32, color: 'var(--g400)' }}>Loading media...</div>
-          ) : media.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 32, color: 'var(--g400)' }}>No media files. Upload images in the Media Library first.</div>
-          ) : (
-            <div className="te-media-grid">
-              {media.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  className="te-media-item"
-                  onClick={() => onSelect(m.url, m.alt || m.filename)}
-                >
-                  <img src={m.url} alt={m.alt || m.filename} />
-                  <div className="te-media-name">{m.filename}</div>
+          {/* Upload tab */}
+          {tab === 'upload' && (
+            <>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: 32, color: 'var(--g400)' }}>Loading media...</div>
+              ) : media.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 32, color: 'var(--g400)' }}>No media files. Upload images in the Media Library first.</div>
+              ) : (
+                <div className="te-media-grid">
+                  {media.map((m) => (
+                    <button key={m.id} type="button" className="te-media-item" onClick={() => onSelect(m.url, m.alt || m.filename)}>
+                      <img src={m.url} alt={m.alt || m.filename} />
+                      <div className="te-media-name">{m.filename}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div style={{ marginTop: 12, textAlign: 'center' }}>
+                <button type="button" className="ed-btn ed-btn-secondary" onClick={() => { const url = window.prompt('Or paste an image URL directly'); if (url) onSelect(url, '') }}>
+                  Paste URL instead
                 </button>
-              ))}
-            </div>
+              </div>
+            </>
           )}
-          <div style={{ marginTop: 12, textAlign: 'center' }}>
-            <button
-              type="button"
-              className="ed-btn ed-btn-secondary"
-              onClick={() => {
-                const url = window.prompt('Or paste an image URL directly')
-                if (url) onSelect(url, '')
-              }}
-            >
-              Paste URL instead
-            </button>
-          </div>
+
+          {/* Unsplash search tab */}
+          {tab === 'search' && (
+            <>
+              <div className="te-unsplash-search">
+                <input
+                  ref={searchRef}
+                  type="text"
+                  className="te-unsplash-input"
+                  placeholder="Search Unsplash photos..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(1) }}
+                />
+                <button type="button" className="te-unsplash-search-btn" onClick={() => handleSearch(1)} disabled={searching || !query.trim()}>
+                  {searching ? 'Searching...' : 'Search'}
+                </button>
+              </div>
+
+              {searchResults.length > 0 ? (
+                <>
+                  <div className="te-unsplash-grid">
+                    {searchResults.map((img) => (
+                      <button key={img.id} type="button" className="te-unsplash-item" onClick={() => handleUnsplashSelect(img)}>
+                        <img src={img.small} alt={img.alt} loading="lazy" />
+                        <div className="te-unsplash-credit">
+                          <span className="te-unsplash-author">{img.author}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  {searchPage < totalPages && (
+                    <div style={{ textAlign: 'center', marginTop: 12 }}>
+                      <button type="button" className="ed-btn ed-btn-secondary" onClick={() => handleSearch(searchPage + 1)} disabled={searching}>
+                        {searching ? 'Loading...' : 'Load More'}
+                      </button>
+                    </div>
+                  )}
+                  <div className="te-unsplash-attribution">
+                    Photos provided by <a href="https://unsplash.com" target="_blank" rel="noopener noreferrer">Unsplash</a>
+                  </div>
+                </>
+              ) : !searching && query && searchResults.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 32, color: 'var(--g400)' }}>No results found. Try a different search term.</div>
+              ) : !query ? (
+                <div style={{ textAlign: 'center', padding: 32, color: 'var(--g400)' }}>Search for free, high-quality photos from Unsplash.</div>
+              ) : null}
+
+              {searching && searchResults.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 32, color: 'var(--g400)' }}>Searching...</div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -471,6 +569,13 @@ export default function TiptapEditor({
   const handleImageSelect = useCallback((url: string, alt: string) => {
     if (editor) {
       editor.chain().focus().setImage({ src: url, alt }).run()
+      // If alt contains Unsplash attribution, add it as caption text
+      if (alt && alt.includes('on Unsplash')) {
+        editor.chain().focus().createParagraphNear().insertContent({
+          type: 'paragraph',
+          content: [{ type: 'text', marks: [{ type: 'italic' }], text: alt }],
+        }).run()
+      }
     }
     setShowMediaLibrary(false)
   }, [editor])
