@@ -37,6 +37,14 @@ function renderMarks(text: string, marks?: TiptapMark[]): string {
       case 'code':
         html = `<code>${html}</code>`
         break
+      case 'underline':
+        html = `<u>${html}</u>`
+        break
+      case 'highlight': {
+        const color = mark.attrs?.color ? ` style="background-color:${escapeHtml(String(mark.attrs.color))}"` : ''
+        html = `<mark${color}>${html}</mark>`
+        break
+      }
       case 'link': {
         const href = escapeHtml(String(mark.attrs?.href || ''))
         const target = mark.attrs?.target ? ` target="${escapeHtml(String(mark.attrs.target))}"` : ' target="_blank"'
@@ -48,13 +56,102 @@ function renderMarks(text: string, marks?: TiptapMark[]): string {
   return html
 }
 
+/** Extract plain text from a node */
+function getNodeText(node: TiptapNode): string {
+  if (node.type === 'text') return node.text || ''
+  if (!node.content) return ''
+  return node.content.map(getNodeText).join('')
+}
+
+/** Detect widget markers in blockquote content */
+function detectWidget(node: TiptapNode): { type: string; attrs: string } | null {
+  if (node.type !== 'blockquote' || !node.content) return null
+  for (const child of node.content) {
+    const text = getNodeText(child).trim()
+    const match = text.match(/^<!--widget:(\w+)(.*)-->$/)
+    if (match) return { type: match[1], attrs: match[2] }
+  }
+  // Fallback: detect by emoji heading patterns (for old content without markers)
+  for (const child of node.content) {
+    if (child.type === 'heading') {
+      const text = getNodeText(child)
+      if (text.startsWith('📊 Poll:')) return { type: 'poll', attrs: '' }
+      if (text.startsWith('🧠 Quiz:')) return { type: 'quiz', attrs: '' }
+      if (text.startsWith('📋 Survey:')) return { type: 'survey', attrs: '' }
+    }
+  }
+  return null
+}
+
+/** Extract list items text from a node */
+function extractListItems(node: TiptapNode): string[] {
+  const items: string[] = []
+  if (!node.content) return items
+  for (const child of node.content) {
+    if (child.type === 'bulletList' || child.type === 'orderedList') {
+      for (const li of child.content || []) {
+        items.push(getNodeText(li).trim())
+      }
+    }
+  }
+  return items
+}
+
+/** Extract heading text (without emoji prefix) */
+function extractWidgetQuestion(node: TiptapNode): string {
+  for (const child of node.content || []) {
+    if (child.type === 'heading') {
+      const text = getNodeText(child)
+      return text.replace(/^[📊🧠📋]\s*(Poll|Quiz|Survey):\s*/, '')
+    }
+  }
+  return ''
+}
+
+function renderWidgetBlockquote(node: TiptapNode, widget: { type: string; attrs: string }): string {
+  const question = escapeHtml(extractWidgetQuestion(node))
+  const items = extractListItems(node)
+
+  if (widget.type === 'poll') {
+    const optionsJson = escapeHtml(JSON.stringify(items))
+    return `<div class="widget-poll" data-question="${question}" data-options="${optionsJson}"></div>`
+  }
+
+  if (widget.type === 'quiz') {
+    const correctMatch = widget.attrs.match(/correct=(\d+)/)
+    const correctIndex = correctMatch ? parseInt(correctMatch[1]) : 0
+    // Also detect from ✓ marker in items
+    let correct = correctIndex
+    const cleanItems = items.map((item, i) => {
+      if (item.endsWith(' ✓')) {
+        correct = i
+        return item.replace(/ ✓$/, '')
+      }
+      return item
+    })
+    const optionsJson = escapeHtml(JSON.stringify(cleanItems))
+    return `<div class="widget-quiz" data-question="${question}" data-options="${optionsJson}" data-correct="${correct}"></div>`
+  }
+
+  if (widget.type === 'survey') {
+    return `<div class="widget-survey" data-question="${question}"></div>`
+  }
+
+  // Unknown widget type, render as normal blockquote
+  return `<blockquote>${renderChildren(node)}</blockquote>`
+}
+
 function renderNode(node: TiptapNode): string {
   switch (node.type) {
     case 'text':
       return renderMarks(node.text || '', node.marks)
 
-    case 'paragraph':
+    case 'paragraph': {
+      const text = getNodeText(node).trim()
+      // Skip widget marker paragraphs in normal rendering
+      if (text.match(/^<!--\/?widget.*-->$/)) return ''
       return `<p>${renderChildren(node)}</p>`
+    }
 
     case 'heading': {
       const level = node.attrs?.level || 2
@@ -70,8 +167,11 @@ function renderNode(node: TiptapNode): string {
     case 'listItem':
       return `<li>${renderChildren(node)}</li>`
 
-    case 'blockquote':
+    case 'blockquote': {
+      const widget = detectWidget(node)
+      if (widget) return renderWidgetBlockquote(node, widget)
       return `<blockquote>${renderChildren(node)}</blockquote>`
+    }
 
     case 'horizontalRule':
       return '<hr />'
@@ -87,6 +187,23 @@ function renderNode(node: TiptapNode): string {
       const lang = node.attrs?.language ? ` class="language-${escapeHtml(String(node.attrs.language))}"` : ''
       return `<pre><code${lang}>${renderChildren(node)}</code></pre>`
     }
+
+    case 'youtube': {
+      const src = escapeHtml(String(node.attrs?.src || ''))
+      return `<div class="video-embed"><iframe src="${src}" frameborder="0" allowfullscreen></iframe></div>`
+    }
+
+    case 'table':
+      return `<table>${renderChildren(node)}</table>`
+
+    case 'tableRow':
+      return `<tr>${renderChildren(node)}</tr>`
+
+    case 'tableCell':
+      return `<td>${renderChildren(node)}</td>`
+
+    case 'tableHeader':
+      return `<th>${renderChildren(node)}</th>`
 
     case 'hardBreak':
       return '<br />'

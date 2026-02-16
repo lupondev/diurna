@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
+import { LanguageSelector } from '@/components/language-selector'
+import { useLanguage } from '@/hooks/use-language'
 
 type NavItem = { label: string; icon: string; href: string; badge?: string }
 type NavSection = { label: string; items: NavItem[]; roles?: string[] }
@@ -60,6 +62,7 @@ export function Sidebar() {
   const userName = session?.user?.name || 'User'
   const userInitial = userName.charAt(0).toUpperCase()
   const userRole = (session?.user as { role?: string } | undefined)?.role || ''
+  const { locale, setLocale } = useLanguage()
 
   return (
     <aside className="sb">
@@ -105,6 +108,9 @@ export function Sidebar() {
       </nav>
 
       <div className="sb-ft">
+        <div style={{ padding: '0 12px 8px', display: 'flex', justifyContent: 'flex-end' }}>
+          <LanguageSelector locale={locale} onChange={setLocale} compact />
+        </div>
         <div className="sb-u" style={{ cursor: 'default' }}>
           <div className="sb-av">{userInitial}</div>
           <div style={{ flex: 1 }}>

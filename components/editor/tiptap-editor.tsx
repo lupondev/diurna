@@ -146,40 +146,64 @@ function ToolbarRow2({
   }, [editor])
 
   const insertPoll = useCallback(() => {
+    const question = window.prompt('Poll question:', 'Your question here?')
+    if (!question) return
+    const optCount = window.prompt('Number of options (2-6):', '3')
+    const count = Math.min(6, Math.max(2, parseInt(optCount || '3') || 3))
+    const options: string[] = []
+    for (let i = 0; i < count; i++) {
+      const opt = window.prompt(`Option ${i + 1}:`, `Option ${String.fromCharCode(65 + i)}`)
+      options.push(opt || `Option ${String.fromCharCode(65 + i)}`)
+    }
     editor.chain().focus().insertContent({
       type: 'blockquote',
       content: [
-        { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: '📊 Poll: Your question here?' }] },
-        { type: 'bulletList', content: [
-          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Option A' }] }] },
-          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Option B' }] }] },
-          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Option C' }] }] },
-        ]},
+        { type: 'paragraph', content: [{ type: 'text', text: `<!--widget:poll-->` }] },
+        { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: `📊 Poll: ${question}` }] },
+        { type: 'bulletList', content: options.map((opt) => ({
+          type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: opt }] }],
+        }))},
+        { type: 'paragraph', content: [{ type: 'text', text: `<!--/widget-->` }] },
       ],
     }).run()
   }, [editor])
 
   const insertQuiz = useCallback(() => {
+    const question = window.prompt('Quiz question:', 'Your question here?')
+    if (!question) return
+    const answers: string[] = []
+    let correctIndex = 0
+    for (let i = 0; i < 4; i++) {
+      const ans = window.prompt(`Answer ${i + 1}${i === 0 ? ' (leave empty to stop)' : ''}:`, i < 3 ? `Answer ${String.fromCharCode(65 + i)}` : '')
+      if (!ans && i >= 2) break
+      answers.push(ans || `Answer ${String.fromCharCode(65 + i)}`)
+    }
+    const correctStr = window.prompt(`Which answer is correct? (1-${answers.length}):`, '1')
+    correctIndex = Math.min(answers.length, Math.max(1, parseInt(correctStr || '1') || 1)) - 1
     editor.chain().focus().insertContent({
       type: 'blockquote',
       content: [
-        { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: '🧠 Quiz: Your question here?' }] },
-        { type: 'orderedList', content: [
-          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Answer A' }] }] },
-          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Answer B' }] }] },
-          { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Answer C (correct)' }] }] },
-        ]},
+        { type: 'paragraph', content: [{ type: 'text', text: `<!--widget:quiz:correct=${correctIndex}-->` }] },
+        { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: `🧠 Quiz: ${question}` }] },
+        { type: 'orderedList', content: answers.map((ans, i) => ({
+          type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: i === correctIndex ? `${ans} ✓` : ans }] }],
+        }))},
+        { type: 'paragraph', content: [{ type: 'text', text: `<!--/widget-->` }] },
       ],
     }).run()
   }, [editor])
 
   const insertSurvey = useCallback(() => {
+    const question = window.prompt('Survey question:', 'Rate this article')
+    if (!question) return
     editor.chain().focus().insertContent({
       type: 'blockquote',
       content: [
-        { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: '📋 Survey: Rate this article' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: `<!--widget:survey-->` }] },
+        { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: `📋 Survey: ${question}` }] },
         { type: 'paragraph', content: [{ type: 'text', text: '⭐⭐⭐⭐⭐ (1-5 stars)' }] },
         { type: 'paragraph', content: [{ type: 'text', text: 'Feedback: ...' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: `<!--/widget-->` }] },
       ],
     }).run()
   }, [editor])

@@ -4,6 +4,7 @@ import { tiptapToHtml } from '@/lib/tiptap-html'
 import { generateNewsArticleSchema } from '@/lib/seo'
 import { SubscribeWidget } from '@/components/subscribe-widget'
 import { ShareButtons } from '@/components/public/share-buttons'
+import { ArticleRenderer } from '@/components/public/article-renderer'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
@@ -133,10 +134,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             </div>
           </header>
 
-          <div
-            className="pub-article-body"
-            dangerouslySetInnerHTML={{ __html: bodyHtml }}
-          />
+          <ArticleRenderer html={bodyHtml} />
 
           {/* Tags */}
           {article.tags.length > 0 && (
