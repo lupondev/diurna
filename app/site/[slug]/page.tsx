@@ -62,7 +62,6 @@ export default async function ArticlePage({ params }: { params: { slug: string }
 
   const bodyHtml = tiptapToHtml(article.content)
 
-  // Fetch author name
   let authorName = 'Editorial Team'
   if (article.authorId) {
     const author = await prisma.user.findUnique({

@@ -26,7 +26,6 @@ export async function GET() {
 
     const headers = { 'x-apisports-key': API_KEY }
 
-    // Fetch upcoming fixtures + live
     const [upcomingRes, liveRes] = await Promise.allSettled([
       fetch(`${BASE}/fixtures?next=10`, { headers }),
       fetch(`${BASE}/fixtures?live=all`, { headers }),

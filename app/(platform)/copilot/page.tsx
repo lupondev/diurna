@@ -4,10 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import './copilot.css'
 
-// ═══════════════════════════════════
-// TYPES
-// ═══════════════════════════════════
-
 type CopilotMode = 'full-auto' | 'hybrid' | 'manual'
 
 type QueueItem = {
@@ -47,10 +43,6 @@ type FixtureData = {
   time: string
   articles: { type: string; timing: string }[]
 }
-
-// ═══════════════════════════════════
-// DEFAULT DATA
-// ═══════════════════════════════════
 
 const DEFAULT_QUEUE: QueueItem[] = [
   { id: 'q1', title: 'Arsenal vs Chelsea: Complete Match Preview & Predictions', category: 'Premier League', suggestedTime: '14:00', confidence: 94, status: 'pending' },
@@ -108,10 +100,6 @@ const PEAK_TIME_OPTIONS = ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00',
 const MIX_COLORS = ['var(--mint)', 'var(--gold)', '#8B5CF6', 'var(--coral)']
 const MIX_LABELS = ['Match Coverage', 'Transfer News', 'Analysis', 'Fan Content']
 
-// ═══════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════
-
 function loadJSON<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key)
@@ -136,12 +124,7 @@ function confBg(c: number): string {
   return 'var(--g100)'
 }
 
-// ═══════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════
-
 export default function CopilotPage() {
-  // ─── State ───
   const [mode, setMode] = useState<CopilotMode>('hybrid')
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [strategy, setStrategy] = useState<ContentStrategy>(DEFAULT_STRATEGY)
@@ -157,7 +140,6 @@ export default function CopilotPage() {
   const [newRuleTeams, setNewRuleTeams] = useState('')
   const [newRuleSlots, setNewRuleSlots] = useState([{ type: 'Preview', timing: '-4h', template: 'Standard preview' }])
 
-  // ─── Load from localStorage ───
   useEffect(() => {
     setMode(loadJSON('copilot-mode', 'hybrid') as CopilotMode)
     setQueue(loadJSON('copilot-queue', DEFAULT_QUEUE))
@@ -165,13 +147,11 @@ export default function CopilotPage() {
     setRules(loadJSON('copilot-rules', DEFAULT_RULES))
   }, [])
 
-  // ─── Mode change ───
   const changeMode = useCallback((m: CopilotMode) => {
     setMode(m)
     saveJSON('copilot-mode', m)
   }, [])
 
-  // ─── Queue actions ───
   const approveItem = useCallback((id: string) => {
     setQueue(prev => {
       const next = prev.map(q => q.id === id ? { ...q, status: 'approved' as const } : q)
@@ -196,7 +176,6 @@ export default function CopilotPage() {
     })
   }, [])
 
-  // ─── Strategy ───
   const updateStrategy = useCallback((partial: Partial<ContentStrategy>) => {
     setStrategy(prev => ({ ...prev, ...partial }))
   }, [])
@@ -245,7 +224,6 @@ export default function CopilotPage() {
     setTimeout(() => setSaveFlash(false), 1500)
   }, [strategy, rules])
 
-  // ─── Add rule ───
   const addRule = useCallback(() => {
     if (!newRuleName.trim()) return
     const rule: AutopilotRule = {
@@ -279,7 +257,6 @@ export default function CopilotPage() {
     setNewRuleSlots(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s))
   }, [])
 
-  // ─── Computed ───
   const pendingQueue = queue.filter(q => q.status === 'pending')
   const approvedCount = queue.filter(q => q.status === 'approved').length
   const scheduledCount = (() => {

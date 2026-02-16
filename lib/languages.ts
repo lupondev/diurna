@@ -20,7 +20,6 @@ export function getLangFlag(code: string): string {
   return SUPPORTED_LANGUAGES.find((l) => l.code === code)?.flag || '🌐'
 }
 
-/** Read language from cookie (works in client) */
 export function getClientLanguage(): LangCode {
   if (typeof window === 'undefined') return DEFAULT_LANGUAGE
   const stored = localStorage.getItem('diurna-lang')
@@ -28,7 +27,6 @@ export function getClientLanguage(): LangCode {
   return DEFAULT_LANGUAGE
 }
 
-/** Save language to localStorage + cookie */
 export function setClientLanguage(code: LangCode) {
   localStorage.setItem('diurna-lang', code)
   document.cookie = `diurna-lang=${code};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`

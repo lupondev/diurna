@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
-// Role hierarchy for route access
 const ROLE_ACCESS: Record<string, string[]> = {
   '/admin': ['OWNER', 'ADMIN'],
   '/copilot': ['OWNER', 'ADMIN', 'EDITOR'],
@@ -12,7 +11,6 @@ export async function middleware(req: NextRequest) {
   const host = req.headers.get('host') || ''
   const { pathname } = req.nextUrl
 
-  // ─── Auth check for platform routes ───
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/onboarding')
   const isMarketingPage = pathname === '/landing'
   const isEmbedRoute = pathname.startsWith('/api/embed')
@@ -28,12 +26,10 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
-    // Redirect non-onboarded users to onboarding (skip API routes)
     if (!token.onboardingCompleted && !pathname.startsWith('/onboarding') && !pathname.startsWith('/api/')) {
       return NextResponse.redirect(new URL('/onboarding', req.url))
     }
 
-    // ─── Role-based route protection ───
     const userRole = (token.role as string) || 'JOURNALIST'
     for (const [routePrefix, allowedRoles] of Object.entries(ROLE_ACCESS)) {
       if (pathname.startsWith(routePrefix) && !allowedRoles.includes(userRole)) {
@@ -44,7 +40,6 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ─── Org slug detection ───
   let orgSlug: string | null = null
 
   if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {

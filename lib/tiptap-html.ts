@@ -56,14 +56,12 @@ function renderMarks(text: string, marks?: TiptapMark[]): string {
   return html
 }
 
-/** Extract plain text from a node */
 function getNodeText(node: TiptapNode): string {
   if (node.type === 'text') return node.text || ''
   if (!node.content) return ''
   return node.content.map(getNodeText).join('')
 }
 
-/** Detect widget markers in blockquote content */
 function detectWidget(node: TiptapNode): { type: string; attrs: string } | null {
   if (node.type !== 'blockquote' || !node.content) return null
   for (const child of node.content) {
@@ -71,7 +69,6 @@ function detectWidget(node: TiptapNode): { type: string; attrs: string } | null 
     const match = text.match(/^<!--widget:(\w+)(.*)-->$/)
     if (match) return { type: match[1], attrs: match[2] }
   }
-  // Fallback: detect by emoji heading patterns (for old content without markers)
   for (const child of node.content) {
     if (child.type === 'heading') {
       const text = getNodeText(child)
@@ -83,7 +80,6 @@ function detectWidget(node: TiptapNode): { type: string; attrs: string } | null 
   return null
 }
 
-/** Extract list items text from a node */
 function extractListItems(node: TiptapNode): string[] {
   const items: string[] = []
   if (!node.content) return items
@@ -97,7 +93,6 @@ function extractListItems(node: TiptapNode): string[] {
   return items
 }
 
-/** Extract heading text (without emoji prefix) */
 function extractWidgetQuestion(node: TiptapNode): string {
   for (const child of node.content || []) {
     if (child.type === 'heading') {
@@ -137,7 +132,6 @@ function renderWidgetBlockquote(node: TiptapNode, widget: { type: string; attrs:
     return `<div class="widget-survey" data-question="${question}"></div>`
   }
 
-  // Unknown widget type, render as normal blockquote
   return `<blockquote>${renderChildren(node)}</blockquote>`
 }
 
@@ -148,7 +142,6 @@ function renderNode(node: TiptapNode): string {
 
     case 'paragraph': {
       const text = getNodeText(node).trim()
-      // Skip widget marker paragraphs in normal rendering
       if (text.match(/^<!--\/?widget.*-->$/)) return ''
       return `<p>${renderChildren(node)}</p>`
     }

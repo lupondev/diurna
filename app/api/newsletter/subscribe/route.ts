@@ -59,7 +59,6 @@ export async function POST(req: NextRequest) {
       siteId = site.id
     }
 
-    // Check for existing subscriber
     const existing = await prisma.subscriber.findUnique({
       where: { siteId_email: { siteId, email: data.email } },
     })

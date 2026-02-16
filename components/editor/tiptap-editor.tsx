@@ -23,7 +23,6 @@ interface TiptapEditorProps {
   editable?: boolean
 }
 
-/* ─── Toolbar Button ─── */
 function TBtn({
   icon, label, action, active, disabled, title,
 }: {
@@ -45,7 +44,6 @@ function TBtn({
 
 function Sep() { return <div className="te-tb-sep" /> }
 
-/* ─── Row 1: Formatting Toolbar ─── */
 function ToolbarRow1({ editor }: { editor: NonNullable<ReturnType<typeof useEditor>> }) {
   const setLink = useCallback(() => {
     const prev = editor.getAttributes('link').href
@@ -107,7 +105,6 @@ function ToolbarRow1({ editor }: { editor: NonNullable<ReturnType<typeof useEdit
   )
 }
 
-/* ─── Row 2: Content Blocks Toolbar ─── */
 function ToolbarRow2({
   editor,
   onOpenMediaLibrary,
@@ -233,7 +230,6 @@ function ToolbarRow2({
   )
 }
 
-/* ─── Floating Bubble Menu ─── */
 function FloatingToolbar({ editor }: { editor: NonNullable<ReturnType<typeof useEditor>> }) {
   const setLink = useCallback(() => {
     const prev = editor.getAttributes('link').href
@@ -272,7 +268,6 @@ function FloatingToolbar({ editor }: { editor: NonNullable<ReturnType<typeof use
   )
 }
 
-/* ─── Right Sidebar Panel ─── */
 function EditorSidebar({
   editor,
   onOpenMediaLibrary,
@@ -365,7 +360,6 @@ function EditorSidebar({
   )
 }
 
-/* ─── Unsplash Image Result ─── */
 interface UnsplashImage {
   id: string
   small: string
@@ -375,7 +369,6 @@ interface UnsplashImage {
   authorUrl: string
 }
 
-/* ─── Media Library Modal with Unsplash Search ─── */
 function MediaLibraryModal({
   onClose,
   onSelect,
@@ -526,7 +519,6 @@ function MediaLibraryModal({
   )
 }
 
-/* ─── Main Editor Component ─── */
 export default function TiptapEditor({
   content,
   onChange,

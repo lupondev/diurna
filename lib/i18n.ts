@@ -1,5 +1,3 @@
-// ═══ MULTI-LANGUAGE / i18n ENGINE ═══
-
 export type Locale = 'en' | 'bs' | 'hr' | 'sr' | 'de' | 'ar' | 'fr' | 'es'
 
 export const LOCALES: { code: Locale; label: string; flag: string; dir?: 'rtl' }[] = [

@@ -41,8 +41,7 @@ export default function EditorialTemplate() {
         body: JSON.stringify({ theme: 'editorial' }),
       })
       if (res.ok) router.push('/site')
-    } catch (e) {
-      console.error('Apply theme error:', e)
+    } catch {
     } finally {
       setApplying(false)
     }

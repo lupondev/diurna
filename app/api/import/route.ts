@@ -91,7 +91,6 @@ export async function POST(req: NextRequest) {
       tagMap.set(name.toLowerCase(), tag.id)
     }
 
-    // Check for existing slugs to avoid duplicates
     const existingSlugs = await prisma.article.findMany({
       where: { siteId: site.id, deletedAt: null },
       select: { slug: true },

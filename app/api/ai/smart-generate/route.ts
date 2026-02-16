@@ -76,7 +76,6 @@ Language: ${input.language}
 
 Write the article content as original journalism. Make it informative, engaging, and factual. The quiz should have exactly 5 questions. All content must be unique and paraphrased.`
 
-    console.log('[smart-generate] Calling Claude with topic:', input.topic)
     const response = await client.messages.create({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 4096,
@@ -85,20 +84,14 @@ Write the article content as original journalism. Make it informative, engaging,
     })
 
     const text = response.content[0].type === 'text' ? response.content[0].text : ''
-    console.log('[smart-generate] Claude response length:', text.length, '| tokens:', response.usage.input_tokens, 'in /', response.usage.output_tokens, 'out')
 
-    // Parse JSON from response (handle potential markdown wrapping)
     let cleaned = text.trim()
     if (cleaned.startsWith('```')) {
       cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
     }
 
     const result = JSON.parse(cleaned)
-    console.log('[smart-generate] Parsed result - title:', result.title, '| content length:', result.content?.length || 0, '| has poll:', !!result.poll, '| has quiz:', !!result.quiz)
-
-    // Convert HTML content to Tiptap JSON
     const tiptapContent = htmlToTiptap(result.content || '')
-    console.log('[smart-generate] Tiptap content blocks:', (tiptapContent as { content?: unknown[] }).content?.length || 0)
 
     return NextResponse.json({
       ...result,
@@ -116,11 +109,8 @@ Write the article content as original journalism. Make it informative, engaging,
   }
 }
 
-// Convert basic HTML to Tiptap JSON format
 function htmlToTiptap(html: string): Record<string, unknown> {
   const content: Record<string, unknown>[] = []
-
-  // Split by block-level tags
   const blockRegex = /<(h[1-6]|p|blockquote|ul|ol)>([\s\S]*?)<\/\1>/gi
   let match
 

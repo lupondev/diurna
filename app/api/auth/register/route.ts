@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await bcrypt.hash(data.password, 12)
 
-    // Handle invite token flow
     if (data.inviteToken) {
       const invite = await prisma.invite.findUnique({ where: { token: data.inviteToken } })
 

@@ -28,7 +28,6 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const data = InviteSchema.parse(body)
 
-  // Check if email already has a pending invite
   const existing = await prisma.invite.findFirst({
     where: {
       organizationId: orgId,
@@ -42,7 +41,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Pending invite already exists for this email' }, { status: 409 })
   }
 
-  // Check if user already in org
   const existingUser = await prisma.user.findUnique({
     where: { email: data.email },
     include: {

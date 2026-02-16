@@ -21,7 +21,6 @@ async function parseFeed(url: string): Promise<FeedItem[]> {
     const xml = await res.text()
     const items: FeedItem[] = []
 
-    // Extract channel title for source name
     const channelTitle = xml.match(/<channel>[\s\S]*?<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
       || xml.match(/<channel>[\s\S]*?<title>(.*?)<\/title>/)?.[1]
       || new URL(url).hostname
@@ -63,7 +62,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ articles: [], message: 'No competitor feeds configured' })
     }
 
-    // Fetch all feeds in parallel
     const results = await Promise.all(feeds.map((url) => parseFeed(url)))
     const allArticles = results
       .flat()

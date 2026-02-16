@@ -46,8 +46,7 @@ export default function MediaPage() {
         const item = await res.json()
         setMedia((prev) => [item, ...prev])
       }
-    } catch (err) {
-      console.error('Upload error:', err)
+    } catch {
     } finally {
       setUploading(false)
     }
@@ -77,8 +76,7 @@ export default function MediaPage() {
       if (res.ok) {
         setMedia((prev) => prev.filter((m) => m.id !== id))
       }
-    } catch (err) {
-      console.error('Delete error:', err)
+    } catch {
     }
   }
 

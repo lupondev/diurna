@@ -30,18 +30,13 @@ export default function ArticleEditor({ id }: { id: string }) {
   const [loading, setLoading] = useState(true)
   const [aiGenerated, setAiGenerated] = useState(false)
 
-  // Schedule
   const [showSchedule, setShowSchedule] = useState(false)
   const [scheduledAt, setScheduledAt] = useState('')
 
-  // History
   const [showHistory, setShowHistory] = useState(false)
   const [versions, setVersions] = useState<Version[]>([])
 
-  // Newsletter
   const [sendNewsletter, setSendNewsletter] = useState(false)
-
-  // Tags
   const [articleTags, setArticleTags] = useState<TagItem[]>([])
   const [allTags, setAllTags] = useState<TagItem[]>([])
   const [tagInput, setTagInput] = useState('')
@@ -89,7 +84,6 @@ export default function ArticleEditor({ id }: { id: string }) {
       })
       if (res.ok) {
         if (newStatus) setStatus(newStatus)
-        // Send newsletter if checked and publishing
         if (sendNewsletter && newStatus === 'PUBLISHED') {
           fetch('/api/newsletter/send', {
             method: 'POST',
@@ -98,7 +92,6 @@ export default function ArticleEditor({ id }: { id: string }) {
           }).catch(console.error)
           setSendNewsletter(false)
         }
-        // Refresh versions
         const data = await res.json()
         if (data.id) {
           const fresh = await fetch(`/api/articles/${id}`).then((r) => r.json())
@@ -108,8 +101,7 @@ export default function ArticleEditor({ id }: { id: string }) {
       } else if (res.status === 409) {
         alert('This slug is already taken. Please choose a different one.')
       }
-    } catch (error) {
-      console.error('Save error:', error)
+    } catch { /* save failed */
     } finally {
       setSaving(false)
     }
@@ -120,7 +112,7 @@ export default function ArticleEditor({ id }: { id: string }) {
     try {
       const res = await fetch(`/api/articles/${id}`, { method: 'DELETE' })
       if (res.ok) { router.push('/newsroom'); router.refresh() }
-    } catch (error) { console.error('Delete error:', error) }
+    } catch { /* delete failed */ }
   }
 
   function restoreVersion(v: Version) {
@@ -148,7 +140,7 @@ export default function ArticleEditor({ id }: { id: string }) {
           setAllTags((prev) => [...prev, tag])
           setArticleTags((prev) => [...prev, tag])
         }
-      } catch (err) { console.error('Tag create error:', err) }
+      } catch { /* tag create failed */ }
     }
     setTagInput('')
     setShowTagSuggestions(false)
@@ -176,7 +168,6 @@ export default function ArticleEditor({ id }: { id: string }) {
 
   return (
     <div>
-      {/* Top bar */}
       <div className="ed-top">
         <button className="ed-back" onClick={() => router.push('/newsroom')}>← Newsroom</button>
         <div className="ed-title-bar">
@@ -203,7 +194,6 @@ export default function ArticleEditor({ id }: { id: string }) {
         )}
       </div>
 
-      {/* Editor form */}
       <div className="ed-form">
         <input
           type="text"
@@ -213,7 +203,6 @@ export default function ArticleEditor({ id }: { id: string }) {
           onChange={(e) => handleTitleChange(e.target.value)}
         />
 
-        {/* Slug field */}
         <div className="ed-meta">
           <div className="ed-slug-row">
             <span className="ed-slug-label">Slug:</span>
@@ -226,7 +215,6 @@ export default function ArticleEditor({ id }: { id: string }) {
             />
           </div>
 
-          {/* Tags */}
           <div className="ed-tags-row">
             <span className="ed-slug-label">Tags:</span>
             <div className="ed-tags-container">
@@ -271,7 +259,6 @@ export default function ArticleEditor({ id }: { id: string }) {
         )}
       </div>
 
-      {/* Schedule Modal */}
       {showSchedule && (
         <div className="ed-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowSchedule(false) }}>
           <div className="ed-modal">
@@ -312,7 +299,6 @@ export default function ArticleEditor({ id }: { id: string }) {
         </div>
       )}
 
-      {/* History Modal */}
       {showHistory && (
         <div className="ed-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowHistory(false) }}>
           <div className="ed-modal">

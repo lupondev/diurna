@@ -23,17 +23,13 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // Facebook
   const [fbConnected, setFbConnected] = useState(false)
   const [fbAuthUrl, setFbAuthUrl] = useState('')
   const [fbPages, setFbPages] = useState<FbPage[]>([])
   const [fbToggling, setFbToggling] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
-  // Newsletter
   const [nlStats, setNlStats] = useState<NewsletterStats | null>(null)
-
-  // General
   const [siteName, setSiteName] = useState('SportNews Pro')
   const [siteUrl, setSiteUrl] = useState('sportnews.com')
   const [description, setDescription] = useState('Breaking sports news, powered by AI')
@@ -58,7 +54,6 @@ export default function SettingsPage() {
       .catch(() => {})
   }, [])
 
-  // Facebook connection status
   function loadFbStatus() {
     fetch('/api/social/facebook')
       .then((r) => r.ok ? r.json() : null)
@@ -73,7 +68,6 @@ export default function SettingsPage() {
 
   useEffect(() => { loadFbStatus() }, [])
 
-  // Newsletter stats
   useEffect(() => {
     fetch('/api/newsletter/subscribe')
       .then((r) => r.ok ? r.json() : null)
@@ -81,7 +75,6 @@ export default function SettingsPage() {
       .catch(() => {})
   }, [])
 
-  // Handle FB OAuth callback
   useEffect(() => {
     const fbStatus = searchParams.get('fb')
     if (fbStatus === 'success') {
@@ -103,8 +96,7 @@ export default function SettingsPage() {
           p.id === page.id ? { ...p, isActive: !p.isActive } : p
         ))
       }
-    } catch (error) {
-      console.error('FB toggle error:', error)
+    } catch {
     } finally {
       setFbToggling(null)
     }
@@ -117,36 +109,27 @@ export default function SettingsPage() {
         setFbConnected(false)
         setFbPages([])
       }
-    } catch (error) {
-      console.error('FB disconnect error:', error)
+    } catch {
     }
   }
 
-  // Theme
   const [theme, setTheme] = useState('editorial')
-
-  // Branding
   const [brandColor, setBrandColor] = useState('#00D4AA')
-
-  // SEO
   const [metaTitle, setMetaTitle] = useState('SportNews Pro — AI-Powered Sports News')
   const [metaDesc, setMetaDesc] = useState('Breaking sports news, match previews, transfer updates and tactical analysis. Powered by AI.')
   const [ogImage, setOgImage] = useState('')
 
-  // Integrations
   const [gaId, setGaId] = useState('')
   const [twitter, setTwitter] = useState('')
   const [facebook, setFacebook] = useState('')
   const [instagram, setInstagram] = useState('')
   const [youtube, setYoutube] = useState('')
 
-  // WordPress
   const [wpSiteUrl, setWpSiteUrl] = useState('')
   const [wpApiKey, setWpApiKey] = useState('')
   const [wpTesting, setWpTesting] = useState(false)
   const [wpTestResult, setWpTestResult] = useState<{ success: boolean; message: string } | null>(null)
 
-  // Competitor Tracking
   const [competitorFeeds, setCompetitorFeeds] = useState<string[]>([])
   const [newFeedUrl, setNewFeedUrl] = useState('')
 
@@ -177,8 +160,7 @@ export default function SettingsPage() {
         setSaved(true)
         setTimeout(() => setSaved(false), 2000)
       }
-    } catch (error) {
-      console.error('Save settings error:', error)
+    } catch {
     } finally {
       setSaving(false)
     }
@@ -201,7 +183,6 @@ export default function SettingsPage() {
   return (
     <div className="st-page">
 
-      {/* GENERAL */}
       <div className="st-section">
         <div className="st-section-head">
           <div className="st-section-title">General Settings</div>
@@ -252,7 +233,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* BRANDING */}
       <div className="st-section">
         <div className="st-section-head">
           <div className="st-section-title">Branding</div>
@@ -288,7 +268,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* THEME */}
       <div className="st-section">
         <div className="st-section-head">
           <div className="st-section-title">Theme</div>
@@ -351,7 +330,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* SEO */}
       <div className="st-section">
         <div className="st-section-head">
           <div className="st-section-title">SEO Defaults</div>
@@ -378,7 +356,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* INTEGRATIONS */}
       <div className="st-section">
         <div className="st-section-head">
           <div className="st-section-title">Integrations</div>
@@ -472,7 +449,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* WORDPRESS */}
       <div className="st-section">
         <div className="st-section-head">
           <div className="st-section-title">WordPress Integration</div>
@@ -542,7 +518,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* COMPETITOR TRACKING */}
       <div className="st-section">
         <div className="st-section-head">
           <div className="st-section-title">Competitor Tracking</div>
@@ -600,7 +575,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* NEWSLETTER */}
       <div className="st-section">
         <div className="st-section-head">
           <div className="st-section-title">Newsletter</div>
@@ -668,7 +642,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* DATA MANAGEMENT */}
       <div className="st-section">
         <div className="st-section-head">
           <div className="st-section-title">Data Management</div>
@@ -696,7 +669,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* DANGER ZONE */}
       <div className="st-section">
         <div className="st-section-head">
           <div className="st-section-title">Danger Zone</div>
@@ -715,7 +687,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* SAVE BAR */}
       {(dirty || saved) && (
         <div className="st-save-bar">
           <div className="st-save-text">

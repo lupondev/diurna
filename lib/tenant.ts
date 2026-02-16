@@ -2,11 +2,6 @@ import { headers } from 'next/headers'
 import { prisma } from './prisma'
 import { cache } from 'react'
 
-/**
- * Get the current organization from the request context.
- * Uses React cache() to deduplicate within a single request.
- * Runs in Node.js server components/API routes (NOT middleware).
- */
 export const getOrg = cache(async () => {
   const slug = headers().get('x-org-slug')
   if (!slug) {
@@ -25,9 +20,6 @@ export const getOrg = cache(async () => {
   return org
 })
 
-/**
- * Convenience shortcut — returns just the org ID.
- */
 export async function getOrgId(): Promise<string> {
   const org = await getOrg()
   return org.id

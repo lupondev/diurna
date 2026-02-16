@@ -117,7 +117,6 @@ export default function NewsroomPage() {
   const [search, setSearch] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
-  // Smart Newsroom state
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
   const [trendingLoading, setTrendingLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'trending' | 'breaking' | 'fixtures' | 'youtube' | 'fanbuzz' | 'transfers' | 'stats'>('trending')
@@ -125,7 +124,6 @@ export default function NewsroomPage() {
   const [genStep, setGenStep] = useState(0)
   const [genError, setGenError] = useState<string | null>(null)
 
-  // Intelligence tabs state
   const [breakingNews, setBreakingNews] = useState<BreakingItem[]>([])
   const [breakingLoading, setBreakingLoading] = useState(false)
   const [fixtures, setFixtures] = useState<FixtureItem[]>([])
@@ -141,10 +139,8 @@ export default function NewsroomPage() {
   const [transferNews, setTransferNews] = useState<BreakingItem[]>([])
   const [transfersLoading, setTransfersLoading] = useState(false)
 
-  // Sidebar
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
-  // Fetch trending
   useEffect(() => {
     setTrendingLoading(true)
     fetch('/api/newsroom/smart')
@@ -152,14 +148,12 @@ export default function NewsroomPage() {
       .then((data) => { setTrendingTopics(data.topics || []); setTrendingLoading(false) })
       .catch(() => setTrendingLoading(false))
 
-    // Also load articles for gap detector
     fetch('/api/articles?limit=50')
       .then((r) => r.json())
       .then((data) => { setArticles(data.articles || data || []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 
-  // Lazy-load tab data
   useEffect(() => {
     if (activeTab === 'breaking' && breakingNews.length === 0 && !breakingLoading) {
       setBreakingLoading(true)
@@ -212,7 +206,6 @@ export default function NewsroomPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
 
-  // Generate article from topic
   const generateFromTopic = useCallback(async (topic: TrendingTopic) => {
     setGeneratingTopic(topic.id)
     setGenStep(0)
@@ -244,13 +237,11 @@ export default function NewsroomPage() {
     }
   }, [router])
 
-  // Rewrite button — opens editor with topic
   function rewriteArticle(title: string) {
     sessionStorage.setItem('editorTopic', title)
     router.push(`/editor?prompt=${encodeURIComponent(`Rewrite this news story in our editorial voice: ${title}`)}`)
   }
 
-  // Search filter across tabs
   const searchLower = search.toLowerCase()
   const filteredBreaking = breakingNews.filter(i => !search || i.title.toLowerCase().includes(searchLower))
   const filteredFixtures = fixtures.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower))
@@ -260,10 +251,8 @@ export default function NewsroomPage() {
   const filteredTransfers = transferNews.filter(i => !search || i.title.toLowerCase().includes(searchLower))
   const filteredTrending = trendingTopics.filter(i => !search || i.title.toLowerCase().includes(searchLower))
 
-  // Top 5 trending for hot bar
   const topTrending = trendingTopics.slice(0, 5)
 
-  // Tab list
   const tabs = [
     { key: 'trending' as const, icon: '🔥', label: 'TRENDING', count: trendingTopics.length },
     { key: 'breaking' as const, icon: '📰', label: 'BREAKING', count: breakingNews.length },
@@ -276,7 +265,6 @@ export default function NewsroomPage() {
 
   return (
     <div className="nr5">
-      {/* Top Header */}
       <div className="nr5-head">
         <div className="nr5-head-left">
           <h1 className="nr5-title">Smart Newsroom</h1>
@@ -303,7 +291,6 @@ export default function NewsroomPage() {
         </div>
       </div>
 
-      {/* Trending Hot Bar */}
       {topTrending.length > 0 && (
         <div className="smart-hotbar">
           <div className="smart-hotbar-label">🔥 TRENDING NOW</div>
@@ -319,7 +306,6 @@ export default function NewsroomPage() {
         </div>
       )}
 
-      {/* Tab Switcher */}
       <div className="smart-tabs">
         {tabs.map((tab) => (
           <button key={tab.key} className={`smart-tab ${activeTab === tab.key ? 'active' : ''}`} onClick={() => setActiveTab(tab.key)}>
@@ -329,10 +315,8 @@ export default function NewsroomPage() {
         ))}
       </div>
 
-      {/* Main content with optional sidebar */}
       <div className={`nr5-main-layout ${sidebarOpen ? 'with-sidebar' : ''}`}>
         <div className="nr5-main-content">
-          {/* ═══ TRENDING TAB ═══ */}
           {activeTab === 'trending' && (
             <div className="smart-trending">
               {trendingLoading ? (
@@ -393,7 +377,6 @@ export default function NewsroomPage() {
             </div>
           )}
 
-          {/* ═══ BREAKING NEWS TAB (Redesigned) ═══ */}
           {activeTab === 'breaking' && (
             <div className="smart-trending">
               {breakingLoading ? (
@@ -428,7 +411,6 @@ export default function NewsroomPage() {
             </div>
           )}
 
-          {/* ═══ FIXTURES TAB (with Live Moment Exploiter) ═══ */}
           {activeTab === 'fixtures' && (
             <div className="smart-trending">
               {fixturesLoading ? (
@@ -450,7 +432,6 @@ export default function NewsroomPage() {
                               <div className="live-score">{m.homeGoals ?? 0} - {m.awayGoals ?? 0}</div>
                               <div className="live-team">{m.awayTeam}</div>
                             </div>
-                            {/* Live Events */}
                             {m.events && m.events.length > 0 && (
                               <div className="live-events">
                                 {m.events.map((ev, ei) => (
@@ -462,7 +443,6 @@ export default function NewsroomPage() {
                                 ))}
                               </div>
                             )}
-                            {/* Moment Alert */}
                             {m.events && m.events.some(e => e.type === 'red' || (m.homeGoals !== null && m.awayGoals !== null && Math.abs(m.homeGoals - m.awayGoals) >= 2)) && (
                               <div className="moment-alert">
                                 ⚡ MOMENT ALERT — Unusual scoreline detected
@@ -517,7 +497,6 @@ export default function NewsroomPage() {
             </div>
           )}
 
-          {/* ═══ YOUTUBE TAB ═══ */}
           {activeTab === 'youtube' && (
             <div className="smart-trending">
               {youtubeLoading ? (
@@ -559,7 +538,6 @@ export default function NewsroomPage() {
             </div>
           )}
 
-          {/* ═══ FAN BUZZ TAB ═══ */}
           {activeTab === 'fanbuzz' && (
             <div className="smart-trending">
               {redditLoading ? (
@@ -602,7 +580,6 @@ export default function NewsroomPage() {
             </div>
           )}
 
-          {/* ═══ TRANSFERS TAB ═══ */}
           {activeTab === 'transfers' && (
             <div className="smart-trending">
               {transfersLoading ? (
@@ -640,14 +617,12 @@ export default function NewsroomPage() {
             </div>
           )}
 
-          {/* ═══ STATS TAB ═══ */}
           {activeTab === 'stats' && (
             <div className="smart-trending" style={{ padding: '0 24px 24px' }}>
               {statsLoading ? (
                 <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Loading Premier League stats...</div></div>
               ) : (
                 <div className="stats-layout">
-                  {/* Standings Table */}
                   <div className="stats-table-wrap">
                     <div className="stats-table-head">🏆 Premier League Standings</div>
                     <table className="stats-table">
@@ -669,7 +644,6 @@ export default function NewsroomPage() {
                       </tbody>
                     </table>
                   </div>
-                  {/* Top Scorers */}
                   <div className="scorers-wrap">
                     <div className="stats-table-head">⚽ Top Scorers</div>
                     {topScorers.map((p, i) => (
@@ -692,12 +666,10 @@ export default function NewsroomPage() {
           )}
         </div>
 
-        {/* ═══ INTELLIGENCE SIDEBAR ═══ */}
         {sidebarOpen && (
           <aside className="intel-sidebar">
             <StoryGapDetector breakingNews={breakingNews} articles={articles} />
             <VelocityTracker breakingNews={breakingNews} articles={articles} />
-            {/* Quick stats */}
             <div className="intel-panel">
               <div className="intel-panel-head">
                 <span className="intel-panel-icon">📊</span>
@@ -714,7 +686,6 @@ export default function NewsroomPage() {
         )}
       </div>
 
-      {/* Keyboard shortcuts hint */}
       <div className="nr5-shortcuts">
         <div className="nr5-sc"><kbd>/</kbd> Search</div>
         <div className="nr5-sc"><kbd>T</kbd> Toggle sidebar</div>

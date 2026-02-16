@@ -1,5 +1,3 @@
-// ═══ SEO ENGINE ═══
-
 export function generateMetaTitle(articleTitle: string, siteName: string): string {
   const maxLen = 60
   const suffix = ` | ${siteName}`

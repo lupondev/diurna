@@ -3,10 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import './calendar.css'
 
-// ═══════════════════════════════════
-// TYPES
-// ═══════════════════════════════════
-
 type Slot = {
   id: string
   time: string
@@ -32,10 +28,6 @@ type DayData = {
   today: boolean
   slots: Slot[]
 }
-
-// ═══════════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════════
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -69,10 +61,6 @@ const contentMix = [
   { label: 'Analysis', pct: 15, color: '#8B5CF6' },
   { label: 'Trending', pct: 10, color: 'var(--coral)' },
 ]
-
-// ═══════════════════════════════════
-// DYNAMIC DATA GENERATION
-// ═══════════════════════════════════
 
 const PREMATCH_TEMPLATES = [
   '{home} vs {away}: Match Preview & Predictions',
@@ -218,10 +206,6 @@ function generateSlotsForDay(date: Date, today: boolean, dailyTarget: number): S
   return slots
 }
 
-// ═══════════════════════════════════
-// DATE HELPERS
-// ═══════════════════════════════════
-
 function getMonday(d: Date): Date {
   const dt = new Date(d)
   const day = dt.getDay()
@@ -248,10 +232,6 @@ function formatDateRange(start: Date): string {
   }
   return `${MONTH_NAMES[start.getMonth()]} ${start.getDate()} — ${MONTH_NAMES[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`
 }
-
-// ═══════════════════════════════════
-// MODALS
-// ═══════════════════════════════════
 
 function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
@@ -469,10 +449,6 @@ function DailyOutputModal({ onClose, value, onChange }: {
   )
 }
 
-// ═══════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════
-
 export default function CalendarPage() {
   const [activeStrat, setActiveStrat] = useState(0)
   const [activeView, setActiveView] = useState<'Week' | 'Month' | 'List'>('Week')
@@ -501,7 +477,6 @@ export default function CalendarPage() {
     }
   }, [isMobile]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load from localStorage on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem('cal-scheduled')

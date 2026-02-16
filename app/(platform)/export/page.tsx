@@ -49,7 +49,6 @@ export default function ExportPage() {
       {error && <div className="exp-error">{error}</div>}
 
       <div className="exp-grid">
-        {/* JSON */}
         <div className="exp-card">
           <div className="exp-card-icon">{ }</div>
           <div className="exp-card-title">Diurna JSON</div>
@@ -63,7 +62,6 @@ export default function ExportPage() {
           </button>
         </div>
 
-        {/* CSV */}
         <div className="exp-card">
           <div className="exp-card-icon">CSV</div>
           <div className="exp-card-title">CSV Spreadsheet</div>
@@ -76,7 +74,6 @@ export default function ExportPage() {
           </button>
         </div>
 
-        {/* WXR */}
         <div className="exp-card">
           <div className="exp-card-icon">WP</div>
           <div className="exp-card-title">WordPress WXR</div>

@@ -75,7 +75,6 @@ export async function POST(req: NextRequest) {
       const pubDate = extractTag(item, 'pubDate')
       const author = extractTag(item, 'dc:creator')
 
-      // Extract categories and tags from <category> elements
       const categoryRegex = /<category\s+domain="category"[^>]*><!\[CDATA\[(.*?)\]\]><\/category>/g
       const tagRegex = /<category\s+domain="post_tag"[^>]*><!\[CDATA\[(.*?)\]\]><\/category>/g
       const categories: string[] = []
@@ -90,7 +89,6 @@ export async function POST(req: NextRequest) {
         tags.push(tagMatch[1])
       }
 
-      // Extract featured image from wp:postmeta
       let featuredImage: string | null = null
       const metaRegex = /<wp:postmeta>([\s\S]*?)<\/wp:postmeta>/g
       let metaMatch

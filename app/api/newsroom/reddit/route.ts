@@ -34,7 +34,6 @@ export async function GET() {
       try {
         const feed = await parser.parseURL(`https://www.reddit.com/r/${sub}/hot.rss`)
         for (const item of (feed.items || []).slice(0, 15)) {
-          // Extract score from content if available
           const scoreMatch = item.contentSnippet?.match(/(\d+)\s*(?:points?|upvotes?)/i)
           const commentMatch = item.contentSnippet?.match(/(\d+)\s*comments?/i)
 

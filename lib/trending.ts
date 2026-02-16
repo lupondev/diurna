@@ -1,10 +1,5 @@
 import { prisma } from './prisma'
 
-// ═══════════════════════════════════
-// TRENDING INTELLIGENCE ENGINE
-// Multi-source aggregation + scoring
-// ═══════════════════════════════════
-
 export interface TrendingTopic {
   id: string
   title: string
@@ -27,11 +22,9 @@ interface RawItem {
   pubDate?: string
 }
 
-// ─── In-memory cache ───
 const cache = new Map<string, { data: TrendingTopic[]; expires: number }>()
 const CACHE_TTL = 10 * 60 * 1000 // 10 min
 
-// ─── Category detection keywords ───
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   Sport: ['football', 'soccer', 'match', 'goal', 'player', 'league', 'champions', 'world cup', 'nba', 'nfl', 'tennis', 'f1', 'racing', 'olympics', 'premier league', 'la liga', 'bundesliga', 'serie a', 'transfer', 'coach', 'stadium', 'team', 'athlete', 'sport', 'game', 'utakmica', 'fudbal', 'košarka'],
   Politics: ['election', 'president', 'minister', 'parliament', 'government', 'vote', 'law', 'policy', 'senate', 'congress', 'political', 'trump', 'biden', 'eu', 'nato', 'diplomacy', 'war', 'conflict', 'sanction', 'izbori', 'vlada'],
@@ -81,7 +74,6 @@ function parseTrafficNumber(traffic: string): number {
   return parseInt(clean) || 0
 }
 
-// ─── Google Trends RSS ───
 async function fetchGoogleTrends(geos: string[]): Promise<RawItem[]> {
   const items: RawItem[] = []
 
@@ -119,7 +111,6 @@ async function fetchGoogleTrends(geos: string[]): Promise<RawItem[]> {
   return items
 }
 
-// ─── Competitor RSS ───
 async function fetchCompetitorFeeds(organizationId: string): Promise<RawItem[]> {
   const site = await prisma.site.findFirst({
     where: { organization: { id: organizationId } },
@@ -165,7 +156,6 @@ async function fetchCompetitorFeeds(organizationId: string): Promise<RawItem[]> 
   return items
 }
 
-// ─── Football Matches ───
 async function fetchFootballTrends(): Promise<RawItem[]> {
   const items: RawItem[] = []
   try {
@@ -192,7 +182,6 @@ async function fetchFootballTrends(): Promise<RawItem[]> {
   return items
 }
 
-// ─── Deduplication & Scoring ───
 function normalize(title: string): string {
   return title.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
 }
@@ -202,7 +191,6 @@ function areSimilar(a: string, b: string): boolean {
   const nb = normalize(b)
   if (na === nb) return true
 
-  // Check word overlap
   const wordsA = new Set(na.split(' ').filter(w => w.length > 3))
   const wordsB = new Set(nb.split(' ').filter(w => w.length > 3))
   if (wordsA.size === 0 || wordsB.size === 0) return false
@@ -240,21 +228,16 @@ function deduplicateAndScore(items: RawItem[]): TrendingTopic[] {
     }
   }
 
-  // Score each group
   return groups.map((group, i) => {
-    let score = 20 // base
-
-    // Sources multiplier (more sources = more viral) - up to 30 pts
+    let score = 20
     score += Math.min(group.sources.size * 10, 30)
 
-    // Traffic volume - up to 25 pts
     if (group.traffic >= 1000000) score += 25
     else if (group.traffic >= 500000) score += 20
     else if (group.traffic >= 100000) score += 15
     else if (group.traffic >= 10000) score += 10
     else if (group.traffic > 0) score += 5
 
-    // Recency bonus - up to 15 pts (items with pubDate)
     const now = Date.now()
     let newestAge = Infinity
     for (const item of group.items) {
@@ -268,7 +251,6 @@ function deduplicateAndScore(items: RawItem[]): TrendingTopic[] {
     else if (newestAge < 6) score += 8
     else if (newestAge < 24) score += 4
 
-    // Position bonus (Google Trends ranking)
     if (i < 3) score += 10
     else if (i < 10) score += 5
 
@@ -277,7 +259,6 @@ function deduplicateAndScore(items: RawItem[]): TrendingTopic[] {
     const category = detectCategory(group.title)
     const suggestedType = detectArticleType(group.title, category)
 
-    // Determine velocity
     let velocity: TrendingTopic['velocity'] = 'rising'
     if (group.traffic >= 500000) velocity = 'peaked'
     if (newestAge > 12) velocity = 'falling'
@@ -302,7 +283,6 @@ function deduplicateAndScore(items: RawItem[]): TrendingTopic[] {
   }).sort((a, b) => b.score - a.score)
 }
 
-// ─── Main Entry Point ───
 export async function getTrendingTopics(organizationId: string): Promise<TrendingTopic[]> {
   const cacheKey = `smart-${organizationId}`
   const cached = cache.get(cacheKey)

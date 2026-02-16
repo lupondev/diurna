@@ -4,10 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence, useInView } from 'framer-motion'
 
-// ═══════════════════════════════════
-// DATA
-// ═══════════════════════════════════
-
 const features = [
   { icon: '\u{1F9E0}', title: 'Smart Newsroom', desc: 'AI monitors Google Trends, competitor RSS feeds, and football fixtures to surface what\'s trending. Never miss a story.' },
   { icon: '\u26A1', title: 'One-Click Article Generation', desc: 'Select a trending topic, click generate. Claude AI writes SEO-optimized articles with proper structure, quotes, and stats.' },
@@ -62,10 +58,6 @@ const mockupCards = [
   { title: 'Euro 2028 Host Cities Officially Revealed by UEFA', score: 65, cat: 'Sport', velocity: '\u2192', color: 'text-blue-400 bg-blue-500/10' },
 ]
 
-// ═══════════════════════════════════
-// ANIMATION HELPERS
-// ═══════════════════════════════════
-
 function FadeIn({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   return (
     <motion.div
@@ -101,10 +93,6 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
 
   return <span ref={ref}>{count}{suffix}</span>
 }
-
-// ═══════════════════════════════════
-// MAIN PAGE
-// ═══════════════════════════════════
 
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false)
@@ -279,7 +267,6 @@ export default function LandingPage() {
             </button>
           </motion.div>
 
-          {/* ─── Browser Mockup: Smart Newsroom ─── */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}

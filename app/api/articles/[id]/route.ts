@@ -59,13 +59,11 @@ export async function PATCH(
     const body = await req.json()
     const data = UpdateArticleSchema.parse(body)
 
-    // Check if this is transitioning to PUBLISHED (need old status)
     const existing = await prisma.article.findFirst({
       where: { id: params.id, site: { organizationId: session.user.organizationId } },
       select: { status: true, siteId: true, title: true, slug: true, content: true, site: { select: { domain: true, slug: true } } },
     })
 
-    // Create a version snapshot before updating
     if (existing && (data.content || data.title)) {
       const lastVersion = await prisma.articleVersion.findFirst({
         where: { articleId: params.id },
@@ -83,7 +81,6 @@ export async function PATCH(
       })
     }
 
-    // Handle slug uniqueness
     let slugUpdate: string | undefined
     if (data.slug && existing && data.slug !== existing.slug) {
       const slugExists = await prisma.article.findFirst({
@@ -95,7 +92,6 @@ export async function PATCH(
       slugUpdate = data.slug
     }
 
-    // Handle tags
     if (data.tagIds) {
       await prisma.articleTag.deleteMany({ where: { articleId: params.id } })
       if (data.tagIds.length > 0) {

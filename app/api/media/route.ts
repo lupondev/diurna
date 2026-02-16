@@ -94,7 +94,6 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'No id provided' }, { status: 400 })
     }
 
-    // Fetch the media to get its blob URL before deleting
     const media = await prisma.media.findUnique({ where: { id } })
     if (!media) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })

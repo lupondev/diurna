@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-/* ─── Poll Widget ─── */
 function PollWidget({ question, options }: { question: string; options: string[] }) {
   const [voted, setVoted] = useState<number | null>(null)
   const [votes, setVotes] = useState<number[]>(() => options.map(() => Math.floor(Math.random() * 20) + 5))
@@ -50,7 +49,6 @@ function PollWidget({ question, options }: { question: string; options: string[]
   )
 }
 
-/* ─── Quiz Widget ─── */
 function QuizWidget({ question, options, correct }: { question: string; options: string[]; correct: number }) {
   const [selected, setSelected] = useState<number | null>(null)
   const [revealed, setRevealed] = useState(false)
@@ -104,7 +102,6 @@ function QuizWidget({ question, options, correct }: { question: string; options:
   )
 }
 
-/* ─── Survey Widget ─── */
 function SurveyWidget({ question }: { question: string }) {
   const [rating, setRating] = useState(0)
   const [hovered, setHovered] = useState(0)
@@ -159,7 +156,6 @@ function SurveyWidget({ question }: { question: string }) {
   )
 }
 
-/* ─── Article Renderer ─── */
 export function ArticleRenderer({ html }: { html: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [widgets, setWidgets] = useState<Array<{ id: string; type: string; el: Element; data: Record<string, string> }>>([])
@@ -191,7 +187,6 @@ export function ArticleRenderer({ html }: { html: string }) {
         className="pub-article-body"
         dangerouslySetInnerHTML={{ __html: html }}
       />
-      {/* Render interactive widgets via portals */}
       {widgets.map((w) => (
         <WidgetPortal key={w.id} element={w.el}>
           {w.type === 'poll' && (
@@ -221,7 +216,6 @@ function safeParseArray(json: string | undefined): string[] {
   try { return JSON.parse(json) } catch { return [] }
 }
 
-/* ─── Portal to replace DOM element with React ─── */
 import { createPortal } from 'react-dom'
 
 function WidgetPortal({ element, children }: { element: Element; children: React.ReactNode }) {
@@ -233,7 +227,7 @@ function WidgetPortal({ element, children }: { element: Element; children: React
 
   useEffect(() => {
     element.replaceWith(container)
-    return () => { /* cleanup if needed */ }
+    return () => {}
   }, [element, container])
 
   return createPortal(children, container)

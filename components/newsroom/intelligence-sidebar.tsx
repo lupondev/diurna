@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-/* ─── Types ─── */
 interface StoryGap {
   topic: string
   newsCount: number
@@ -19,7 +18,6 @@ interface VelocityTopic {
   saturating: boolean
 }
 
-/* ─── Story Gap Detector ─── */
 export function StoryGapDetector({ breakingNews, articles }: {
   breakingNews: { title: string; source: string }[]
   articles: { title: string }[]
@@ -30,12 +28,10 @@ export function StoryGapDetector({ breakingNews, articles }: {
   useEffect(() => {
     if (breakingNews.length === 0) return
 
-    // Extract topics from breaking news
     const topicCounts: Record<string, number> = {}
     for (const item of breakingNews) {
       const words = item.title.toLowerCase().split(/\s+/)
-      // Extract 2-3 word phrases as topics
-      for (let i = 0; i < words.length - 1; i++) {
+        for (let i = 0; i < words.length - 1; i++) {
         const bigram = `${words[i]} ${words[i + 1]}`
         if (bigram.length > 6 && !['the ', 'and ', 'for ', 'in ', 'to ', 'of ', 'is ', 'a '].some(sw => bigram.startsWith(sw))) {
           topicCounts[bigram] = (topicCounts[bigram] || 0) + 1
@@ -43,7 +39,6 @@ export function StoryGapDetector({ breakingNews, articles }: {
       }
     }
 
-    // Find topics with most coverage in news but 0 in our articles
     const articleTitlesLower = articles.map(a => a.title.toLowerCase())
     const sorted = Object.entries(topicCounts)
       .filter(([, count]) => count >= 2)
@@ -101,7 +96,6 @@ export function StoryGapDetector({ breakingNews, articles }: {
   )
 }
 
-/* ─── Velocity Tracker ─── */
 export function VelocityTracker({ breakingNews, articles }: {
   breakingNews: { title: string; pubDate: string }[]
   articles: { title: string }[]
@@ -112,7 +106,6 @@ export function VelocityTracker({ breakingNews, articles }: {
   useEffect(() => {
     if (breakingNews.length === 0) return
 
-    // Group by rough topics and compute velocity
     const topicGroups: Record<string, { count: number; timestamps: number[] }> = {}
     const keywords = ['transfer', 'injury', 'champions league', 'premier league', 'world cup', 'manager', 'contract']
 
