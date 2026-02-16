@@ -53,6 +53,23 @@ export const authOptions: NextAuthOptions = {
         token.organizationId = (user as unknown as { organizationId?: string | null }).organizationId ?? null
         token.onboardingCompleted = (user as unknown as { onboardingCompleted?: boolean }).onboardingCompleted ?? false
       }
+
+      // Re-fetch onboardingCompleted from DB so the token stays current
+      // after the onboarding API sets it to true (avoids redirect loop)
+      if (token.id && !token.onboardingCompleted) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { onboardingCompleted: true },
+          })
+          if (dbUser) {
+            token.onboardingCompleted = dbUser.onboardingCompleted
+          }
+        } catch {
+          // Non-fatal — keep existing token value
+        }
+      }
+
       return token
     },
     async session({ session, token }) {

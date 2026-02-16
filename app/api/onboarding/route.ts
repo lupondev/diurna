@@ -21,9 +21,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   ])
 }
 
-// DEBUG FLAG: Set to true to bypass Prisma and test frontend redirect
-const DEBUG_BYPASS = true
-
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -35,12 +32,6 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const data = OnboardingSchema.parse(body)
-
-    // DEBUG: Bypass all Prisma calls to test frontend redirect
-    if (DEBUG_BYPASS) {
-      console.log('[onboarding] DEBUG BYPASS — returning fake success for user:', userId, 'siteName:', data.siteName)
-      return NextResponse.json({ success: true, redirectUrl: '/dashboard' }, { status: 201 })
-    }
 
     // Step 1: Find org for user
     let orgId: string
@@ -59,6 +50,32 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error('Onboarding step 1 (find org) failed:', err)
       return NextResponse.json({ error: 'Failed to find organization. Please try again.' }, { status: 500 })
+    }
+
+    // Step 1.5: Check if user already has a site (idempotency for retries)
+    try {
+      const existingSite = await withTimeout(
+        prisma.site.findFirst({
+          where: { organizationId: orgId },
+        }),
+        TIMEOUT_MS,
+        'Check existing site'
+      )
+      if (existingSite) {
+        // Site already exists — just mark onboarding complete and return
+        await withTimeout(
+          prisma.user.update({
+            where: { id: userId },
+            data: { onboardingCompleted: true },
+          }),
+          TIMEOUT_MS,
+          'Update user (existing site)'
+        )
+        return NextResponse.json({ success: true, redirectUrl: '/dashboard' }, { status: 201 })
+      }
+    } catch (err) {
+      console.error('Onboarding step 1.5 (check existing site) failed:', err)
+      // Non-fatal — continue with creation
     }
 
     // Step 2: Create site

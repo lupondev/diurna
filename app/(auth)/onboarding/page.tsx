@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 
 const leagues = [
   { id: 'premier-league', name: 'Premier League', icon: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', country: 'England' },
@@ -65,7 +64,6 @@ function Confetti() {
 }
 
 export default function OnboardingPage() {
-  const router = useRouter()
   const [step, setStep] = useState(1)
   const [siteName, setSiteName] = useState('')
   const [selectedLeagues, setSelectedLeagues] = useState<string[]>([])
@@ -96,15 +94,17 @@ export default function OnboardingPage() {
       if (!res.ok) {
         throw new Error(typeof data.error === 'string' ? data.error : 'Setup failed')
       }
+      // Use window.location.href (not router.push) to force a full page
+      // reload. This makes the server issue a fresh JWT with the updated
+      // onboardingCompleted=true, so middleware won't redirect back here.
       setTimeout(() => {
-        router.push(data.redirectUrl || '/dashboard')
-        router.refresh()
-      }, 2000)
+        window.location.href = data.redirectUrl || '/dashboard'
+      }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Setup failed')
       setSaving(false)
     }
-  }, [siteName, selectedLeagues, language, router])
+  }, [siteName, selectedLeagues, language])
 
   useEffect(() => {
     if (step === 4) {
