@@ -87,7 +87,7 @@ export async function GET() {
     return NextResponse.json(result)
   } catch (error) {
     console.error('Stats error:', error)
-    return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })
+    return NextResponse.json({ standings: getMockStandings(), topScorers: getMockScorers(), source: 'mock-fallback', fetchedAt: new Date().toISOString() })
   }
 }
 
@@ -116,5 +116,10 @@ function getMockScorers() {
     { name: 'Alexander Isak', team: 'Newcastle', goals: 17, appearances: 26 },
     { name: 'Bukayo Saka', team: 'Arsenal', goals: 15, appearances: 28 },
     { name: 'Cole Palmer', team: 'Chelsea', goals: 14, appearances: 27 },
+    { name: 'Ollie Watkins', team: 'Aston Villa', goals: 13, appearances: 28 },
+    { name: 'Son Heung-min', team: 'Tottenham', goals: 12, appearances: 25 },
+    { name: 'Bruno Fernandes', team: 'Manchester United', goals: 11, appearances: 27 },
+    { name: 'Jarrod Bowen', team: 'West Ham', goals: 10, appearances: 26 },
+    { name: 'Jean-Philippe Mateta', team: 'Crystal Palace', goals: 10, appearances: 27 },
   ]
 }

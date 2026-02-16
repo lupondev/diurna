@@ -21,8 +21,7 @@ export async function GET() {
 
     if (!API_KEY) {
       // Return mock data when no API key
-      const mockFixtures = generateMockFixtures()
-      return NextResponse.json({ fixtures: mockFixtures, live: [], source: 'mock', fetchedAt: new Date().toISOString() })
+      return NextResponse.json({ fixtures: generateMockFixtures(), live: generateMockLive(), source: 'mock', fetchedAt: new Date().toISOString() })
     }
 
     const headers = { 'x-apisports-key': API_KEY }
@@ -82,33 +81,45 @@ export async function GET() {
     return NextResponse.json(result)
   } catch (error) {
     console.error('Fixtures error:', error)
-    return NextResponse.json({ error: 'Failed to fetch fixtures' }, { status: 500 })
+    return NextResponse.json({ fixtures: generateMockFixtures(), live: generateMockLive(), source: 'mock-fallback', fetchedAt: new Date().toISOString() })
   }
 }
 
 function generateMockFixtures() {
-  const teams = [
-    ['Arsenal', 'Chelsea'], ['Manchester City', 'Liverpool'],
-    ['Barcelona', 'Real Madrid'], ['Bayern Munich', 'Dortmund'],
-    ['PSG', 'Marseille'], ['Juventus', 'AC Milan'],
-    ['Inter Milan', 'Napoli'], ['Tottenham', 'Manchester United'],
+  const matches = [
+    { home: 'Arsenal', away: 'Chelsea', league: 'Premier League', daysAhead: 1, hour: 15 },
+    { home: 'Manchester City', away: 'Liverpool', league: 'Premier League', daysAhead: 2, hour: 17 },
+    { home: 'Newcastle', away: 'Tottenham', league: 'Premier League', daysAhead: 3, hour: 15 },
+    { home: 'Aston Villa', away: 'Manchester United', league: 'Premier League', daysAhead: 4, hour: 20 },
+    { home: 'Brighton', away: 'West Ham', league: 'Premier League', daysAhead: 5, hour: 15 },
+    { home: 'Barcelona', away: 'Real Madrid', league: 'La Liga', daysAhead: 2, hour: 21 },
+    { home: 'Bayern Munich', away: 'Dortmund', league: 'Bundesliga', daysAhead: 3, hour: 18 },
+    { home: 'PSG', away: 'Marseille', league: 'Ligue 1', daysAhead: 4, hour: 21 },
   ]
-  const leagues = ['Premier League', 'La Liga', 'Bundesliga', 'Serie A', 'Ligue 1']
-
-  return teams.map(([home, away], i) => {
+  return matches.map((m, i) => {
     const date = new Date()
-    date.setDate(date.getDate() + i + 1)
+    date.setDate(date.getDate() + m.daysAhead)
+    date.setHours(m.hour, 0, 0, 0)
     return {
-      id: 1000 + i,
-      date: date.toISOString(),
-      status: 'NS',
-      elapsed: null,
-      league: leagues[i % leagues.length],
-      country: 'England',
-      homeTeam: home,
-      awayTeam: away,
-      homeGoals: null,
-      awayGoals: null,
+      id: 1000 + i, date: date.toISOString(), status: 'NS', elapsed: null,
+      league: m.league, country: 'Europe', homeTeam: m.home, awayTeam: m.away,
+      homeGoals: null, awayGoals: null,
     }
   })
+}
+
+function generateMockLive() {
+  return [
+    {
+      id: 2001, elapsed: 67, league: 'Champions League',
+      homeTeam: 'Real Madrid', awayTeam: 'Manchester City',
+      homeGoals: 2, awayGoals: 1, status: '2H',
+      events: [
+        { minute: 12, type: 'goal', detail: 'Vinicius Jr. scores for Real Madrid', team: 'Real Madrid' },
+        { minute: 34, type: 'goal', detail: 'Haaland equalizes', team: 'Manchester City' },
+        { minute: 58, type: 'goal', detail: 'Bellingham header! Real Madrid lead!', team: 'Real Madrid' },
+        { minute: 61, type: 'yellow', detail: 'Yellow card for Rodri', team: 'Manchester City' },
+      ],
+    },
+  ]
 }
