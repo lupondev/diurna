@@ -215,7 +215,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* HERO                               */}
       {/* ═══════════════════════════════════ */}
-      <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
+      <section className="relative pt-24 pb-16 md:pt-32 md:pb-20 overflow-hidden">
         {/* Gradient orbs */}
         <div className="absolute top-[-200px] left-[20%] w-[600px] h-[600px] rounded-full bg-blue-500/[0.07] blur-[120px] orb-1 pointer-events-none" />
         <div className="absolute top-[-100px] right-[10%] w-[500px] h-[500px] rounded-full bg-violet-500/[0.07] blur-[120px] orb-2 pointer-events-none" />
@@ -381,7 +381,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* FEATURES GRID                      */}
       {/* ═══════════════════════════════════ */}
-      <section id="features" className="py-20 md:py-24">
+      <section id="features" className="py-16 md:py-20">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-16">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400 mb-4">Features</p>
@@ -412,7 +412,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* LIVE WIDGET DEMO                   */}
       {/* ═══════════════════════════════════ */}
-      <section id="demo" className="py-20 md:py-24 bg-[#0D0D0F] border-y border-white/[0.04]">
+      <section id="demo" className="py-16 md:py-20 bg-[#0D0D0F] border-y border-white/[0.04]">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-12">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400 mb-4">Live Demo</p>
@@ -569,7 +569,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* HOW IT WORKS                       */}
       {/* ═══════════════════════════════════ */}
-      <section className="py-20 md:py-24">
+      <section className="py-16 md:py-20">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-16 md:mb-20">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400 mb-4">How It Works</p>
@@ -602,7 +602,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* SOCIAL PROOF / STATS               */}
       {/* ═══════════════════════════════════ */}
-      <section className="py-20 md:py-24 bg-[#0D0D0F] border-y border-white/[0.04]">
+      <section className="py-16 md:py-20 bg-[#0D0D0F] border-y border-white/[0.04]">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
           <FadeIn>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
@@ -634,7 +634,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* PRICING                            */}
       {/* ═══════════════════════════════════ */}
-      <section id="pricing" className="py-20 md:py-24">
+      <section id="pricing" className="py-16 md:py-20">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-16">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400 mb-4">Pricing</p>
@@ -748,7 +748,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════ */}
       {/* FINAL CTA                          */}
       {/* ═══════════════════════════════════ */}
-      <section className="py-20 md:py-24 relative overflow-hidden">
+      <section className="py-16 md:py-20 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-blue-500/[0.06] blur-[120px] pointer-events-none" />
         <div className="absolute top-1/2 left-[40%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-violet-500/[0.06] blur-[100px] pointer-events-none" />
 
