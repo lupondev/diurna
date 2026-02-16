@@ -1,7 +1,14 @@
 import { prisma } from '@/lib/prisma'
+import { getSiteBaseUrl } from '@/lib/site-url'
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://diurna.io'
+  const baseUrl = await getSiteBaseUrl()
+
+  const site = await prisma.site.findFirst({
+    where: { deletedAt: null },
+    select: { name: true, language: true },
+    orderBy: { createdAt: 'asc' },
+  })
 
   const articles = await prisma.article.findMany({
     where: { status: 'PUBLISHED', deletedAt: null },
@@ -33,13 +40,16 @@ export async function GET() {
     })
     .join('\n')
 
+  const siteName = site?.name || 'Diurna'
+  const lang = site?.language || 'en'
+
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Diurna — AI-Powered Sports Publishing</title>
+    <title>${escapeXml(siteName)} — AI-Powered Sports Publishing</title>
     <link>${baseUrl}</link>
     <description>The publishing platform for modern sports newsrooms. Powered by Lupon Media.</description>
-    <language>en</language>
+    <language>${lang}</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link href="${baseUrl}/feed" rel="self" type="application/rss+xml"/>
 ${items}

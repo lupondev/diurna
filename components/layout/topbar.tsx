@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { SUPPORTED_LANGUAGES, getClientLanguage, setClientLanguage, getLangFlag, type LangCode } from '@/lib/languages'
 
 const pageMeta: Record<string, { icon: string; title: string }> = {
   '/': { icon: '📊', title: 'Dashboard' },
@@ -36,12 +37,22 @@ export function Topbar() {
   const pathname = usePathname()
   const meta = getMeta(pathname)
   const [showNotifs, setShowNotifs] = useState(false)
+  const [showLang, setShowLang] = useState(false)
+  const [lang, setLang] = useState<LangCode>('en')
   const ref = useRef<HTMLDivElement>(null)
+  const langRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setLang(getClientLanguage())
+  }, [])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setShowNotifs(false)
+      }
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setShowLang(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
@@ -52,6 +63,31 @@ export function Topbar() {
     <header className="tb">
       <h1 className="tb-title">{meta.icon} {meta.title}</h1>
       <div className="tb-right">
+        <div className="tb-lang-wrap" ref={langRef}>
+          <button className="tb-btn tb-lang-btn" onClick={() => setShowLang(!showLang)}>
+            {getLangFlag(lang)}
+          </button>
+          {showLang && (
+            <div className="tb-lang-dropdown">
+              <div className="tb-lang-head">Language</div>
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <button
+                  key={l.code}
+                  className={`tb-lang-item${lang === l.code ? ' active' : ''}`}
+                  onClick={() => {
+                    setLang(l.code)
+                    setClientLanguage(l.code)
+                    setShowLang(false)
+                  }}
+                >
+                  <span className="tb-lang-flag">{l.flag}</span>
+                  <span className="tb-lang-label">{l.label}</span>
+                  {lang === l.code && <span className="tb-lang-check">✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="tb-notif-wrap" ref={ref}>
           <button className="tb-btn" onClick={() => setShowNotifs(!showNotifs)}>
             🔔<span className="dot" />

@@ -38,6 +38,16 @@ export const metadata: Metadata = {
   },
   alternates: {
     types: { 'application/rss+xml': '/feed' },
+    languages: {
+      'en': '/',
+      'bs': '/?lang=bs',
+      'hr': '/?lang=hr',
+      'sr': '/?lang=sr',
+      'de': '/?lang=de',
+      'tr': '/?lang=tr',
+      'ar': '/?lang=ar',
+      'x-default': '/',
+    },
   },
 }
 

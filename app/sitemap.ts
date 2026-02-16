@@ -1,8 +1,9 @@
 import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
+import { getSiteBaseUrl } from '@/lib/site-url'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://diurna.io'
+  const baseUrl = await getSiteBaseUrl()
 
   const articles = await prisma.article.findMany({
     where: { status: 'PUBLISHED', deletedAt: null },

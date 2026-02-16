@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { SUPPORTED_LANGUAGES } from '@/lib/languages'
 import './settings.css'
 
 export default function SettingsPage() {
   const [dirty, setDirty] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   // General
   const [siteName, setSiteName] = useState('SportNews Pro')
@@ -13,6 +15,19 @@ export default function SettingsPage() {
   const [description, setDescription] = useState('Breaking sports news, powered by AI')
   const [language, setLanguage] = useState('bs')
   const [timezone, setTimezone] = useState('Europe/Sarajevo')
+
+  useEffect(() => {
+    fetch('/api/site')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return
+        if (data.name) setSiteName(data.name)
+        if (data.domain) setSiteUrl(data.domain)
+        if (data.language) setLanguage(data.language)
+        if (data.timezone) setTimezone(data.timezone)
+      })
+      .catch(() => {})
+  }, [])
 
   // Branding
   const [brandColor, setBrandColor] = useState('#00D4AA')
@@ -33,10 +48,29 @@ export default function SettingsPage() {
     return (v: T) => { setter(v); setDirty(true); setSaved(false) }
   }
 
-  function handleSave() {
-    setDirty(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/site', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: siteName,
+          domain: siteUrl,
+          language,
+          timezone,
+        }),
+      })
+      if (res.ok) {
+        setDirty(false)
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2000)
+      }
+    } catch (error) {
+      console.error('Save settings error:', error)
+    } finally {
+      setSaving(false)
+    }
   }
 
   function handleDiscard() {
@@ -88,12 +122,9 @@ export default function SettingsPage() {
           <div className="st-row">
             <span className="st-label">Primary Language</span>
             <select className="st-select" value={language} onChange={(e) => change(setLanguage)(e.target.value)}>
-              <option value="bs">Bosnian (bs)</option>
-              <option value="en">English (en)</option>
-              <option value="hr">Croatian (hr)</option>
-              <option value="sr">Serbian (sr)</option>
-              <option value="de">German (de)</option>
-              <option value="tr">Turkish (tr)</option>
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>{l.flag} {l.label} ({l.code})</option>
+              ))}
             </select>
           </div>
           <div className="st-row">
@@ -245,7 +276,7 @@ export default function SettingsPage() {
           {!saved && (
             <div className="st-save-actions">
               <button className="st-save-discard" onClick={handleDiscard}>Discard</button>
-              <button className="st-save-btn" onClick={handleSave}>💾 Save Changes</button>
+              <button className="st-save-btn" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : '💾 Save Changes'}</button>
             </div>
           )}
         </div>
