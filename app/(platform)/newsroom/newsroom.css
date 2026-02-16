@@ -82,6 +82,11 @@
 .nr-art-edit { font-size: 12px; font-weight: 600; color: var(--mint-d); opacity: 0; transition: opacity .12s; }
 .nr-art:hover .nr-art-edit { opacity: 1; }
 
+/* Tag filter & badges */
+.nr-tag-filter { padding: 7px 10px; font-size: 12px; border: 1px solid var(--brd); border-radius: var(--rm); outline: none; color: var(--g700); font-family: var(--sans); background: var(--wh); cursor: pointer; }
+.nr-tag-filter:focus { border-color: var(--mint); }
+.nr-art-tag { font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 8px; background: var(--g100); color: var(--g600); }
+
 /* Empty */
 .nr-empty { text-align: center; padding: 60px 18px; }
 .nr-empty-icon { width: 72px; height: 72px; margin: 0 auto 16px; border-radius: 18px; background: linear-gradient(135deg, rgba(0,212,170,.08), rgba(91,95,255,.05)); display: flex; align-items: center; justify-content: center; font-size: 32px; }

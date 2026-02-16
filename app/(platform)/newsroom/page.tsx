@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import './newsroom.css'
 
+type TagInfo = { tag: { id: string; name: string } }
 type Article = {
   id: string
   title: string
@@ -11,6 +12,7 @@ type Article = {
   aiGenerated: boolean
   updatedAt: string
   category?: { name: string } | null
+  tags?: TagInfo[]
 }
 
 const getStatusInfo = (status: string, aiGenerated: boolean) => {
@@ -29,6 +31,8 @@ export default function NewsroomPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState('All')
   const [search, setSearch] = useState('')
+  const [tagFilter, setTagFilter] = useState('')
+  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
   const [bulkLoading, setBulkLoading] = useState(false)
 
   useEffect(() => {
@@ -36,6 +40,10 @@ export default function NewsroomPage() {
       .then((r) => r.json())
       .then((data) => { setArticles(data); setLoading(false) })
       .catch(() => setLoading(false))
+    fetch('/api/tags')
+      .then((r) => r.json())
+      .then((data) => setAllTags(data.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }))))
+      .catch(() => {})
   }, [])
 
   const filteredArticles = articles.filter((a) => {
@@ -45,7 +53,8 @@ export default function NewsroomPage() {
       || (filter === 'Scheduled' && a.status === 'SCHEDULED')
       || (filter === 'In Review' && a.status === 'IN_REVIEW')
     const matchesSearch = !search || a.title.toLowerCase().includes(search.toLowerCase())
-    return matchesFilter && matchesSearch
+    const matchesTag = !tagFilter || a.tags?.some((t) => t.tag.id === tagFilter)
+    return matchesFilter && matchesSearch && matchesTag
   })
 
   function toggleSelect(id: string) {
@@ -136,6 +145,14 @@ export default function NewsroomPage() {
           <span key={f} className={`nr-chip${filter === f ? ' act' : ''}`} onClick={() => setFilter(f)}>{f}</span>
         ))}
         <input type="text" className="nr-search" placeholder="Search articles..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        {allTags.length > 0 && (
+          <select className="nr-tag-filter" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+            <option value="">All Tags</option>
+            {allTags.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Bulk Actions Bar */}
@@ -207,6 +224,9 @@ export default function NewsroomPage() {
                       <span className={`nr-art-badge ${si.badge}`}>{si.label}</span>
                       <span className="nr-art-cat">{article.category?.name || 'Uncategorized'}</span>
                       {article.aiGenerated && <span className="nr-art-badge ai">🤖 AI</span>}
+                      {article.tags?.slice(0, 2).map((t) => (
+                        <span key={t.tag.id} className="nr-art-tag">{t.tag.name}</span>
+                      ))}
                     </div>
                   </div>
                   <div className="nr-art-right">

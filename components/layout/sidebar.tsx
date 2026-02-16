@@ -18,6 +18,7 @@ const sections = [
     items: [
       { label: 'Widgets', icon: '🧩', href: '/widgets' },
       { label: 'Widget Creator', icon: '🛠️', href: '/widget-creator' },
+      { label: 'Media', icon: '🖼️', href: '/media' },
       { label: 'Calendar', icon: '📅', href: '/calendar' },
       { label: 'Analytics', icon: '📈', href: '/analytics' },
     ],

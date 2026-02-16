@@ -82,6 +82,7 @@ export async function GET() {
       include: {
         category: { select: { name: true } },
         site: { select: { name: true } },
+        tags: { include: { tag: { select: { id: true, name: true } } } },
       },
       orderBy: { updatedAt: 'desc' },
     })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './analytics.css'
 
 const periods = ['Today', 'Week', 'Month', 'Year'] as const
@@ -72,9 +72,31 @@ const topArticles = [
   { title: 'Belgrade Protests Enter Third Week', views: '7.2K', revenue: '$31', ecpm: '$4.31', type: 'manual' as const },
 ]
 
+type WidgetStats = {
+  total: number
+  byType: { type: string; count: number }[]
+  byDevice: { device: string; count: number }[]
+}
+
+const eventLabels: Record<string, { label: string; icon: string; color: string }> = {
+  widget_view: { label: 'Widget Views', icon: '👁️', color: 'var(--elec)' },
+  poll_vote: { label: 'Poll Votes', icon: '🗳️', color: 'var(--mint)' },
+  quiz_start: { label: 'Quiz Starts', icon: '🧠', color: 'var(--gold)' },
+  quiz_complete: { label: 'Quiz Completions', icon: '✅', color: 'var(--suc)' },
+  survey_submit: { label: 'Survey Submissions', icon: '📋', color: 'var(--coral)' },
+}
+
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState<string>('Week')
+  const [widgetStats, setWidgetStats] = useState<WidgetStats | null>(null)
   const currentStats = periodData[period].stats
+
+  useEffect(() => {
+    fetch('/api/analytics/events')
+      .then((r) => r.json())
+      .then(setWidgetStats)
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="an-page">
@@ -170,6 +192,50 @@ export default function AnalyticsPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Widget Interactions */}
+      <div className="an-widget-section">
+        <div className="an-table-head">
+          <div className="an-table-title">🧩 Widget Interactions (Last 7 Days)</div>
+        </div>
+        {widgetStats ? (
+          <>
+            <div className="an-widget-stats">
+              <div className="an-widget-total">
+                <div className="an-widget-total-val">{widgetStats.total.toLocaleString()}</div>
+                <div className="an-widget-total-label">Total Events</div>
+              </div>
+              {widgetStats.byType.map((e) => {
+                const info = eventLabels[e.type] || { label: e.type, icon: '📊', color: 'var(--g400)' }
+                return (
+                  <div key={e.type} className="an-widget-event">
+                    <div className="an-widget-event-icon">{info.icon}</div>
+                    <div className="an-widget-event-info">
+                      <div className="an-widget-event-val">{e.count.toLocaleString()}</div>
+                      <div className="an-widget-event-label">{info.label}</div>
+                    </div>
+                    <div className="an-widget-event-bar">
+                      <div className="an-widget-event-fill" style={{ width: `${widgetStats.total > 0 ? (e.count / widgetStats.total * 100) : 0}%`, background: info.color }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {widgetStats.byDevice.length > 0 && (
+              <div className="an-widget-devices">
+                <div className="an-widget-device-label">By Device:</div>
+                {widgetStats.byDevice.map((d) => (
+                  <span key={d.device} className="an-widget-device-tag">
+                    {d.device === 'mobile' ? '📱' : d.device === 'tablet' ? '📟' : '🖥️'} {d.device} ({d.count})
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="an-widget-empty">No widget interaction data yet</div>
+        )}
       </div>
 
       <div className="an-footer">
