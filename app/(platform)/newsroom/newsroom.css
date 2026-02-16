@@ -346,6 +346,7 @@
   .smart-card-actions { flex-direction: column; }
   .smart-generate-btn { width: 100%; }
   .smart-manual-btn { width: 100%; text-align: center; }
+  .smart-tab { padding: 8px 12px; font-size: 12px; }
   /* Article card mobile */
   .nr5-article-inner { grid-template-columns: 1fr; gap: 10px; }
   .nr5-article-side { flex-direction: row; border-left: none; padding-left: 0; padding-top: 10px; border-top: 1px solid var(--brd); justify-content: flex-start; }

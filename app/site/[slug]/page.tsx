@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
 import { tiptapToHtml } from '@/lib/tiptap-html'
+import { generateNewsArticleSchema } from '@/lib/seo'
 import { SubscribeWidget } from '@/components/subscribe-widget'
 import { ShareButtons } from '@/components/public/share-buttons'
 import Link from 'next/link'
@@ -19,6 +20,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   })
   if (!article) return { title: 'Not Found' }
 
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://diurna.vercel.app'
+
   return {
     title: `${article.title} - ${site.name}`,
     description: article.excerpt || undefined,
@@ -26,6 +29,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       title: article.title,
       description: article.excerpt || undefined,
       type: 'article',
+      images: [`${baseUrl}/api/og?title=${encodeURIComponent(article.title)}`],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: article.title,
+      description: article.excerpt || undefined,
+      images: [`${baseUrl}/api/og?title=${encodeURIComponent(article.title)}`],
     },
   }
 }
@@ -77,8 +87,25 @@ export default async function ArticlePage({ params }: { params: { slug: string }
       })
     : []
 
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://diurna.vercel.app'
+  const articleSchema = generateNewsArticleSchema({
+    title: article.title,
+    description: article.excerpt || '',
+    url: `${baseUrl}/site/${article.slug}`,
+    imageUrl: `${baseUrl}/api/og/${article.id}`,
+    authorName,
+    publishedAt: (article.publishedAt || article.createdAt).toISOString(),
+    modifiedAt: article.updatedAt.toISOString(),
+    siteName: site.name,
+    category: article.category?.name,
+  })
+
   return (
     <div className="pub-container">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
       <div className="pub-main-grid">
         {/* Article */}
         <article className="pub-article">

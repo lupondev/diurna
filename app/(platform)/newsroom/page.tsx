@@ -122,10 +122,22 @@ export default function NewsroomPage() {
   // Smart Newsroom state
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
   const [trendingLoading, setTrendingLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'feed' | 'trending'>('trending')
+  const [activeTab, setActiveTab] = useState<'trending' | 'breaking' | 'fixtures' | 'fanbuzz' | 'stats' | 'feed'>('trending')
   const [generatingTopic, setGeneratingTopic] = useState<string | null>(null)
   const [genStep, setGenStep] = useState(0)
   const [genError, setGenError] = useState<string | null>(null)
+
+  // New intelligence tabs state
+  const [breakingNews, setBreakingNews] = useState<{ title: string; source: string; link: string; pubDate: string }[]>([])
+  const [breakingLoading, setBreakingLoading] = useState(false)
+  const [fixtures, setFixtures] = useState<{ id: number; date: string; status: string; elapsed: number | null; league: string; homeTeam: string; awayTeam: string; homeGoals: number | null; awayGoals: number | null }[]>([])
+  const [liveMatches, setLiveMatches] = useState<{ id: number; elapsed: number | null; league: string; homeTeam: string; awayTeam: string; homeGoals: number | null; awayGoals: number | null }[]>([])
+  const [fixturesLoading, setFixturesLoading] = useState(false)
+  const [redditPosts, setRedditPosts] = useState<{ title: string; score: number; comments: number; link: string; subreddit: string; pubDate: string }[]>([])
+  const [redditLoading, setRedditLoading] = useState(false)
+  const [standings, setStandings] = useState<{ rank: number; team: string; points: number; played: number; won: number; drawn: number; lost: number; gf: number; ga: number; gd: number }[]>([])
+  const [topScorers, setTopScorers] = useState<{ name: string; team: string; goals: number; appearances: number }[]>([])
+  const [statsLoading, setStatsLoading] = useState(false)
 
   // Fetch trending intelligence
   useEffect(() => {
@@ -138,6 +150,49 @@ export default function NewsroomPage() {
       })
       .catch(() => setTrendingLoading(false))
   }, [])
+
+  // Lazy-load tab data on tab switch
+  useEffect(() => {
+    if (activeTab === 'breaking' && breakingNews.length === 0 && !breakingLoading) {
+      setBreakingLoading(true)
+      fetch('/api/newsroom/google-news')
+        .then((r) => r.json())
+        .then((data) => setBreakingNews(data.items || []))
+        .catch(() => {})
+        .finally(() => setBreakingLoading(false))
+    }
+    if (activeTab === 'fixtures' && fixtures.length === 0 && !fixturesLoading) {
+      setFixturesLoading(true)
+      fetch('/api/newsroom/fixtures')
+        .then((r) => r.json())
+        .then((data) => {
+          setFixtures(data.fixtures || [])
+          setLiveMatches(data.live || [])
+        })
+        .catch(() => {})
+        .finally(() => setFixturesLoading(false))
+    }
+    if (activeTab === 'fanbuzz' && redditPosts.length === 0 && !redditLoading) {
+      setRedditLoading(true)
+      fetch('/api/newsroom/reddit')
+        .then((r) => r.json())
+        .then((data) => setRedditPosts(data.posts || []))
+        .catch(() => {})
+        .finally(() => setRedditLoading(false))
+    }
+    if (activeTab === 'stats' && standings.length === 0 && !statsLoading) {
+      setStatsLoading(true)
+      fetch('/api/newsroom/stats')
+        .then((r) => r.json())
+        .then((data) => {
+          setStandings(data.standings || [])
+          setTopScorers(data.topScorers || [])
+        })
+        .catch(() => {})
+        .finally(() => setStatsLoading(false))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
 
   const loadArticles = useCallback((pageNum: number) => {
     setLoading(true)
@@ -395,23 +450,23 @@ export default function NewsroomPage() {
 
       {/* Tab Switcher */}
       <div className="smart-tabs">
-        <button
-          className={`smart-tab ${activeTab === 'trending' ? 'active' : ''}`}
-          onClick={() => setActiveTab('trending')}
-        >
-          🧠 Trending Intelligence
-          {trendingTopics.length > 0 && <span className="smart-tab-count">{trendingTopics.length}</span>}
-        </button>
-        <button
-          className={`smart-tab ${activeTab === 'feed' ? 'active' : ''}`}
-          onClick={() => setActiveTab('feed')}
-        >
-          📰 Article Feed
-          <span className="smart-tab-count">{totalArticles}</span>
-        </button>
-        <div className="smart-tab-right">
-          <kbd className="smart-kbd">T</kbd> Toggle
-        </div>
+        {([
+          { key: 'trending', icon: '🔥', label: 'TRENDING', count: trendingTopics.length },
+          { key: 'breaking', icon: '📰', label: 'BREAKING', count: breakingNews.length },
+          { key: 'fixtures', icon: '⚽', label: 'FIXTURES', count: fixtures.length + liveMatches.length },
+          { key: 'fanbuzz', icon: '💬', label: 'FAN BUZZ', count: redditPosts.length },
+          { key: 'stats', icon: '📊', label: 'STATS', count: standings.length },
+          { key: 'feed', icon: '📰', label: 'ARTICLES', count: totalArticles },
+        ] as const).map((tab) => (
+          <button
+            key={tab.key}
+            className={`smart-tab ${activeTab === tab.key ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.icon} {tab.label}
+            {tab.count > 0 && <span className="smart-tab-count">{tab.count}</span>}
+          </button>
+        ))}
       </div>
 
       {/* ═══ TRENDING INTELLIGENCE TAB ═══ */}
@@ -499,6 +554,278 @@ export default function NewsroomPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ BREAKING NEWS TAB ═══ */}
+      {activeTab === 'breaking' && (
+        <div className="smart-trending">
+          {breakingLoading ? (
+            <div className="smart-loading">
+              <div className="smart-loading-spinner" />
+              <div className="smart-loading-text">Fetching Google News...</div>
+            </div>
+          ) : breakingNews.length === 0 ? (
+            <div className="smart-empty">
+              <div className="smart-empty-icon">📰</div>
+              <div className="smart-empty-title">No breaking news found</div>
+              <div className="smart-empty-desc">Try again later</div>
+            </div>
+          ) : (
+            <div className="smart-grid">
+              {breakingNews.map((item, i) => (
+                <div key={i} className="smart-card">
+                  <div className="smart-card-top">
+                    <div className="smart-score-circle warm">
+                      <span className="smart-score-num" style={{ fontSize: 11 }}>NEW</span>
+                    </div>
+                    <div className="smart-card-meta">
+                      <span className="smart-cat-badge cat-breaking">⚡ Breaking</span>
+                      <span className="smart-velocity">{getTimeAgo(item.pubDate)}</span>
+                    </div>
+                  </div>
+                  <h3 className="smart-card-title">{item.title}</h3>
+                  <div className="smart-card-info">
+                    <span className="smart-card-sources">{item.source}</span>
+                  </div>
+                  <div className="smart-card-actions">
+                    <button
+                      className="smart-generate-btn"
+                      onClick={() => generateFromTopic({ id: `bn-${i}`, title: item.title, score: 75, sources: [item.source], sourcesCount: 1, category: 'General', suggestedType: 'breaking', velocity: 'rising', estimatedViews: '', traffic: '', recency: 0 })}
+                      disabled={!!generatingTopic}
+                    >
+                      🤖 Generate Article
+                    </button>
+                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="smart-manual-btn">
+                      🔗 Source
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ FIXTURES TAB ═══ */}
+      {activeTab === 'fixtures' && (
+        <div className="smart-trending">
+          {fixturesLoading ? (
+            <div className="smart-loading">
+              <div className="smart-loading-spinner" />
+              <div className="smart-loading-text">Loading fixtures...</div>
+            </div>
+          ) : (
+            <>
+              {liveMatches.length > 0 && (
+                <>
+                  <div style={{ padding: '12px 0 8px', fontSize: 12, fontWeight: 700, color: 'var(--coral)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                    🔴 LIVE NOW
+                  </div>
+                  <div className="smart-grid">
+                    {liveMatches.map((m) => (
+                      <div key={m.id} className="smart-card" style={{ borderLeft: '3px solid var(--coral)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--coral)', textTransform: 'uppercase' }}>{m.league}</span>
+                          <span style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--coral)', fontWeight: 700 }}>{m.elapsed}&apos;</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 12 }}>
+                          <div style={{ textAlign: 'center', flex: 1 }}>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>{m.homeTeam}</div>
+                          </div>
+                          <div style={{ fontSize: 24, fontWeight: 800, fontFamily: 'var(--mono)', color: 'var(--g900)' }}>
+                            {m.homeGoals ?? 0} - {m.awayGoals ?? 0}
+                          </div>
+                          <div style={{ textAlign: 'center', flex: 1 }}>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>{m.awayTeam}</div>
+                          </div>
+                        </div>
+                        <div className="smart-card-actions">
+                          <button
+                            className="smart-generate-btn"
+                            onClick={() => generateFromTopic({ id: `live-${m.id}`, title: `${m.homeTeam} ${m.homeGoals}-${m.awayGoals} ${m.awayTeam} - ${m.league} Live`, score: 90, sources: ['Live Match'], sourcesCount: 1, category: 'Sport', suggestedType: 'breaking', velocity: 'rising', estimatedViews: '', traffic: '', recency: 0 })}
+                            disabled={!!generatingTopic}
+                          >
+                            ⚡ Live Report
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              <div style={{ padding: '12px 0 8px', fontSize: 12, fontWeight: 700, color: 'var(--g500)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                📅 UPCOMING FIXTURES
+              </div>
+              <div className="smart-grid">
+                {fixtures.map((f) => {
+                  const matchDate = new Date(f.date)
+                  const now = new Date()
+                  const diffMs = matchDate.getTime() - now.getTime()
+                  const diffH = Math.max(0, Math.floor(diffMs / 3600000))
+                  const diffD = Math.floor(diffH / 24)
+                  const countdown = diffD > 0 ? `${diffD}d ${diffH % 24}h` : diffH > 0 ? `${diffH}h` : 'Soon'
+
+                  return (
+                    <div key={f.id} className="smart-card">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--mint-d)', textTransform: 'uppercase' }}>{f.league}</span>
+                        <span style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--g400)', background: 'var(--g50)', padding: '2px 8px', borderRadius: 8 }}>⏱ {countdown}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, margin: '16px 0' }}>
+                        <div style={{ textAlign: 'center', flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>{f.homeTeam}</div>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g400)' }}>vs</div>
+                        <div style={{ textAlign: 'center', flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>{f.awayTeam}</div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--g400)', textAlign: 'center', fontFamily: 'var(--mono)', marginBottom: 12 }}>
+                        {matchDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} • {matchDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      <div className="smart-card-actions">
+                        <button
+                          className="smart-generate-btn"
+                          onClick={() => generateFromTopic({ id: `fix-${f.id}`, title: `${f.homeTeam} vs ${f.awayTeam} - ${f.league} Preview`, score: 70, sources: ['API-Football'], sourcesCount: 1, category: 'Sport', suggestedType: 'preview', velocity: 'rising', estimatedViews: '', traffic: '', recency: 0 })}
+                          disabled={!!generatingTopic}
+                        >
+                          📝 Generate Preview
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ═══ FAN BUZZ TAB ═══ */}
+      {activeTab === 'fanbuzz' && (
+        <div className="smart-trending">
+          {redditLoading ? (
+            <div className="smart-loading">
+              <div className="smart-loading-spinner" />
+              <div className="smart-loading-text">Scanning Reddit football communities...</div>
+            </div>
+          ) : redditPosts.length === 0 ? (
+            <div className="smart-empty">
+              <div className="smart-empty-icon">💬</div>
+              <div className="smart-empty-title">No fan discussions found</div>
+              <div className="smart-empty-desc">Reddit feeds may be temporarily unavailable</div>
+            </div>
+          ) : (
+            <div className="smart-grid">
+              {redditPosts.map((post, i) => {
+                const heat = post.score >= 5000 ? 'hot' : post.score >= 1000 ? 'warm' : 'cool'
+                return (
+                  <div key={i} className="smart-card">
+                    <div className="smart-card-top">
+                      <div className={`smart-score-circle ${heat}`}>
+                        <span className="smart-score-num" style={{ fontSize: post.score >= 10000 ? 10 : 12 }}>
+                          {post.score >= 1000 ? `${(post.score / 1000).toFixed(1)}k` : post.score || '—'}
+                        </span>
+                      </div>
+                      <div className="smart-card-meta">
+                        <span className="smart-cat-badge cat-green">r/{post.subreddit}</span>
+                        <span className="smart-velocity">{getTimeAgo(post.pubDate)}</span>
+                      </div>
+                    </div>
+                    <h3 className="smart-card-title">{post.title}</h3>
+                    <div className="smart-card-info">
+                      <span className="smart-card-sources">💬 {post.comments || 0} comments</span>
+                      <span className="smart-card-traffic">⬆ {post.score || 0} upvotes</span>
+                    </div>
+                    <div className="smart-card-actions">
+                      <button
+                        className="smart-generate-btn"
+                        onClick={() => generateFromTopic({ id: `rd-${i}`, title: post.title, score: Math.min(99, Math.floor((post.score || 0) / 100)), sources: [`r/${post.subreddit}`], sourcesCount: 1, category: 'Sport', suggestedType: 'report', velocity: 'rising', estimatedViews: '', traffic: '', recency: 0 })}
+                        disabled={!!generatingTopic}
+                      >
+                        🤖 Generate Article
+                      </button>
+                      <a href={post.link} target="_blank" rel="noopener noreferrer" className="smart-manual-btn">
+                        🔗 Reddit
+                      </a>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ STATS TAB ═══ */}
+      {activeTab === 'stats' && (
+        <div className="smart-trending" style={{ padding: '0 24px 24px' }}>
+          {statsLoading ? (
+            <div className="smart-loading">
+              <div className="smart-loading-spinner" />
+              <div className="smart-loading-text">Loading Premier League stats...</div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24 }}>
+              {/* Standings Table */}
+              <div className="adm-table" style={{ background: 'var(--wh)', borderRadius: 'var(--rl)', overflow: 'hidden' }}>
+                <div style={{ padding: '14px 16px', fontWeight: 800, fontSize: 13, color: 'var(--g900)', borderBottom: '1px solid var(--g100)' }}>
+                  🏆 Premier League Standings
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '8px 12px', fontSize: 10, fontWeight: 700, color: 'var(--g400)', textTransform: 'uppercase', textAlign: 'left', borderBottom: '1px solid var(--g100)', background: 'var(--g50)' }}>#</th>
+                      <th style={{ padding: '8px 12px', fontSize: 10, fontWeight: 700, color: 'var(--g400)', textTransform: 'uppercase', textAlign: 'left', borderBottom: '1px solid var(--g100)', background: 'var(--g50)' }}>Team</th>
+                      <th style={{ padding: '8px 12px', fontSize: 10, fontWeight: 700, color: 'var(--g400)', textTransform: 'uppercase', textAlign: 'center', borderBottom: '1px solid var(--g100)', background: 'var(--g50)' }}>P</th>
+                      <th style={{ padding: '8px 12px', fontSize: 10, fontWeight: 700, color: 'var(--g400)', textTransform: 'uppercase', textAlign: 'center', borderBottom: '1px solid var(--g100)', background: 'var(--g50)' }}>W</th>
+                      <th style={{ padding: '8px 12px', fontSize: 10, fontWeight: 700, color: 'var(--g400)', textTransform: 'uppercase', textAlign: 'center', borderBottom: '1px solid var(--g100)', background: 'var(--g50)' }}>D</th>
+                      <th style={{ padding: '8px 12px', fontSize: 10, fontWeight: 700, color: 'var(--g400)', textTransform: 'uppercase', textAlign: 'center', borderBottom: '1px solid var(--g100)', background: 'var(--g50)' }}>L</th>
+                      <th style={{ padding: '8px 12px', fontSize: 10, fontWeight: 700, color: 'var(--g400)', textTransform: 'uppercase', textAlign: 'center', borderBottom: '1px solid var(--g100)', background: 'var(--g50)' }}>GD</th>
+                      <th style={{ padding: '8px 12px', fontSize: 10, fontWeight: 700, color: 'var(--mint-d)', textTransform: 'uppercase', textAlign: 'center', borderBottom: '1px solid var(--g100)', background: 'var(--g50)' }}>Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {standings.map((t) => (
+                      <tr key={t.rank} style={{ borderBottom: '1px solid var(--g50)' }}>
+                        <td style={{ padding: '10px 12px', fontSize: 12, fontWeight: 700, color: t.rank <= 4 ? 'var(--mint-d)' : 'var(--g400)', fontFamily: 'var(--mono)' }}>{t.rank}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: 'var(--g900)' }}>{t.team}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--g500)', textAlign: 'center', fontFamily: 'var(--mono)' }}>{t.played}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--g500)', textAlign: 'center', fontFamily: 'var(--mono)' }}>{t.won}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--g500)', textAlign: 'center', fontFamily: 'var(--mono)' }}>{t.drawn}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--g500)', textAlign: 'center', fontFamily: 'var(--mono)' }}>{t.lost}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 12, color: t.gd > 0 ? 'var(--mint-d)' : 'var(--coral)', textAlign: 'center', fontFamily: 'var(--mono)', fontWeight: 700 }}>{t.gd > 0 ? '+' : ''}{t.gd}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 800, color: 'var(--g900)', textAlign: 'center', fontFamily: 'var(--mono)' }}>{t.points}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Top Scorers */}
+              <div style={{ background: 'var(--wh)', borderRadius: 'var(--rl)', border: '1px solid var(--brd)', overflow: 'hidden' }}>
+                <div style={{ padding: '14px 16px', fontWeight: 800, fontSize: 13, color: 'var(--g900)', borderBottom: '1px solid var(--g100)' }}>
+                  ⚽ Top Scorers
+                </div>
+                {topScorers.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--g50)' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: i < 3 ? 'var(--gold-l)' : 'var(--g100)', color: i < 3 ? 'var(--gold)' : 'var(--g400)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, fontFamily: 'var(--mono)' }}>
+                      {i + 1}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--g900)' }}>{p.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--g400)' }}>{p.team}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--mint-d)', fontFamily: 'var(--mono)' }}>{p.goals}</div>
+                      <div style={{ fontSize: 10, color: 'var(--g400)' }}>{p.appearances} apps</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

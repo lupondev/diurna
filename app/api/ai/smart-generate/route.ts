@@ -51,8 +51,16 @@ The JSON must have this exact structure:
   "imageQuery": "Unsplash search query (2-4 keywords)",
   "seo": {
     "metaTitle": "SEO-optimized title (50-60 chars)",
-    "metaDescription": "Meta description (150-160 chars)"
+    "metaDescription": "Meta description (150-160 chars)",
+    "slug": "url-safe-slug-from-title",
+    "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
+    "ogImageText": "Short headline for OG image (max 80 chars)"
   },
+  "faq": [
+    {"q": "Relevant question about the topic?", "a": "Concise answer based on article content."},
+    {"q": "Another question?", "a": "Another answer."},
+    {"q": "Third question?", "a": "Third answer."}
+  ],
   "social": {
     "facebook": "Facebook share text (engaging, under 200 chars)",
     "twitter": "Twitter/X post text (under 280 chars with hashtags)"
