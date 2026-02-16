@@ -36,6 +36,7 @@ model Site {
   gaId           String?
   language       String       @default("bs")
   timezone       String       @default("Europe/Sarajevo")
+  theme          String       @default("editorial")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?
