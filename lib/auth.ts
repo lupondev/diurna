@@ -41,6 +41,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           image: user.image,
           organizationId: user.orgs[0]?.organizationId ?? null,
+          onboardingCompleted: user.onboardingCompleted,
         }
       },
     }),
@@ -50,6 +51,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.organizationId = (user as unknown as { organizationId?: string | null }).organizationId ?? null
+        token.onboardingCompleted = (user as unknown as { onboardingCompleted?: boolean }).onboardingCompleted ?? false
       }
       return token
     },
@@ -57,6 +59,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string
         session.user.organizationId = token.organizationId as string | null
+        session.user.onboardingCompleted = token.onboardingCompleted as boolean
       }
       return session
     },

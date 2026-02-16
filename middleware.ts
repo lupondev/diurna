@@ -18,6 +18,11 @@ export async function middleware(req: NextRequest) {
       loginUrl.searchParams.set('callbackUrl', pathname)
       return NextResponse.redirect(loginUrl)
     }
+
+    // Redirect non-onboarded users to onboarding (skip API routes)
+    if (!token.onboardingCompleted && !pathname.startsWith('/onboarding') && !pathname.startsWith('/api/')) {
+      return NextResponse.redirect(new URL('/onboarding', req.url))
+    }
   }
 
   // ─── Org slug detection ───

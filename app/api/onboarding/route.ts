@@ -54,6 +54,12 @@ export async function POST(req: NextRequest) {
       await prisma.category.createMany({ data: leagueCategories })
     }
 
+    // Mark onboarding as completed
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { onboardingCompleted: true },
+    })
+
     return NextResponse.json({ success: true, siteId: site.id }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {

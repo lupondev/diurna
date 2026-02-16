@@ -90,13 +90,14 @@ model SocialPage {
 // ══════════════════════════════════
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  passwordHash  String?
-  image         String?
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  name                String?
+  passwordHash        String?
+  image               String?
+  emailVerified       DateTime?
+  onboardingCompleted Boolean   @default(false)
+  createdAt           DateTime  @default(now())
 
   accounts Account[]
   sessions Session[]
