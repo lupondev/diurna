@@ -115,8 +115,57 @@ export default function EditorPage() {
       } catch {}
     }
 
+    if (searchParams.get('mode') === 'combined') {
+      try {
+        const raw = sessionStorage.getItem('diurna_combined_sources')
+        if (raw) {
+          const sources = JSON.parse(raw) as { title: string; source: string; role: string }[]
+          sessionStorage.removeItem('diurna_combined_sources')
+          if (sources.length > 0) {
+            const primary = sources.find(s => s.role === 'primary')
+            setPrompt(`Combined article from ${sources.length} sources`)
+            setScreen('generating')
+            setGenStep(0)
+
+            const runCombinedGenerate = async () => {
+              for (let i = 0; i < genSteps.length; i++) {
+                await new Promise((r) => setTimeout(r, 400 + Math.random() * 300))
+                setGenStep(i + 1)
+              }
+              try {
+                const res = await fetch('/api/ai/smart-generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    topic: primary?.title || sources[0].title,
+                    category: 'Sport',
+                    articleType: 'report',
+                    mode: 'combined',
+                    sources: sources.map(s => ({ title: s.title, source: s.source, role: s.role })),
+                  }),
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error || 'Generation failed')
+                setTitle(data.title || primary?.title || 'Combined Article')
+                if (data.tiptapContent) setContent(data.tiptapContent)
+                setAiResult({ model: data.model, tokensIn: data.tokensIn, tokensOut: data.tokensOut })
+                setScreen('editor')
+                setSmartNotice('Combined article generated — review and edit before publishing')
+                setTimeout(() => setSmartNotice(null), 6000)
+              } catch {
+                setTitle(primary?.title || sources[0].title)
+                setContent({})
+                setScreen('editor')
+              }
+            }
+            runCombinedGenerate()
+          }
+        }
+      } catch {}
+    }
+
     const promptParam = searchParams.get('prompt')
-    if (promptParam && !searchParams.get('smartGenerate')) {
+    if (promptParam && !searchParams.get('smartGenerate') && searchParams.get('mode') !== 'combined') {
       setPrompt(promptParam)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

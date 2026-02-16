@@ -406,16 +406,9 @@ export default function NewsroomPage() {
   }, [])
 
   const generateFromCart = useCallback(() => {
-    const primary = cart.find(c => c.role === 'primary')
-    const supporting = cart.filter(c => c.role === 'supporting')
-    const media = cart.filter(c => c.role === 'media')
-    const prompt = [
-      primary ? `Primary story: ${primary.title}` : '',
-      supporting.length > 0 ? `Supporting context: ${supporting.map(s => s.title).join('; ')}` : '',
-      media.length > 0 ? `Related media: ${media.map(m => m.title).join('; ')}` : '',
-    ].filter(Boolean).join('\n')
-    sessionStorage.setItem('editorTopic', primary?.title || cart[0]?.title || '')
-    router.push(`/editor?prompt=${encodeURIComponent(`Write a comprehensive article combining these sources:\n${prompt}`)}`)
+    const sources = cart.map(c => ({ title: c.title, source: c.source, role: c.role }))
+    sessionStorage.setItem('diurna_combined_sources', JSON.stringify(sources))
+    router.push('/editor?mode=combined')
   }, [cart, router])
 
   const generateFromTopic = useCallback(async (topic: { id: string; title: string; category: string; suggestedType: string }) => {

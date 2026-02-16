@@ -11,6 +11,12 @@ const schema = z.object({
   category: z.string().optional(),
   articleType: z.enum(['breaking', 'report', 'analysis', 'preview']).optional(),
   language: z.string().default('en'),
+  sources: z.array(z.object({
+    title: z.string(),
+    source: z.string(),
+    role: z.enum(['primary', 'supporting', 'media']),
+  })).optional(),
+  mode: z.enum(['single', 'combined']).default('single'),
 })
 
 export async function POST(req: NextRequest) {
@@ -23,62 +29,95 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const input = schema.parse(body)
 
-    const systemPrompt = `You are a senior journalist AI assistant for Diurna CMS. Generate a COMPLETE article package in a single response. Output valid JSON only, no markdown wrapping.
+    const systemPrompt = `You are a senior sports journalist writing for a digital newsroom. Output valid JSON only, no markdown wrapping.
+
+RULES — follow every single one:
+1. ONLY state facts that are directly present in the source headline(s) provided. If the headline says "Arsenal sign midfielder" you may say Arsenal signed a midfielder. You may NOT invent the fee, wage, contract length, or any quote.
+2. NEVER invent statistics, transfer fees, quotes, match scores, or specific details not present in the source material.
+3. Maximum 400 words for the article content. Shorter is better. Every sentence must earn its place.
+4. BANNED WORDS AND PHRASES — never use any of these: "landscape", "crucial", "paramount", "delve", "comprehensive", "It remains to be seen", "Only time will tell", "game-changer", "footballing world", "sending shockwaves", "blockbuster", "marquee signing", "meteoric rise", "the beautiful game", "masterclass".
+5. Write like a senior sports journalist at Reuters or BBC Sport — factual, tight, no fluff.
+6. Start with the NEWS. First sentence = what happened. Do not open with background, history, or scene-setting.
+7. Each paragraph: 2-3 sentences maximum.
+8. Do NOT add "expert opinions", "analyst reactions", or unnamed source quotes unless they appear in the headline.
+9. No filler conclusions. Do not end with "This could reshape..." or "Fans will be watching closely..." — end with the last relevant fact.
+10. HTML tags allowed: <h2>, <p>, <ul>, <li>. No <blockquote> unless quoting from source. No <h3>.
+11. Article structure: Lead paragraph (the news) → Context (1-2 paragraphs of relevant factual background) → What's next (only if factual, e.g. "The transfer window closes on Feb 3").
+12. SEO: metaTitle max 60 characters. metaDescription max 155 characters. Both must be factual.
+13. FAQ: Generate exactly 3 questions. Each answer must be based ONLY on information in the article. Do not add external knowledge.
+14. Social posts must be factual summaries, not hype. No clickbait.
 
 The JSON must have this exact structure:
 {
-  "title": "CTR-optimized headline (50-70 chars)",
-  "content": "Full article in HTML format. Use <h2>, <h3>, <p>, <blockquote>, <ul>, <li> tags. Write 800-1500 words. Content must be original, paraphrased, and journalistically sound. Include quotes where relevant.",
-  "excerpt": "2-sentence compelling summary for meta/social",
+  "title": "Factual headline under 70 chars",
+  "content": "Article in HTML (<h2>, <p>, <ul>, <li> only). Max 400 words. Facts only.",
+  "excerpt": "1-2 sentence factual summary",
   "poll": {
-    "question": "Engaging poll question related to the topic",
+    "question": "Relevant fan opinion question",
     "options": ["Option A", "Option B", "Option C"]
   },
   "quiz": {
     "title": "Quiz title",
     "questions": [
-      {
-        "question": "Question text?",
-        "options": ["A", "B", "C", "D"],
-        "correct": 0
-      }
+      {"question": "Question based on article content?", "options": ["A", "B", "C", "D"], "correct": 0}
     ]
-  },
-  "widget": {
-    "type": "poll|quiz|match_widget|stats_table",
-    "suggestion": "Brief description of recommended widget"
   },
   "imageQuery": "Unsplash search query (2-4 keywords)",
   "seo": {
-    "metaTitle": "SEO-optimized title (50-60 chars)",
-    "metaDescription": "Meta description (150-160 chars)",
-    "slug": "url-safe-slug-from-title",
+    "metaTitle": "SEO title max 60 chars",
+    "metaDescription": "Meta description max 155 chars",
+    "slug": "url-safe-slug",
     "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
-    "ogImageText": "Short headline for OG image (max 80 chars)"
+    "ogImageText": "Short OG headline max 80 chars"
   },
   "faq": [
-    {"q": "Relevant question about the topic?", "a": "Concise answer based on article content."},
-    {"q": "Another question?", "a": "Another answer."},
+    {"q": "Question from article?", "a": "Answer using only article facts."},
+    {"q": "Second question?", "a": "Second answer."},
     {"q": "Third question?", "a": "Third answer."}
   ],
   "social": {
-    "facebook": "Facebook share text (engaging, under 200 chars)",
-    "twitter": "Twitter/X post text (under 280 chars with hashtags)"
+    "facebook": "Factual share text under 200 chars",
+    "twitter": "Factual tweet under 280 chars with hashtags"
   },
   "tags": ["tag1", "tag2", "tag3"],
-  "category": "Sport|Politics|Tech|Business|Entertainment|General"
+  "category": "Sport"
 }`
 
-    const userPrompt = `Generate a complete article package about: "${input.topic}"
-${input.category ? `Category: ${input.category}` : ''}
-${input.articleType ? `Article type: ${input.articleType}` : ''}
-Language: ${input.language}
+    let userPrompt: string
 
-Write the article content as original journalism. Make it informative, engaging, and factual. The quiz should have exactly 5 questions. All content must be unique and paraphrased.`
+    if (input.mode === 'combined' && input.sources && input.sources.length > 0) {
+      const primary = input.sources.filter(s => s.role === 'primary')
+      const supporting = input.sources.filter(s => s.role === 'supporting')
+      const media = input.sources.filter(s => s.role === 'media')
+
+      userPrompt = `Write a COMBINED article from these sources. The article must synthesize all sources into one cohesive piece.
+
+PRIMARY SOURCE:
+${primary.map(s => `HEADLINE: ${s.title}\nSOURCE: ${s.source}`).join('\n')}
+
+${supporting.length > 0 ? `SUPPORTING CONTEXT:\n${supporting.map(s => `HEADLINE: ${s.title}\nSOURCE: ${s.source}`).join('\n')}` : ''}
+
+${media.length > 0 ? `RELATED MEDIA:\n${media.map(s => `HEADLINE: ${s.title}\nSOURCE: ${s.source}`).join('\n')}` : ''}
+
+CATEGORY: ${input.category || 'Sport'}
+TYPE: ${input.articleType || 'report'}
+LANGUAGE: ${input.language}
+
+Remember: ONLY use facts from the headlines above. Do NOT invent details. Max 400 words.`
+    } else {
+      userPrompt = `HEADLINE: ${input.topic}
+SOURCE: Newsroom feed
+CATEGORY: ${input.category || 'Sport'}
+TYPE: ${input.articleType || 'breaking'}
+LANGUAGE: ${input.language}
+
+Write an article about this headline. ONLY use facts present in the headline. Do NOT invent statistics, fees, quotes, or details. Max 400 words.`
+    }
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 4096,
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      temperature: 0.3,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     })
