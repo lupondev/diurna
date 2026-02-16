@@ -222,6 +222,13 @@
 .nr5-sc { display: flex; align-items: center; gap: 6px; }
 .nr5-sc kbd { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 3px 6px; background: var(--g700); border-radius: 4px; color: var(--wh); }
 
+/* ── PAGINATION ── */
+.nr5-pagination { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 16px 0; border-top: 1px solid var(--g100); margin-top: 8px; }
+.nr5-page-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--g200); background: var(--wh); color: var(--g700); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s ease; }
+.nr5-page-btn:hover:not(:disabled) { background: var(--g50); border-color: var(--g300); }
+.nr5-page-btn:disabled { opacity: .4; cursor: not-allowed; }
+.nr5-page-info { font-size: 13px; color: var(--g500); font-weight: 500; }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 1200px) {
   .nr5-content { grid-template-columns: 1fr; }

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { writeFile } from 'fs/promises'
-import path from 'path'
+import { put, del } from '@vercel/blob'
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,21 +36,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 400 })
     }
 
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-
-    const ext = path.extname(file.name) || '.jpg'
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-    const uniqueName = `${Date.now()}-${safeName}`
-    const uploadPath = path.join(process.cwd(), 'public', 'uploads', uniqueName)
+    const pathname = `uploads/${Date.now()}-${safeName}`
 
-    await writeFile(uploadPath, buffer)
+    const blob = await put(pathname, file, {
+      access: 'public',
+      contentType: file.type,
+    })
+
+    const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '.jpg'
 
     const media = await prisma.media.create({
       data: {
         siteId: site.id,
         filename: file.name,
-        url: `/uploads/${uniqueName}`,
+        url: blob.url,
         alt: file.name.replace(ext, '').replace(/[-_]/g, ' '),
         size: file.size,
         mimeType: file.type,
@@ -93,6 +92,21 @@ export async function DELETE(req: NextRequest) {
     const { id } = await req.json()
     if (!id) {
       return NextResponse.json({ error: 'No id provided' }, { status: 400 })
+    }
+
+    // Fetch the media to get its blob URL before deleting
+    const media = await prisma.media.findUnique({ where: { id } })
+    if (!media) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    // Delete from Vercel Blob if it's a blob URL
+    if (media.url.includes('.blob.vercel-storage.com')) {
+      try {
+        await del(media.url)
+      } catch {
+        // Continue with DB deletion even if blob deletion fails
+      }
     }
 
     await prisma.media.delete({ where: { id } })

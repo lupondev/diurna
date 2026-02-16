@@ -73,8 +73,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'articleId required' }, { status: 400 })
     }
 
-    const article = await prisma.article.findUnique({
-      where: { id: articleId },
+    const article = await prisma.article.findFirst({
+      where: { id: articleId, deletedAt: null },
       include: { site: true },
     })
     if (!article) {

@@ -80,18 +80,31 @@ export default function NewsroomPage() {
   const [previewTab, setPreviewTab] = useState<'preview' | 'edit' | 'seo'>('preview')
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [sortBy, setSortBy] = useState('latest')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalArticles, setTotalArticles] = useState(0)
   const feedRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    fetch('/api/articles')
+  const loadArticles = useCallback((pageNum: number) => {
+    setLoading(true)
+    fetch(`/api/articles?page=${pageNum}&limit=20`)
       .then((r) => r.json())
       .then((data) => {
-        setArticles(data)
-        if (data.length > 0) setSelectedId(data[0].id)
+        const items = data.articles || data
+        setArticles(items)
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages)
+          setTotalArticles(data.pagination.total)
+        }
+        if (items.length > 0 && !selectedId) setSelectedId(items[0].id)
         setLoading(false)
       })
       .catch(() => setLoading(false))
+  }, [selectedId])
+
+  useEffect(() => {
+    loadArticles(page)
 
     fetch('/api/tags')
       .then((r) => r.json())
@@ -99,7 +112,7 @@ export default function NewsroomPage() {
         setAllTags(data.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })))
       )
       .catch(() => {})
-  }, [])
+  }, [page, loadArticles])
 
   const filteredArticles = articles
     .filter((a) => {
@@ -141,6 +154,7 @@ export default function NewsroomPage() {
     } catch (e) {
       console.error('Publish error:', e)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Keyboard shortcuts
@@ -306,7 +320,7 @@ export default function NewsroomPage() {
               📅 Calendar
             </button>
           </div>
-          <span className="nr5-count">{filteredArticles.length} articles</span>
+          <span className="nr5-count">{totalArticles} articles</span>
           <select className="nr5-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
             <option value="latest">Latest ↓</option>
             <option value="oldest">Oldest ↓</option>
@@ -396,6 +410,27 @@ export default function NewsroomPage() {
                 </div>
               )
             })
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="nr5-pagination">
+              <button
+                className="nr5-page-btn"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                ← Prev
+              </button>
+              <span className="nr5-page-info">Page {page} of {totalPages}</span>
+              <button
+                className="nr5-page-btn"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Next →
+              </button>
+            </div>
           )}
         </div>
 

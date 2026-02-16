@@ -7,12 +7,36 @@ import { z } from 'zod'
 // Simple in-memory rate limiter: 10 generations per user per day
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const DAILY_LIMIT = 10
+const MAX_RATE_LIMIT_ENTRIES = 1000
+
+function evictExpiredEntries() {
+  const now = Date.now()
+  const keysToDelete: string[] = []
+  rateLimitMap.forEach((entry, key) => {
+    if (now > entry.resetAt) {
+      keysToDelete.push(key)
+    }
+  })
+  keysToDelete.forEach((key) => rateLimitMap.delete(key))
+
+  // If still over limit, remove oldest entries
+  if (rateLimitMap.size > MAX_RATE_LIMIT_ENTRIES) {
+    const entries: Array<[string, { count: number; resetAt: number }]> = []
+    rateLimitMap.forEach((entry, key) => entries.push([key, entry]))
+    entries.sort((a, b) => a[1].resetAt - b[1].resetAt)
+    const removeCount = rateLimitMap.size - MAX_RATE_LIMIT_ENTRIES
+    for (let i = 0; i < removeCount; i++) {
+      rateLimitMap.delete(entries[i][0])
+    }
+  }
+}
 
 function checkRateLimit(userId: string): { allowed: boolean; remaining: number } {
   const now = Date.now()
   const entry = rateLimitMap.get(userId)
 
   if (!entry || now > entry.resetAt) {
+    evictExpiredEntries()
     rateLimitMap.set(userId, { count: 1, resetAt: now + 24 * 60 * 60 * 1000 })
     return { allowed: true, remaining: DAILY_LIMIT - 1 }
   }

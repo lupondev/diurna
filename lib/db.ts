@@ -5,6 +5,7 @@ export async function getArticles(filters?: {
   status?: ArticleStatus
   siteId?: string
   organizationId?: string
+  take?: number
 }) {
   return prisma.article.findMany({
     where: {
@@ -18,6 +19,7 @@ export async function getArticles(filters?: {
       site: { select: { name: true } },
     },
     orderBy: { updatedAt: 'desc' },
+    take: filters?.take ?? 50,
   })
 }
 

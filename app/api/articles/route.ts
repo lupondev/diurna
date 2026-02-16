@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.organizationId) {
@@ -80,19 +80,40 @@ export async function GET() {
     }
     const orgId = session.user.organizationId
 
-    const articles = await prisma.article.findMany({
-      where: {
-        deletedAt: null,
-        site: { organizationId: orgId },
+    const { searchParams } = req.nextUrl
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10) || 20))
+    const skip = (page - 1) * limit
+
+    const where = {
+      deletedAt: null,
+      site: { organizationId: orgId },
+    }
+
+    const [articles, total] = await Promise.all([
+      prisma.article.findMany({
+        where,
+        include: {
+          category: { select: { name: true } },
+          site: { select: { name: true } },
+          tags: { include: { tag: { select: { id: true, name: true } } } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.article.count({ where }),
+    ])
+
+    return NextResponse.json({
+      articles,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
-      include: {
-        category: { select: { name: true } },
-        site: { select: { name: true } },
-        tags: { include: { tag: { select: { id: true, name: true } } } },
-      },
-      orderBy: { updatedAt: 'desc' },
     })
-    return NextResponse.json(articles)
   } catch (error) {
     console.error('Get articles error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

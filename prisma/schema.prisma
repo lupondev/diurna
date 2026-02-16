@@ -49,6 +49,7 @@ model Site {
   subscribers       Subscriber[]
 
   @@unique([organizationId, slug])
+  @@index([organizationId])
 }
 
 model SocialConnection {
@@ -176,7 +177,7 @@ model Article {
   metaDescription String?
 
   categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id])
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -185,6 +186,7 @@ model Article {
   @@unique([siteId, slug])
   @@index([siteId, status])
   @@index([siteId, publishedAt])
+  @@index([siteId])
 }
 
 model AIRevision {
@@ -284,6 +286,7 @@ model Tag {
   articles  ArticleTag[]
 
   @@unique([siteId, slug])
+  @@index([siteId])
 }
 
 model ArticleTag {
