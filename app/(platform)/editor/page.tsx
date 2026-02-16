@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import './editor.css'
 
@@ -61,6 +61,7 @@ const genSteps = [
 
 export default function EditorPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [screen, setScreen] = useState<'prompt' | 'generating' | 'editor'>('prompt')
   const [prompt, setPrompt] = useState('')
   const [showAttach, setShowAttach] = useState(false)
@@ -94,6 +95,30 @@ export default function EditorPage() {
         }
       })
       .catch(console.error)
+  }, [])
+
+  // Load smart-generated article from sessionStorage
+  useEffect(() => {
+    if (searchParams.get('smartGenerate') === 'true') {
+      try {
+        const raw = sessionStorage.getItem('smartArticle')
+        if (raw) {
+          const data = JSON.parse(raw)
+          if (data.title) setTitle(data.title)
+          if (data.tiptapContent) setContent(data.tiptapContent)
+          if (data.model) setAiResult({ model: data.model, tokensIn: data.tokensIn, tokensOut: data.tokensOut })
+          setScreen('editor')
+          sessionStorage.removeItem('smartArticle')
+        }
+      } catch { /* ignore parse errors */ }
+    }
+
+    // Also handle ?prompt= param from newsroom manual write
+    const promptParam = searchParams.get('prompt')
+    if (promptParam && !searchParams.get('smartGenerate')) {
+      setPrompt(promptParam)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Fetch Google Trends
