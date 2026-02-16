@@ -21,6 +21,9 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   ])
 }
 
+// DEBUG FLAG: Set to true to bypass Prisma and test frontend redirect
+const DEBUG_BYPASS = true
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -28,15 +31,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const userId = session.user.id
+
     const body = await req.json()
     const data = OnboardingSchema.parse(body)
+
+    // DEBUG: Bypass all Prisma calls to test frontend redirect
+    if (DEBUG_BYPASS) {
+      console.log('[onboarding] DEBUG BYPASS — returning fake success for user:', userId, 'siteName:', data.siteName)
+      return NextResponse.json({ success: true, redirectUrl: '/dashboard' }, { status: 201 })
+    }
 
     // Step 1: Find org for user
     let orgId: string
     try {
       const membership = await withTimeout(
         prisma.userOnOrganization.findFirst({
-          where: { userId: session.user.id, deletedAt: null },
+          where: { userId, deletedAt: null },
         }),
         TIMEOUT_MS,
         'Find organization'
@@ -96,7 +107,7 @@ export async function POST(req: NextRequest) {
     try {
       await withTimeout(
         prisma.user.update({
-          where: { id: session.user.id },
+          where: { id: userId },
           data: { onboardingCompleted: true },
         }),
         TIMEOUT_MS,
