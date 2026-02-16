@@ -234,6 +234,21 @@
   .nr5-content { grid-template-columns: 1fr; }
   .nr5-preview { display: none; }
 }
+/* Competitor Activity */
+.nr5-competitors { margin: 0 24px 16px; background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); overflow: hidden; }
+.nr5-comp-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--g100); }
+.nr5-comp-title { font-size: 14px; font-weight: 800; color: var(--g900); }
+.nr5-comp-count { font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 3px 10px; background: var(--elec-l); color: var(--elec); border-radius: 10px; }
+.nr5-comp-list { display: flex; overflow-x: auto; gap: 0; scrollbar-width: none; }
+.nr5-comp-list::-webkit-scrollbar { display: none; }
+.nr5-comp-item { flex-shrink: 0; width: 260px; padding: 14px 18px; border-right: 1px solid var(--g100); display: flex; flex-direction: column; gap: 10px; }
+.nr5-comp-item:last-child { border-right: none; }
+.nr5-comp-source { font-family: var(--mono); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--elec); }
+.nr5-comp-article-title { font-size: 12px; font-weight: 600; color: var(--g800); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nr5-comp-time { font-family: var(--mono); font-size: 10px; color: var(--g400); }
+.nr5-comp-write { margin-top: auto; padding: 6px 12px; font-size: 10px; font-weight: 700; background: var(--mint-l); color: var(--mint-d); border: 1px solid rgba(0,212,170,.2); border-radius: var(--r); cursor: pointer; transition: all .12s; font-family: var(--sans); white-space: nowrap; }
+.nr5-comp-write:hover { background: var(--mint); color: white; }
+
 @media (max-width: 768px) {
   .nr5-stats { flex-wrap: wrap; padding: 12px 16px; gap: 8px; }
   .nr5-stat { flex: 1 1 calc(50% - 4px); min-width: 0; }
@@ -244,4 +259,5 @@
   .nr5-feed { padding: 16px; }
   .nr5-ticker { display: none; }
   .nr5-shortcuts { display: none; }
+  .nr5-competitors { margin: 0 16px 12px; }
 }

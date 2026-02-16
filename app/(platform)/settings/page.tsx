@@ -53,6 +53,7 @@ export default function SettingsPage() {
         if (data.theme) setTheme(data.theme)
         if (data.wpSiteUrl) setWpSiteUrl(data.wpSiteUrl)
         if (data.wpApiKey) setWpApiKey(data.wpApiKey)
+        if (data.competitorFeeds) setCompetitorFeeds(data.competitorFeeds)
       })
       .catch(() => {})
   }, [])
@@ -145,6 +146,10 @@ export default function SettingsPage() {
   const [wpTesting, setWpTesting] = useState(false)
   const [wpTestResult, setWpTestResult] = useState<{ success: boolean; message: string } | null>(null)
 
+  // Competitor Tracking
+  const [competitorFeeds, setCompetitorFeeds] = useState<string[]>([])
+  const [newFeedUrl, setNewFeedUrl] = useState('')
+
   function change<T>(setter: (v: T) => void) {
     return (v: T) => { setter(v); setDirty(true); setSaved(false) }
   }
@@ -164,6 +169,7 @@ export default function SettingsPage() {
           theme,
           wpSiteUrl: wpSiteUrl || null,
           wpApiKey: wpApiKey || null,
+          competitorFeeds,
         }),
       })
       if (res.ok) {
@@ -533,6 +539,64 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* COMPETITOR TRACKING */}
+      <div className="st-section">
+        <div className="st-section-head">
+          <div className="st-section-title">Competitor Tracking</div>
+          <div className="st-section-desc">Add RSS feed URLs of competitor sites to monitor their latest articles.</div>
+        </div>
+
+        <div className="st-card">
+          <div className="st-card-head">
+            <div className="st-card-title">RSS Feeds</div>
+          </div>
+          <div className="st-card-desc">
+            Add up to 10 competitor RSS feeds. Their articles will appear in Newsroom under &ldquo;Competitor Activity&rdquo;.
+          </div>
+
+          {competitorFeeds.map((url, i) => (
+            <div key={i} className="st-row">
+              <span className="st-label">Feed {i + 1}</span>
+              <input className="st-input mono" value={url} readOnly />
+              <button
+                type="button"
+                className="st-comp-remove"
+                onClick={() => { setCompetitorFeeds(competitorFeeds.filter((_, j) => j !== i)); setDirty(true); setSaved(false) }}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+
+          {competitorFeeds.length < 10 && (
+            <div className="st-row">
+              <span className="st-label">Add Feed</span>
+              <input
+                className="st-input mono"
+                value={newFeedUrl}
+                onChange={(e) => setNewFeedUrl(e.target.value)}
+                placeholder="https://competitor.com/rss"
+              />
+              <button
+                type="button"
+                className="st-comp-add"
+                onClick={() => {
+                  if (newFeedUrl.trim() && !competitorFeeds.includes(newFeedUrl.trim())) {
+                    setCompetitorFeeds([...competitorFeeds, newFeedUrl.trim()])
+                    setNewFeedUrl('')
+                    setDirty(true)
+                    setSaved(false)
+                  }
+                }}
+                disabled={!newFeedUrl.trim()}
+              >
+                Add
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -131,6 +131,13 @@
 .st-wp-test-btn:hover { background: var(--g800); }
 .st-wp-test-btn:disabled { opacity: .5; cursor: not-allowed; }
 
+/* Competitor tracking */
+.st-comp-remove { padding: 6px 12px; font-size: 11px; font-weight: 600; background: var(--coral-l); color: var(--coral); border: 1px solid rgba(255,107,107,.2); border-radius: var(--r); cursor: pointer; transition: all .12s; flex-shrink: 0; font-family: inherit; }
+.st-comp-remove:hover { background: var(--coral); color: white; }
+.st-comp-add { padding: 6px 14px; font-size: 11px; font-weight: 700; background: var(--mint); color: white; border: none; border-radius: var(--r); cursor: pointer; transition: all .12s; flex-shrink: 0; font-family: inherit; }
+.st-comp-add:hover { background: var(--mint-d); }
+.st-comp-add:disabled { opacity: .4; cursor: not-allowed; }
+
 /* Data management */
 .st-data-grid { display: flex; flex-direction: column; gap: 10px; }
 .st-data-card { display: flex; align-items: center; gap: 16px; padding: 18px 22px; background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); text-decoration: none; transition: all .15s; }

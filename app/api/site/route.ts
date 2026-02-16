@@ -14,6 +14,7 @@ const UpdateSiteSchema = z.object({
   theme: z.enum(['editorial', 'midnight']).optional(),
   wpSiteUrl: z.string().max(500).optional().nullable(),
   wpApiKey: z.string().max(500).optional().nullable(),
+  competitorFeeds: z.array(z.string().url().max(500)).max(10).optional(),
 })
 
 export async function GET() {
@@ -40,6 +41,7 @@ export async function GET() {
       theme: site.theme,
       wpSiteUrl: site.wpSiteUrl,
       wpApiKey: site.wpApiKey,
+      competitorFeeds: site.competitorFeeds,
       categories: categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
     })
   } catch (error) {
@@ -73,6 +75,7 @@ export async function PATCH(req: NextRequest) {
         ...(data.theme !== undefined && { theme: data.theme }),
         ...(data.wpSiteUrl !== undefined && { wpSiteUrl: data.wpSiteUrl || null }),
         ...(data.wpApiKey !== undefined && { wpApiKey: data.wpApiKey || null }),
+        ...(data.competitorFeeds !== undefined && { competitorFeeds: data.competitorFeeds }),
       },
     })
 
@@ -87,6 +90,7 @@ export async function PATCH(req: NextRequest) {
       theme: updated.theme,
       wpSiteUrl: updated.wpSiteUrl,
       wpApiKey: updated.wpApiKey,
+      competitorFeeds: updated.competitorFeeds,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

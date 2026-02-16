@@ -39,6 +39,7 @@ model Site {
   theme          String       @default("editorial")
   wpSiteUrl      String?
   wpApiKey       String?
+  competitorFeeds String[]    @default([])
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?

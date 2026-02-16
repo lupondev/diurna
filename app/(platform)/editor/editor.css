@@ -333,6 +333,30 @@
 .te-unsplash-attribution { text-align: center; padding: 10px; font-size: 11px; color: var(--g400); }
 .te-unsplash-attribution a { color: var(--g600); text-decoration: underline; }
 
+/* ─── Originality Check ─── */
+.ed-btn-originality { background: var(--elec-l); color: var(--elec); border: 1px solid rgba(91,95,255,.2); }
+.ed-btn-originality:hover { background: var(--elec); color: white; }
+.orig-results { display: flex; flex-direction: column; gap: 16px; }
+.orig-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.orig-score-card { text-align: center; padding: 20px; background: var(--g50); border: 1px solid var(--brd); border-radius: var(--rl); }
+.orig-score-val { font-family: var(--mono); font-size: 40px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.orig-score-val.low { color: var(--suc); }
+.orig-score-val.med { color: var(--warn); }
+.orig-score-val.high { color: var(--coral); }
+.orig-score-label { font-size: 12px; font-weight: 700; color: var(--g700); margin-bottom: 2px; }
+.orig-score-hint { font-size: 10px; color: var(--g400); }
+.orig-summary { font-size: 13px; color: var(--g600); line-height: 1.5; padding: 12px 14px; background: var(--g50); border-radius: var(--rm); border-left: 3px solid var(--mint); }
+.orig-section { margin-top: 4px; }
+.orig-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--g400); margin-bottom: 8px; }
+.orig-phrase { font-size: 12px; color: var(--coral); padding: 6px 10px; background: var(--coral-l); border-radius: var(--r); margin-bottom: 4px; font-style: italic; }
+.orig-suggestion { font-size: 12px; color: var(--g600); padding: 6px 0; display: flex; gap: 8px; }
+.orig-bullet { color: var(--mint); font-weight: 700; flex-shrink: 0; }
+
+/* ─── Trends in sidebar ─── */
+.tp-trends-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.tp-trends-head .tp-title { margin-bottom: 0; }
+.tp-geo-select { padding: 4px 8px; font-size: 10px; font-weight: 600; border: 1px solid var(--brd); border-radius: var(--r); color: var(--g600); background: var(--wh); cursor: pointer; font-family: var(--sans); }
+
 /* ─── Editor responsive ─── */
 @media (max-width: 900px) {
   .te-sidebar { display: none; }

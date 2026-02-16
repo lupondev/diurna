@@ -76,6 +76,12 @@ export default function EditorPage() {
   const [categoryId, setCategoryId] = useState('')
   const [aiResult, setAiResult] = useState<{ model?: string; tokensIn?: number; tokensOut?: number } | null>(null)
   const [sendNewsletter, setSendNewsletter] = useState(false)
+  const [showOriginality, setShowOriginality] = useState(false)
+  const [origLoading, setOrigLoading] = useState(false)
+  const [origResult, setOrigResult] = useState<{ aiScore: number; uniquenessScore: number; flaggedPhrases: string[]; suggestions: string[]; summary: string } | null>(null)
+  const [trends, setTrends] = useState<{ title: string; traffic: string }[]>([])
+  const [trendsGeo, setTrendsGeo] = useState('BA')
+  const [trendsLoading, setTrendsLoading] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -89,6 +95,45 @@ export default function EditorPage() {
       })
       .catch(console.error)
   }, [])
+
+  // Fetch Google Trends
+  useEffect(() => {
+    setTrendsLoading(true)
+    fetch(`/api/trends?geo=${trendsGeo}`)
+      .then((r) => r.json())
+      .then((data) => { setTrends(data.trends || []); setTrendsLoading(false) })
+      .catch(() => setTrendsLoading(false))
+  }, [trendsGeo])
+
+  async function runOriginalityCheck() {
+    // Extract plain text from tiptap content
+    const doc = content as { content?: Array<{ content?: Array<{ text?: string }> }> }
+    let text = ''
+    if (doc?.content) {
+      for (const node of doc.content) {
+        if (node.content) {
+          text += node.content.map((c) => c.text || '').join('') + '\n'
+        }
+      }
+    }
+    text = text.trim()
+    if (text.length < 50) { alert('Write at least 50 characters before checking originality.'); return }
+    setOrigLoading(true)
+    setOrigResult(null)
+    setShowOriginality(true)
+    try {
+      const res = await fetch('/api/ai/originality', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: text }),
+      })
+      const data = await res.json()
+      if (res.ok) setOrigResult(data)
+      else setOrigResult({ aiScore: 0, uniquenessScore: 0, flaggedPhrases: [], suggestions: [data.error || 'Check failed'], summary: 'Error' })
+    } catch {
+      setOrigResult({ aiScore: 0, uniquenessScore: 0, flaggedPhrases: [], suggestions: ['Network error'], summary: 'Error' })
+    } finally { setOrigLoading(false) }
+  }
 
   function setP(text: string) {
     setPrompt(text)
@@ -249,6 +294,9 @@ export default function EditorPage() {
           <button className="ed-btn ed-btn-review" onClick={() => { setArticleStatus('IN_REVIEW'); handleSave('IN_REVIEW') }} disabled={saving || !title.trim()}>
             📝 {saving && articleStatus === 'IN_REVIEW' ? 'Saving...' : 'Submit for Review'}
           </button>
+          <button className="ed-btn ed-btn-originality" onClick={runOriginalityCheck} disabled={origLoading}>
+            🔍 {origLoading ? 'Checking...' : 'Originality'}
+          </button>
           <label className="ed-nl-check">
             <input type="checkbox" checked={sendNewsletter} onChange={(e) => setSendNewsletter(e.target.checked)} />
             <span>📧 Newsletter</span>
@@ -286,6 +334,58 @@ export default function EditorPage() {
             <span>· {aiResult.tokensIn} in / {aiResult.tokensOut} out tokens</span>
           </div>
         )}
+
+        {/* Originality Check Modal */}
+        {showOriginality && (
+          <div className="ed-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowOriginality(false) }}>
+            <div className="ed-modal" style={{ width: 540 }}>
+              <div className="ed-modal-head">
+                <div className="ed-modal-title">🔍 Originality Check</div>
+                <button className="ed-modal-close" onClick={() => setShowOriginality(false)}>x</button>
+              </div>
+              <div className="ed-modal-body">
+                {origLoading ? (
+                  <div style={{ textAlign: 'center', padding: 40, color: 'var(--g400)' }}>
+                    <div className="spinner" style={{ width: 32, height: 32, margin: '0 auto 12px' }} />
+                    Analyzing content...
+                  </div>
+                ) : origResult ? (
+                  <div className="orig-results">
+                    <div className="orig-scores">
+                      <div className="orig-score-card">
+                        <div className={`orig-score-val ${origResult.aiScore > 70 ? 'high' : origResult.aiScore > 40 ? 'med' : 'low'}`}>{origResult.aiScore}</div>
+                        <div className="orig-score-label">AI Detection</div>
+                        <div className="orig-score-hint">{origResult.aiScore > 70 ? 'Likely AI' : origResult.aiScore > 40 ? 'Mixed' : 'Likely Human'}</div>
+                      </div>
+                      <div className="orig-score-card">
+                        <div className={`orig-score-val ${origResult.uniquenessScore > 70 ? 'low' : origResult.uniquenessScore > 40 ? 'med' : 'high'}`}>{origResult.uniquenessScore}</div>
+                        <div className="orig-score-label">Uniqueness</div>
+                        <div className="orig-score-hint">{origResult.uniquenessScore > 70 ? 'Highly Original' : origResult.uniquenessScore > 40 ? 'Moderate' : 'Needs Work'}</div>
+                      </div>
+                    </div>
+                    <div className="orig-summary">{origResult.summary}</div>
+                    {origResult.flaggedPhrases.length > 0 && (
+                      <div className="orig-section">
+                        <div className="orig-section-title">Flagged Phrases</div>
+                        {origResult.flaggedPhrases.map((p, i) => (
+                          <div key={i} className="orig-phrase">&ldquo;{p}&rdquo;</div>
+                        ))}
+                      </div>
+                    )}
+                    {origResult.suggestions.length > 0 && (
+                      <div className="orig-section">
+                        <div className="orig-section-title">Suggestions</div>
+                        {origResult.suggestions.map((s, i) => (
+                          <div key={i} className="orig-suggestion"><span className="orig-bullet">→</span> {s}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -299,9 +399,41 @@ export default function EditorPage() {
       <div className="s1-main">
         {/* Trending sidebar */}
         <div className="tp">
-          <div className="tp-title"><span>🔥</span> Trending Now</div>
+          {/* Google Trends */}
+          <div className="tp-trends-head">
+            <div className="tp-title"><span>📈</span> Google Trends</div>
+            <select className="tp-geo-select" value={trendsGeo} onChange={(e) => setTrendsGeo(e.target.value)}>
+              <option value="BA">Bosnia</option>
+              <option value="US">USA</option>
+              <option value="GB">UK</option>
+              <option value="DE">Germany</option>
+              <option value="HR">Croatia</option>
+              <option value="RS">Serbia</option>
+            </select>
+          </div>
           <div className="tp-list">
-            {trendingItems.slice(0, showMore ? 15 : 10).map((item, i) => (
+            {trendsLoading ? (
+              <div style={{ textAlign: 'center', padding: 16, color: 'var(--g400)', fontSize: 12 }}>Loading trends...</div>
+            ) : trends.length > 0 ? (
+              trends.slice(0, 10).map((item, i) => (
+                <div key={i} className="ti" onClick={() => setP(`Write a sports article about: ${item.title}`)}>
+                  <span className="ti-num">{String(i + 1).padStart(2, '0')}</span>
+                  <div className="ti-body">
+                    <div className="ti-text">{item.title}</div>
+                    <div className="ti-meta">
+                      <span className="ti-tag hot">TRENDING</span>
+                      {item.traffic && <span className="ti-art">{item.traffic}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : null}
+          </div>
+
+          {/* Editorial Picks */}
+          <div className="tp-title" style={{ marginTop: 16 }}><span>🔥</span> Editorial Picks</div>
+          <div className="tp-list">
+            {trendingItems.slice(0, showMore ? 15 : 5).map((item, i) => (
               <div key={i} className="ti" onClick={() => setP(item.prompt)}>
                 <span className="ti-num">{String(i + 1).padStart(2, '0')}</span>
                 <div className="ti-body">
@@ -315,7 +447,7 @@ export default function EditorPage() {
               </div>
             ))}
             {!showMore && (
-              <button className="load-more-btn" onClick={() => setShowMore(true)}>▾ Load 5 more</button>
+              <button className="load-more-btn" onClick={() => setShowMore(true)}>▾ Load more</button>
             )}
           </div>
         </div>

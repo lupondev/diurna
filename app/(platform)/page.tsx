@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getDashboardStats, getArticles } from '@/lib/db'
 import { LiveMatches } from '@/components/dashboard/live-matches'
+import { TrendingWidget } from '@/components/dashboard/trending-widget'
 import './dashboard.css'
 
 export default async function DashboardPage() {
@@ -217,6 +218,9 @@ export default async function DashboardPage() {
 
           {/* Live Now / Today's Matches */}
           <LiveMatches />
+
+          {/* Trending Topics */}
+          <TrendingWidget />
 
           {/* AI Co-Pilot */}
           <div className="db-copilot">

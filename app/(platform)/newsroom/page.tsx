@@ -68,11 +68,20 @@ const categoryColors: Record<string, string> = {
   'Breaking': 'cat-breaking',
 }
 
+interface CompetitorArticle {
+  title: string
+  link: string
+  pubDate: string
+  source: string
+}
+
 export default function NewsroomPage() {
   const router = useRouter()
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [competitors, setCompetitors] = useState<CompetitorArticle[]>([])
+  const [compLoading, setCompLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('All')
   const [tagFilter, setTagFilter] = useState('')
   const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
@@ -102,6 +111,13 @@ export default function NewsroomPage() {
       })
       .catch(() => setLoading(false))
   }, [selectedId])
+
+  useEffect(() => {
+    fetch('/api/competitors')
+      .then((r) => r.json())
+      .then((data) => { setCompetitors(data.articles || []); setCompLoading(false) })
+      .catch(() => setCompLoading(false))
+  }, [])
 
   useEffect(() => {
     loadArticles(page)
@@ -570,6 +586,35 @@ export default function NewsroomPage() {
         <span className="nr5-dist-ch pending">⏳ Newsletter</span>
         <span className="nr5-dist-ch off">○ Social</span>
       </div>
+
+      {/* Competitor Activity */}
+      {competitors.length > 0 && (
+        <div className="nr5-competitors">
+          <div className="nr5-comp-head">
+            <span className="nr5-comp-title">🔎 Competitor Activity</span>
+            <span className="nr5-comp-count">{competitors.length} articles</span>
+          </div>
+          <div className="nr5-comp-list">
+            {competitors.slice(0, 8).map((item, i) => (
+              <div key={i} className="nr5-comp-item">
+                <div className="nr5-comp-body">
+                  <div className="nr5-comp-source">{item.source}</div>
+                  <div className="nr5-comp-article-title">{item.title}</div>
+                  <div className="nr5-comp-time">
+                    {item.pubDate ? new Date(item.pubDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                  </div>
+                </div>
+                <button
+                  className="nr5-comp-write"
+                  onClick={() => router.push(`/editor?prompt=${encodeURIComponent(`Write a better, more detailed article about: ${item.title}`)}`)}
+                >
+                  Write Better Version
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Keyboard shortcuts hint */}
       <div className="nr5-shortcuts">
