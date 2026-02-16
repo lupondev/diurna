@@ -75,6 +75,7 @@ export default function EditorPage() {
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
   const [categoryId, setCategoryId] = useState('')
   const [aiResult, setAiResult] = useState<{ model?: string; tokensIn?: number; tokensOut?: number } | null>(null)
+  const [sendNewsletter, setSendNewsletter] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -191,6 +192,15 @@ export default function EditorPage() {
         }),
       })
       if (res.ok) {
+        const article = await res.json()
+        // Send newsletter if checkbox checked and publishing
+        if (sendNewsletter && status === 'PUBLISHED' && article.id) {
+          fetch('/api/newsletter/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ articleId: article.id }),
+          }).catch(console.error)
+        }
         router.push('/newsroom')
         router.refresh()
       }
@@ -239,6 +249,10 @@ export default function EditorPage() {
           <button className="ed-btn ed-btn-review" onClick={() => { setArticleStatus('IN_REVIEW'); handleSave('IN_REVIEW') }} disabled={saving || !title.trim()}>
             📝 {saving && articleStatus === 'IN_REVIEW' ? 'Saving...' : 'Submit for Review'}
           </button>
+          <label className="ed-nl-check">
+            <input type="checkbox" checked={sendNewsletter} onChange={(e) => setSendNewsletter(e.target.checked)} />
+            <span>📧 Newsletter</span>
+          </label>
           <button className="ed-btn ed-btn-primary" onClick={() => { setArticleStatus('PUBLISHED'); handleSave('PUBLISHED') }} disabled={saving || !title.trim()}>
             ⚡ {saving && articleStatus === 'PUBLISHED' ? 'Saving...' : 'Publish'}
           </button>

@@ -135,6 +135,11 @@
 /* AI result info */
 .ai-result-info { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--g400); padding: 8px 0; }
 
+/* Newsletter checkbox */
+.ed-nl-check { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--g600); cursor: pointer; padding: 4px 8px; border-radius: var(--rm); transition: background .12s; white-space: nowrap; }
+.ed-nl-check:hover { background: var(--g100); }
+.ed-nl-check input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--mint); cursor: pointer; }
+
 /* Slug field */
 .ed-slug-row { display: flex; align-items: center; gap: 8px; }
 .ed-slug-label { font-size: 11px; font-weight: 700; color: var(--g400); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }

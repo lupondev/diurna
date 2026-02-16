@@ -12,6 +12,12 @@ interface FbPage {
   isActive: boolean
 }
 
+interface NewsletterStats {
+  active: number
+  total: number
+  recent: { id: string; email: string; name: string | null; isActive: boolean; subscribedAt: string }[]
+}
+
 export default function SettingsPage() {
   const [dirty, setDirty] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -23,6 +29,9 @@ export default function SettingsPage() {
   const [fbPages, setFbPages] = useState<FbPage[]>([])
   const [fbToggling, setFbToggling] = useState<string | null>(null)
   const searchParams = useSearchParams()
+
+  // Newsletter
+  const [nlStats, setNlStats] = useState<NewsletterStats | null>(null)
 
   // General
   const [siteName, setSiteName] = useState('SportNews Pro')
@@ -59,6 +68,14 @@ export default function SettingsPage() {
   }
 
   useEffect(() => { loadFbStatus() }, [])
+
+  // Newsletter stats
+  useEffect(() => {
+    fetch('/api/newsletter/subscribe')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setNlStats(data) })
+      .catch(() => {})
+  }, [])
 
   // Handle FB OAuth callback
   useEffect(() => {
@@ -367,6 +384,74 @@ export default function SettingsPage() {
             <div className="st-social-icon yt">&#9654;</div>
             <span className="st-social-name">YouTube</span>
             <input value={youtube} onChange={(e) => change(setYoutube)(e.target.value)} placeholder="youtube.com/@sportnewspro" />
+          </div>
+        </div>
+      </div>
+
+      {/* NEWSLETTER */}
+      <div className="st-section">
+        <div className="st-section-head">
+          <div className="st-section-title">Newsletter</div>
+          <div className="st-section-desc">Manage email subscribers and send newsletters to your audience.</div>
+        </div>
+
+        <div className="st-card">
+          <div className="st-card-head">
+            <div className="st-card-title">📧 Subscriber Overview</div>
+          </div>
+          <div className="st-card-desc">Powered by Resend. Subscribers can sign up via the embeddable subscribe widget.</div>
+
+          {nlStats ? (
+            <>
+              <div className="st-nl-stats">
+                <div className="st-nl-stat">
+                  <div className="st-nl-stat-val">{nlStats.active}</div>
+                  <div className="st-nl-stat-label">Active Subscribers</div>
+                </div>
+                <div className="st-nl-stat">
+                  <div className="st-nl-stat-val">{nlStats.total}</div>
+                  <div className="st-nl-stat-label">Total All-Time</div>
+                </div>
+              </div>
+
+              {nlStats.recent.length > 0 && (
+                <div className="st-nl-recent">
+                  <div className="st-nl-recent-title">Recent Subscribers</div>
+                  {nlStats.recent.map((sub) => (
+                    <div key={sub.id} className="st-nl-sub-row">
+                      <div className="st-nl-sub-avatar">{sub.email.charAt(0).toUpperCase()}</div>
+                      <div className="st-nl-sub-info">
+                        <div className="st-nl-sub-email">{sub.email}</div>
+                        <div className="st-nl-sub-date">
+                          {new Date(sub.subscribedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                      </div>
+                      <span className={`st-nl-sub-badge ${sub.isActive ? 'active' : 'inactive'}`}>
+                        {sub.isActive ? 'Active' : 'Unsubscribed'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ padding: '16px 0', fontSize: 13, color: 'var(--g400)' }}>Loading newsletter stats...</div>
+          )}
+        </div>
+
+        <div className="st-card">
+          <div className="st-card-head">
+            <div className="st-card-title">Embed Subscribe Widget</div>
+          </div>
+          <div className="st-card-desc">Copy this code to add a subscribe form to your website.</div>
+          <div className="st-row">
+            <span className="st-label">Embed Code</span>
+            <input
+              className="st-input mono"
+              readOnly
+              value={`<script src="https://cdn.diurna.io/subscribe-widget.js" data-site="sportnews-pro"></script>`}
+              onClick={(e) => { (e.target as HTMLInputElement).select(); navigator.clipboard.writeText((e.target as HTMLInputElement).value) }}
+            />
           </div>
         </div>
       </div>

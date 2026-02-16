@@ -78,6 +78,23 @@
 .st-fb-disconnect { padding: 6px 12px; font-size: 11px; font-weight: 600; background: white; color: var(--coral); border: 1px solid var(--coral); border-radius: var(--r); cursor: pointer; transition: all .12s; }
 .st-fb-disconnect:hover { background: var(--coral-l); }
 
+/* Newsletter */
+.st-nl-stats { display: flex; gap: 16px; margin-bottom: 16px; }
+.st-nl-stat { flex: 1; background: var(--g50); border: 1px solid var(--brd); border-radius: var(--rm); padding: 16px; text-align: center; }
+.st-nl-stat-val { font-family: var(--mono); font-size: 28px; font-weight: 800; color: var(--g900); }
+.st-nl-stat-label { font-size: 11px; color: var(--g500); margin-top: 2px; }
+.st-nl-recent { margin-top: 8px; }
+.st-nl-recent-title { font-size: 11px; font-weight: 700; color: var(--g400); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.st-nl-sub-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--g50); border: 1px solid var(--brd); border-radius: var(--rm); margin-bottom: 6px; }
+.st-nl-sub-row:last-child { margin-bottom: 0; }
+.st-nl-sub-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--mint-l); color: var(--mint-d); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.st-nl-sub-info { flex: 1; min-width: 0; }
+.st-nl-sub-email { font-size: 12px; font-weight: 600; color: var(--g800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-nl-sub-date { font-size: 10px; color: var(--g400); font-family: var(--mono); }
+.st-nl-sub-badge { font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 10px; flex-shrink: 0; }
+.st-nl-sub-badge.active { background: var(--suc-l); color: var(--suc); }
+.st-nl-sub-badge.inactive { background: var(--g100); color: var(--g500); }
+
 /* Danger zone */
 .st-danger { background: var(--wh); border: 1px solid var(--coral); border-radius: var(--rl); padding: 20px 24px; }
 .st-danger-title { font-size: 13px; font-weight: 700; color: var(--coral); display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }

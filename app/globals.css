@@ -118,6 +118,23 @@ a { text-decoration: none; color: inherit; }
 .btn-m { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 13px; font-weight: 700; background: var(--mint); color: var(--wh); border-radius: var(--rm); transition: all .15s; text-decoration: none; }
 .btn-m:hover { background: var(--mint-d); transform: translateY(-1px); box-shadow: 0 4px 12px var(--mint-g); }
 
+/* ═══ SUBSCRIBE WIDGET ═══ */
+.sw-widget { background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); padding: 28px 24px; text-align: center; max-width: 400px; }
+.sw-icon { font-size: 32px; margin-bottom: 8px; }
+.sw-title { font-size: 16px; font-weight: 800; color: var(--g900); margin-bottom: 4px; }
+.sw-desc { font-size: 13px; color: var(--g500); margin-bottom: 16px; }
+.sw-form { display: flex; gap: 8px; }
+.sw-input { flex: 1; padding: 10px 14px; font-size: 14px; border: 2px solid var(--g200); border-radius: var(--rm); outline: none; font-family: var(--sans); transition: border-color .15s; }
+.sw-input:focus { border-color: var(--mint); box-shadow: 0 0 0 3px var(--mint-l); }
+.sw-btn { padding: 10px 20px; font-size: 14px; font-weight: 700; background: var(--mint); color: var(--wh); border: none; border-radius: var(--rm); cursor: pointer; transition: all .15s; white-space: nowrap; }
+.sw-btn:hover { background: var(--mint-d); transform: translateY(-1px); }
+.sw-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.sw-success { padding: 14px; background: var(--mint-l); border-radius: var(--rm); font-size: 14px; font-weight: 600; color: var(--mint-d); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.sw-success-icon { width: 24px; height: 24px; background: var(--mint); color: var(--wh); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+.sw-error { font-size: 12px; color: var(--coral); margin-top: 6px; width: 100%; text-align: left; }
+.sw-footer { margin-top: 12px; font-size: 10px; color: var(--g400); }
+.sw-brand { color: var(--mint); font-weight: 700; }
+
 /* ═══ SCROLLBAR ═══ */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

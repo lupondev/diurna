@@ -38,6 +38,9 @@ export default function ArticleEditor({ id }: { id: string }) {
   const [showHistory, setShowHistory] = useState(false)
   const [versions, setVersions] = useState<Version[]>([])
 
+  // Newsletter
+  const [sendNewsletter, setSendNewsletter] = useState(false)
+
   // Tags
   const [articleTags, setArticleTags] = useState<TagItem[]>([])
   const [allTags, setAllTags] = useState<TagItem[]>([])
@@ -86,6 +89,15 @@ export default function ArticleEditor({ id }: { id: string }) {
       })
       if (res.ok) {
         if (newStatus) setStatus(newStatus)
+        // Send newsletter if checked and publishing
+        if (sendNewsletter && newStatus === 'PUBLISHED') {
+          fetch('/api/newsletter/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ articleId: id }),
+          }).catch(console.error)
+          setSendNewsletter(false)
+        }
         // Refresh versions
         const data = await res.json()
         if (data.id) {
@@ -179,9 +191,15 @@ export default function ArticleEditor({ id }: { id: string }) {
           💾 {saving ? 'Saving...' : 'Save'}
         </button>
         {status !== 'PUBLISHED' && (
-          <button className="ed-btn ed-btn-primary" onClick={() => handleSave('PUBLISHED')} disabled={saving}>
-            ⚡ Publish
-          </button>
+          <>
+            <label className="ed-nl-check">
+              <input type="checkbox" checked={sendNewsletter} onChange={(e) => setSendNewsletter(e.target.checked)} />
+              <span>📧 Newsletter</span>
+            </label>
+            <button className="ed-btn ed-btn-primary" onClick={() => handleSave('PUBLISHED')} disabled={saving}>
+              ⚡ Publish
+            </button>
+          </>
         )}
       </div>
 

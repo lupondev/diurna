@@ -45,6 +45,7 @@ model Site {
   categories        Category[]
   socialConnections SocialConnection[]
   media             Media[]
+  subscribers       Subscriber[]
 
   @@unique([organizationId, slug])
 }
@@ -243,6 +244,20 @@ model Media {
   createdAt  DateTime @default(now())
 
   @@index([siteId, createdAt])
+}
+
+model Subscriber {
+  id             String    @id @default(cuid())
+  siteId         String
+  site           Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  email          String
+  name           String?
+  isActive       Boolean   @default(true)
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+
+  @@unique([siteId, email])
+  @@index([siteId, isActive])
 }
 
 model ArticleVersion {
