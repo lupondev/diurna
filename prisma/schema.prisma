@@ -273,6 +273,7 @@ enum WidgetType {
   STANDINGS
   POLL
   QUIZ
+  SURVEY
   LIVE_SCORE
   STATS_TABLE
 }
