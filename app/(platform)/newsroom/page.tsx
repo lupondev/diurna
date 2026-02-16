@@ -22,6 +22,20 @@ type Article = {
   site?: { name: string } | null
 }
 
+interface TrendingTopic {
+  id: string
+  title: string
+  score: number
+  sources: string[]
+  sourcesCount: number
+  category: string
+  suggestedType: string
+  velocity: string
+  estimatedViews: string
+  traffic: string
+  recency: number
+}
+
 function getTimeAgo(date: string) {
   const diff = Date.now() - new Date(date).getTime()
   const mins = Math.floor(diff / 60000)
@@ -65,35 +79,65 @@ const categoryColors: Record<string, string> = {
   'Sport': 'cat-green', 'Sports': 'cat-green', 'Football': 'cat-green',
   'Politics': 'cat-purple', 'Tech': 'cat-blue', 'Technology': 'cat-blue',
   'Business': 'cat-gold', 'Entertainment': 'cat-coral', 'Show': 'cat-coral',
-  'Breaking': 'cat-breaking',
+  'Breaking': 'cat-breaking', 'General': 'cat-default',
 }
 
-interface CompetitorArticle {
-  title: string
-  link: string
-  pubDate: string
-  source: string
+const categoryIcons: Record<string, string> = {
+  'Sport': '⚽', 'Politics': '🏛️', 'Tech': '💻', 'Business': '📊', 'Entertainment': '🎬', 'General': '📰',
 }
+
+const typeLabels: Record<string, string> = {
+  'breaking': '⚡ Breaking', 'report': '📝 Report', 'analysis': '🔬 Analysis', 'preview': '👁️ Preview',
+}
+
+const velocityIcons: Record<string, string> = {
+  'rising': '📈', 'peaked': '🔥', 'falling': '📉',
+}
+
+const SMART_GEN_STEPS = [
+  'Analyzing trending topic...',
+  'Generating original content...',
+  'Creating poll & quiz...',
+  'Optimizing SEO...',
+  'Finalizing article package...',
+]
 
 export default function NewsroomPage() {
   const router = useRouter()
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [competitors, setCompetitors] = useState<CompetitorArticle[]>([])
-  const [compLoading, setCompLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('All')
   const [tagFilter, setTagFilter] = useState('')
   const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [previewTab, setPreviewTab] = useState<'preview' | 'edit' | 'seo'>('preview')
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [sortBy, setSortBy] = useState('latest')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalArticles, setTotalArticles] = useState(0)
   const feedRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+
+  // Smart Newsroom state
+  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
+  const [trendingLoading, setTrendingLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'feed' | 'trending'>('trending')
+  const [generatingTopic, setGeneratingTopic] = useState<string | null>(null)
+  const [genStep, setGenStep] = useState(0)
+  const [genError, setGenError] = useState<string | null>(null)
+
+  // Fetch trending intelligence
+  useEffect(() => {
+    setTrendingLoading(true)
+    fetch('/api/newsroom/smart')
+      .then((r) => r.json())
+      .then((data) => {
+        setTrendingTopics(data.topics || [])
+        setTrendingLoading(false)
+      })
+      .catch(() => setTrendingLoading(false))
+  }, [])
 
   const loadArticles = useCallback((pageNum: number) => {
     setLoading(true)
@@ -113,15 +157,7 @@ export default function NewsroomPage() {
   }, [selectedId])
 
   useEffect(() => {
-    fetch('/api/competitors')
-      .then((r) => r.json())
-      .then((data) => { setCompetitors(data.articles || []); setCompLoading(false) })
-      .catch(() => setCompLoading(false))
-  }, [])
-
-  useEffect(() => {
     loadArticles(page)
-
     fetch('/api/tags')
       .then((r) => r.json())
       .then((data) =>
@@ -173,6 +209,70 @@ export default function NewsroomPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // One-click generate article from trending topic
+  async function generateFromTopic(topic: TrendingTopic) {
+    setGeneratingTopic(topic.id)
+    setGenStep(0)
+    setGenError(null)
+
+    // Animate steps
+    const stepInterval = setInterval(() => {
+      setGenStep((prev) => {
+        if (prev >= SMART_GEN_STEPS.length - 1) {
+          clearInterval(stepInterval)
+          return prev
+        }
+        return prev + 1
+      })
+    }, 1500)
+
+    try {
+      const res = await fetch('/api/ai/smart-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: topic.title,
+          category: topic.category,
+          articleType: topic.suggestedType,
+        }),
+      })
+
+      clearInterval(stepInterval)
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Generation failed')
+      }
+
+      const data = await res.json()
+      setGenStep(SMART_GEN_STEPS.length)
+
+      // Redirect to editor with pre-filled data
+      const params = new URLSearchParams()
+      params.set('smartGenerate', 'true')
+      params.set('title', data.title || topic.title)
+      if (data.excerpt) params.set('excerpt', data.excerpt)
+      if (data.category) params.set('category', data.category)
+      if (data.seo?.metaTitle) params.set('metaTitle', data.seo.metaTitle)
+      if (data.seo?.metaDescription) params.set('metaDescription', data.seo.metaDescription)
+      if (data.imageQuery) params.set('imageQuery', data.imageQuery)
+
+      // Store generated content in sessionStorage for the editor to pick up
+      sessionStorage.setItem('smartArticle', JSON.stringify(data))
+
+      setTimeout(() => {
+        router.push(`/editor?${params.toString()}`)
+      }, 800)
+    } catch (err) {
+      clearInterval(stepInterval)
+      setGenError(err instanceof Error ? err.message : 'Generation failed')
+      setTimeout(() => {
+        setGeneratingTopic(null)
+        setGenError(null)
+      }, 3000)
+    }
+  }
+
   // Keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -217,19 +317,17 @@ export default function NewsroomPage() {
           if (selectedArticle) router.push(`/editor/${selectedArticle.id}`)
           break
         }
+        case 't': {
+          e.preventDefault()
+          setActiveTab(activeTab === 'trending' ? 'feed' : 'trending')
+          break
+        }
       }
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [filteredArticles, selectedId, selectedArticle, publishArticle, router])
-
-  // Ticker items from articles
-  const tickerItems = articles.slice(0, 8).map((a) => ({
-    title: a.title.length > 45 ? a.title.slice(0, 45) + '…' : a.title,
-    tag: a.tags?.[0]?.tag.name,
-    isAi: a.aiGenerated,
-  }))
+  }, [filteredArticles, selectedId, selectedArticle, publishArticle, router, activeTab])
 
   const chipFilters = [
     { key: 'All', label: 'All' },
@@ -239,13 +337,16 @@ export default function NewsroomPage() {
     { key: 'AI', label: '🤖 AI' },
   ]
 
+  // Top 5 trending for the hot bar
+  const topTrending = trendingTopics.slice(0, 5)
+
   return (
     <div className="nr5">
       {/* Top Header */}
       <div className="nr5-head">
         <div className="nr5-head-left">
-          <h1 className="nr5-title">Newsroom</h1>
-          <span className="nr5-live">LIVE</span>
+          <h1 className="nr5-title">Smart Newsroom</h1>
+          <span className="nr5-live">AI POWERED</span>
         </div>
         <div className="nr5-search-box">
           <span className="nr5-search-icon">🔍</span>
@@ -253,7 +354,7 @@ export default function NewsroomPage() {
             ref={searchRef}
             type="text"
             className="nr5-search-input"
-            placeholder="Search articles, tags..."
+            placeholder="Search articles, topics..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -264,356 +365,438 @@ export default function NewsroomPage() {
         </div>
       </div>
 
-      {/* Stats Bar */}
-      <div className="nr5-stats">
-        <div className={`nr5-stat${statusFilter === 'Queue' ? ' active' : ''}`} onClick={() => setStatusFilter('Queue')}>
-          <div className="nr5-stat-val coral">{stats.queue}</div>
-          <div className="nr5-stat-label">In Queue</div>
-          {stats.queue > 0 && <div className="nr5-stat-change up">↑ {stats.queue} pending</div>}
-        </div>
-        <div className={`nr5-stat${statusFilter === 'Published' ? ' active' : ''}`} onClick={() => setStatusFilter('Published')}>
-          <div className="nr5-stat-val green">{stats.published}</div>
-          <div className="nr5-stat-label">Published</div>
-        </div>
-        <div className={`nr5-stat${statusFilter === 'Scheduled' ? ' active' : ''}`} onClick={() => setStatusFilter('Scheduled')}>
-          <div className="nr5-stat-val blue">{stats.scheduled}</div>
-          <div className="nr5-stat-label">Scheduled</div>
-        </div>
-        <div className={`nr5-stat${statusFilter === 'AI' ? ' active' : ''}`} onClick={() => setStatusFilter('AI')}>
-          <div className="nr5-stat-val gold">{stats.ai}</div>
-          <div className="nr5-stat-label">AI Generated</div>
-        </div>
-        <div className={`nr5-stat${statusFilter === 'All' ? ' active' : ''}`} onClick={() => setStatusFilter('All')}>
-          <div className="nr5-stat-val mint">{stats.total}</div>
-          <div className="nr5-stat-label">Total Articles</div>
-        </div>
-      </div>
-
-      {/* Ticker */}
-      {tickerItems.length > 0 && (
-        <div className="nr5-ticker">
-          <div className="nr5-ticker-label">🔥 HOT</div>
-          <div className="nr5-ticker-content">
-            <div className="nr5-ticker-track">
-              {[...tickerItems, ...tickerItems].map((item, i) => (
-                <div key={i} className="nr5-ticker-item">
-                  {item.title}
-                  {item.tag && <span className="nr5-ticker-tag">{item.tag}</span>}
-                  {item.isAi && i < tickerItems.length && <span className="nr5-ticker-new">AI</span>}
-                </div>
-              ))}
-            </div>
+      {/* Trending Hot Bar */}
+      {topTrending.length > 0 && (
+        <div className="smart-hotbar">
+          <div className="smart-hotbar-label">🔥 TRENDING NOW</div>
+          <div className="smart-hotbar-items">
+            {topTrending.map((topic) => (
+              <button
+                key={topic.id}
+                className="smart-hotbar-item"
+                onClick={() => { setActiveTab('trending') }}
+              >
+                <span className={`smart-hotbar-score ${topic.score >= 80 ? 'hot' : topic.score >= 50 ? 'warm' : 'cool'}`}>
+                  {topic.score}
+                </span>
+                <span className="smart-hotbar-text">{topic.title}</span>
+                <span className="smart-hotbar-cat">{categoryIcons[topic.category] || '📰'}</span>
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Filters Bar */}
-      <div className="nr5-filters">
-        {chipFilters.map((f) => (
-          <button
-            key={f.key}
-            className={`nr5-chip${statusFilter === f.key ? ' active' : ''}`}
-            onClick={() => setStatusFilter(f.key)}
-          >
-            {f.label}
-          </button>
-        ))}
-        <div className="nr5-filter-divider" />
-        {allTags.length > 0 && (
-          <select className="nr5-sort" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
-            <option value="">All Tags</option>
-            {allTags.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        )}
-        <div className="nr5-filter-right">
-          <div className="nr5-view-toggle">
-            <button className={`nr5-view-btn${viewMode === 'list' ? ' active' : ''}`} onClick={() => setViewMode('list')}>
-              ☰ List
-            </button>
-            <button className={`nr5-view-btn${viewMode === 'calendar' ? ' active' : ''}`} onClick={() => setViewMode('calendar')}>
-              📅 Calendar
-            </button>
-          </div>
-          <span className="nr5-count">{totalArticles} articles</span>
-          <select className="nr5-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="latest">Latest ↓</option>
-            <option value="oldest">Oldest ↓</option>
-          </select>
+      {/* Tab Switcher */}
+      <div className="smart-tabs">
+        <button
+          className={`smart-tab ${activeTab === 'trending' ? 'active' : ''}`}
+          onClick={() => setActiveTab('trending')}
+        >
+          🧠 Trending Intelligence
+          {trendingTopics.length > 0 && <span className="smart-tab-count">{trendingTopics.length}</span>}
+        </button>
+        <button
+          className={`smart-tab ${activeTab === 'feed' ? 'active' : ''}`}
+          onClick={() => setActiveTab('feed')}
+        >
+          📰 Article Feed
+          <span className="smart-tab-count">{totalArticles}</span>
+        </button>
+        <div className="smart-tab-right">
+          <kbd className="smart-kbd">T</kbd> Toggle
         </div>
       </div>
 
-      {/* Content Area: Feed + Preview */}
-      <div className="nr5-content">
-        <div className="nr5-feed" ref={feedRef}>
-          {loading ? (
-            <div className="nr5-loading">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="nr5-skeleton" />
-              ))}
+      {/* ═══ TRENDING INTELLIGENCE TAB ═══ */}
+      {activeTab === 'trending' && (
+        <div className="smart-trending">
+          {trendingLoading ? (
+            <div className="smart-loading">
+              <div className="smart-loading-spinner" />
+              <div className="smart-loading-text">Scanning Google Trends, competitors, live matches...</div>
             </div>
-          ) : filteredArticles.length === 0 ? (
-            <div className="nr5-empty">
-              <div className="nr5-empty-icon">📝</div>
-              <div className="nr5-empty-title">
-                {articles.length === 0 ? 'No articles yet' : 'No matching articles'}
-              </div>
-              <div className="nr5-empty-desc">
-                {articles.length === 0 ? 'Create your first article with AI or manually' : 'Try different filters or search'}
-              </div>
-              {articles.length === 0 && (
-                <Link href="/editor" className="nr5-create-btn">✨ Create Article</Link>
+          ) : trendingTopics.length === 0 ? (
+            <div className="smart-empty">
+              <div className="smart-empty-icon">🧠</div>
+              <div className="smart-empty-title">No trending topics found</div>
+              <div className="smart-empty-desc">Add competitor RSS feeds in Settings to enhance intelligence</div>
+            </div>
+          ) : (
+            <div className="smart-grid">
+              {trendingTopics.map((topic) => {
+                const isGenerating = generatingTopic === topic.id
+                const scoreClass = topic.score >= 80 ? 'hot' : topic.score >= 50 ? 'warm' : 'cool'
+
+                return (
+                  <div key={topic.id} className={`smart-card ${isGenerating ? 'generating' : ''}`}>
+                    {isGenerating && (
+                      <div className="smart-card-overlay">
+                        <div className="smart-card-gen-steps">
+                          {SMART_GEN_STEPS.map((step, i) => (
+                            <div key={i} className={`smart-gen-step ${i < genStep ? 'done' : ''} ${i === genStep ? 'active' : ''}`}>
+                              <span className="smart-gen-dot">{i < genStep ? '✓' : i === genStep ? '●' : '○'}</span>
+                              {step}
+                            </div>
+                          ))}
+                          {genError && <div className="smart-gen-error">{genError}</div>}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="smart-card-top">
+                      <div className={`smart-score-circle ${scoreClass}`}>
+                        <span className="smart-score-num">{topic.score}</span>
+                      </div>
+                      <div className="smart-card-meta">
+                        <span className={`smart-cat-badge ${categoryColors[topic.category] || 'cat-default'}`}>
+                          {categoryIcons[topic.category] || '📰'} {topic.category}
+                        </span>
+                        <span className="smart-velocity">{velocityIcons[topic.velocity] || ''} {topic.velocity}</span>
+                      </div>
+                    </div>
+
+                    <h3 className="smart-card-title">{topic.title}</h3>
+
+                    <div className="smart-card-info">
+                      <span className="smart-card-sources">{topic.sourcesCount} source{topic.sourcesCount !== 1 ? 's' : ''}</span>
+                      {topic.traffic && <span className="smart-card-traffic">{topic.traffic} searches</span>}
+                      <span className="smart-card-type">{typeLabels[topic.suggestedType] || topic.suggestedType}</span>
+                    </div>
+
+                    <div className="smart-card-estimate">{topic.estimatedViews}</div>
+
+                    <div className="smart-card-sources-list">
+                      {topic.sources.slice(0, 3).map((s, i) => (
+                        <span key={i} className="smart-source-tag">{s}</span>
+                      ))}
+                      {topic.sources.length > 3 && (
+                        <span className="smart-source-more">+{topic.sources.length - 3}</span>
+                      )}
+                    </div>
+
+                    <div className="smart-card-actions">
+                      <button
+                        className="smart-generate-btn"
+                        onClick={() => generateFromTopic(topic)}
+                        disabled={!!generatingTopic}
+                      >
+                        {isGenerating ? 'Generating...' : '🤖 Generate Article'}
+                      </button>
+                      <button
+                        className="smart-manual-btn"
+                        onClick={() => router.push(`/editor?prompt=${encodeURIComponent(`Write a ${topic.suggestedType} about: ${topic.title}`)}`)}
+                      >
+                        ✏️ Manual
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ ARTICLE FEED TAB ═══ */}
+      {activeTab === 'feed' && (
+        <>
+          {/* Stats Bar */}
+          <div className="nr5-stats">
+            <div className={`nr5-stat${statusFilter === 'Queue' ? ' active' : ''}`} onClick={() => setStatusFilter('Queue')}>
+              <div className="nr5-stat-val coral">{stats.queue}</div>
+              <div className="nr5-stat-label">In Queue</div>
+            </div>
+            <div className={`nr5-stat${statusFilter === 'Published' ? ' active' : ''}`} onClick={() => setStatusFilter('Published')}>
+              <div className="nr5-stat-val green">{stats.published}</div>
+              <div className="nr5-stat-label">Published</div>
+            </div>
+            <div className={`nr5-stat${statusFilter === 'Scheduled' ? ' active' : ''}`} onClick={() => setStatusFilter('Scheduled')}>
+              <div className="nr5-stat-val blue">{stats.scheduled}</div>
+              <div className="nr5-stat-label">Scheduled</div>
+            </div>
+            <div className={`nr5-stat${statusFilter === 'AI' ? ' active' : ''}`} onClick={() => setStatusFilter('AI')}>
+              <div className="nr5-stat-val gold">{stats.ai}</div>
+              <div className="nr5-stat-label">AI Generated</div>
+            </div>
+            <div className={`nr5-stat${statusFilter === 'All' ? ' active' : ''}`} onClick={() => setStatusFilter('All')}>
+              <div className="nr5-stat-val mint">{stats.total}</div>
+              <div className="nr5-stat-label">Total</div>
+            </div>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="nr5-filters">
+            {chipFilters.map((f) => (
+              <button
+                key={f.key}
+                className={`nr5-chip${statusFilter === f.key ? ' active' : ''}`}
+                onClick={() => setStatusFilter(f.key)}
+              >
+                {f.label}
+              </button>
+            ))}
+            <div className="nr5-filter-divider" />
+            {allTags.length > 0 && (
+              <select className="nr5-sort" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+                <option value="">All Tags</option>
+                {allTags.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
+            <div className="nr5-filter-right">
+              <span className="nr5-count">{totalArticles} articles</span>
+              <select className="nr5-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="latest">Latest ↓</option>
+                <option value="oldest">Oldest ↓</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Content Area: Feed + Preview */}
+          <div className="nr5-content">
+            <div className="nr5-feed" ref={feedRef}>
+              {loading ? (
+                <div className="nr5-loading">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="nr5-skeleton" />
+                  ))}
+                </div>
+              ) : filteredArticles.length === 0 ? (
+                <div className="nr5-empty">
+                  <div className="nr5-empty-icon">📝</div>
+                  <div className="nr5-empty-title">
+                    {articles.length === 0 ? 'No articles yet' : 'No matching articles'}
+                  </div>
+                  <div className="nr5-empty-desc">
+                    {articles.length === 0 ? 'Create your first article with AI or manually' : 'Try different filters or search'}
+                  </div>
+                  {articles.length === 0 && (
+                    <Link href="/editor" className="nr5-create-btn">✨ Create Article</Link>
+                  )}
+                </div>
+              ) : (
+                filteredArticles.map((article, idx) => {
+                  const score = getScore(article)
+                  const scoreCls = getScoreClass(score)
+                  const isSelected = selectedId === article.id
+                  const isPublished = article.status === 'PUBLISHED'
+                  const catCls = article.category ? (categoryColors[article.category.name] || 'cat-default') : 'cat-default'
+
+                  return (
+                    <div
+                      key={article.id}
+                      className={`nr5-article${isSelected ? ' selected' : ''}${isPublished ? ' published' : ''}`}
+                      onClick={() => setSelectedId(article.id)}
+                      style={{ animationDelay: `${idx * 0.02}s` }}
+                      data-id={article.id}
+                    >
+                      {article.aiGenerated && score >= 85 && (
+                        <div className="nr5-trending">🤖 AI GENERATED</div>
+                      )}
+                      <div className="nr5-article-inner">
+                        <div className="nr5-article-body">
+                          <div className="nr5-article-meta">
+                            <span className="nr5-article-source">{article.site?.name || 'Newsroom'}</span>
+                            {article.category && (
+                              <span className={`nr5-article-cat ${catCls}`}>{article.category.name}</span>
+                            )}
+                            <span className="nr5-article-time">{getTimeAgo(article.updatedAt)}</span>
+                          </div>
+                          <h2 className="nr5-article-title">{article.title}</h2>
+                          <div className="nr5-article-tags">
+                            {article.aiGenerated && <span className="nr5-tag ai">🤖 AI {score}%</span>}
+                            {article.tags?.slice(0, 3).map((t) => (
+                              <span key={t.tag.id} className="nr5-tag source">{t.tag.name}</span>
+                            ))}
+                            <span className={`nr5-tag status-${article.status.toLowerCase()}`}>
+                              {article.status === 'DRAFT' ? '📝 Draft' : article.status === 'PUBLISHED' ? '✓ Live' : article.status === 'SCHEDULED' ? '📅 Scheduled' : '👁️ Review'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="nr5-article-side">
+                          <div className={`nr5-score ${isPublished ? 'done' : scoreCls}`}>
+                            {isPublished ? '—' : score}
+                          </div>
+                          {isPublished ? (
+                            <button className="nr5-pub-btn done">✓ Live</button>
+                          ) : article.status === 'SCHEDULED' ? (
+                            <button className="nr5-pub-btn scheduled">Scheduled</button>
+                          ) : (
+                            <button
+                              className="nr5-pub-btn ready"
+                              onClick={(e) => { e.stopPropagation(); publishArticle(article.id) }}
+                            >
+                              Publish
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="nr5-pagination">
+                  <button
+                    className="nr5-page-btn"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    ← Prev
+                  </button>
+                  <span className="nr5-page-info">Page {page} of {totalPages}</span>
+                  <button
+                    className="nr5-page-btn"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Next →
+                  </button>
+                </div>
               )}
             </div>
-          ) : (
-            filteredArticles.map((article, idx) => {
-              const score = getScore(article)
-              const scoreCls = getScoreClass(score)
-              const isSelected = selectedId === article.id
-              const isPublished = article.status === 'PUBLISHED'
-              const catCls = article.category ? (categoryColors[article.category.name] || 'cat-default') : 'cat-default'
 
-              return (
-                <div
-                  key={article.id}
-                  className={`nr5-article${isSelected ? ' selected' : ''}${isPublished ? ' published' : ''}`}
-                  onClick={() => setSelectedId(article.id)}
-                  style={{ animationDelay: `${idx * 0.02}s` }}
-                  data-id={article.id}
-                >
-                  {article.aiGenerated && score >= 85 && (
-                    <div className="nr5-trending">🤖 AI GENERATED</div>
-                  )}
-                  <div className="nr5-article-inner">
-                    <div className="nr5-article-body">
-                      <div className="nr5-article-meta">
-                        <span className="nr5-article-source">{article.site?.name || 'Newsroom'}</span>
-                        {article.category && (
-                          <span className={`nr5-article-cat ${catCls}`}>{article.category.name}</span>
-                        )}
-                        <span className="nr5-article-time">{getTimeAgo(article.updatedAt)}</span>
-                      </div>
-                      <h2 className="nr5-article-title">{article.title}</h2>
-                      <div className="nr5-article-tags">
-                        {article.aiGenerated && <span className="nr5-tag ai">🤖 AI {score}%</span>}
-                        {article.tags?.slice(0, 3).map((t) => (
-                          <span key={t.tag.id} className="nr5-tag source">{t.tag.name}</span>
-                        ))}
-                        <span className={`nr5-tag status-${article.status.toLowerCase()}`}>
-                          {article.status === 'DRAFT' ? '📝 Draft' : article.status === 'PUBLISHED' ? '✓ Live' : article.status === 'SCHEDULED' ? '📅 Scheduled' : '👁️ Review'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="nr5-article-side">
-                      <div className={`nr5-score ${isPublished ? 'done' : scoreCls}`}>
-                        {isPublished ? '—' : score}
-                      </div>
-                      {isPublished ? (
-                        <button className="nr5-pub-btn done">✓ Live</button>
-                      ) : article.status === 'SCHEDULED' ? (
-                        <button className="nr5-pub-btn scheduled">Scheduled</button>
-                      ) : (
-                        <button
-                          className="nr5-pub-btn ready"
-                          onClick={(e) => { e.stopPropagation(); publishArticle(article.id) }}
-                        >
-                          Publish
-                        </button>
-                      )}
-                    </div>
-                  </div>
+            {/* Preview Panel */}
+            <aside className="nr5-preview">
+              <div className="nr5-preview-head">
+                <span className="nr5-preview-label">Article Preview</span>
+                <div className="nr5-preview-tabs">
+                  {(['preview', 'edit', 'seo'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      className={`nr5-ptab${previewTab === tab ? ' active' : ''}`}
+                      onClick={() => setPreviewTab(tab)}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </button>
+                  ))}
                 </div>
-              )
-            })
-          )}
+              </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="nr5-pagination">
-              <button
-                className="nr5-page-btn"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                ← Prev
-              </button>
-              <span className="nr5-page-info">Page {page} of {totalPages}</span>
-              <button
-                className="nr5-page-btn"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Next →
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Preview Panel */}
-        <aside className="nr5-preview">
-          <div className="nr5-preview-head">
-            <span className="nr5-preview-label">Article Preview</span>
-            <div className="nr5-preview-tabs">
-              {(['preview', 'edit', 'seo'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  className={`nr5-ptab${previewTab === tab ? ' active' : ''}`}
-                  onClick={() => setPreviewTab(tab)}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {selectedArticle ? (
-            <>
-              <div className="nr5-preview-body">
-                {previewTab === 'preview' && (
-                  <>
-                    <div className="nr5-ai-tags">
-                      {selectedArticle.aiGenerated && <span className="nr5-aitag generated">✨ AI Generated</span>}
-                      <span className="nr5-aitag quality">✓ {selectedArticle.status === 'PUBLISHED' ? 'Published' : selectedArticle.status === 'DRAFT' ? 'Draft' : selectedArticle.status}</span>
-                      {selectedArticle.tags && selectedArticle.tags.length > 0 && (
-                        <span className="nr5-aitag seo">🏷️ {selectedArticle.tags.length} tags</span>
-                      )}
-                    </div>
-                    {selectedArticle.category && (
-                      <div className="nr5-pv-category">{selectedArticle.category.name}</div>
-                    )}
-                    <h1 className="nr5-pv-headline">{selectedArticle.title}</h1>
-                    <p className="nr5-pv-lead">{extractExcerpt(selectedArticle)}</p>
-                    <div className="nr5-pv-image">📰</div>
-                    {selectedArticle.tags && selectedArticle.tags.length > 0 && (
-                      <div className="nr5-pv-tags">
-                        <div className="nr5-pv-tags-title">Tags</div>
-                        {selectedArticle.tags.map((t) => (
-                          <span key={t.tag.id} className="nr5-pv-tag">{t.tag.name}</span>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-                {previewTab === 'edit' && (
-                  <div className="nr5-pv-edit">
-                    <div className="nr5-pv-edit-rows">
-                      <div className="nr5-pv-edit-row">
-                        <span className="nr5-pv-edit-lbl">Status</span>
-                        <span className="nr5-pv-edit-val">{selectedArticle.status}</span>
-                      </div>
-                      <div className="nr5-pv-edit-row">
-                        <span className="nr5-pv-edit-lbl">Slug</span>
-                        <span className="nr5-pv-edit-val mono">{selectedArticle.slug || '—'}</span>
-                      </div>
-                      <div className="nr5-pv-edit-row">
-                        <span className="nr5-pv-edit-lbl">Updated</span>
-                        <span className="nr5-pv-edit-val">{new Date(selectedArticle.updatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                      <div className="nr5-pv-edit-row">
-                        <span className="nr5-pv-edit-lbl">AI Generated</span>
-                        <span className="nr5-pv-edit-val">{selectedArticle.aiGenerated ? 'Yes' : 'No'}</span>
-                      </div>
-                      {selectedArticle.category && (
-                        <div className="nr5-pv-edit-row">
-                          <span className="nr5-pv-edit-lbl">Category</span>
-                          <span className="nr5-pv-edit-val">{selectedArticle.category.name}</span>
+              {selectedArticle ? (
+                <>
+                  <div className="nr5-preview-body">
+                    {previewTab === 'preview' && (
+                      <>
+                        <div className="nr5-ai-tags">
+                          {selectedArticle.aiGenerated && <span className="nr5-aitag generated">✨ AI Generated</span>}
+                          <span className="nr5-aitag quality">✓ {selectedArticle.status === 'PUBLISHED' ? 'Published' : selectedArticle.status === 'DRAFT' ? 'Draft' : selectedArticle.status}</span>
+                          {selectedArticle.tags && selectedArticle.tags.length > 0 && (
+                            <span className="nr5-aitag seo">🏷️ {selectedArticle.tags.length} tags</span>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <Link href={`/editor/${selectedArticle.id}`} className="nr5-edit-full">
-                      ✏️ Open Full Editor
-                    </Link>
+                        {selectedArticle.category && (
+                          <div className="nr5-pv-category">{selectedArticle.category.name}</div>
+                        )}
+                        <h1 className="nr5-pv-headline">{selectedArticle.title}</h1>
+                        <p className="nr5-pv-lead">{extractExcerpt(selectedArticle)}</p>
+                        <div className="nr5-pv-image">📰</div>
+                        {selectedArticle.tags && selectedArticle.tags.length > 0 && (
+                          <div className="nr5-pv-tags">
+                            <div className="nr5-pv-tags-title">Tags</div>
+                            {selectedArticle.tags.map((t) => (
+                              <span key={t.tag.id} className="nr5-pv-tag">{t.tag.name}</span>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {previewTab === 'edit' && (
+                      <div className="nr5-pv-edit">
+                        <div className="nr5-pv-edit-rows">
+                          <div className="nr5-pv-edit-row">
+                            <span className="nr5-pv-edit-lbl">Status</span>
+                            <span className="nr5-pv-edit-val">{selectedArticle.status}</span>
+                          </div>
+                          <div className="nr5-pv-edit-row">
+                            <span className="nr5-pv-edit-lbl">Slug</span>
+                            <span className="nr5-pv-edit-val mono">{selectedArticle.slug || '—'}</span>
+                          </div>
+                          <div className="nr5-pv-edit-row">
+                            <span className="nr5-pv-edit-lbl">Updated</span>
+                            <span className="nr5-pv-edit-val">{new Date(selectedArticle.updatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                          <div className="nr5-pv-edit-row">
+                            <span className="nr5-pv-edit-lbl">AI Generated</span>
+                            <span className="nr5-pv-edit-val">{selectedArticle.aiGenerated ? 'Yes' : 'No'}</span>
+                          </div>
+                          {selectedArticle.category && (
+                            <div className="nr5-pv-edit-row">
+                              <span className="nr5-pv-edit-lbl">Category</span>
+                              <span className="nr5-pv-edit-val">{selectedArticle.category.name}</span>
+                            </div>
+                          )}
+                        </div>
+                        <Link href={`/editor/${selectedArticle.id}`} className="nr5-edit-full">
+                          ✏️ Open Full Editor
+                        </Link>
+                      </div>
+                    )}
+                    {previewTab === 'seo' && (
+                      <div className="nr5-pv-seo">
+                        <div className="nr5-seo-ring">
+                          <div className={`nr5-seo-circle ${getScoreClass(getScore(selectedArticle))}`}>
+                            {getScore(selectedArticle)}
+                          </div>
+                          <div className="nr5-seo-ring-label">Content Score</div>
+                        </div>
+                        <div className="nr5-seo-checks">
+                          <div className={`nr5-seo-check ${selectedArticle.title.length > 10 ? 'pass' : 'fail'}`}>
+                            {selectedArticle.title.length > 10 ? '✓' : '✕'} Title length ({selectedArticle.title.length} chars)
+                          </div>
+                          <div className={`nr5-seo-check ${selectedArticle.slug ? 'pass' : 'fail'}`}>
+                            {selectedArticle.slug ? '✓' : '✕'} URL slug configured
+                          </div>
+                          <div className={`nr5-seo-check ${selectedArticle.excerpt ? 'pass' : 'fail'}`}>
+                            {selectedArticle.excerpt ? '✓' : '✕'} Meta description
+                          </div>
+                          <div className={`nr5-seo-check ${selectedArticle.category ? 'pass' : 'fail'}`}>
+                            {selectedArticle.category ? '✓' : '✕'} Category assigned
+                          </div>
+                          <div className={`nr5-seo-check ${selectedArticle.tags && selectedArticle.tags.length > 0 ? 'pass' : 'fail'}`}>
+                            {selectedArticle.tags && selectedArticle.tags.length > 0 ? '✓' : '✕'} Tags added
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-                {previewTab === 'seo' && (
-                  <div className="nr5-pv-seo">
-                    <div className="nr5-seo-ring">
-                      <div className={`nr5-seo-circle ${getScoreClass(getScore(selectedArticle))}`}>
-                        {getScore(selectedArticle)}
-                      </div>
-                      <div className="nr5-seo-ring-label">Content Score</div>
-                    </div>
-                    <div className="nr5-seo-checks">
-                      <div className={`nr5-seo-check ${selectedArticle.title.length > 10 ? 'pass' : 'fail'}`}>
-                        {selectedArticle.title.length > 10 ? '✓' : '✕'} Title length ({selectedArticle.title.length} chars)
-                      </div>
-                      <div className={`nr5-seo-check ${selectedArticle.slug ? 'pass' : 'fail'}`}>
-                        {selectedArticle.slug ? '✓' : '✕'} URL slug configured
-                      </div>
-                      <div className={`nr5-seo-check ${selectedArticle.excerpt ? 'pass' : 'fail'}`}>
-                        {selectedArticle.excerpt ? '✓' : '✕'} Meta description
-                      </div>
-                      <div className={`nr5-seo-check ${selectedArticle.category ? 'pass' : 'fail'}`}>
-                        {selectedArticle.category ? '✓' : '✕'} Category assigned
-                      </div>
-                      <div className={`nr5-seo-check ${selectedArticle.tags && selectedArticle.tags.length > 0 ? 'pass' : 'fail'}`}>
-                        {selectedArticle.tags && selectedArticle.tags.length > 0 ? '✓' : '✕'} Tags added
-                      </div>
-                    </div>
+
+                  <div className="nr5-preview-actions">
+                    {selectedArticle.status !== 'PUBLISHED' ? (
+                      <>
+                        <button className="nr5-pact publish" onClick={() => publishArticle(selectedArticle.id)}>⚡ Publish Now</button>
+                        <button className="nr5-pact schedule" onClick={() => router.push(`/editor/${selectedArticle.id}`)}>🕐 Schedule</button>
+                      </>
+                    ) : (
+                      <button className="nr5-pact publish" disabled>✓ Published</button>
+                    )}
+                    <button className="nr5-pact edit" onClick={() => router.push(`/editor/${selectedArticle.id}`)}>✏️ Edit</button>
                   </div>
-                )}
-              </div>
-
-              <div className="nr5-preview-actions">
-                {selectedArticle.status !== 'PUBLISHED' ? (
-                  <>
-                    <button className="nr5-pact publish" onClick={() => publishArticle(selectedArticle.id)}>⚡ Publish Now</button>
-                    <button className="nr5-pact schedule" onClick={() => router.push(`/editor/${selectedArticle.id}`)}>🕐 Schedule</button>
-                  </>
-                ) : (
-                  <button className="nr5-pact publish" disabled>✓ Published</button>
-                )}
-                <button className="nr5-pact edit" onClick={() => router.push(`/editor/${selectedArticle.id}`)}>✏️ Edit</button>
-              </div>
-            </>
-          ) : (
-            <div className="nr5-preview-body">
-              <div className="nr5-preview-empty">
-                <div className="nr5-preview-empty-icon">📰</div>
-                <p>Select an article to preview</p>
-              </div>
-            </div>
-          )}
-        </aside>
-      </div>
-
-      {/* Distribution Bar */}
-      <div className="nr5-dist">
-        <span className="nr5-dist-label">Distribute to:</span>
-        <span className="nr5-dist-ch active">✓ Website</span>
-        <span className="nr5-dist-ch active">✓ RSS Feed</span>
-        <span className="nr5-dist-ch pending">⏳ Newsletter</span>
-        <span className="nr5-dist-ch off">○ Social</span>
-      </div>
-
-      {/* Competitor Activity */}
-      {competitors.length > 0 && (
-        <div className="nr5-competitors">
-          <div className="nr5-comp-head">
-            <span className="nr5-comp-title">🔎 Competitor Activity</span>
-            <span className="nr5-comp-count">{competitors.length} articles</span>
-          </div>
-          <div className="nr5-comp-list">
-            {competitors.slice(0, 8).map((item, i) => (
-              <div key={i} className="nr5-comp-item">
-                <div className="nr5-comp-body">
-                  <div className="nr5-comp-source">{item.source}</div>
-                  <div className="nr5-comp-article-title">{item.title}</div>
-                  <div className="nr5-comp-time">
-                    {item.pubDate ? new Date(item.pubDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                </>
+              ) : (
+                <div className="nr5-preview-body">
+                  <div className="nr5-preview-empty">
+                    <div className="nr5-preview-empty-icon">📰</div>
+                    <p>Select an article to preview</p>
                   </div>
                 </div>
-                <button
-                  className="nr5-comp-write"
-                  onClick={() => router.push(`/editor?prompt=${encodeURIComponent(`Write a better, more detailed article about: ${item.title}`)}`)}
-                >
-                  Write Better Version
-                </button>
-              </div>
-            ))}
+              )}
+            </aside>
           </div>
-        </div>
+
+          {/* Distribution Bar */}
+          <div className="nr5-dist">
+            <span className="nr5-dist-label">Distribute to:</span>
+            <span className="nr5-dist-ch active">✓ Website</span>
+            <span className="nr5-dist-ch active">✓ RSS Feed</span>
+            <span className="nr5-dist-ch pending">⏳ Newsletter</span>
+            <span className="nr5-dist-ch off">○ Social</span>
+          </div>
+        </>
       )}
 
       {/* Keyboard shortcuts hint */}
@@ -622,6 +805,7 @@ export default function NewsroomPage() {
         <div className="nr5-sc"><kbd>P</kbd> Publish</div>
         <div className="nr5-sc"><kbd>/</kbd> Search</div>
         <div className="nr5-sc"><kbd>E</kbd> Edit</div>
+        <div className="nr5-sc"><kbd>T</kbd> Toggle view</div>
       </div>
     </div>
   )
