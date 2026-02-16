@@ -131,6 +131,17 @@
 .st-wp-test-btn:hover { background: var(--g800); }
 .st-wp-test-btn:disabled { opacity: .5; cursor: not-allowed; }
 
+/* Data management */
+.st-data-grid { display: flex; flex-direction: column; gap: 10px; }
+.st-data-card { display: flex; align-items: center; gap: 16px; padding: 18px 22px; background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); text-decoration: none; transition: all .15s; }
+.st-data-card:hover { border-color: var(--g300); box-shadow: var(--sh); transform: translateY(-1px); }
+.st-data-icon { font-size: 24px; width: 44px; height: 44px; background: var(--g50); border-radius: var(--rm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.st-data-info { flex: 1; min-width: 0; }
+.st-data-title { font-size: 13px; font-weight: 700; color: var(--g800); margin-bottom: 2px; }
+.st-data-desc { font-size: 11px; color: var(--g500); line-height: 1.4; }
+.st-data-arrow { font-size: 16px; color: var(--g400); flex-shrink: 0; transition: transform .15s; }
+.st-data-card:hover .st-data-arrow { transform: translateX(3px); color: var(--mint-d); }
+
 /* Danger zone */
 .st-danger { background: var(--wh); border: 1px solid var(--coral); border-radius: var(--rl); padding: 20px 24px; }
 .st-danger-title { font-size: 13px; font-weight: 700; color: var(--coral); display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }

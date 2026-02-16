@@ -604,6 +604,34 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* DATA MANAGEMENT */}
+      <div className="st-section">
+        <div className="st-section-head">
+          <div className="st-section-title">Data Management</div>
+          <div className="st-section-desc">Import content from other platforms or export your articles for backup and migration.</div>
+        </div>
+
+        <div className="st-data-grid">
+          <a href="/import" className="st-data-card">
+            <div className="st-data-icon">📥</div>
+            <div className="st-data-info">
+              <div className="st-data-title">Import Content</div>
+              <div className="st-data-desc">Import articles from WordPress XML, CSV, or JSON files.</div>
+            </div>
+            <span className="st-data-arrow">&rarr;</span>
+          </a>
+
+          <a href="/export" className="st-data-card">
+            <div className="st-data-icon">📤</div>
+            <div className="st-data-info">
+              <div className="st-data-title">Export Content</div>
+              <div className="st-data-desc">Download your articles as JSON, CSV, or WordPress WXR format.</div>
+            </div>
+            <span className="st-data-arrow">&rarr;</span>
+          </a>
+        </div>
+      </div>
+
       {/* DANGER ZONE */}
       <div className="st-section">
         <div className="st-section-head">

@@ -31,13 +31,6 @@ const sections = [
     ],
   },
   {
-    label: 'Tools',
-    items: [
-      { label: 'Import', icon: '📥', href: '/import' },
-      { label: 'Export', icon: '📤', href: '/export' },
-    ],
-  },
-  {
     label: 'Settings',
     items: [
       { label: 'Team', icon: '👥', href: '/team' },
