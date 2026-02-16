@@ -23,6 +23,7 @@ export default function SettingsPage() {
         if (!data) return
         if (data.name) setSiteName(data.name)
         if (data.domain) setSiteUrl(data.domain)
+        if (data.gaId) setGaId(data.gaId)
         if (data.language) setLanguage(data.language)
         if (data.timezone) setTimezone(data.timezone)
       })
@@ -57,6 +58,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           name: siteName,
           domain: siteUrl,
+          gaId,
           language,
           timezone,
         }),

@@ -33,6 +33,7 @@ model Site {
   name           String
   slug           String
   domain         String?
+  gaId           String?
   language       String       @default("bs")
   timezone       String       @default("Europe/Sarajevo")
   createdAt      DateTime     @default(now())

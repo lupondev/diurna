@@ -1,16 +1,26 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Script from 'next/script'
 
-const GA_ID = process.env.NEXT_PUBLIC_GA4_ID
-
 export function GoogleAnalytics() {
-  if (!GA_ID) return null
+  const [gaId, setGaId] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/site')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.gaId) setGaId(data.gaId)
+      })
+      .catch(() => {})
+  }, [])
+
+  if (!gaId) return null
 
   return (
     <>
       <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+        src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
         strategy="afterInteractive"
       />
       <Script id="ga4-init" strategy="afterInteractive">
@@ -18,7 +28,7 @@ export function GoogleAnalytics() {
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${GA_ID}');
+          gtag('config', '${gaId}');
         `}
       </Script>
     </>

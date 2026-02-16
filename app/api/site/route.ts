@@ -20,6 +20,7 @@ export async function GET() {
       name: site.name,
       slug: site.slug,
       domain: site.domain,
+      gaId: site.gaId,
       language: site.language,
       timezone: site.timezone,
       categories: categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
@@ -40,13 +41,14 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { name, domain, language, timezone } = body
+    const { name, domain, gaId, language, timezone } = body
 
     const updated = await prisma.site.update({
       where: { id: site.id },
       data: {
         ...(name !== undefined && { name }),
         ...(domain !== undefined && { domain }),
+        ...(gaId !== undefined && { gaId: gaId || null }),
         ...(language !== undefined && { language }),
         ...(timezone !== undefined && { timezone }),
       },
@@ -57,6 +59,7 @@ export async function PATCH(req: NextRequest) {
       name: updated.name,
       slug: updated.slug,
       domain: updated.domain,
+      gaId: updated.gaId,
       language: updated.language,
       timezone: updated.timezone,
     })
