@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { postToPage } from '@/lib/facebook'
 import { z } from 'zod'
 
 const UpdateArticleSchema = z.object({
@@ -41,6 +42,12 @@ export async function PATCH(
     const body = await req.json()
     const data = UpdateArticleSchema.parse(body)
 
+    // Check if this is transitioning to PUBLISHED (need old status)
+    const existing = await prisma.article.findUnique({
+      where: { id: params.id },
+      select: { status: true, siteId: true, title: true, slug: true, site: { select: { domain: true, slug: true } } },
+    })
+
     const article = await prisma.article.update({
       where: { id: params.id },
       data: {
@@ -48,6 +55,26 @@ export async function PATCH(
         publishedAt: data.status === 'PUBLISHED' ? new Date() : undefined,
       },
     })
+
+    // Auto-post to Facebook when publishing for the first time
+    if (data.status === 'PUBLISHED' && existing && existing.status !== 'PUBLISHED') {
+      try {
+        const fbConnection = await prisma.socialConnection.findUnique({
+          where: { siteId_provider: { siteId: existing.siteId, provider: 'facebook' } },
+        })
+        if (fbConnection?.pageId && fbConnection.accessToken) {
+          const baseUrl = existing.site?.domain
+            ? (existing.site.domain.startsWith('http') ? existing.site.domain : `https://${existing.site.domain}`)
+            : process.env.NEXTAUTH_URL || 'http://localhost:3000'
+          const articleUrl = `${baseUrl}/${existing.site?.slug}/${existing.slug}`
+          const title = data.title || existing.title
+          await postToPage(fbConnection.pageId, fbConnection.accessToken, title, articleUrl)
+        }
+      } catch (fbError) {
+        // Don't fail the publish if FB post fails
+        console.error('Facebook auto-post error:', fbError)
+      }
+    }
 
     return NextResponse.json(article)
   } catch (error) {

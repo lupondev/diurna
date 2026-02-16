@@ -50,6 +50,21 @@
 .st-social input { flex: 1; padding: 6px 10px; font-size: 12px; border: 1px solid var(--brd); border-radius: var(--r); outline: none; color: var(--g800); font-family: var(--mono); }
 .st-social input:focus { border-color: var(--mint); }
 
+/* Facebook connect */
+.st-fb-connect-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 12px; font-weight: 700; background: #1877F2; color: white; border-radius: var(--rm); text-decoration: none; transition: all .12s; }
+.st-fb-connect-btn:hover { background: #1565C0; }
+.st-fb-connected { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #E8F0FE; border: 1px solid #BBDEFB; border-radius: var(--rm); }
+.st-fb-status { display: flex; align-items: center; gap: 10px; }
+.st-fb-page-name { font-size: 13px; font-weight: 700; color: #1877F2; }
+.st-fb-status-text { font-size: 11px; color: var(--g500); }
+.st-fb-disconnect { padding: 6px 12px; font-size: 11px; font-weight: 600; background: white; color: var(--coral); border: 1px solid var(--coral); border-radius: var(--r); cursor: pointer; transition: all .12s; }
+.st-fb-disconnect:hover { background: var(--coral-l); }
+.st-fb-pages { padding: 4px 0; }
+.st-fb-pages-title { font-size: 12px; font-weight: 600; color: var(--g600); margin-bottom: 8px; }
+.st-fb-page-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; background: var(--g50); border: 1px solid var(--brd); border-radius: var(--rm); cursor: pointer; font-size: 13px; font-weight: 600; color: var(--g800); transition: all .12s; margin-bottom: 6px; }
+.st-fb-page-btn:hover { background: #E8F0FE; border-color: #BBDEFB; }
+.st-fb-page-btn:disabled { opacity: .5; cursor: not-allowed; }
+
 /* Danger zone */
 .st-danger { background: var(--wh); border: 1px solid var(--coral); border-radius: var(--rl); padding: 20px 24px; }
 .st-danger-title { font-size: 13px; font-weight: 700; color: var(--coral); display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }

@@ -40,11 +40,26 @@ model Site {
   updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?
 
-  articles   Article[]
-  widgets    Widget[]
-  categories Category[]
+  articles          Article[]
+  widgets           Widget[]
+  categories        Category[]
+  socialConnections SocialConnection[]
 
   @@unique([organizationId, slug])
+}
+
+model SocialConnection {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  provider    String
+  accessToken String
+  pageId      String?
+  pageName    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([siteId, provider])
 }
 
 // ══════════════════════════════════

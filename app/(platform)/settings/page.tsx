@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { SUPPORTED_LANGUAGES } from '@/lib/languages'
 import './settings.css'
 
@@ -8,6 +9,14 @@ export default function SettingsPage() {
   const [dirty, setDirty] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  // Facebook
+  const [fbConnected, setFbConnected] = useState(false)
+  const [fbPageName, setFbPageName] = useState<string | null>(null)
+  const [fbAuthUrl, setFbAuthUrl] = useState('')
+  const [fbPages, setFbPages] = useState<Array<{ id: string; name: string; token: string }>>([])
+  const [fbSaving, setFbSaving] = useState(false)
+  const searchParams = useSearchParams()
 
   // General
   const [siteName, setSiteName] = useState('SportNews Pro')
@@ -29,6 +38,66 @@ export default function SettingsPage() {
       })
       .catch(() => {})
   }, [])
+
+  // Facebook connection status
+  useEffect(() => {
+    fetch('/api/social/facebook')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return
+        setFbAuthUrl(data.authUrl || '')
+        setFbConnected(data.connected || false)
+        setFbPageName(data.pageName || null)
+      })
+      .catch(() => {})
+  }, [])
+
+  // Handle FB OAuth callback params
+  useEffect(() => {
+    const fbStatus = searchParams.get('fb')
+    const pagesParam = searchParams.get('pages')
+
+    if (fbStatus === 'success' && pagesParam) {
+      try {
+        const pages = JSON.parse(decodeURIComponent(pagesParam))
+        setFbPages(pages)
+      } catch { /* ignore */ }
+      // Clean URL
+      window.history.replaceState({}, '', '/settings')
+    }
+  }, [searchParams])
+
+  async function connectFbPage(page: { id: string; name: string; token: string }) {
+    setFbSaving(true)
+    try {
+      const res = await fetch('/api/social/facebook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId: page.id, pageName: page.name, pageToken: page.token }),
+      })
+      if (res.ok) {
+        setFbConnected(true)
+        setFbPageName(page.name)
+        setFbPages([])
+      }
+    } catch (error) {
+      console.error('FB connect error:', error)
+    } finally {
+      setFbSaving(false)
+    }
+  }
+
+  async function disconnectFb() {
+    try {
+      const res = await fetch('/api/social/facebook', { method: 'DELETE' })
+      if (res.ok) {
+        setFbConnected(false)
+        setFbPageName(null)
+      }
+    } catch (error) {
+      console.error('FB disconnect error:', error)
+    }
+  }
 
   // Branding
   const [brandColor, setBrandColor] = useState('#00D4AA')
@@ -220,6 +289,48 @@ export default function SettingsPage() {
             <span className="st-label">Google Analytics ID</span>
             <input className="st-input mono" value={gaId} onChange={(e) => change(setGaId)(e.target.value)} placeholder="G-XXXXXXXXXX" />
           </div>
+        </div>
+
+        <div className="st-card">
+          <div className="st-card-head">
+            <div className="st-card-title">Facebook Auto-Post</div>
+          </div>
+          <div className="st-card-desc">Connect a Facebook Page to auto-post articles when published.</div>
+          {fbConnected ? (
+            <div className="st-fb-connected">
+              <div className="st-fb-status">
+                <div className="st-social-icon fb">f</div>
+                <div>
+                  <div className="st-fb-page-name">{fbPageName || 'Connected Page'}</div>
+                  <div className="st-fb-status-text">Connected — articles will auto-post on publish</div>
+                </div>
+              </div>
+              <button className="st-fb-disconnect" onClick={disconnectFb}>Disconnect</button>
+            </div>
+          ) : fbPages.length > 0 ? (
+            <div className="st-fb-pages">
+              <div className="st-fb-pages-title">Select a page to connect:</div>
+              {fbPages.map((page) => (
+                <button
+                  key={page.id}
+                  className="st-fb-page-btn"
+                  onClick={() => connectFbPage(page)}
+                  disabled={fbSaving}
+                >
+                  <div className="st-social-icon fb">f</div>
+                  <span>{page.name}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="st-row">
+              <span className="st-label">Facebook Page</span>
+              <a href={fbAuthUrl || '#'} className="st-fb-connect-btn">
+                <span className="st-social-icon fb" style={{ width: 22, height: 22, fontSize: 11 }}>f</span>
+                Connect Facebook
+              </a>
+            </div>
+          )}
         </div>
 
         <div className="st-card">
