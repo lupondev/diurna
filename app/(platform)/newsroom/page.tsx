@@ -211,6 +211,7 @@ export default function NewsroomPage() {
 
   // One-click generate article from trending topic
   async function generateFromTopic(topic: TrendingTopic) {
+    console.log('[Newsroom] generateFromTopic called:', topic.title, '| category:', topic.category, '| type:', topic.suggestedType)
     setGeneratingTopic(topic.id)
     setGenStep(0)
     setGenError(null)
@@ -227,6 +228,7 @@ export default function NewsroomPage() {
     }, 1500)
 
     try {
+      console.log('[Newsroom] Calling /api/ai/smart-generate...')
       const res = await fetch('/api/ai/smart-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -241,10 +243,12 @@ export default function NewsroomPage() {
 
       if (!res.ok) {
         const err = await res.json()
+        console.error('[Newsroom] smart-generate failed:', res.status, err)
         throw new Error(err.error || 'Generation failed')
       }
 
       const data = await res.json()
+      console.log('[Newsroom] smart-generate response - title:', data.title, '| content length:', data.content?.length || 0, '| tiptapContent blocks:', data.tiptapContent?.content?.length || 0)
       setGenStep(SMART_GEN_STEPS.length)
 
       // Redirect to editor with pre-filled data
@@ -259,12 +263,14 @@ export default function NewsroomPage() {
 
       // Store generated content in sessionStorage for the editor to pick up
       sessionStorage.setItem('smartArticle', JSON.stringify(data))
+      console.log('[Newsroom] Stored smartArticle in sessionStorage, redirecting to /editor...')
 
       setTimeout(() => {
         router.push(`/editor?${params.toString()}`)
       }, 800)
     } catch (err) {
       clearInterval(stepInterval)
+      console.error('[Newsroom] generateFromTopic error:', err)
       setGenError(err instanceof Error ? err.message : 'Generation failed')
       setTimeout(() => {
         setGeneratingTopic(null)

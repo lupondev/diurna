@@ -92,12 +92,12 @@ export default function OnboardingPage() {
           language,
         }),
       })
+      const data = await res.json()
       if (!res.ok) {
-        const data = await res.json()
         throw new Error(typeof data.error === 'string' ? data.error : 'Setup failed')
       }
       setTimeout(() => {
-        router.push('/')
+        router.push(data.redirectUrl || '/dashboard')
         router.refresh()
       }, 2000)
     } catch (err) {
@@ -304,7 +304,21 @@ export default function OnboardingPage() {
                   marginTop: 16, padding: '10px 14px', borderRadius: 12,
                   border: '1px solid #FCA5A5', background: '#FEF2F2',
                   fontSize: 13, color: '#DC2626',
-                }}>{error}</div>
+                }}>
+                  {error}
+                  <button
+                    onClick={() => { setError(''); handleFinish() }}
+                    style={{
+                      display: 'block', width: '100%', marginTop: 10, padding: '10px',
+                      fontSize: 13, fontWeight: 700, color: '#fff', border: 'none',
+                      borderRadius: 8, cursor: 'pointer',
+                      background: 'linear-gradient(135deg, #00D4AA, #00A888)',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Try Again
+                  </button>
+                </div>
               )}
               <div style={{
                 marginTop: 20, fontSize: 13, color: '#A1A1AA',
