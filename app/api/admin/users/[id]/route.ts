@@ -16,7 +16,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const data = UpdateSchema.parse(body)
   const targetUserId = params.id
 
-  // Find membership
   const membership = await prisma.userOnOrganization.findFirst({
     where: { userId: targetUserId, organizationId: orgId, deletedAt: null },
   })
@@ -25,7 +24,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'User not found in organization' }, { status: 404 })
   }
 
-  // Cannot demote yourself if you're the only OWNER
   if (data.role && membership.role === 'OWNER' && data.role !== 'OWNER') {
     const ownerCount = await prisma.userOnOrganization.count({
       where: { organizationId: orgId, role: 'OWNER', deletedAt: null },

@@ -44,7 +44,6 @@ export async function POST(req: NextRequest) {
 
     const xml = await file.text()
 
-    // Split into <item> blocks
     const itemRegex = /<item>([\s\S]*?)<\/item>/g
     const articles: Array<{
       title: string
@@ -63,7 +62,6 @@ export async function POST(req: NextRequest) {
     while ((itemMatch = itemRegex.exec(xml)) !== null) {
       const item = itemMatch[1]
 
-      // Only import posts (not pages, attachments, etc.)
       const postType = extractTag(item, 'wp:post_type')
       if (postType && postType !== 'post') continue
 
@@ -95,13 +93,11 @@ export async function POST(req: NextRequest) {
       while ((metaMatch = metaRegex.exec(item)) !== null) {
         const metaKey = extractTag(metaMatch[1], 'wp:meta_key')
         if (metaKey === '_thumbnail_id') {
-          // We'll need to resolve this from attachments - for now store the ID
           featuredImage = extractTag(metaMatch[1], 'wp:meta_value')
           break
         }
       }
 
-      // Map WP status to our status
       let status = 'DRAFT'
       if (wpStatus === 'publish') status = 'PUBLISHED'
       else if (wpStatus === 'pending') status = 'IN_REVIEW'
@@ -121,7 +117,6 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Try to resolve featured images from attachment items
     const attachmentMap = new Map<string, string>()
     const attachRegex = /<item>([\s\S]*?)<\/item>/g
     let attachMatch
@@ -135,7 +130,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Resolve featured image IDs to URLs
     articles.forEach((a) => {
       if (a.featuredImage && attachmentMap.has(a.featuredImage)) {
         a.featuredImage = attachmentMap.get(a.featuredImage) || null

@@ -11,7 +11,6 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Diurna brand tokens (from SPEC v2.1 §14.2)
         mint: {
           DEFAULT: '#00D4AA',
           light: '#E6FBF6',
@@ -29,7 +28,6 @@ const config: Config = {
           DEFAULT: '#FFB800',
           light: '#FFF9E6',
         },
-        // Semantic
         success: {
           DEFAULT: '#10B981',
           light: '#ECFDF5',
@@ -42,7 +40,6 @@ const config: Config = {
           DEFAULT: '#EF4444',
           light: '#FEF2F2',
         },
-        // shadcn/ui tokens
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',

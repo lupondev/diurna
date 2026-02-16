@@ -37,7 +37,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { articles } = ImportSchema.parse(body)
 
-    // Build category map - find existing or create new
     const allCategoryNames = new Set<string>()
     articles.forEach((a) => a.categories.forEach((c) => allCategoryNames.add(c)))
 
@@ -50,7 +49,6 @@ export async function POST(req: NextRequest) {
       categoryMap.set(c.name.toLowerCase(), c.id)
     })
 
-    // Create missing categories
     const newCategoryNames = Array.from(allCategoryNames).filter(
       (name) => !categoryMap.has(name.toLowerCase())
     )
@@ -67,7 +65,6 @@ export async function POST(req: NextRequest) {
       categoryMap.set(name.toLowerCase(), cat.id)
     }
 
-    // Build tag map
     const allTagNames = new Set<string>()
     articles.forEach((a) => a.tags.forEach((t) => allTagNames.add(t)))
 
@@ -102,7 +99,6 @@ export async function POST(req: NextRequest) {
     const results: Array<{ title: string; slug: string; status: string }> = []
 
     for (const article of articles) {
-      // Deduplicate slug
       let slug = article.slug
       if (slugSet.has(slug)) {
         let i = 2
@@ -111,7 +107,6 @@ export async function POST(req: NextRequest) {
       }
       slugSet.add(slug)
 
-      // Convert HTML content to Tiptap JSON
       const tiptapContent = {
         type: 'doc',
         content: [
@@ -143,7 +138,6 @@ export async function POST(req: NextRequest) {
           },
         })
 
-        // Link tags
         const articleTags = article.tags
           .map((t) => tagMap.get(t.toLowerCase()))
           .filter(Boolean) as string[]

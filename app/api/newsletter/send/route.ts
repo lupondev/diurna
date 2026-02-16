@@ -100,7 +100,6 @@ export async function POST(req: NextRequest) {
     let sent = 0
     let failed = 0
 
-    // Send in batches of 50
     for (let i = 0; i < subscribers.length; i += 50) {
       const batch = subscribers.slice(i, i + 50)
       const results = await Promise.allSettled(

@@ -147,16 +147,12 @@ export default function LandingPage() {
         .mockup-float:hover { animation-play-state: paused; transform: perspective(2000px) rotateX(2deg) rotateY(-2deg); }
       `}</style>
 
-      {/* ═══════════════════════════════════ */}
-      {/* NAVIGATION                         */}
-      {/* ═══════════════════════════════════ */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0A0A0B]/80 backdrop-blur-xl border-b border-white/[0.06]' : ''}`}>
         <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/landing" className="text-xl font-display gradient-text font-bold tracking-tight">
             Diurna
           </Link>
 
-          {/* Desktop */}
           <div className="hidden md:flex items-center gap-8">
             <button onClick={() => scrollTo('features')} className="text-sm text-white/50 hover:text-white transition-colors">Features</button>
             <button onClick={() => scrollTo('pricing')} className="text-sm text-white/50 hover:text-white transition-colors">Pricing</button>
@@ -167,7 +163,6 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Mobile hamburger */}
           <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden p-2" aria-label="Menu">
             <div className="flex flex-col gap-1.5">
               <span className={`block w-5 h-0.5 bg-white transition-all duration-300 ${mobileMenu ? 'rotate-45 translate-y-2' : ''}`} />
@@ -177,7 +172,6 @@ export default function LandingPage() {
           </button>
         </div>
 
-        {/* Mobile menu */}
         <AnimatePresence>
           {mobileMenu && (
             <motion.div
@@ -200,17 +194,12 @@ export default function LandingPage() {
         </AnimatePresence>
       </nav>
 
-      {/* ═══════════════════════════════════ */}
-      {/* HERO                               */}
-      {/* ═══════════════════════════════════ */}
       <section className="relative pt-24 pb-16 md:pt-32 md:pb-20 overflow-hidden">
-        {/* Gradient orbs */}
         <div className="absolute top-[-200px] left-[20%] w-[600px] h-[600px] rounded-full bg-blue-500/[0.07] blur-[120px] orb-1 pointer-events-none" />
         <div className="absolute top-[-100px] right-[10%] w-[500px] h-[500px] rounded-full bg-violet-500/[0.07] blur-[120px] orb-2 pointer-events-none" />
         <div className="absolute top-[200px] left-[50%] w-[400px] h-[400px] rounded-full bg-pink-500/[0.04] blur-[100px] orb-3 pointer-events-none" />
 
         <div className="max-w-[1200px] mx-auto px-6 text-center relative z-10">
-          {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -221,7 +210,6 @@ export default function LandingPage() {
             AI-Powered Sports Publishing
           </motion.div>
 
-          {/* Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -232,7 +220,6 @@ export default function LandingPage() {
             <br className="hidden sm:block" /> Sports Publishers
           </motion.h1>
 
-          {/* Subheadline */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -243,7 +230,6 @@ export default function LandingPage() {
             generation, real-time football data, and embeddable widgets &mdash; all in one platform.
           </motion.p>
 
-          {/* CTAs */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -277,7 +263,6 @@ export default function LandingPage() {
               className="mockup-float rounded-2xl border border-white/[0.08] bg-[#111113] overflow-hidden"
               style={{ boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 80px rgba(59,130,246,0.06)' }}
             >
-              {/* Browser chrome */}
               <div className="flex items-center gap-2 px-4 py-3 bg-[#0D0D0F] border-b border-white/[0.06]">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
@@ -289,9 +274,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Newsroom UI */}
               <div className="p-4 md:p-5">
-                {/* Header bar */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <h3 className="text-sm font-bold text-white">Smart Newsroom</h3>
@@ -307,7 +290,6 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* Hot topics bar */}
                 <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
                   {mockupTopics.map((t, i) => (
                     <div key={i} className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.04] border border-white/[0.06] rounded-full">
@@ -318,7 +300,6 @@ export default function LandingPage() {
                   ))}
                 </div>
 
-                {/* Smart cards grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                   {mockupCards.slice(0, typeof window !== 'undefined' && window.innerWidth < 640 ? 3 : 6).map((card, i) => (
                     <div key={i} className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 relative">
@@ -343,7 +324,6 @@ export default function LandingPage() {
             </div>
           </motion.div>
 
-          {/* Stats bar */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -365,9 +345,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════ */}
-      {/* FEATURES GRID                      */}
-      {/* ═══════════════════════════════════ */}
       <section id="features" className="py-16 md:py-20">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-16">
@@ -396,9 +373,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════ */}
-      {/* LIVE WIDGET DEMO                   */}
-      {/* ═══════════════════════════════════ */}
       <section id="demo" className="py-16 md:py-20 bg-[#0D0D0F] border-y border-white/[0.04]">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-12">
@@ -413,7 +387,6 @@ export default function LandingPage() {
 
           <FadeIn delay={0.1}>
             <div className="max-w-[720px] mx-auto">
-              {/* Tabs */}
               <div className="flex gap-1 bg-white/[0.04] rounded-xl p-1 mb-6 w-fit mx-auto overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
                 {(['standings', 'fixtures', 'scorers'] as const).map((tab) => (
                   <button
@@ -430,9 +403,7 @@ export default function LandingPage() {
                 ))}
               </div>
 
-              {/* Widget card */}
               <div className="rounded-2xl border border-white/[0.08] bg-[#111113] overflow-hidden">
-                {/* Widget header */}
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06]">
                   <div className="flex items-center gap-2.5">
                     <span className="text-base">{'\u26BD'}</span>
@@ -442,7 +413,6 @@ export default function LandingPage() {
                   <span className="text-[10px] text-white/30">2024/25</span>
                 </div>
 
-                {/* Tab content */}
                 <AnimatePresence mode="wait">
                   {activeTab === 'standings' && (
                     <motion.div key="standings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
@@ -527,7 +497,6 @@ export default function LandingPage() {
                 </AnimatePresence>
               </div>
 
-              {/* Embed code block */}
               <div className="mt-6 rounded-xl border border-white/[0.08] bg-[#0D0D0F] overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06]">
                   <span className="text-[10px] font-mono text-white/30">embed.html</span>
@@ -553,9 +522,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════ */}
-      {/* HOW IT WORKS                       */}
-      {/* ═══════════════════════════════════ */}
       <section className="py-16 md:py-20">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-16 md:mb-20">
@@ -566,7 +532,6 @@ export default function LandingPage() {
           </FadeIn>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4 relative">
-            {/* Connecting line */}
             <div className="hidden md:block absolute top-10 left-[20%] right-[20%] h-px bg-gradient-to-r from-blue-500/40 via-violet-500/40 to-pink-500/40" />
 
             {[
@@ -586,9 +551,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════ */}
-      {/* SOCIAL PROOF / STATS               */}
-      {/* ═══════════════════════════════════ */}
       <section className="py-16 md:py-20 bg-[#0D0D0F] border-y border-white/[0.04]">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
           <FadeIn>
@@ -618,9 +580,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════ */}
-      {/* PRICING                            */}
-      {/* ═══════════════════════════════════ */}
       <section id="pricing" className="py-16 md:py-20">
         <div className="max-w-[1200px] mx-auto px-6">
           <FadeIn className="text-center mb-16">
@@ -634,7 +593,6 @@ export default function LandingPage() {
           </FadeIn>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 max-w-[960px] mx-auto items-start">
-            {/* Starter */}
             <FadeIn>
               <div className="h-full rounded-2xl border border-white/[0.06] bg-[#111113] p-7 flex flex-col">
                 <h3 className="text-lg font-semibold text-white mb-1">Starter</h3>
@@ -663,10 +621,8 @@ export default function LandingPage() {
               </div>
             </FadeIn>
 
-            {/* Pro - Featured */}
             <FadeIn delay={0.1}>
               <div className="relative md:scale-105 md:z-10">
-                {/* Gradient border wrapper */}
                 <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-blue-500/50 to-violet-500/50" />
                 <div className="relative h-full rounded-2xl bg-[#111113] p-7 flex flex-col">
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-violet-500 rounded-full whitespace-nowrap">
@@ -700,7 +656,6 @@ export default function LandingPage() {
               </div>
             </FadeIn>
 
-            {/* Enterprise */}
             <FadeIn delay={0.2}>
               <div className="h-full rounded-2xl border border-white/[0.06] bg-[#111113] p-7 flex flex-col">
                 <h3 className="text-lg font-semibold text-white mb-1">Enterprise</h3>
@@ -732,9 +687,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════ */}
-      {/* FINAL CTA                          */}
-      {/* ═══════════════════════════════════ */}
       <section className="py-16 md:py-20 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-blue-500/[0.06] blur-[120px] pointer-events-none" />
         <div className="absolute top-1/2 left-[40%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-violet-500/[0.06] blur-[100px] pointer-events-none" />
@@ -759,13 +711,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════ */}
-      {/* FOOTER                             */}
-      {/* ═══════════════════════════════════ */}
       <footer className="pt-16 pb-8 border-t border-white/[0.04]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
-            {/* Brand */}
             <div className="col-span-2">
               <Link href="/landing" className="text-xl font-display gradient-text font-bold tracking-tight">
                 Diurna
@@ -775,7 +723,6 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Product */}
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-white/50 mb-4">Product</h4>
               <div className="space-y-2.5">
@@ -786,7 +733,6 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Company */}
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-white/50 mb-4">Company</h4>
               <div className="space-y-2.5">
@@ -796,7 +742,6 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Legal */}
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-white/50 mb-4">Legal</h4>
               <div className="space-y-2.5">
@@ -807,7 +752,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Bottom bar */}
           <div className="flex flex-col sm:flex-row items-center justify-between pt-8 border-t border-white/[0.04] gap-4">
             <p className="text-xs text-white/20">
               &copy; 2025 Diurna. A product by{' '}

@@ -55,7 +55,6 @@ function ToolbarRow1({ editor }: { editor: NonNullable<ReturnType<typeof useEdit
 
   return (
     <div className="te-tb-row">
-      {/* Text formatting */}
       <TBtn icon="B" action={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold" />
       <TBtn icon="I" action={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic" />
       <TBtn icon="U" action={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Underline" />
@@ -63,7 +62,6 @@ function ToolbarRow1({ editor }: { editor: NonNullable<ReturnType<typeof useEdit
 
       <Sep />
 
-      {/* Headings */}
       <TBtn icon="H1" action={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Heading 1" />
       <TBtn icon="H2" action={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Heading 2" />
       <TBtn icon="H3" action={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Heading 3" />
@@ -71,26 +69,22 @@ function ToolbarRow1({ editor }: { editor: NonNullable<ReturnType<typeof useEdit
 
       <Sep />
 
-      {/* Blockquote & Code */}
       <TBtn icon="❝" action={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Blockquote" />
       <TBtn icon="⟨/⟩" action={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} title="Code Block" />
 
       <Sep />
 
-      {/* Alignment */}
       <TBtn icon="☰" action={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="Align Left" />
       <TBtn icon="☰" action={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="Align Center" />
       <TBtn icon="☰" action={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="Align Right" />
 
       <Sep />
 
-      {/* Lists */}
       <TBtn icon="1." action={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Ordered List" />
       <TBtn icon="•" action={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Bullet List" />
 
       <Sep />
 
-      {/* Link */}
       <TBtn icon="🔗" action={setLink} active={editor.isActive('link')} title="Insert Link" />
       {editor.isActive('link') && (
         <TBtn icon="✂" action={() => editor.chain().focus().unsetLink().run()} title="Unlink" />
@@ -98,7 +92,6 @@ function ToolbarRow1({ editor }: { editor: NonNullable<ReturnType<typeof useEdit
 
       <Sep />
 
-      {/* Undo / Redo */}
       <TBtn icon="↩" action={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo" />
       <TBtn icon="↪" action={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Redo" />
     </div>
@@ -129,7 +122,6 @@ function ToolbarRow2({
       type: 'blockquote',
       content: [{ type: 'paragraph', content: [{ type: 'text', text: `${icons[type]} ${type.charAt(0).toUpperCase() + type.slice(1)}: Your text here` }] }],
     }).run()
-    // Highlight the blockquote for visual distinction
     editor.chain().focus().toggleHighlight({ color: colors[type] }).run()
   }, [editor])
 
@@ -253,7 +245,7 @@ function FloatingToolbar({ editor }: { editor: NonNullable<ReturnType<typeof use
       if (data.content) {
         editor.chain().focus().deleteSelection().insertContent(data.content.trim()).run()
       }
-    } catch { /* noop */ }
+    } catch {}
   }, [editor])
 
   return (
@@ -302,7 +294,7 @@ function EditorSidebar({
       if (data.content) {
         editor.chain().focus().deleteSelection().insertContent(data.content.trim()).run()
       }
-    } catch { /* noop */ } finally { setAiLoading(null) }
+    } catch {} finally { setAiLoading(null) }
   }, [editor])
 
   const contentBlocks = [
@@ -324,7 +316,6 @@ function EditorSidebar({
 
   return (
     <div className="te-sidebar">
-      {/* Content Blocks */}
       <div className="te-sb-section">
         <div className="te-sb-title">Content Blocks</div>
         <div className="te-sb-grid">
@@ -337,7 +328,6 @@ function EditorSidebar({
         </div>
       </div>
 
-      {/* AI Assist */}
       <div className="te-sb-section">
         <div className="te-sb-title">AI Assist</div>
         <div className="te-sb-desc">Select text, then click an action</div>
@@ -380,7 +370,6 @@ function MediaLibraryModal({
   const [media, setMedia] = useState<Array<{ id: string; url: string; filename: string; alt?: string | null }>>([])
   const [loading, setLoading] = useState(true)
 
-  // Unsplash search state
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<UnsplashImage[]>([])
   const [searching, setSearching] = useState(false)
@@ -412,7 +401,7 @@ function MediaLibraryModal({
         setSearchPage(page)
         setTotalPages(data.totalPages)
       }
-    } catch { /* noop */ }
+    } catch {}
     finally { setSearching(false) }
   }
 
@@ -429,14 +418,12 @@ function MediaLibraryModal({
           <button className="ed-modal-close" onClick={onClose}>x</button>
         </div>
 
-        {/* Tabs */}
         <div className="te-img-tabs">
           <button type="button" className={`te-img-tab ${tab === 'upload' ? 'active' : ''}`} onClick={() => setTab('upload')}>Media Library</button>
           <button type="button" className={`te-img-tab ${tab === 'search' ? 'active' : ''}`} onClick={() => setTab('search')}>Unsplash Search</button>
         </div>
 
         <div className="ed-modal-body">
-          {/* Upload tab */}
           {tab === 'upload' && (
             <>
               {loading ? (
@@ -461,7 +448,6 @@ function MediaLibraryModal({
             </>
           )}
 
-          {/* Unsplash search tab */}
           {tab === 'search' && (
             <>
               <div className="te-unsplash-search">
@@ -564,7 +550,6 @@ export default function TiptapEditor({
   const charCount = editor?.storage.characterCount?.characters() || 0
   const readingTime = Math.max(1, Math.ceil(wordCount / 238))
 
-  // Focus mode: toggle fullscreen
   const toggleFocus = useCallback(() => {
     setFocusMode((prev) => {
       const next = !prev
@@ -573,7 +558,6 @@ export default function TiptapEditor({
     })
   }, [])
 
-  // Escape exits focus mode
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && focusMode) setFocusMode(false)
@@ -585,7 +569,6 @@ export default function TiptapEditor({
   const handleImageSelect = useCallback((url: string, alt: string) => {
     if (editor) {
       editor.chain().focus().setImage({ src: url, alt }).run()
-      // If alt contains Unsplash attribution, add it as caption text
       if (alt && alt.includes('on Unsplash')) {
         editor.chain().focus().createParagraphNear().insertContent({
           type: 'paragraph',
@@ -603,16 +586,13 @@ export default function TiptapEditor({
   return (
     <>
       <div ref={wrapRef} className={`te-wrap ${focusMode ? 'te-focus-mode' : ''}`}>
-        {/* Toolbar */}
         <div className="te-toolbar">
           <ToolbarRow1 editor={editor} />
           <ToolbarRow2 editor={editor} onOpenMediaLibrary={() => setShowMediaLibrary(true)} />
         </div>
 
-        {/* Editor + Sidebar layout */}
         <div className="te-body">
           <div className="te-editor-area">
-            {/* Floating toolbar on text selection */}
             <FloatingToolbar editor={editor} />
             <EditorContent editor={editor} />
           </div>
@@ -622,7 +602,6 @@ export default function TiptapEditor({
           )}
         </div>
 
-        {/* Status bar */}
         <div className="te-status">
           <div className="te-status-left">
             <span>{wordCount} words</span>
@@ -642,7 +621,6 @@ export default function TiptapEditor({
         </div>
       </div>
 
-      {/* Media Library Modal */}
       {showMediaLibrary && (
         <MediaLibraryModal
           onClose={() => setShowMediaLibrary(false)}

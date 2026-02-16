@@ -22,7 +22,6 @@ export async function checkAIRateLimit(orgId: string): Promise<{
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Count ONLY successful generations (AI_FAILED does not count)
   const used = await prisma.auditLog.count({
     where: {
       organizationId: orgId,

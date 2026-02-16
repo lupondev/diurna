@@ -161,7 +161,6 @@ function htmlToTiptap(html: string): Record<string, unknown> {
     }
   }
 
-  // If no blocks parsed, treat as plain paragraphs
   if (content.length === 0) {
     const paragraphs = html.split(/\n\n+/).filter(Boolean)
     for (const p of paragraphs) {
@@ -177,7 +176,6 @@ function htmlToTiptap(html: string): Record<string, unknown> {
 
 function parseInline(html: string): Record<string, unknown>[] {
   const nodes: Record<string, unknown>[] = []
-  // Strip HTML tags but preserve text
   const text = html
     .replace(/<strong>(.*?)<\/strong>/gi, '$1')
     .replace(/<em>(.*?)<\/em>/gi, '$1')

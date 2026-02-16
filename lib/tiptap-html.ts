@@ -115,7 +115,6 @@ function renderWidgetBlockquote(node: TiptapNode, widget: { type: string; attrs:
   if (widget.type === 'quiz') {
     const correctMatch = widget.attrs.match(/correct=(\d+)/)
     const correctIndex = correctMatch ? parseInt(correctMatch[1]) : 0
-    // Also detect from ✓ marker in items
     let correct = correctIndex
     const cleanItems = items.map((item, i) => {
       if (item.endsWith(' ✓')) {

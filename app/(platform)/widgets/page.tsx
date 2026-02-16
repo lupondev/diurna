@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import './widgets.css'
 
-/* ═══ TYPES ═══ */
 type Widget = {
   id: string
   name: string
@@ -21,7 +20,6 @@ type QuizData = { title: string; questions: QuizQuestion[] }
 type SurveyQuestion = { question: string; scale: string[] }
 type SurveyData = { title: string; questions: SurveyQuestion[] }
 
-/* ═══ WIDGET LIST ═══ */
 const widgets: Widget[] = [
   { id: 'live-score', name: 'Live Score', desc: 'Real-time match scores with live events and minute-by-minute updates.', tag: { label: 'Popular', cls: 'popular' }, embedCode: '<script src="https://cdn.diurna.io/widgets/live-score.js" data-match="auto" data-theme="light"></script>', preview: 'live-score', thumb: 'ls' },
   { id: 'standings', name: 'League Standings', desc: 'Full league table with positions, points, and form indicators.', tag: { label: 'Popular', cls: 'popular' }, embedCode: '<script src="https://cdn.diurna.io/widgets/standings.js" data-league="premier-league" data-theme="light"></script>', preview: 'standings', thumb: 'st' },
@@ -38,7 +36,6 @@ const widgets: Widget[] = [
   { id: 'survey', name: 'Fan Survey', desc: 'AI-generated survey with rating scales for fan feedback.', tag: { label: 'AI', cls: 'pro' }, embedCode: '<script src="https://cdn.diurna.io/widgets/survey.js" data-id="auto" data-theme="light"></script>', preview: 'survey', thumb: 'sv' },
 ]
 
-/* ═══ THUMBNAIL PREVIEWS (compact) ═══ */
 function ThumbLiveScore() {
   return (
     <div className="wg-thumb">
@@ -182,7 +179,6 @@ const thumbComponents: Record<string, () => React.JSX.Element> = {
   'tf': ThumbTeamForm, 'pc': ThumbPlayerCard, 'pr': ThumbPrediction, 'qz': ThumbQuiz, 'sv': ThumbSurvey,
 }
 
-/* ═══ FULL PREVIEW COMPONENTS ═══ */
 function LiveScorePreview() {
   return (
     <div className="wg-live-score">
@@ -491,7 +487,6 @@ function SurveyPreview({ data }: { data?: SurveyData }) {
   )
 }
 
-/* ═══ PREVIEW COMPONENT MAP ═══ */
 function getPreviewComponent(preview: string, aiData?: { poll?: PollData; quiz?: QuizData; survey?: SurveyData }) {
   switch (preview) {
     case 'live-score': return <LiveScorePreview />
@@ -511,7 +506,6 @@ function getPreviewComponent(preview: string, aiData?: { poll?: PollData; quiz?:
   }
 }
 
-/* ═══ AI INTERACTIVE WIDGETS ═══ */
 const interactiveTypes = new Set(['poll', 'quiz', 'survey'])
 
 function AIGenerateForm({ type, onGenerated }: { type: string; onGenerated: (data: PollData | QuizData | SurveyData) => void }) {
@@ -559,7 +553,6 @@ function AIGenerateForm({ type, onGenerated }: { type: string; onGenerated: (dat
   )
 }
 
-/* ═══ EMBED CODE BUILDER ═══ */
 function buildEmbedCode(widgetScript: string): string {
   return `<div style="display:flex;flex-direction:column;align-items:center;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff">
   ${widgetScript}
@@ -577,7 +570,6 @@ function buildEmbedCode(widgetScript: string): string {
 </div>`
 }
 
-/* ═══ MAIN PAGE ═══ */
 export default function WidgetsPage() {
   const [embedModal, setEmbedModal] = useState<{ code: string; name: string } | null>(null)
   const [previewModal, setPreviewModal] = useState<{ widget: Widget } | null>(null)
@@ -612,14 +604,12 @@ export default function WidgetsPage() {
 
   return (
     <div className="wg-page">
-      {/* Header */}
       <div className="wg-header">
         <div className="wg-badge">Widget Library</div>
         <h1 className="wg-title">Football Widgets</h1>
         <p className="wg-subtitle">Embeddable sports widgets with AI generation. Live scores, standings, polls, quizzes, and more.</p>
       </div>
 
-      {/* Compact Grid */}
       <div className="wg-grid">
         {widgets.map((w) => {
           const Thumb = thumbComponents[w.thumb]
@@ -644,7 +634,6 @@ export default function WidgetsPage() {
         })}
       </div>
 
-      {/* AI Generate Modal */}
       {mounted && aiModal && createPortal(
         <div className="wg-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setAiModal(null) }}>
           <div className="wg-modal-sm">
@@ -664,7 +653,6 @@ export default function WidgetsPage() {
         document.body
       )}
 
-      {/* Preview Modal */}
       {mounted && previewModal && createPortal(
         <div className="wg-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setPreviewModal(null) }}>
           <div className="wg-preview-modal">
@@ -691,7 +679,6 @@ export default function WidgetsPage() {
         document.body
       )}
 
-      {/* Embed Modal */}
       {mounted && embedModal && createPortal(
         <div className="wg-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setEmbedModal(null) }}>
           <div className="wg-embed-modal">

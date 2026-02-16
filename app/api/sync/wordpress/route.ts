@@ -24,7 +24,6 @@ export async function POST(req: NextRequest) {
 
     const { articleId, action } = await req.json()
 
-    // Test connection
     if (action === 'test') {
       try {
         const wpUrl = site.wpSiteUrl.replace(/\/+$/, '')
@@ -49,7 +48,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Push article
     if (!articleId) {
       return NextResponse.json({ error: 'articleId is required' }, { status: 400 })
     }

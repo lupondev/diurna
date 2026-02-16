@@ -20,9 +20,7 @@ export async function GET(
       title = article.title
       category = article.category?.name || 'News'
     }
-  } catch {
-    // fallback to defaults
-  }
+  } catch {}
 
   return new ImageResponse(
     (

@@ -57,7 +57,6 @@ export default function EditorialTemplate() {
     } as React.CSSProperties}>
       <div style={{ minHeight: '100vh', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontFamily: 'var(--sans)' }}>
 
-        {/* Preview Banner */}
         <div style={{ padding: '14px 24px', background: 'linear-gradient(135deg, #00D4AA, #00A888)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>This is a preview of the Clean Editorial theme</span>
           <button onClick={applyTheme} disabled={applying} style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, background: 'white', color: '#00A888', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -66,7 +65,6 @@ export default function EditorialTemplate() {
           <Link href="/settings" style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,.8)', textDecoration: 'none', marginLeft: 8 }}>Back to Settings</Link>
         </div>
 
-        {/* Header */}
         <header style={{ background: 'var(--bg-primary)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 100 }}>
           <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
@@ -89,7 +87,6 @@ export default function EditorialTemplate() {
           </div>
         </header>
 
-        {/* Breaking Bar */}
         <div style={{ background: 'var(--coral)', color: 'white', padding: '10px 0' }}>
           <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, padding: '4px 12px', background: 'rgba(255,255,255,.2)', borderRadius: 6, flexShrink: 0 }}>BREAKING</span>
@@ -99,9 +96,7 @@ export default function EditorialTemplate() {
 
         <main style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 40, padding: '40px 0' }}>
-            {/* Content */}
             <div>
-              {/* Hero */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 24, marginBottom: 48 }}>
                 <Link href="/site" style={{ borderRadius: 20, overflow: 'hidden', background: 'var(--bg-card)', boxShadow: '0 4px 12px rgba(0,0,0,.08)', textDecoration: 'none', color: 'inherit', display: 'block' }}>
                   <div style={{ aspectRatio: '16/10', background: 'linear-gradient(135deg, #1e3a5f, #0f2744)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, position: 'relative' }}>
@@ -139,7 +134,6 @@ export default function EditorialTemplate() {
                 </div>
               </div>
 
-              {/* Latest News */}
               <section style={{ marginBottom: 48 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 12, borderBottom: '2px solid var(--text-primary)' }}>
                   <h2 style={{ fontFamily: 'var(--disp)', fontSize: '1.5rem' }}>Latest News</h2>
@@ -180,7 +174,6 @@ export default function EditorialTemplate() {
                 </div>
               </section>
 
-              {/* Expert Opinions */}
               <section style={{ marginBottom: 48 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 12, borderBottom: '2px solid var(--text-primary)' }}>
                   <h2 style={{ fontFamily: 'var(--disp)', fontSize: '1.5rem' }}>Expert Opinions</h2>
@@ -198,9 +191,7 @@ export default function EditorialTemplate() {
               </section>
             </div>
 
-            {/* Sidebar */}
             <aside style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-              {/* Matches */}
               <div style={{ background: 'var(--bg-card)', borderRadius: 20, boxShadow: '0 1px 3px rgba(0,0,0,.08)', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700 }}>Live Scores</h3>
@@ -227,7 +218,6 @@ export default function EditorialTemplate() {
                 </div>
               </div>
 
-              {/* Poll */}
               <div style={{ background: 'var(--bg-card)', borderRadius: 20, boxShadow: '0 1px 3px rgba(0,0,0,.08)', overflow: 'hidden' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700 }}>Fan Poll</h3>
@@ -251,7 +241,6 @@ export default function EditorialTemplate() {
                 </div>
               </div>
 
-              {/* Newsletter */}
               <div style={{ padding: 24, background: 'linear-gradient(135deg, var(--accent-light), #E0FFF8)', borderRadius: 20, textAlign: 'center' }}>
                 <h4 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Never Miss a Goal</h4>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>Get the latest football news delivered to your inbox</p>
@@ -264,7 +253,6 @@ export default function EditorialTemplate() {
           </div>
         </main>
 
-        {/* Footer */}
         <footer style={{ background: 'var(--text-primary)', color: 'var(--bg-secondary)', marginTop: 60, padding: '48px 0 24px' }}>
           <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 24, borderTop: '1px solid rgba(255,255,255,.1)', fontSize: 13, color: 'var(--text-tertiary)' }}>

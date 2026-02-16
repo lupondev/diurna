@@ -53,7 +53,6 @@ export async function PATCH(req: Request) {
     const body = await req.json()
     const data = PatchSchema.parse(body)
 
-    // Verify member belongs to same org
     const member = await prisma.userOnOrganization.findFirst({
       where: { id: data.memberId, organizationId: session.user.organizationId, deletedAt: null },
     })
@@ -85,7 +84,6 @@ export async function DELETE(req: Request) {
     const body = await req.json()
     const data = DeleteSchema.parse(body)
 
-    // Verify member belongs to same org
     const member = await prisma.userOnOrganization.findFirst({
       where: { id: data.memberId, organizationId: session.user.organizationId, deletedAt: null },
     })

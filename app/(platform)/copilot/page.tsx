@@ -134,7 +134,6 @@ export default function CopilotPage() {
   const [showAddRule, setShowAddRule] = useState(false)
   const [saveFlash, setSaveFlash] = useState(false)
 
-  // New rule form
   const [newRuleName, setNewRuleName] = useState('')
   const [newRuleFilter, setNewRuleFilter] = useState<'top6' | 'all' | 'specific'>('all')
   const [newRuleTeams, setNewRuleTeams] = useState('')
@@ -206,7 +205,6 @@ export default function CopilotPage() {
       others.forEach(k => {
         next[k] = Math.max(0, Math.round((prev[k] / oldTotal) * remaining))
       })
-      // Fix rounding
       const total = next.mixMatch + next.mixTransfer + next.mixAnalysis + next.mixFan
       if (total !== 100) {
         next[others[0]] += 100 - total
@@ -218,7 +216,6 @@ export default function CopilotPage() {
   const saveStrategy = useCallback(() => {
     saveJSON('copilot-strategy', strategy)
     saveJSON('copilot-rules', rules)
-    // Also sync daily target to calendar's localStorage
     localStorage.setItem('cal-daily-target', String(strategy.dailyTarget))
     setSaveFlash(true)
     setTimeout(() => setSaveFlash(false), 1500)
@@ -266,14 +263,13 @@ export default function CopilotPage() {
     } catch { return 0 }
   })()
   const planned = strategy.dailyTarget
-  const published = approvedCount + Math.floor(Math.random() * 0.001) // stable
+  const published = approvedCount + Math.floor(Math.random() * 0.001)
   const inReview = pendingQueue.length
   const drafts = Math.max(0, planned - published - inReview)
   const completed = Math.min(published, planned)
 
   return (
     <div className="cop">
-      {/* ═══ HEADER ═══ */}
       <div className="cop-hd">
         <div>
           <h1>🤖 AI Co-Pilot</h1>
@@ -281,7 +277,6 @@ export default function CopilotPage() {
         </div>
       </div>
 
-      {/* ═══ SECTION 1: MODE SELECTOR ═══ */}
       <div className="cop-modes">
         {([
           { id: 'full-auto' as const, icon: '🤖', name: 'Full Auto', desc: 'AI generates + publishes automatically. No human review needed.' },
@@ -300,7 +295,6 @@ export default function CopilotPage() {
         ))}
       </div>
 
-      {/* ═══ SECTION 2: TODAY'S STATUS ═══ */}
       <div className="cop-sec">📊 Today&apos;s Status</div>
       <div className="cop-stats">
         {([
@@ -329,7 +323,6 @@ export default function CopilotPage() {
         </div>
       </div>
 
-      {/* ═══ SECTION 3: SMART QUEUE (Hybrid mode) ═══ */}
       {mode === 'hybrid' && (
         <>
           <div className="cop-sec">📋 Smart Queue <span className="cop-sec-sub">{pendingQueue.length} awaiting review</span></div>
@@ -380,13 +373,10 @@ export default function CopilotPage() {
         </>
       )}
 
-      {/* ═══ SECTION 4: CONTENT STRATEGY ═══ */}
       <div className="cop-sec">⚙️ Content Strategy</div>
       <div className="cop-strat">
         <div className="cop-strat-grid">
-          {/* Left column */}
           <div>
-            {/* Daily target */}
             <div className="cop-field">
               <label className="cop-lbl">Articles per Day</label>
               <div className="cop-slider-row">
@@ -399,7 +389,6 @@ export default function CopilotPage() {
               </div>
             </div>
 
-            {/* Peak times */}
             <div className="cop-field">
               <label className="cop-lbl">Peak Publish Times</label>
               <div className="cop-chips">
@@ -415,7 +404,6 @@ export default function CopilotPage() {
               </div>
             </div>
 
-            {/* Article length */}
             <div className="cop-field">
               <label className="cop-lbl">Default Article Length</label>
               <div className="cop-radios">
@@ -435,7 +423,6 @@ export default function CopilotPage() {
               </div>
             </div>
 
-            {/* Tone */}
             <div className="cop-field">
               <label className="cop-lbl">Default Tone</label>
               <div className="cop-radios">
@@ -457,11 +444,9 @@ export default function CopilotPage() {
             </div>
           </div>
 
-          {/* Right column — Content Mix */}
           <div>
             <label className="cop-lbl">Content Mix</label>
 
-            {/* Stacked bar */}
             <div className="cop-mix-bar">
               {([
                 { key: 'mixMatch' as const, color: MIX_COLORS[0] },
@@ -484,7 +469,6 @@ export default function CopilotPage() {
               ))}
             </div>
 
-            {/* Sliders */}
             {([
               { key: 'mixMatch' as const, label: 'Match Coverage' },
               { key: 'mixTransfer' as const, label: 'Transfer News' },
@@ -512,7 +496,6 @@ export default function CopilotPage() {
         </button>
       </div>
 
-      {/* ═══ SECTION 5: FIXTURE AUTOPILOT RULES ═══ */}
       <div className="cop-sec">📐 Fixture Autopilot Rules</div>
       <div className="cop-rules">
         {rules.map(rule => (
@@ -543,7 +526,6 @@ export default function CopilotPage() {
         ))}
       </div>
 
-      {/* Add Rule */}
       {!showAddRule ? (
         <button className="cop-add-rule-btn" onClick={() => setShowAddRule(true)}>+ Add Rule</button>
       ) : (
@@ -643,7 +625,6 @@ export default function CopilotPage() {
         </div>
       )}
 
-      {/* ═══ SECTION 6: UPCOMING FIXTURES ═══ */}
       <div className="cop-sec" style={{ marginTop: 28 }}>⚽ Upcoming Fixtures</div>
       <div className="cop-fixtures">
         {fixtures.map(fix => (

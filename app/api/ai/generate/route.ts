@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth'
 import { generateContent } from '@/lib/ai/client'
 import { z } from 'zod'
 
-// Simple in-memory rate limiter: 10 generations per user per day
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const DAILY_LIMIT = 10
 const MAX_RATE_LIMIT_ENTRIES = 1000
@@ -19,7 +18,6 @@ function evictExpiredEntries() {
   })
   keysToDelete.forEach((key) => rateLimitMap.delete(key))
 
-  // If still over limit, remove oldest entries
   if (rateLimitMap.size > MAX_RATE_LIMIT_ENTRIES) {
     const entries: Array<[string, { count: number; resetAt: number }]> = []
     rateLimitMap.forEach((entry, key) => entries.push([key, entry]))
@@ -51,20 +49,16 @@ function checkRateLimit(userId: string): { allowed: boolean; remaining: number }
 
 const GenerateSchema = z.object({
   type: z.enum(['match-report', 'transfer-news', 'match-preview', 'analysis', 'custom']),
-  // Match report fields
   homeTeam: z.string().optional(),
   awayTeam: z.string().optional(),
   score: z.string().optional(),
   league: z.string().optional(),
   keyEvents: z.string().optional(),
-  // Transfer news fields
   playerName: z.string().optional(),
   fromClub: z.string().optional(),
   toClub: z.string().optional(),
   fee: z.string().optional(),
-  // Custom
   customPrompt: z.string().optional(),
-  // Common
   tone: z.enum(['professional', 'casual', 'tabloid', 'analytical']).default('professional'),
   language: z.enum(['bs', 'hr', 'sr', 'en']).default('bs'),
   wordCount: z.number().default(600),
@@ -124,7 +118,6 @@ Cover form, key players, and prediction.`
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth + rate limit
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -153,17 +146,14 @@ export async function POST(req: NextRequest) {
 
     const result = await generateContent({ system, prompt })
 
-    // Parse JSON from AI response
     let parsed
     try {
-      // Clean response — remove markdown code blocks if present
       const cleaned = result.text
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
         .trim()
       parsed = JSON.parse(cleaned)
     } catch {
-      // If JSON parsing fails, wrap raw text
       parsed = {
         title: 'Generated Article',
         excerpt: '',

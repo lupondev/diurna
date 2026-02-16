@@ -71,7 +71,6 @@ export default async function ArticlePage({ params }: { params: { slug: string }
     if (author?.name) authorName = author.name
   }
 
-  // Related articles (same category)
   const related = article.categoryId
     ? await prisma.article.findMany({
         where: {
@@ -107,7 +106,6 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
       />
       <div className="pub-main-grid">
-        {/* Article */}
         <article className="pub-article">
           <header className="pub-article-header">
             {article.category && (
@@ -135,7 +133,6 @@ export default async function ArticlePage({ params }: { params: { slug: string }
 
           <ArticleRenderer html={bodyHtml} />
 
-          {/* Tags */}
           {article.tags.length > 0 && (
             <div className="pub-tags">
               {article.tags.map(({ tag }) => (
@@ -144,10 +141,8 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             </div>
           )}
 
-          {/* Share */}
           <ShareButtons title={article.title} />
 
-          {/* Related */}
           {related.length > 0 && (
             <div className="pub-related">
               <h2 className="pub-related-title">Related Articles</h2>
@@ -170,20 +165,16 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             </div>
           )}
 
-          {/* Comments placeholder */}
           <div className="pub-comments">
             Comments coming soon. Stay tuned!
           </div>
         </article>
 
-        {/* Sidebar */}
         <aside className="pub-sidebar">
-          {/* Ad Slot */}
           <div className="pub-ad-slot">
             Lupon Media SSP — 300x250
           </div>
 
-          {/* Subscribe */}
           <div className="pub-subscribe">
             <SubscribeWidget siteName={site.name} />
           </div>

@@ -3,7 +3,7 @@ import { prisma } from './prisma'
 export interface TrendingTopic {
   id: string
   title: string
-  score: number            // 0-100 viral score
+  score: number
   sources: string[]
   sourcesCount: number
   category: 'Sport' | 'Politics' | 'Tech' | 'Business' | 'Entertainment' | 'General'
@@ -11,7 +11,7 @@ export interface TrendingTopic {
   velocity: 'rising' | 'peaked' | 'falling'
   estimatedViews: string
   traffic: string
-  recency: number          // hours ago first seen
+  recency: number
 }
 
 interface RawItem {
@@ -23,7 +23,7 @@ interface RawItem {
 }
 
 const cache = new Map<string, { data: TrendingTopic[]; expires: number }>()
-const CACHE_TTL = 10 * 60 * 1000 // 10 min
+const CACHE_TTL = 10 * 60 * 1000
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   Sport: ['football', 'soccer', 'match', 'goal', 'player', 'league', 'champions', 'world cup', 'nba', 'nfl', 'tennis', 'f1', 'racing', 'olympics', 'premier league', 'la liga', 'bundesliga', 'serie a', 'transfer', 'coach', 'stadium', 'team', 'athlete', 'sport', 'game', 'utakmica', 'fudbal', 'košarka'],
@@ -105,7 +105,7 @@ async function fetchGoogleTrends(geos: string[]): Promise<RawItem[]> {
           })
         }
       }
-    } catch { /* skip failed geo */ }
+    } catch {}
   }))
 
   return items
@@ -150,7 +150,7 @@ async function fetchCompetitorFeeds(organizationId: string): Promise<RawItem[]> 
           count++
         }
       }
-    } catch { /* skip failed feed */ }
+    } catch {}
   }))
 
   return items
@@ -178,7 +178,7 @@ async function fetchFootballTrends(): Promise<RawItem[]> {
         })
       }
     }
-  } catch { /* football API unavailable */ }
+  } catch {}
   return items
 }
 

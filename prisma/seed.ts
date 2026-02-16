@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  // 1. Create demo org
   const org = await prisma.organization.upsert({
     where: { slug: 'demo' },
     update: {},
@@ -14,7 +13,6 @@ async function main() {
     },
   })
 
-  // 2. Create default site
   const site = await prisma.site.upsert({
     where: {
       organizationId_slug: { organizationId: org.id, slug: 'main' },
@@ -28,7 +26,6 @@ async function main() {
     },
   })
 
-  // 3. Create dev user + ownership
   const user = await prisma.user.upsert({
     where: { email: 'dev@diurna.app' },
     update: {},
@@ -60,7 +57,6 @@ async function main() {
     },
   })
 
-  // 4. Create default categories
   const categories = [
     'Trending',
     'Matches',

@@ -22,7 +22,6 @@ export async function GET(req: NextRequest) {
           fontFamily: 'system-ui, sans-serif',
         }}
       >
-        {/* Category badge */}
         <div
           style={{
             display: 'flex',
@@ -47,7 +46,6 @@ export async function GET(req: NextRequest) {
           </div>
         </div>
 
-        {/* Title */}
         <div
           style={{
             fontSize: title.length > 60 ? 42 : 52,
@@ -61,7 +59,6 @@ export async function GET(req: NextRequest) {
           {title}
         </div>
 
-        {/* Footer */}
         <div
           style={{
             display: 'flex',

@@ -100,7 +100,6 @@ export default function AnalyticsPage() {
 
   return (
     <div className="an-page">
-      {/* Header */}
       <div className="an-header">
         <div className="an-header-left">
           <h1>Analytics</h1>
@@ -116,7 +115,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="an-stats">
         {statLabels.map((s, i) => (
           <div key={s.label} className="an-stat">
@@ -127,9 +125,7 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      {/* Charts */}
       <div className="an-grid">
-        {/* Traffic */}
         <div className="an-chart">
           <div className="an-chart-head">
             <div className="an-chart-title">📊 Traffic Overview</div>
@@ -149,7 +145,6 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Revenue by Source */}
         <div className="an-chart">
           <div className="an-chart-head">
             <div className="an-chart-title">💰 Revenue by Source</div>
@@ -167,7 +162,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Top Articles */}
       <div className="an-table">
         <div className="an-table-head">
           <div className="an-table-title">📰 Top Performing Articles</div>
@@ -194,7 +188,6 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      {/* Widget Interactions */}
       <div className="an-widget-section">
         <div className="an-table-head">
           <div className="an-table-title">🧩 Widget Interactions (Last 7 Days)</div>

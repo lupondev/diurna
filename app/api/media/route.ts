@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
     }
 
-    const maxSize = 10 * 1024 * 1024 // 10MB
+    const maxSize = 10 * 1024 * 1024
     if (file.size > maxSize) {
       return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 400 })
     }
@@ -99,13 +99,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    // Delete from Vercel Blob if it's a blob URL
     if (media.url.includes('.blob.vercel-storage.com')) {
       try {
         await del(media.url)
-      } catch {
-        // Continue with DB deletion even if blob deletion fails
-      }
+      } catch {}
     }
 
     await prisma.media.delete({ where: { id } })

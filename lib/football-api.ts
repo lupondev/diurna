@@ -1,6 +1,6 @@
 const API_HOST = 'v3.football.api-sports.io'
 const API_KEY = process.env.FOOTBALL_API_KEY || ''
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000
 const MAX_CACHE_SIZE = 100
 
 type CacheEntry = { data: unknown; ts: number }
@@ -16,7 +16,6 @@ function evictStaleEntries() {
   })
   keysToDelete.forEach((key) => cache.delete(key))
 
-  // If still over limit, remove oldest entries
   if (cache.size > MAX_CACHE_SIZE) {
     const entries: Array<[string, CacheEntry]> = []
     cache.forEach((entry, key) => entries.push([key, entry]))

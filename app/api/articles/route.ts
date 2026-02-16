@@ -36,7 +36,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = CreateArticleSchema.parse(body)
 
-    // Generate unique slug
     let slug = slugify(data.title)
     const existing = await prisma.article.findFirst({
       where: { siteId: data.siteId, slug },

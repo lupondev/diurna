@@ -49,7 +49,6 @@ export default async function PublicHomePage() {
 
   return (
     <>
-      {/* Hero */}
       {featured && (
         <section className="pub-hero">
           <div className="pub-hero-inner">
@@ -69,10 +68,8 @@ export default async function PublicHomePage() {
         </section>
       )}
 
-      {/* Content */}
       <div className="pub-container">
         <div className="pub-main-grid">
-          {/* Articles Grid */}
           <div>
             <h2 className="pub-section-title">Latest Articles</h2>
             <div className="pub-grid">
@@ -96,9 +93,7 @@ export default async function PublicHomePage() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <aside className="pub-sidebar">
-            {/* Trending */}
             <div className="pub-sidebar-section">
               <div className="pub-sidebar-title">Trending</div>
               {trending.map((article, i) => (
@@ -114,7 +109,6 @@ export default async function PublicHomePage() {
               ))}
             </div>
 
-            {/* Subscribe */}
             <div className="pub-subscribe">
               <SubscribeWidget siteName={site.name} />
             </div>

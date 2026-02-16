@@ -12,7 +12,6 @@ export default async function PublicLayout({ children }: { children: React.React
 
   return (
     <div className={`pub-wrap ${themeCls}`}>
-      {/* Header */}
       <header className="pub-header">
         <div className="pub-header-inner">
           <Link href="/site" className="pub-logo">{siteName}</Link>
@@ -24,10 +23,8 @@ export default async function PublicLayout({ children }: { children: React.React
         </div>
       </header>
 
-      {/* Main Content */}
       {children}
 
-      {/* Footer */}
       <footer className="pub-footer">
         <div className="pub-footer-inner">
           <div className="pub-footer-grid">

@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = OnboardingSchema.parse(body)
 
-    // Step 1: Find org for user
     let orgId: string
     try {
       const membership = await withTimeout(
@@ -52,7 +51,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to find organization. Please try again.' }, { status: 500 })
     }
 
-    // Step 1.5: Check if user already has a site (idempotency for retries)
     try {
       const existingSite = await withTimeout(
         prisma.site.findFirst({
@@ -62,7 +60,6 @@ export async function POST(req: NextRequest) {
         'Check existing site'
       )
       if (existingSite) {
-        // Site already exists — just mark onboarding complete and return
         await withTimeout(
           prisma.user.update({
             where: { id: userId },
@@ -75,10 +72,8 @@ export async function POST(req: NextRequest) {
       }
     } catch (err) {
       console.error('Onboarding step 1.5 (check existing site) failed:', err)
-      // Non-fatal — continue with creation
     }
 
-    // Step 2: Create site
     let siteId: string
     try {
       const slug = data.siteName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 50)
@@ -100,7 +95,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create site. Please try again.' }, { status: 500 })
     }
 
-    // Step 3: Create categories from selected leagues
     try {
       const leagueCategories = data.leagues.map((league, i) => ({
         siteId,
@@ -120,7 +114,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create league categories. Please try again.' }, { status: 500 })
     }
 
-    // Step 4: Mark onboarding as completed
     try {
       await withTimeout(
         prisma.user.update({

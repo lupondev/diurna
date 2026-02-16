@@ -1,18 +1,14 @@
-/* ═══ WIDGETS PAGE ═══ */
 .wg-page { padding: 24px 32px 60px; max-width: 1400px; }
 
-/* Header */
 .wg-header { text-align: center; margin-bottom: 32px; }
 .wg-badge { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 6px 14px; background: var(--mint-l); color: var(--mint-d); border-radius: 20px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: .05em; }
 .wg-title { font-family: var(--disp); font-size: 2rem; color: var(--g900); margin-bottom: 8px; }
 .wg-subtitle { font-size: 14px; color: var(--g500); max-width: 540px; margin: 0 auto; }
 
-/* ═══ COMPACT CARD GRID ═══ */
 .wg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 48px; }
 .wg-card { background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); overflow: hidden; transition: all .2s; display: flex; flex-direction: column; }
 .wg-card:hover { border-color: var(--mint); box-shadow: 0 8px 24px rgba(0,0,0,.1); transform: translateY(-2px); }
 
-/* Compact thumbnail */
 .wg-card-thumb { height: 100px; background: linear-gradient(135deg, #f8f9fb 0%, #f0f2f5 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; border-bottom: 1px solid var(--g100); }
 .wg-card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; }
 .wg-card-name { font-size: 13px; font-weight: 700; color: var(--g900); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
@@ -28,7 +24,6 @@
 .wg-btn.secondary { background: var(--g100); color: var(--g700); }
 .wg-btn.secondary:hover { background: var(--g200); }
 
-/* ═══ THUMBNAIL MINI-PREVIEWS ═══ */
 .wg-thumb { width: 150px; height: 88px; background: var(--wh); border-radius: var(--rm); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08); font-size: 9px; display: flex; flex-direction: column; }
 .wg-thumb.dark-bg { background: linear-gradient(135deg, #0f3460, #1a1a2e); color: var(--wh); }
 .wg-thumb-bar { padding: 4px 8px; font-weight: 700; font-size: 8px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
@@ -48,7 +43,6 @@
 .wg-thumb-pos.ucl { background: var(--mint-l); color: var(--mint-d); }
 .wg-thumb-pos.gold { background: var(--gold-l); color: #B45309; }
 
-/* Thumbnail variants */
 .wg-thumb-h2h-bar { display: flex; height: 4px; margin: 0 8px; border-radius: 2px; overflow: hidden; }
 .wg-thumb-seg { height: 100%; }
 .wg-thumb-seg.home { background: var(--mint); }
@@ -88,7 +82,6 @@
 .wg-thumb-scale span { width: 12px; height: 12px; border-radius: 50%; background: var(--g200); }
 .wg-thumb-scale span.filled { background: var(--elec); }
 
-/* ═══ MODAL SHARED ═══ */
 .wg-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); animation: wgFadeIn .2s ease; }
 @keyframes wgFadeIn { from { opacity: 0; } to { opacity: 1; } }
 .wg-modal-head { padding: 16px 20px; border-bottom: 1px solid var(--brd); display: flex; align-items: center; justify-content: space-between; }
@@ -96,7 +89,6 @@
 .wg-modal-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--r); color: var(--g400); font-size: 20px; background: none; border: none; cursor: pointer; transition: all .12s; }
 .wg-modal-close:hover { background: var(--g100); color: var(--g700); }
 
-/* AI Generate Modal */
 .wg-modal-sm { background: var(--wh); border-radius: var(--rx); width: 480px; max-width: 90%; box-shadow: 0 24px 64px rgba(0,0,0,.15); animation: wgModalIn .3s ease; }
 @keyframes wgModalIn { from { opacity: 0; transform: scale(.95) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .wg-modal-body-ai { padding: 24px; }
@@ -113,7 +105,6 @@
 .wg-ai-skip { width: 100%; padding: 10px; font-size: 12px; font-weight: 600; background: var(--g100); color: var(--g600); border: none; border-radius: var(--rm); cursor: pointer; transition: all .12s; font-family: inherit; }
 .wg-ai-skip:hover { background: var(--g200); }
 
-/* Preview Modal */
 .wg-preview-modal { background: var(--wh); border-radius: var(--rx); width: 560px; max-width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,.15); animation: wgModalIn .3s ease; }
 .wg-preview-body { padding: 24px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fb 0%, #f0f2f5 100%); min-height: 280px; }
 .wg-preview-frame { width: 100%; max-width: 360px; }
@@ -122,7 +113,6 @@
 .wg-preview-foot-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .wg-preview-foot-actions .wg-btn { padding: 8px 16px; font-size: 12px; }
 
-/* Embed Modal */
 .wg-embed-modal { background: var(--wh); border-radius: var(--rx); width: 520px; max-width: 90%; box-shadow: 0 24px 64px rgba(0,0,0,.15); animation: wgModalIn .3s ease; }
 .wg-embed-body { padding: 24px; }
 .wg-embed-code { width: 100%; padding: 14px; font-family: var(--mono); font-size: 12px; background: var(--g900); color: var(--mint); border: none; border-radius: var(--rm); resize: none; line-height: 1.6; }
@@ -131,7 +121,6 @@
 .wg-embed-hint { margin-top: 12px; font-size: 11px; color: var(--g400); line-height: 1.5; }
 .wg-embed-hint strong { color: var(--g600); }
 
-/* ═══ FULL WIDGET PREVIEWS ═══ */
 .wg-live-score { width: 100%; max-width: 320px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-ls-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--g900); color: var(--wh); }
 .wg-ls-league { font-size: 11px; font-weight: 600; }
@@ -147,7 +136,6 @@
 .wg-ls-minute { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--coral); margin-top: 2px; }
 .wg-ls-center { display: flex; flex-direction: column; align-items: center; padding: 0 12px; }
 
-/* Standings */
 .wg-standings { width: 100%; max-width: 340px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-st-header { padding: 10px 14px; background: linear-gradient(135deg, #1a1a2e, #0f3460); color: var(--wh); font-size: 12px; font-weight: 700; }
 .wg-st-thead { display: grid; grid-template-columns: 28px 1fr 36px 36px 44px; padding: 8px 14px; background: var(--g50); font-size: 9px; font-weight: 700; color: var(--g400); text-transform: uppercase; }
@@ -160,7 +148,6 @@
 .wg-st-stat { font-family: var(--mono); font-size: 11px; color: var(--g500); text-align: center; }
 .wg-st-pts { font-family: var(--mono); font-size: 13px; font-weight: 800; color: var(--g900); text-align: center; }
 
-/* H2H */
 .wg-h2h { width: 100%; max-width: 340px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-h2h-header { padding: 10px 14px; background: linear-gradient(135deg, var(--mint-d), var(--mint)); color: var(--g900); font-size: 12px; font-weight: 700; }
 .wg-h2h-teams { display: flex; align-items: center; justify-content: space-between; padding: 20px; background: var(--g50); }
@@ -178,7 +165,6 @@
 .wg-h2h-seg.draw { background: var(--g300); }
 .wg-h2h-seg.away { background: var(--coral); }
 
-/* Poll - interactive with voting bars */
 .wg-poll { width: 100%; max-width: 320px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-poll-header { padding: 10px 14px; background: linear-gradient(135deg, #5B5FFF, #8B5CF6); color: var(--wh); font-size: 12px; font-weight: 700; }
 .wg-poll-body { padding: 16px; }
@@ -191,7 +177,6 @@
 .wg-poll-pct { position: relative; z-index: 1; float: right; font-family: var(--mono); font-weight: 700; color: var(--elec); font-size: 11px; }
 .wg-poll-total { text-align: center; font-size: 11px; color: var(--g400); margin-top: 8px; }
 
-/* Timeline */
 .wg-timeline { width: 100%; max-width: 320px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-tl-header { padding: 10px 14px; background: var(--g900); color: var(--wh); font-size: 12px; font-weight: 700; }
 .wg-tl-events { padding: 12px 16px; }
@@ -204,7 +189,6 @@
 .wg-tl-badge.sub { background: var(--g400); }
 .wg-tl-text { color: var(--g700); font-weight: 600; }
 
-/* Player */
 .wg-player { width: 100%; max-width: 320px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-pl-header { padding: 16px; background: linear-gradient(135deg, #0f3460, #1a1a2e); color: var(--wh); text-align: center; }
 .wg-pl-avatar { width: 56px; height: 56px; background: rgba(255,255,255,.15); border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; border: 2px solid rgba(255,255,255,.2); }
@@ -215,7 +199,6 @@
 .wg-pl-stat-val { font-family: var(--mono); font-size: 18px; font-weight: 800; color: var(--g900); }
 .wg-pl-stat-label { font-size: 9px; color: var(--g400); text-transform: uppercase; }
 
-/* Match Center */
 .wg-mc { width: 100%; max-width: 340px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-mc-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--g900); color: var(--wh); font-size: 11px; font-weight: 600; }
 .wg-mc-live { display: flex; align-items: center; gap: 4px; padding: 3px 8px; background: var(--coral); border-radius: 10px; font-family: var(--mono); font-size: 10px; font-weight: 700; }
@@ -231,7 +214,6 @@
 .wg-mc-evt.right { justify-content: flex-end; }
 .wg-mc-min { font-family: var(--mono); font-size: 10px; color: var(--g400); min-width: 24px; }
 
-/* Top Scorers */
 .wg-ts { width: 100%; max-width: 340px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-ts-header { padding: 10px 14px; background: linear-gradient(135deg, #1a1a2e, #0f3460); color: var(--wh); font-size: 12px; font-weight: 700; }
 .wg-ts-thead { display: grid; grid-template-columns: 28px 1fr 32px 32px 32px; padding: 8px 14px; background: var(--g50); font-size: 9px; font-weight: 700; color: var(--g400); text-transform: uppercase; }
@@ -244,7 +226,6 @@
 .wg-ts-goals { font-family: var(--mono); font-size: 13px; font-weight: 800; color: var(--g900); text-align: center; }
 .wg-ts-stat { font-family: var(--mono); font-size: 11px; color: var(--g500); text-align: center; }
 
-/* Team Form */
 .wg-tf { width: 100%; max-width: 320px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-tf-header { padding: 14px; background: var(--g50); }
 .wg-tf-team-info { display: flex; align-items: center; gap: 10px; }
@@ -265,7 +246,6 @@
 .wg-tf-opp { flex: 1; font-weight: 600; color: var(--g700); }
 .wg-tf-score { font-family: var(--mono); font-weight: 700; color: var(--g500); }
 
-/* Player Trading Card */
 .wg-pc { width: 100%; max-width: 260px; background: linear-gradient(135deg, #0f3460, #1a1a2e); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.15); color: var(--wh); }
 .wg-pc-header { position: relative; padding: 24px 16px 16px; text-align: center; }
 .wg-pc-photo { width: 72px; height: 72px; background: rgba(255,255,255,.1); border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; border: 3px solid rgba(255,255,255,.15); }
@@ -279,7 +259,6 @@
 .wg-pc-sv { font-family: var(--mono); font-size: 16px; font-weight: 800; color: var(--mint); }
 .wg-pc-sl { font-size: 8px; text-transform: uppercase; color: rgba(255,255,255,.4); margin-top: 2px; }
 
-/* Prediction */
 .wg-pred { width: 100%; max-width: 320px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-pred-header { padding: 10px 14px; background: linear-gradient(135deg, var(--mint-d), var(--mint)); color: var(--g900); font-size: 12px; font-weight: 700; }
 .wg-pred-teams { display: flex; align-items: center; justify-content: space-between; padding: 16px; }
@@ -295,7 +274,6 @@
 .wg-pred-factor { font-size: 10px; color: var(--g600); font-weight: 600; }
 .wg-pred-badge { padding: 8px; text-align: center; background: var(--g50); font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--mint-d); text-transform: uppercase; letter-spacing: .05em; }
 
-/* ═══ QUIZ WIDGET ═══ */
 .wg-quiz { width: 100%; max-width: 340px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-quiz-header { padding: 10px 14px; background: linear-gradient(135deg, #5B5FFF, #8B5CF6); color: var(--wh); font-size: 12px; font-weight: 700; }
 .wg-quiz-body { padding: 16px; }
@@ -315,7 +293,6 @@
 .wg-quiz-retry { padding: 10px 24px; font-size: 13px; font-weight: 700; background: var(--mint); color: var(--wh); border: none; border-radius: var(--rm); cursor: pointer; font-family: inherit; transition: all .15s; }
 .wg-quiz-retry:hover { background: var(--mint-d); }
 
-/* ═══ SURVEY WIDGET ═══ */
 .wg-survey { width: 100%; max-width: 340px; background: var(--wh); border-radius: var(--rl); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .wg-survey-header { padding: 10px 14px; background: linear-gradient(135deg, #5B5FFF, #8B5CF6); color: var(--wh); font-size: 12px; font-weight: 700; }
 .wg-survey-body { padding: 16px; }
@@ -332,7 +309,6 @@
 .wg-survey-thanks-icon { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: #ECFDF5; color: #10B981; font-size: 24px; border-radius: 50%; margin: 0 auto 12px; }
 .wg-survey-thanks-text { font-size: 14px; font-weight: 600; color: var(--g700); }
 
-/* ═══ RESPONSIVE ═══ */
 @media (max-width: 1200px) { .wg-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 900px) { .wg-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .wg-page { padding: 16px; } .wg-grid { grid-template-columns: 1fr; } .wg-title { font-size: 1.6rem; } }

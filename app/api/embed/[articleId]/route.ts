@@ -75,7 +75,6 @@ export async function GET(
     }
 
     const contentHtml = tiptapToHtml(article.content as Record<string, unknown>)
-    // Take first 3 paragraphs as excerpt for embed
     const excerptMatch = contentHtml.match(/(<p>[\s\S]*?<\/p>)/g)
     const excerptHtml = excerptMatch ? excerptMatch.slice(0, 3).join('') : ''
 

@@ -32,18 +32,14 @@ export async function GET(req: NextRequest) {
 
     const subscriberId = verifyUnsubscribeToken(token)
 
-    // Fallback: support legacy base64-only tokens during transition
     let finalId = subscriberId
     if (!finalId) {
       try {
         const legacyId = Buffer.from(token, 'base64').toString('utf-8')
-        // Only accept if it looks like a valid CUID/UUID (no colons)
         if (legacyId && !legacyId.includes(':') && legacyId.length >= 20) {
           finalId = legacyId
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
 
     if (!finalId) {

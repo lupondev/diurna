@@ -113,7 +113,6 @@ export async function PATCH(
       },
     })
 
-    // Auto-post to ALL active Facebook pages when publishing for the first time
     if (data.status === 'PUBLISHED' && existing && existing.status !== 'PUBLISHED') {
       try {
         const fbConnection = await prisma.socialConnection.findUnique({
@@ -133,7 +132,6 @@ export async function PATCH(
           }
         }
       } catch (fbError) {
-        // Don't fail the publish if FB post fails
         console.error('Facebook auto-post error:', fbError)
       }
     }
@@ -158,7 +156,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify article belongs to user's org before deleting
     const article = await prisma.article.findFirst({
       where: { id: params.id, site: { organizationId: session.user.organizationId } },
     })
@@ -166,7 +163,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    // Soft delete
     await prisma.article.update({
       where: { id: params.id },
       data: { deletedAt: new Date() },

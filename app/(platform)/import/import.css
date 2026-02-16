@@ -1,38 +1,31 @@
-/* ═══ IMPORT PAGE ═══ */
 .imp-page { padding: 24px 32px 80px; max-width: 1100px; }
 .imp-head { margin-bottom: 24px; }
 .imp-title { font-size: 18px; font-weight: 800; color: var(--g900); margin-bottom: 4px; }
 .imp-desc { font-size: 12px; color: var(--g500); }
 
-/* Tabs */
 .imp-tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--g50); padding: 4px; border-radius: var(--rl); border: 1px solid var(--brd); }
 .imp-tab { padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--g500); background: none; border: none; border-radius: var(--rm); cursor: pointer; transition: all .15s; font-family: inherit; }
 .imp-tab:hover { color: var(--g700); }
 .imp-tab.active { background: var(--wh); color: var(--g900); box-shadow: var(--sh); }
 
-/* Card */
 .imp-card { background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); padding: 24px; margin-bottom: 16px; }
 .imp-card-title { font-size: 14px; font-weight: 700; color: var(--g800); margin-bottom: 6px; }
 .imp-card-desc { font-size: 12px; color: var(--g500); line-height: 1.5; margin-bottom: 16px; }
 
-/* Upload button */
 .imp-upload-btn { padding: 10px 24px; font-size: 13px; font-weight: 700; background: var(--g900); color: var(--wh); border: none; border-radius: var(--rm); cursor: pointer; transition: all .15s; font-family: inherit; }
 .imp-upload-btn:hover { background: var(--g800); transform: translateY(-1px); }
 .imp-upload-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 .imp-upload-btn.small { padding: 8px 16px; font-size: 12px; background: var(--mint); }
 .imp-upload-btn.small:hover { background: var(--mint-d); }
 
-/* JSON area */
 .imp-json-row { display: flex; gap: 16px; }
 .imp-json-input { flex: 1; padding: 12px; font-family: var(--mono); font-size: 12px; border: 1px solid var(--brd); border-radius: var(--rm); resize: vertical; outline: none; color: var(--g800); }
 .imp-json-input:focus { border-color: var(--mint); box-shadow: 0 0 0 3px var(--mint-g); }
 .imp-json-actions { display: flex; flex-direction: column; gap: 8px; }
 
-/* Error / Success */
 .imp-error { padding: 12px 16px; background: var(--coral-l); color: var(--coral); border: 1px solid var(--coral); border-radius: var(--rm); font-size: 13px; font-weight: 600; margin-bottom: 16px; }
 .imp-success { padding: 12px 16px; background: var(--suc-l); color: var(--suc); border: 1px solid var(--suc); border-radius: var(--rm); font-size: 13px; font-weight: 600; margin-bottom: 16px; }
 
-/* Preview table */
 .imp-preview { background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); overflow: hidden; }
 .imp-preview-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--brd); }
 .imp-preview-title { font-size: 13px; font-weight: 700; color: var(--g800); }
@@ -58,7 +51,6 @@
 .imp-status.scheduled { background: #DBEAFE; color: #2563EB; }
 .imp-status.archived { background: var(--g100); color: var(--g400); }
 
-/* Import bar */
 .imp-import-bar { padding: 16px 20px; border-top: 1px solid var(--brd); display: flex; justify-content: flex-end; }
 .imp-import-btn { padding: 10px 28px; font-size: 13px; font-weight: 700; background: var(--mint); color: var(--wh); border: none; border-radius: var(--rm); cursor: pointer; transition: all .15s; font-family: inherit; }
 .imp-import-btn:hover { background: var(--mint-d); transform: translateY(-1px); }

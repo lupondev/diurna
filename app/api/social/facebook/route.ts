@@ -5,7 +5,6 @@ import { getDefaultSite } from '@/lib/db'
 import { getAuthUrl } from '@/lib/facebook'
 import { prisma } from '@/lib/prisma'
 
-// GET: return FB auth URL and all connected pages
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -44,7 +43,6 @@ export async function GET() {
   }
 }
 
-// PATCH: toggle a page's active status
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -69,7 +67,6 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE: disconnect Facebook (remove connection + all pages)
 export async function DELETE() {
   try {
     const session = await getServerSession(authOptions)

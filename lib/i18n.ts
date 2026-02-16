@@ -12,7 +12,6 @@ export const LOCALES: { code: Locale; label: string; flag: string; dir?: 'rtl' }
 ]
 
 type TranslationKeys = {
-  // Navigation
   'nav.newsroom': string
   'nav.editor': string
   'nav.media': string
@@ -22,7 +21,6 @@ type TranslationKeys = {
   'nav.admin': string
   'nav.settings': string
 
-  // Common actions
   'action.save': string
   'action.cancel': string
   'action.delete': string
@@ -42,7 +40,6 @@ type TranslationKeys = {
   'action.confirm': string
   'action.loading': string
 
-  // Editor
   'editor.title_placeholder': string
   'editor.content_placeholder': string
   'editor.save_draft': string
@@ -66,7 +63,6 @@ type TranslationKeys = {
   'editor.ai_expand': string
   'editor.ai_translate': string
 
-  // Newsroom
   'newsroom.title': string
   'newsroom.trending': string
   'newsroom.breaking': string
@@ -77,13 +73,11 @@ type TranslationKeys = {
   'newsroom.generate_article': string
   'newsroom.no_articles': string
 
-  // Article statuses
   'status.draft': string
   'status.in_review': string
   'status.scheduled': string
   'status.published': string
 
-  // Public site
   'public.related_articles': string
   'public.share': string
   'public.subscribe': string
@@ -94,7 +88,6 @@ type TranslationKeys = {
   'public.latest': string
   'public.category': string
 
-  // Widgets
   'widget.poll': string
   'widget.quiz': string
   'widget.survey': string
@@ -106,7 +99,6 @@ type TranslationKeys = {
   'widget.thank_you': string
   'widget.feedback_placeholder': string
 
-  // Auth
   'auth.login': string
   'auth.register': string
   'auth.logout': string
@@ -115,7 +107,6 @@ type TranslationKeys = {
   'auth.name': string
   'auth.forgot_password': string
 
-  // Misc
   'misc.powered_by': string
   'misc.language': string
   'misc.theme': string

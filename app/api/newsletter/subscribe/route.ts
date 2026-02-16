@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = SubscribeSchema.parse(body)
 
-    // Find site
     let siteId = data.siteId
     if (!siteId) {
       const site = await prisma.site.findFirst({ select: { id: true } })
@@ -67,7 +66,6 @@ export async function POST(req: NextRequest) {
       if (existing.isActive) {
         return NextResponse.json({ message: 'Already subscribed' })
       }
-      // Reactivate
       await prisma.subscriber.update({
         where: { id: existing.id },
         data: { isActive: true, unsubscribedAt: null, subscribedAt: new Date() },

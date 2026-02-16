@@ -121,7 +121,6 @@ export default function TeamPage() {
 
   return (
     <div className="tm-page">
-      {/* Header */}
       <div className="tm-header">
         <div className="tm-header-left">
           <h1>Team Management</h1>
@@ -130,7 +129,6 @@ export default function TeamPage() {
         <button className="tm-invite-btn" onClick={() => setShowInvite(true)}>+ Add Team Member</button>
       </div>
 
-      {/* Stats */}
       <div className="tm-stats">
         {stats.map((s) => (
           <div key={s.label} className="ts-card">
@@ -143,13 +141,11 @@ export default function TeamPage() {
         ))}
       </div>
 
-      {/* Tabs */}
       <div className="tm-tabs">
         <button className={`tm-tab${activeTab === 'members' ? ' act' : ''}`} onClick={() => setActiveTab('members')}>Members</button>
         <button className={`tm-tab${activeTab === 'permissions' ? ' act' : ''}`} onClick={() => setActiveTab('permissions')}>Permissions</button>
       </div>
 
-      {/* Members Tab */}
       {activeTab === 'members' && (
         <div className="member-list">
           <div className="ml-head">
@@ -222,7 +218,6 @@ export default function TeamPage() {
         </div>
       )}
 
-      {/* Permissions Tab */}
       {activeTab === 'permissions' && (
         <>
           <div className="perm-matrix">
@@ -261,7 +256,6 @@ export default function TeamPage() {
         </>
       )}
 
-      {/* Invite Modal */}
       {showInvite && (
         <div className="tm-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowInvite(false) }}>
           <div className="tm-modal">

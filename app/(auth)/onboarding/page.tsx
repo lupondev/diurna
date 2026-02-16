@@ -94,9 +94,6 @@ export default function OnboardingPage() {
       if (!res.ok) {
         throw new Error(typeof data.error === 'string' ? data.error : 'Setup failed')
       }
-      // Use window.location.href (not router.push) to force a full page
-      // reload. This makes the server issue a fresh JWT with the updated
-      // onboardingCompleted=true, so middleware won't redirect back here.
       setTimeout(() => {
         window.location.href = data.redirectUrl || '/dashboard'
       }, 1500)
@@ -124,7 +121,6 @@ export default function OnboardingPage() {
       {step === 4 && <Confetti />}
 
       <div style={{ width: '100%', maxWidth: 520 }}>
-        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
             width: 48, height: 48, borderRadius: 16, margin: '0 auto 12px',
@@ -138,7 +134,6 @@ export default function OnboardingPage() {
           <p style={{ fontSize: 14, color: '#71717A', marginTop: 4 }}>Let&apos;s set up your newsroom</p>
         </div>
 
-        {/* Progress */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 32 }}>
           {[1, 2, 3, 4].map((s) => (
             <div key={s} style={{
@@ -149,7 +144,6 @@ export default function OnboardingPage() {
           ))}
         </div>
 
-        {/* Card */}
         <div style={{
           background: '#fff',
           border: '1px solid #E4E4E7',
@@ -157,7 +151,6 @@ export default function OnboardingPage() {
           padding: 32,
         }}>
 
-          {/* Step 1: Site Name */}
           {step === 1 && (
             <div>
               <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -197,7 +190,6 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 2: Leagues */}
           {step === 2 && (
             <div>
               <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -248,7 +240,6 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 3: Language */}
           {step === 3 && (
             <div>
               <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -288,7 +279,6 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 4: Done */}
           {step === 4 && (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>

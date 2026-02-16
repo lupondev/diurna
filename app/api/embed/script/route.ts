@@ -27,7 +27,6 @@ export async function GET(req: NextRequest) {
   iframe.setAttribute('loading', 'lazy');
   iframe.setAttribute('title', 'Diurna Article Embed');
 
-  // Auto-resize iframe
   iframe.onload = function() {
     try {
       var h = iframe.contentDocument.documentElement.scrollHeight;

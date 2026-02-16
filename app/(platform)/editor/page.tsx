@@ -112,7 +112,7 @@ export default function EditorPage() {
           setTimeout(() => setSmartNotice(null), 6000)
           sessionStorage.removeItem('smartArticle')
         }
-      } catch { /* corrupted session data */ }
+      } catch {}
     }
 
     const promptParam = searchParams.get('prompt')
@@ -269,8 +269,7 @@ export default function EditorPage() {
         router.push('/newsroom')
         router.refresh()
       }
-    } catch { /* save failed */
-    } finally {
+    } catch {} finally {
       setSaving(false)
     }
   }
@@ -368,7 +367,6 @@ export default function EditorPage() {
           </div>
         )}
 
-        {/* Originality Check Modal */}
         {showOriginality && (
           <div className="ed-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowOriginality(false) }}>
             <div className="ed-modal" style={{ width: 540 }}>
@@ -429,9 +427,7 @@ export default function EditorPage() {
   return (
     <div className="s1">
       <div className="s1-main">
-        {/* Trending sidebar */}
         <div className="tp">
-          {/* Google Trends */}
           <div className="tp-trends-head">
             <div className="tp-title"><span>📈</span> Google Trends</div>
             <select className="tp-geo-select" value={trendsGeo} onChange={(e) => setTrendsGeo(e.target.value)}>
@@ -462,7 +458,6 @@ export default function EditorPage() {
             ) : null}
           </div>
 
-          {/* Editorial Picks */}
           <div className="tp-title" style={{ marginTop: 16 }}><span>🔥</span> Editorial Picks</div>
           <div className="tp-list">
             {trendingItems.slice(0, showMore ? 15 : 5).map((item, i) => (
@@ -484,14 +479,12 @@ export default function EditorPage() {
           </div>
         </div>
 
-        {/* Prompt center */}
         <div className="pc">
           <div className="brand">
             <h1>AI Co-Pilot<span>.</span></h1>
             <p>Describe what you want — AI handles the rest</p>
           </div>
 
-          {/* Prompt box */}
           <div className="pb">
             <textarea
               ref={textareaRef}
@@ -533,7 +526,6 @@ export default function EditorPage() {
             </div>
           </div>
 
-          {/* Preview card */}
           {showPreview && (
             <div className="prev-card">
               <div className="pci">⚡</div>
@@ -549,14 +541,12 @@ export default function EditorPage() {
             </div>
           )}
 
-          {/* Quick type chips */}
           <div className="chips">
             {chips.map((c) => (
               <button key={c.label} className="chip" onClick={() => setP(c.prompt)}>{c.label}</button>
             ))}
           </div>
 
-          {/* Today's Matches */}
           <div className="ms">
             <div className="ms-label">Today&apos;s Matches</div>
             <div className="mc-list">

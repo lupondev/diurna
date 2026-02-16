@@ -45,7 +45,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="db-page">
-      {/* Welcome */}
       <div className="db-welcome">
         <div className="db-welcome-text">
           <h1>Good morning, Harun 👋</h1>
@@ -59,7 +58,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="db-stats">
         {statCards.map((s) => (
           <div key={s.label} className="stat-card">
@@ -78,12 +76,9 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Grid */}
       <div className="db-grid">
-        {/* Left column */}
         <div className="db-col">
 
-          {/* Traffic Overview */}
           <div className="db-card">
             <div className="db-card-head">
               <span className="db-card-title">📈 Traffic Overview</span>
@@ -117,7 +112,6 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Recent Articles */}
           <div className="db-card">
             <div className="db-card-head">
               <span className="db-card-title">📰 Recent Articles</span>
@@ -154,7 +148,6 @@ export default async function DashboardPage() {
             )}
           </div>
 
-          {/* Activity Feed */}
           <div className="db-card">
             <div className="db-card-head">
               <span className="db-card-title">⚡ Activity Feed</span>
@@ -200,10 +193,8 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Right column */}
         <div className="db-col">
 
-          {/* Quick Actions */}
           <div className="db-card">
             <div className="db-card-head">
               <span className="db-card-title">⚡ Quick Actions</span>
@@ -216,13 +207,10 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Live Now / Today's Matches */}
           <LiveMatches />
 
-          {/* Trending Topics */}
           <TrendingWidget />
 
-          {/* AI Co-Pilot */}
           <div className="db-copilot">
             <div className="db-copilot-head">
               <div className="db-copilot-icon">🤖</div>
@@ -248,7 +236,6 @@ export default async function DashboardPage() {
             <Link href="/editor" className="db-copilot-cta">🚀 Open Content Calendar</Link>
           </div>
 
-          {/* Top Performing */}
           <div className="db-card">
             <div className="db-card-head">
               <span className="db-card-title">🔥 Top Performing</span>

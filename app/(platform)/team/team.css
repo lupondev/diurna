@@ -1,20 +1,16 @@
-/* ═══ TEAM ═══ */
 .tm-page { padding: 24px 32px 60px; max-width: 1100px; }
 
-/* Header */
 .tm-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
 .tm-header-left h1 { font-size: 22px; font-weight: 800; color: var(--g900); }
 .tm-header-left p { font-size: 13px; color: var(--g500); margin-top: 2px; }
 .tm-invite-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 13px; font-weight: 700; background: var(--mint); color: var(--wh); border: none; border-radius: var(--rm); cursor: pointer; transition: all .15s; }
 .tm-invite-btn:hover { background: var(--mint-d); transform: translateY(-1px); box-shadow: 0 4px 12px var(--mint-g); }
 
-/* Tabs */
 .tm-tabs { display: flex; gap: 2px; background: var(--g100); border-radius: var(--rm); padding: 3px; margin-bottom: 24px; width: fit-content; }
 .tm-tab { padding: 8px 18px; font-size: 13px; font-weight: 600; color: var(--g500); border-radius: var(--r); cursor: pointer; transition: all .12s; background: none; border: none; font-family: inherit; }
 .tm-tab:hover { color: var(--g700); }
 .tm-tab.act { background: var(--wh); color: var(--g900); box-shadow: var(--sh); }
 
-/* Stats */
 .tm-stats { display: flex; gap: 12px; margin-bottom: 24px; }
 .ts-card { flex: 1; padding: 16px; background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); display: flex; align-items: center; gap: 12px; }
 .ts-icon { width: 40px; height: 40px; border-radius: var(--rm); display: flex; align-items: center; justify-content: center; font-size: 18px; }
@@ -25,7 +21,6 @@
 .ts-val { font-family: var(--mono); font-size: 22px; font-weight: 800; color: var(--g900); }
 .ts-label { font-size: 11px; color: var(--g400); margin-top: 1px; }
 
-/* Member list */
 .member-list { background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); overflow: hidden; margin-bottom: 24px; }
 .ml-head { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 80px; padding: 12px 20px; background: var(--g50); border-bottom: 1px solid var(--brd); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--g400); }
 .ml-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 80px; padding: 14px 20px; border-bottom: 1px solid var(--g100); align-items: center; transition: background .12s; }
@@ -54,11 +49,9 @@
 .ml-act:hover { background: var(--g100); color: var(--g700); }
 .ml-act.danger:hover { background: var(--err-l); color: var(--err); }
 
-/* Role select dropdown */
 .ml-role-select { padding: 4px 8px; font-size: 11px; font-weight: 700; border-radius: var(--r); border: 1px solid var(--brd); cursor: pointer; font-family: inherit; outline: none; }
 .ml-role-select:focus { border-color: var(--mint); }
 
-/* Permissions matrix */
 .perm-matrix { background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); overflow: hidden; margin-bottom: 24px; }
 .pm-head { display: grid; grid-template-columns: 200px repeat(4, 1fr); border-bottom: 1px solid var(--brd); }
 .pm-head-cell { padding: 12px 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--g400); text-align: center; border-left: 1px solid var(--g100); }
@@ -78,7 +71,6 @@
 .pm-legend-item { display: flex; align-items: center; gap: 4px; }
 .pm-legend .pm-check { width: 16px; height: 16px; font-size: 8px; }
 
-/* Modal */
 .tm-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.4); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); animation: tmFadeIn .2s ease; }
 @keyframes tmFadeIn { from { opacity: 0; } to { opacity: 1; } }
 .tm-modal { background: var(--wh); border-radius: var(--rx); width: 460px; max-width: 90%; box-shadow: 0 24px 64px rgba(0,0,0,.15); animation: tmModalIn .3s var(--ease); }
@@ -106,7 +98,6 @@
 .tm-send-btn { padding: 8px 20px; font-size: 12px; font-weight: 700; background: var(--mint); color: var(--wh); border: none; border-radius: var(--rm); cursor: pointer; transition: all .15s; }
 .tm-send-btn:hover { background: var(--mint-d); transform: translateY(-1px); }
 
-/* Responsive */
 @media (max-width: 1024px) {
   .ml-head, .ml-row { grid-template-columns: 2fr 1fr 1fr 60px; }
   .ml-head > :nth-child(4), .ml-row > :nth-child(4) { display: none; }

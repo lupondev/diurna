@@ -1,14 +1,12 @@
 export default function PlatformLoading() {
   return (
     <div className="loading-skeleton">
-      {/* Header skeleton */}
       <div className="sk-header">
         <div className="sk-pill" style={{ width: 100 }} />
         <div className="sk-bar" style={{ width: 220, height: 28 }} />
         <div className="sk-bar" style={{ width: 340, height: 14 }} />
       </div>
 
-      {/* Stat cards skeleton */}
       <div className="sk-stats">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="sk-stat-card">
@@ -19,7 +17,6 @@ export default function PlatformLoading() {
         ))}
       </div>
 
-      {/* Content cards skeleton */}
       <div className="sk-grid">
         <div className="sk-card">
           <div className="sk-bar" style={{ width: 160, height: 16 }} />

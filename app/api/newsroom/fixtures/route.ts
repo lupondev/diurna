@@ -20,7 +20,6 @@ export async function GET() {
     }
 
     if (!API_KEY) {
-      // Return mock data when no API key
       return NextResponse.json({ fixtures: generateMockFixtures(), live: generateMockLive(), source: 'mock', fetchedAt: new Date().toISOString() })
     }
 

@@ -56,7 +56,6 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as unknown as { role?: string }).role ?? 'JOURNALIST'
       }
 
-      // Re-fetch from DB so the token stays current
       if (token.id && (!token.onboardingCompleted || !token.role)) {
         try {
           const dbUser = await prisma.user.findUnique({
@@ -78,9 +77,7 @@ export const authOptions: NextAuthOptions = {
               token.organizationId = dbUser.orgs[0].organizationId
             }
           }
-        } catch {
-          // Non-fatal — keep existing token value
-        }
+        } catch {}
       }
 
       return token

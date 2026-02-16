@@ -124,7 +124,6 @@ export default function AdminInvitesPage() {
         </div>
       )}
 
-      {/* Invite Modal */}
       {showModal && (
         <div className="adm-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}>
           <div className="adm-modal">

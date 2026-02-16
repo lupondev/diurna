@@ -39,7 +39,6 @@ export default function ImportPage() {
     setArticles((prev) => prev.map((a, i) => i === index ? { ...a, selected: !a.selected } : a))
   }
 
-  // WordPress XML upload
   async function handleWpUpload(file: File) {
     setParsing(true)
     setError('')
@@ -59,7 +58,6 @@ export default function ImportPage() {
     }
   }
 
-  // CSV upload
   async function handleCsvUpload(file: File) {
     setParsing(true)
     setError('')
@@ -107,7 +105,6 @@ export default function ImportPage() {
     }
   }
 
-  // JSON import
   function handleJsonParse() {
     setError('')
     setResult(null)
@@ -158,7 +155,6 @@ export default function ImportPage() {
     }
   }
 
-  // Import selected
   async function handleImport() {
     const selected = articles.filter((a) => a.selected)
     if (selected.length === 0) return
@@ -193,14 +189,12 @@ export default function ImportPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="imp-tabs">
         <button className={`imp-tab ${tab === 'wordpress' ? 'active' : ''}`} onClick={() => { setTab('wordpress'); setArticles([]); setError(''); setResult(null) }}>WordPress XML</button>
         <button className={`imp-tab ${tab === 'csv' ? 'active' : ''}`} onClick={() => { setTab('csv'); setArticles([]); setError(''); setResult(null) }}>CSV</button>
         <button className={`imp-tab ${tab === 'json' ? 'active' : ''}`} onClick={() => { setTab('json'); setArticles([]); setError(''); setResult(null) }}>JSON</button>
       </div>
 
-      {/* Upload area */}
       {tab === 'wordpress' && (
         <div className="imp-card">
           <div className="imp-card-title">Upload WordPress Export (WXR XML)</div>
@@ -244,10 +238,8 @@ export default function ImportPage() {
         </div>
       )}
 
-      {/* Error */}
       {error && <div className="imp-error">{error}</div>}
 
-      {/* Result */}
       {result && (
         <div className="imp-success">
           Imported {result.imported} article{result.imported !== 1 ? 's' : ''} successfully.
@@ -255,7 +247,6 @@ export default function ImportPage() {
         </div>
       )}
 
-      {/* Preview table */}
       {articles.length > 0 && (
         <div className="imp-preview">
           <div className="imp-preview-head">

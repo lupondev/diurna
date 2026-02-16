@@ -57,7 +57,6 @@ function isScheduled(short: string) {
   return scheduledStatuses.has(short)
 }
 
-// Top leagues to prioritize
 const topLeagues = [
   'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
   'UEFA Champions League', 'UEFA Europa League', 'UEFA Conference League',
@@ -87,7 +86,6 @@ export function LiveMatches() {
   useEffect(() => {
     async function fetchMatches() {
       try {
-        // Try live first
         const liveRes = await fetch('/api/football?action=live')
         const liveData = await liveRes.json()
 
@@ -95,22 +93,18 @@ export function LiveMatches() {
           setMatches(sortMatches(liveData.response).slice(0, 6))
           setHasLive(true)
         } else {
-          // Fall back to today's matches
           const todayRes = await fetch('/api/football?action=today')
           const todayData = await todayRes.json()
           if (todayData.response) {
             setMatches(sortMatches(todayData.response).slice(0, 6))
           }
         }
-      } catch {
-        // Silently fail, show fallback
-      } finally {
+      } catch {} finally {
         setLoading(false)
       }
     }
     fetchMatches()
 
-    // Refresh every 5 minutes
     const interval = setInterval(fetchMatches, 5 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])

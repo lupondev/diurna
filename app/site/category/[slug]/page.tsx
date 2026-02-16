@@ -100,7 +100,6 @@ export default async function CategoryPage({
         ))}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="pub-pagination">
           {page > 1 && (

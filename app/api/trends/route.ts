@@ -10,7 +10,6 @@ interface TrendItem {
   link: string
 }
 
-// Simple in-memory cache: 15 min TTL
 const cache = new Map<string, { data: TrendItem[]; expires: number }>()
 
 async function fetchTrends(geo: string): Promise<TrendItem[]> {

@@ -28,17 +28,14 @@ export async function GET(req: NextRequest) {
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
     const redirectUri = `${baseUrl}/api/social/facebook/callback`
 
-    // Exchange code for user token
     const userToken = await exchangeCodeForToken(code, redirectUri)
 
-    // Get user's pages
     const pages = await getUserPages(userToken)
 
     if (pages.length === 0) {
       return NextResponse.redirect(new URL('/settings?fb=no-pages', req.url))
     }
 
-    // Upsert connection and save ALL pages
     const connection = await prisma.socialConnection.upsert({
       where: { siteId_provider: { siteId: site.id, provider: 'facebook' } },
       create: {
@@ -51,7 +48,6 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    // Upsert each page
     for (const page of pages) {
       await prisma.socialPage.upsert({
         where: { connectionId_pageId: { connectionId: connection.id, pageId: page.id } },

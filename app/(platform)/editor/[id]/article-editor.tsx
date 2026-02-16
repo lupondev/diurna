@@ -101,8 +101,7 @@ export default function ArticleEditor({ id }: { id: string }) {
       } else if (res.status === 409) {
         alert('This slug is already taken. Please choose a different one.')
       }
-    } catch { /* save failed */
-    } finally {
+    } catch {} finally {
       setSaving(false)
     }
   }
@@ -112,7 +111,7 @@ export default function ArticleEditor({ id }: { id: string }) {
     try {
       const res = await fetch(`/api/articles/${id}`, { method: 'DELETE' })
       if (res.ok) { router.push('/newsroom'); router.refresh() }
-    } catch { /* delete failed */ }
+    } catch {}
   }
 
   function restoreVersion(v: Version) {
@@ -140,7 +139,7 @@ export default function ArticleEditor({ id }: { id: string }) {
           setAllTags((prev) => [...prev, tag])
           setArticleTags((prev) => [...prev, tag])
         }
-      } catch { /* tag create failed */ }
+      } catch {}
     }
     setTagInput('')
     setShowTagSuggestions(false)

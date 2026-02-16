@@ -211,7 +211,6 @@ export default function WidgetCreatorPage() {
 
   return (
     <div className="wc-layout">
-      {/* Left Panel */}
       <div className="wc-panel">
         <div className="wc-header">
           <div>
@@ -230,7 +229,6 @@ export default function WidgetCreatorPage() {
           </div>
         </div>
 
-        {/* Step 1: Pick Template */}
         <div className="wc-step">
           <div className="wc-step-label">
             <div className={`wc-step-num${selectedTpl ? ' done' : ''}`}>{selectedTpl ? '✓' : '1'}</div>
@@ -262,7 +260,6 @@ export default function WidgetCreatorPage() {
           </div>
         </div>
 
-        {/* Step 2: Select Match/League */}
         <div className={`wc-step${!step2Ready ? ' disabled' : ''}`}>
           <div className="wc-step-label">
             <div className={`wc-step-num${selectedMatch ? ' done' : ''}`}>{selectedMatch ? '✓' : '2'}</div>
@@ -295,7 +292,6 @@ export default function WidgetCreatorPage() {
           </div>
         </div>
 
-        {/* Step 3: Configure Frame & Theme */}
         <div className={`wc-step${!step3Ready ? ' disabled' : ''}`}>
           <div className="wc-step-label">
             <div className="wc-step-num">3</div>
@@ -341,7 +337,6 @@ export default function WidgetCreatorPage() {
         </div>
       </div>
 
-      {/* Right Panel - Preview */}
       <div className="wc-preview" style={theme === 'dark' ? { background: '#0a0a1a' } : theme === 'transparent' ? { background: 'linear-gradient(135deg, #667eea, #764ba2)' } : undefined}>
         <div className="wc-preview-head">
           <div className="wc-preview-title">Live Preview</div>
@@ -370,7 +365,6 @@ export default function WidgetCreatorPage() {
         )}
       </div>
 
-      {/* Code Modal */}
       {codeModal && (
         <div className="wc-code-overlay" onClick={(e) => { if (e.target === e.currentTarget) setCodeModal(false) }}>
           <div className="wc-code-modal">

@@ -64,7 +64,6 @@ export default function MidnightTemplate() {
     } as React.CSSProperties}>
       <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontFamily: 'var(--sans)' }}>
 
-        {/* Preview Banner */}
         <div style={{ padding: '14px 24px', background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderBottom: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>This is a preview of the Midnight Pro theme</span>
           <button onClick={applyTheme} disabled={applying} style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, background: 'var(--accent)', color: '#0A0A0F', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -73,7 +72,6 @@ export default function MidnightTemplate() {
           <Link href="/settings" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-tertiary)', textDecoration: 'none', marginLeft: 8 }}>Back to Settings</Link>
         </div>
 
-        {/* Header */}
         <header style={{ background: 'rgba(10,10,15,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 100 }}>
           <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0' }}>
@@ -95,7 +93,6 @@ export default function MidnightTemplate() {
           </div>
         </header>
 
-        {/* Ticker */}
         <div style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', padding: '10px 0', overflow: 'hidden' }}>
           <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center' }}>
             <span style={{ padding: '6px 16px', background: 'var(--coral)', color: 'var(--bg-primary)', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, borderRadius: 10, marginRight: 20, flexShrink: 0 }}>BREAKING</span>
@@ -107,9 +104,7 @@ export default function MidnightTemplate() {
 
         <main style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 32, padding: '32px 0' }}>
-            {/* Content */}
             <div>
-              {/* Hero */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20, marginBottom: 40 }}>
                 <Link href="/site" style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', background: 'var(--bg-card)', aspectRatio: '16/10', display: 'flex', alignItems: 'flex-end', textDecoration: 'none', color: 'inherit' }}>
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%)' }} />
@@ -137,7 +132,6 @@ export default function MidnightTemplate() {
                 </div>
               </div>
 
-              {/* Latest */}
               <div style={{ marginBottom: 40 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
                   <h2 style={{ fontFamily: 'var(--disp)', fontSize: '1.5rem' }}>Latest News</h2>
@@ -169,9 +163,7 @@ export default function MidnightTemplate() {
               </div>
             </div>
 
-            {/* Sidebar */}
             <aside style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-              {/* Live Scores */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700 }}>Live Scores</h3>
@@ -198,7 +190,6 @@ export default function MidnightTemplate() {
                 </div>
               </div>
 
-              {/* Standings */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700 }}>Premier League</h3>
@@ -220,7 +211,6 @@ export default function MidnightTemplate() {
                 </div>
               </div>
 
-              {/* Trending */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700 }}>Trending</h3>
@@ -241,7 +231,6 @@ export default function MidnightTemplate() {
           </div>
         </main>
 
-        {/* Footer */}
         <footer style={{ background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', marginTop: 60, padding: '48px 0 24px' }}>
           <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 24, borderTop: '1px solid var(--border)', fontSize: 13, color: 'var(--text-tertiary)' }}>

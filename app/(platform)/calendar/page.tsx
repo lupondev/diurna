@@ -15,7 +15,7 @@ type Slot = {
 type ScheduledArticle = {
   id: string
   title: string
-  date: string // ISO date string
+  date: string
   time: string
   category: string
   type: 'ai-auto' | 'manual' | 'fixture'
@@ -145,11 +145,9 @@ function generateSlotsForDay(date: Date, today: boolean, dailyTarget: number): S
     status: isFuture ? (variant === 'ai-gen' ? 'draft' : 'scheduled') : 'published',
   })
 
-  // Morning briefing (always)
   const briefing = fillTemplate(pickTemplate(BRIEFING_TEMPLATES, rng), rng, gw, dayName)
   slots.push(makeSlot('08:00', briefing, 'prematch', [{ label: 'AI', cls: 'ai' }], !isPast && !today))
 
-  // Weekday mid-morning: transfer or analysis
   if (dayOfWeek >= 1 && dayOfWeek <= 5) {
     if (rng() > 0.5) {
       const t = fillTemplate(pickTemplate(TRANSFER_TEMPLATES, rng), rng, gw, dayName)
@@ -160,13 +158,11 @@ function generateSlotsForDay(date: Date, today: boolean, dailyTarget: number): S
     }
   }
 
-  // Afternoon: pre-match or analysis
   if (dayOfWeek >= 2 && dayOfWeek <= 6) {
     const t = fillTemplate(pickTemplate(PREMATCH_TEMPLATES, rng), rng, gw, dayName)
     slots.push(makeSlot('14:00', t, 'prematch', [{ label: 'FIXTURE', cls: 'fixture' }, { label: 'AI', cls: 'ai' }], !isPast && !today))
   }
 
-  // Weekend has more slots (match days)
   if (dayOfWeek === 0 || dayOfWeek === 6) {
     const pre = fillTemplate(pickTemplate(PREMATCH_TEMPLATES, rng), rng, gw, dayName)
     slots.push(makeSlot('12:00', pre, 'prematch', [{ label: 'FIXTURE', cls: 'fixture' }, { label: 'AI', cls: 'ai' }], !isPast && !today))
@@ -186,13 +182,11 @@ function generateSlotsForDay(date: Date, today: boolean, dailyTarget: number): S
     }
   }
 
-  // Add evening analysis for Wed/Thu (UCL nights)
   if (dayOfWeek === 3 || dayOfWeek === 4) {
     const t = fillTemplate(pickTemplate(POSTMATCH_TEMPLATES, rng), rng, gw, dayName)
     slots.push(makeSlot('23:00', t, 'postmatch', [{ label: 'FIXTURE', cls: 'fixture' }, { label: 'AI', cls: 'ai' }], !isPast && !today))
   }
 
-  // Pad with extra if needed to hit dailyTarget
   const times = ['09:00', '13:00', '16:00', '19:00', '21:00']
   let ti = 0
   while (slots.length < Math.min(dailyTarget, 8) && ti < times.length) {
@@ -287,7 +281,6 @@ function ScheduleModal({ onClose, onSave, defaultDate }: {
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: '#A1A1AA', cursor: 'pointer' }}>&times;</button>
         </div>
 
-        {/* Title */}
         <label style={{ display: 'block', marginBottom: 16 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: '#52525B', display: 'block', marginBottom: 6 }}>Article Title</span>
           <input
@@ -305,7 +298,6 @@ function ScheduleModal({ onClose, onSave, defaultDate }: {
           />
         </label>
 
-        {/* Date + Time */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
           <label>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#52525B', display: 'block', marginBottom: 6 }}>Date</span>
@@ -335,7 +327,6 @@ function ScheduleModal({ onClose, onSave, defaultDate }: {
           </label>
         </div>
 
-        {/* Category */}
         <label style={{ display: 'block', marginBottom: 16 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: '#52525B', display: 'block', marginBottom: 6 }}>Category</span>
           <select
@@ -351,7 +342,6 @@ function ScheduleModal({ onClose, onSave, defaultDate }: {
           </select>
         </label>
 
-        {/* Type */}
         <div style={{ marginBottom: 24 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: '#52525B', display: 'block', marginBottom: 8 }}>Type</span>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -378,7 +368,6 @@ function ScheduleModal({ onClose, onSave, defaultDate }: {
           </div>
         </div>
 
-        {/* Save */}
         <button
           onClick={handleSave}
           disabled={!title.trim()}
@@ -459,7 +448,6 @@ export default function CalendarPage() {
   const [dailyTarget, setDailyTarget] = useState(5)
   const [isMobile, setIsMobile] = useState(false)
 
-  // Detect mobile and auto-switch to List view
   useEffect(() => {
     const check = () => {
       const mobile = window.innerWidth <= 768
@@ -470,7 +458,6 @@ export default function CalendarPage() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Auto-switch to List view on mobile
   useEffect(() => {
     if (isMobile && activeView === 'Week') {
       setActiveView('List')
@@ -483,10 +470,9 @@ export default function CalendarPage() {
       if (saved) setScheduledArticles(JSON.parse(saved))
       const target = localStorage.getItem('cal-daily-target')
       if (target) setDailyTarget(Number(target))
-    } catch { /* ignore */ }
+    } catch {}
   }, [])
 
-  // Save to localStorage
   const saveArticle = useCallback((article: ScheduledArticle) => {
     setScheduledArticles((prev) => {
       const next = [...prev, article]
@@ -500,21 +486,18 @@ export default function CalendarPage() {
     localStorage.setItem('cal-daily-target', String(v))
   }, [])
 
-  // Navigation
   const goToPrevWeek = () => setCurrentWeekStart((d) => addDays(d, -7))
   const goToNextWeek = () => setCurrentWeekStart((d) => addDays(d, 7))
   const goToToday = () => setCurrentWeekStart(getMonday(new Date()))
 
   const today = useMemo(() => new Date(), [])
 
-  // Generate week data
   const weekData: DayData[] = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
       const fullDate = addDays(currentWeekStart, i)
       const isToday = isSameDay(fullDate, today)
       const baseSlots = generateSlotsForDay(fullDate, isToday, dailyTarget)
 
-      // Merge in user-scheduled articles for this day
       const dateStr = fullDate.toISOString().split('T')[0]
       const userSlots: Slot[] = scheduledArticles
         .filter((a) => a.date === dateStr)
@@ -543,27 +526,22 @@ export default function CalendarPage() {
     })
   }, [currentWeekStart, today, dailyTarget, scheduledArticles])
 
-  // Total articles this week
   const weekTotal = weekData.reduce((sum, d) => sum + d.slots.length, 0)
   const publishedCount = weekData.reduce((sum, d) => sum + d.slots.filter((s) => s.status === 'published').length, 0)
   const onTimeRate = weekTotal > 0 ? Math.round((publishedCount / weekTotal) * 100) : 0
 
-  // Effective strategies with current dailyTarget
   const effectiveStrategies = strategies.map((s, i) =>
     i === 0 ? { ...s, val: `${dailyTarget} articles/day` } : s
   )
 
-  // Default date for schedule modal
   const defaultScheduleDate = today.toISOString().split('T')[0]
 
-  // Month view data
   const monthData = useMemo(() => {
     const firstOfMonth = new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth(), 1)
     const lastOfMonth = new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth() + 1, 0)
-    const startDay = firstOfMonth.getDay() === 0 ? 6 : firstOfMonth.getDay() - 1 // Monday-based
+    const startDay = firstOfMonth.getDay() === 0 ? 6 : firstOfMonth.getDay() - 1
     const days: { date: Date | null; count: number; isToday: boolean }[] = []
 
-    // Empty cells before first day
     for (let i = 0; i < startDay; i++) days.push({ date: null, count: 0, isToday: false })
 
     for (let d = 1; d <= lastOfMonth.getDate(); d++) {
@@ -577,7 +555,6 @@ export default function CalendarPage() {
     return { month: FULL_MONTH_NAMES[firstOfMonth.getMonth()], year: firstOfMonth.getFullYear(), days }
   }, [currentWeekStart, today, dailyTarget, scheduledArticles])
 
-  // List view: flatten all week slots
   const listData = useMemo(() => {
     return weekData.flatMap((d) =>
       d.slots.map((s) => ({ ...s, dayLabel: `${d.day}, ${MONTH_NAMES[d.fullDate.getMonth()]} ${d.date}`, fullDate: d.fullDate }))
@@ -586,7 +563,6 @@ export default function CalendarPage() {
 
   return (
     <div className="cal-page">
-      {/* Header */}
       <div className="cal-header">
         <div className="cal-header-left">
           <h1>Content Calendar</h1>
@@ -595,7 +571,6 @@ export default function CalendarPage() {
         <button className="cal-schedule-btn" onClick={() => setShowScheduleModal(true)}>✨ Schedule Article</button>
       </div>
 
-      {/* Autopilot Bar */}
       <div className="cal-autopilot">
         <div className="cal-ap-dot"></div>
         <div className="cal-ap-text">
@@ -609,7 +584,6 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Strategy Cards */}
       <div className="cal-strategy">
         {effectiveStrategies.map((s, i) => (
           <div
@@ -628,7 +602,6 @@ export default function CalendarPage() {
         ))}
       </div>
 
-      {/* Calendar Nav */}
       <div className="cal-nav">
         <button className="cal-nav-btn" onClick={goToPrevWeek}>&laquo;</button>
         <button className="cal-nav-btn" onClick={goToNextWeek}>&raquo;</button>
@@ -651,7 +624,6 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ═══ WEEK VIEW ═══ */}
       {activeView === 'Week' && (
         <div className="cal-week">
           {weekData.map((d) => (
@@ -679,8 +651,6 @@ export default function CalendarPage() {
                   onClick={() => {
                     const dateStr = d.fullDate.toISOString().split('T')[0]
                     setShowScheduleModal(true)
-                    // Pre-fill date via a small workaround: close and reopen will use default
-                    // Instead, store the target date
                     setTimeout(() => {
                       const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement
                       if (dateInput) dateInput.value = dateStr
@@ -695,10 +665,8 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* ═══ MONTH VIEW ═══ */}
       {activeView === 'Month' && (
         <div style={{ marginBottom: 24 }}>
-          {/* Day headers */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
               <div key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--g400)', textTransform: 'uppercase', letterSpacing: '.08em', padding: '8px 0' }}>
@@ -706,7 +674,6 @@ export default function CalendarPage() {
               </div>
             ))}
           </div>
-          {/* Day cells */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
             {monthData.days.map((cell, i) => (
               <div
@@ -745,14 +712,12 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* ═══ LIST VIEW ═══ */}
       {activeView === 'List' && (
         <div style={{ marginBottom: 24 }}>
           <div style={{
             background: 'var(--wh)', border: '1px solid var(--brd)', borderRadius: 12,
             overflow: 'hidden',
           }}>
-            {/* Header - hidden on mobile */}
             {!isMobile && (
               <div style={{
                 display: 'grid', gridTemplateColumns: '100px 80px 1fr 100px 80px',
@@ -766,7 +731,6 @@ export default function CalendarPage() {
                 <div>Status</div>
               </div>
             )}
-            {/* Rows */}
             {listData.map((item) => (
               <div
                 key={item.id}
@@ -845,7 +809,6 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* Bottom Panel */}
       <div className="cal-bottom">
         <div className="cal-bp-card">
           <div className="cal-bp-head">
@@ -881,7 +844,6 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ═══ MODALS ═══ */}
       {showScheduleModal && (
         <ScheduleModal
           onClose={() => setShowScheduleModal(false)}

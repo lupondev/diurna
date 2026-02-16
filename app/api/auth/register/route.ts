@@ -47,7 +47,6 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // Mark invite as used
       await prisma.invite.update({
         where: { id: invite.id },
         data: { usedAt: new Date() },
@@ -56,7 +55,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ id: user.id, email: user.email }, { status: 201 })
     }
 
-    // Default flow: create new org
     let org = await prisma.organization.findFirst({ where: { slug: 'demo' } })
     if (!org) {
       const slug = data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30)

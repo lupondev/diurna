@@ -95,7 +95,6 @@ export default function MediaPage() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="ml-stats">
         <div className="ml-stat">
           <div className="ml-stat-icon">🖼️</div>
@@ -113,7 +112,6 @@ export default function MediaPage() {
         </div>
       </div>
 
-      {/* Drop zone */}
       <div
         className={`ml-dropzone${dragActive ? ' active' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
@@ -129,7 +127,6 @@ export default function MediaPage() {
         <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} />
       </div>
 
-      {/* Uploading indicator */}
       {uploading && (
         <div className="ml-uploading">
           <div className="ml-uploading-spinner" />
@@ -137,7 +134,6 @@ export default function MediaPage() {
         </div>
       )}
 
-      {/* Search */}
       <div className="ml-toolbar">
         <input
           type="text"
@@ -148,7 +144,6 @@ export default function MediaPage() {
         />
       </div>
 
-      {/* Grid */}
       {loading ? (
         <div className="ml-empty">
           <div className="ml-empty-desc">Loading media...</div>

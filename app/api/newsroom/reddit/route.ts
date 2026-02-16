@@ -51,7 +51,6 @@ export async function GET() {
       }
     }
 
-    // Sort by score descending
     allPosts.sort((a, b) => b.score - a.score)
 
     const result = {
