@@ -51,6 +51,8 @@ export default function SettingsPage() {
         if (data.language) setLanguage(data.language)
         if (data.timezone) setTimezone(data.timezone)
         if (data.theme) setTheme(data.theme)
+        if (data.wpSiteUrl) setWpSiteUrl(data.wpSiteUrl)
+        if (data.wpApiKey) setWpApiKey(data.wpApiKey)
       })
       .catch(() => {})
   }, [])
@@ -137,6 +139,12 @@ export default function SettingsPage() {
   const [instagram, setInstagram] = useState('')
   const [youtube, setYoutube] = useState('')
 
+  // WordPress
+  const [wpSiteUrl, setWpSiteUrl] = useState('')
+  const [wpApiKey, setWpApiKey] = useState('')
+  const [wpTesting, setWpTesting] = useState(false)
+  const [wpTestResult, setWpTestResult] = useState<{ success: boolean; message: string } | null>(null)
+
   function change<T>(setter: (v: T) => void) {
     return (v: T) => { setter(v); setDirty(true); setSaved(false) }
   }
@@ -154,6 +162,8 @@ export default function SettingsPage() {
           language,
           timezone,
           theme,
+          wpSiteUrl: wpSiteUrl || null,
+          wpApiKey: wpApiKey || null,
         }),
       })
       if (res.ok) {
@@ -452,6 +462,76 @@ export default function SettingsPage() {
             <div className="st-social-icon yt">&#9654;</div>
             <span className="st-social-name">YouTube</span>
             <input value={youtube} onChange={(e) => change(setYoutube)(e.target.value)} placeholder="youtube.com/@sportnewspro" />
+          </div>
+        </div>
+      </div>
+
+      {/* WORDPRESS */}
+      <div className="st-section">
+        <div className="st-section-head">
+          <div className="st-section-title">WordPress Integration</div>
+          <div className="st-section-desc">Connect to a WordPress site to sync articles or import/export content.</div>
+        </div>
+
+        <div className="st-card">
+          <div className="st-card-head">
+            <div className="st-card-title">WordPress REST API</div>
+          </div>
+          <div className="st-card-desc">
+            Enter your WordPress site URL and an Application Password to enable syncing.
+            Generate an Application Password in WordPress under Users &rarr; Profile &rarr; Application Passwords.
+          </div>
+          <div className="st-row">
+            <span className="st-label">WP Site URL</span>
+            <input
+              className="st-input mono"
+              value={wpSiteUrl}
+              onChange={(e) => change(setWpSiteUrl)(e.target.value)}
+              placeholder="https://yoursite.com"
+            />
+          </div>
+          <div className="st-row">
+            <span className="st-label">API Key</span>
+            <input
+              className="st-input mono"
+              value={wpApiKey}
+              onChange={(e) => change(setWpApiKey)(e.target.value)}
+              placeholder="username:xxxx xxxx xxxx xxxx"
+              type="password"
+            />
+          </div>
+          <div className="st-row">
+            <span className="st-label">Connection</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                className="st-wp-test-btn"
+                disabled={wpTesting || !wpSiteUrl || !wpApiKey}
+                onClick={async () => {
+                  setWpTesting(true)
+                  setWpTestResult(null)
+                  try {
+                    const res = await fetch('/api/sync/wordpress', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'test' }),
+                    })
+                    const data = await res.json()
+                    setWpTestResult({ success: data.success || false, message: data.message })
+                  } catch {
+                    setWpTestResult({ success: false, message: 'Connection failed' })
+                  } finally {
+                    setWpTesting(false)
+                  }
+                }}
+              >
+                {wpTesting ? 'Testing...' : 'Test Connection'}
+              </button>
+              {wpTestResult && (
+                <span style={{ fontSize: 12, fontWeight: 600, color: wpTestResult.success ? 'var(--suc)' : 'var(--coral)' }}>
+                  {wpTestResult.message}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

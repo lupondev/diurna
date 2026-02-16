@@ -12,6 +12,8 @@ const UpdateSiteSchema = z.object({
   language: z.string().min(2).max(10).optional(),
   timezone: z.string().max(50).optional(),
   theme: z.enum(['editorial', 'midnight']).optional(),
+  wpSiteUrl: z.string().max(500).optional().nullable(),
+  wpApiKey: z.string().max(500).optional().nullable(),
 })
 
 export async function GET() {
@@ -36,6 +38,8 @@ export async function GET() {
       language: site.language,
       timezone: site.timezone,
       theme: site.theme,
+      wpSiteUrl: site.wpSiteUrl,
+      wpApiKey: site.wpApiKey,
       categories: categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
     })
   } catch (error) {
@@ -67,6 +71,8 @@ export async function PATCH(req: NextRequest) {
         ...(data.language !== undefined && { language: data.language }),
         ...(data.timezone !== undefined && { timezone: data.timezone }),
         ...(data.theme !== undefined && { theme: data.theme }),
+        ...(data.wpSiteUrl !== undefined && { wpSiteUrl: data.wpSiteUrl || null }),
+        ...(data.wpApiKey !== undefined && { wpApiKey: data.wpApiKey || null }),
       },
     })
 
@@ -79,6 +85,8 @@ export async function PATCH(req: NextRequest) {
       language: updated.language,
       timezone: updated.timezone,
       theme: updated.theme,
+      wpSiteUrl: updated.wpSiteUrl,
+      wpApiKey: updated.wpApiKey,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -37,6 +37,8 @@ model Site {
   language       String       @default("bs")
   timezone       String       @default("Europe/Sarajevo")
   theme          String       @default("editorial")
+  wpSiteUrl      String?
+  wpApiKey       String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?

@@ -1,0 +1,70 @@
+/* ═══ IMPORT PAGE ═══ */
+.imp-page { padding: 24px 32px 80px; max-width: 1100px; }
+.imp-head { margin-bottom: 24px; }
+.imp-title { font-size: 18px; font-weight: 800; color: var(--g900); margin-bottom: 4px; }
+.imp-desc { font-size: 12px; color: var(--g500); }
+
+/* Tabs */
+.imp-tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--g50); padding: 4px; border-radius: var(--rl); border: 1px solid var(--brd); }
+.imp-tab { padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--g500); background: none; border: none; border-radius: var(--rm); cursor: pointer; transition: all .15s; font-family: inherit; }
+.imp-tab:hover { color: var(--g700); }
+.imp-tab.active { background: var(--wh); color: var(--g900); box-shadow: var(--sh); }
+
+/* Card */
+.imp-card { background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); padding: 24px; margin-bottom: 16px; }
+.imp-card-title { font-size: 14px; font-weight: 700; color: var(--g800); margin-bottom: 6px; }
+.imp-card-desc { font-size: 12px; color: var(--g500); line-height: 1.5; margin-bottom: 16px; }
+
+/* Upload button */
+.imp-upload-btn { padding: 10px 24px; font-size: 13px; font-weight: 700; background: var(--g900); color: var(--wh); border: none; border-radius: var(--rm); cursor: pointer; transition: all .15s; font-family: inherit; }
+.imp-upload-btn:hover { background: var(--g800); transform: translateY(-1px); }
+.imp-upload-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.imp-upload-btn.small { padding: 8px 16px; font-size: 12px; background: var(--mint); }
+.imp-upload-btn.small:hover { background: var(--mint-d); }
+
+/* JSON area */
+.imp-json-row { display: flex; gap: 16px; }
+.imp-json-input { flex: 1; padding: 12px; font-family: var(--mono); font-size: 12px; border: 1px solid var(--brd); border-radius: var(--rm); resize: vertical; outline: none; color: var(--g800); }
+.imp-json-input:focus { border-color: var(--mint); box-shadow: 0 0 0 3px var(--mint-g); }
+.imp-json-actions { display: flex; flex-direction: column; gap: 8px; }
+
+/* Error / Success */
+.imp-error { padding: 12px 16px; background: var(--coral-l); color: var(--coral); border: 1px solid var(--coral); border-radius: var(--rm); font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+.imp-success { padding: 12px 16px; background: var(--suc-l); color: var(--suc); border: 1px solid var(--suc); border-radius: var(--rm); font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+
+/* Preview table */
+.imp-preview { background: var(--wh); border: 1px solid var(--brd); border-radius: var(--rl); overflow: hidden; }
+.imp-preview-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--brd); }
+.imp-preview-title { font-size: 13px; font-weight: 700; color: var(--g800); }
+.imp-preview-actions { display: flex; align-items: center; gap: 16px; }
+.imp-check-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--g600); cursor: pointer; }
+.imp-check-label input { accent-color: var(--mint); }
+.imp-selected-count { font-family: var(--mono); font-size: 11px; color: var(--mint-d); font-weight: 700; padding: 3px 10px; background: var(--mint-l); border-radius: 10px; }
+.imp-table-wrap { overflow-x: auto; }
+.imp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.imp-table th { padding: 10px 16px; text-align: left; font-size: 10px; font-weight: 700; color: var(--g400); text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--brd); background: var(--g50); }
+.imp-table td { padding: 10px 16px; border-bottom: 1px solid var(--brd); color: var(--g700); vertical-align: middle; }
+.imp-table tr.selected { background: var(--mint-l); }
+.imp-table tr:hover { background: var(--g50); }
+.imp-table input[type="checkbox"] { accent-color: var(--mint); }
+.imp-cell-title { font-weight: 600; color: var(--g900); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-cell-slug { font-family: var(--mono); font-size: 11px; color: var(--g500); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-cell-tags { font-size: 11px; color: var(--g500); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-cell-date { font-family: var(--mono); font-size: 11px; color: var(--g500); white-space: nowrap; }
+.imp-status { font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; }
+.imp-status.published { background: var(--suc-l); color: var(--suc); }
+.imp-status.draft { background: var(--g100); color: var(--g500); }
+.imp-status.in_review { background: #FEF3C7; color: #D97706; }
+.imp-status.scheduled { background: #DBEAFE; color: #2563EB; }
+.imp-status.archived { background: var(--g100); color: var(--g400); }
+
+/* Import bar */
+.imp-import-bar { padding: 16px 20px; border-top: 1px solid var(--brd); display: flex; justify-content: flex-end; }
+.imp-import-btn { padding: 10px 28px; font-size: 13px; font-weight: 700; background: var(--mint); color: var(--wh); border: none; border-radius: var(--rm); cursor: pointer; transition: all .15s; font-family: inherit; }
+.imp-import-btn:hover { background: var(--mint-d); transform: translateY(-1px); }
+.imp-import-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+@media (max-width: 768px) {
+  .imp-page { padding: 16px; }
+  .imp-json-row { flex-direction: column; }
+}
