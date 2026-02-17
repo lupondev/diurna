@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 const TABS = ['Statistika', 'Postave', 'Utjecaj'] as const
 
@@ -33,7 +34,7 @@ export function MatchOfDay() {
         <h2 className="sba-section-title">Utakmica dana</h2>
       </div>
       <div className="sba-motd">
-        <div className="sba-motd-scoreboard">
+        <Link href="/utakmica/1" className="sba-motd-scoreboard">
           <div className="sba-motd-team">
             <span className="sba-motd-team-name">Arsenal</span>
           </div>
@@ -44,7 +45,7 @@ export function MatchOfDay() {
           <div className="sba-motd-team">
             <span className="sba-motd-team-name">Chelsea</span>
           </div>
-        </div>
+        </Link>
 
         <div className="sba-motd-tabs" role="tablist">
           {TABS.map((label, i) => (

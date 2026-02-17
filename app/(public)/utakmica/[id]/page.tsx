@@ -132,9 +132,9 @@ const SIDEBAR_INFO = [
 ]
 
 const SIDEBAR_NEWS = [
-  { cat:'VIJESTI', title:"Arteta: 'Danas smo pokazali karakter'", grad:'linear-gradient(135deg,#ff5722,#ff7043)' },
-  { cat:'TRANSFERI', title:'Arsenal pojačava vezni red — tri imena na listi', grad:'linear-gradient(135deg,#7c3aed,#a855f7)' },
-  { cat:'POVREDE', title:'Saka napustio teren — status neizvjestan', grad:'linear-gradient(135deg,#ef4444,#f87171)' },
+  { cat:'VIJESTI', title:"Arteta: 'Danas smo pokazali karakter'", grad:'linear-gradient(135deg,#ff5722,#ff7043)', href:'/vijesti/arteta-danas-smo-pokazali-karakter' },
+  { cat:'TRANSFERI', title:'Arsenal pojačava vezni red — tri imena na listi', grad:'linear-gradient(135deg,#7c3aed,#a855f7)', href:'/transferi/arsenal-pojacava-vezni-red' },
+  { cat:'POVREDE', title:'Saka napustio teren — status neizvjestan', grad:'linear-gradient(135deg,#ef4444,#f87171)', href:'/povrede/saka-napustio-teren-status-neizvjestan' },
 ]
 
 const ODDS = { home:'1.85', draw:'3.40', away:'4.20' }
@@ -1058,7 +1058,7 @@ function Sidebar() {
       <div className="mc-card">
         <div className="mc-card-title">Povezano</div>
         {SIDEBAR_NEWS.map((n, i) => (
-          <a key={i} href="/vijesti" className="mc-news-item">
+          <a key={i} href={n.href} className="mc-news-item">
             <div className="mc-news-thumb" style={{ background: n.grad }} />
             <div className="mc-news-body">
               <span className="mc-news-cat">{n.cat}</span>

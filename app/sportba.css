@@ -394,6 +394,16 @@ html[data-theme] {
   font-size: 11px;
   white-space: nowrap;
   flex-shrink: 0;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--sba-ease), border-color var(--sba-ease);
+}
+
+@media (hover: hover) {
+  .sba-match-pill:hover {
+    background: var(--sba-bg-3);
+    border-color: var(--sba-accent);
+  }
 }
 
 .sba-match-team {

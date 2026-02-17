@@ -254,6 +254,15 @@
   padding: 24px 20px;
   background: var(--sba-bg-2);
   border-bottom: 1px solid var(--sba-border);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--sba-ease);
+}
+
+@media (hover: hover) {
+  .sba-motd-scoreboard:hover {
+    background: var(--sba-bg-3);
+  }
 }
 
 .sba-motd-team {

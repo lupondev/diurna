@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export type LiveMatch = {
   id: string
   home: string
@@ -24,7 +26,7 @@ export function LiveStrip({ matches = [] }: LiveStripProps) {
       </div>
       <div className="sba-live-scroll">
         {matches.map((match) => (
-          <div key={match.id} className="sba-match-pill">
+          <Link key={match.id} href={`/utakmica/${match.id}`} className="sba-match-pill">
             <span className="sba-match-team">{match.home}</span>
             {(match.status === 'live' || match.status === 'ft') && (
               <span className="sba-match-score">
@@ -41,7 +43,7 @@ export function LiveStrip({ matches = [] }: LiveStripProps) {
             {match.status === 'scheduled' && match.time && (
               <span className="sba-match-time">{match.time}</span>
             )}
-          </div>
+          </Link>
         ))}
       </div>
     </div>
