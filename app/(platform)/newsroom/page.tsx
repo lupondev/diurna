@@ -574,7 +574,8 @@ export default function NewsroomPage() {
         }
       } catch {}
     }
-    router.push(`/editor?prompt=${encodeURIComponent(prompt || `Rewrite this news story in our editorial voice: ${title}`)}`)
+    sessionStorage.setItem('diurna_headline_only', JSON.stringify({ title }))
+    router.push('/editor?mode=headline-only')
   }
 
   const isInCart = useCallback((title: string) => cart.some(c => c.title === title), [cart])

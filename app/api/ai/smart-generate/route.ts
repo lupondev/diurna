@@ -21,6 +21,9 @@ const schema = z.object({
   sourceDomain: z.string().optional(),
 })
 
+type ContextLevel = 'full' | 'combined' | 'headline-only'
+type FactWarning = { text: string; type: 'number' | 'quote' | 'statistic' | 'name' }
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -88,8 +91,10 @@ The JSON must have this exact structure:
 }`
 
     let userPrompt: string
+    let contextLevel: ContextLevel
 
     if (input.mode === 'rewrite' && input.sourceContext) {
+      contextLevel = 'full'
       userPrompt = `REWRITE this article in your own editorial voice. Do NOT copy sentences — rewrite completely.
 
 ORIGINAL HEADLINE: ${input.topic}
@@ -110,6 +115,7 @@ Instructions:
 - Max 400 words
 - Start with the news, not background`
     } else if (input.mode === 'combined' && input.sources && input.sources.length > 0) {
+      contextLevel = 'combined'
       const primary = input.sources.filter(s => s.role === 'primary')
       const supporting = input.sources.filter(s => s.role === 'supporting')
       const media = input.sources.filter(s => s.role === 'media')
@@ -129,13 +135,21 @@ LANGUAGE: ${input.language}
 
 Remember: ONLY use facts from the headlines above. Do NOT invent details. Max 400 words. Synthesize, do NOT repeat.`
     } else {
-      userPrompt = `HEADLINE: ${input.topic}
-SOURCE: Newsroom feed
-CATEGORY: ${input.category || 'Sport'}
-TYPE: ${input.articleType || 'breaking'}
+      contextLevel = 'headline-only'
+      userPrompt = `YOU HAVE NO SOURCE ARTICLE. You ONLY have this headline:
+
+HEADLINE: ${input.topic}
 LANGUAGE: ${input.language}
 
-Write an article about this headline. ONLY use facts present in the headline. Do NOT invent statistics, fees, quotes, or details. Max 400 words.`
+STRICT RULES FOR HEADLINE-ONLY GENERATION:
+- Write MAXIMUM 2 short paragraphs (2-3 sentences total)
+- Paragraph 1: Restate the headline as a factual news report. Only use facts literally present in the headline.
+- Paragraph 2: A single sentence: "Further details are expected as the story develops."
+- Do NOT invent ANY details: no player names not in the headline, no transfer fees, no quotes, no match scores, no statistics, no contract lengths, no wages
+- Do NOT speculate about implications, reactions, or future consequences
+- Do NOT add background context or historical information
+- The content section in your JSON must be under 80 words total
+- This is a BREAKING NEWS STUB — short, factual, zero fabrication`
     }
 
     const response = await client.messages.create({
@@ -159,9 +173,15 @@ Write an article about this headline. ONLY use facts present in the headline. Do
     }
     const tiptapContent = htmlToTiptap(result.content || '')
 
+    const warnings: FactWarning[] = contextLevel === 'full' && input.sourceContext
+      ? factCheck(result.content || '', input.sourceContext, input.topic)
+      : []
+
     return NextResponse.json({
       ...result,
       tiptapContent,
+      contextLevel,
+      factWarnings: warnings,
       model: response.model,
       tokensIn: response.usage.input_tokens,
       tokensOut: response.usage.output_tokens,
@@ -280,4 +300,52 @@ function parseInline(html: string): Record<string, unknown>[] {
     nodes.push({ type: 'text', text })
   }
   return nodes
+}
+
+function factCheck(generatedHtml: string, sourceText: string, headline: string): FactWarning[] {
+  const warnings: FactWarning[] = []
+  const generated = generatedHtml.replace(/<[^>]+>/g, ' ')
+  const sourceLower = (sourceText + ' ' + headline).toLowerCase()
+
+  const moneyMatches = generated.match(/(?:[£€$])\s*\d[\d.,]*\s*(?:m|million|billion|bn)?/gi) || []
+  for (const m of moneyMatches) {
+    const normalized = m.replace(/\s+/g, '').toLowerCase()
+    if (!sourceLower.includes(normalized) && !sourceLower.includes(m.trim().toLowerCase())) {
+      warnings.push({ text: m.trim(), type: 'number' })
+    }
+  }
+
+  const scoreMatches = generated.match(/\b\d{1,2}\s*[-–]\s*\d{1,2}\b/g) || []
+  for (const s of scoreMatches) {
+    const plain = s.replace(/\s+/g, '').replace('–', '-')
+    if (!sourceLower.includes(plain) && !sourceLower.includes(s.toLowerCase())) {
+      warnings.push({ text: s.trim(), type: 'statistic' })
+    }
+  }
+
+  const quoteMatches = generated.match(/"[^"]{10,}"/g) || []
+  for (const q of quoteMatches) {
+    const inner = q.slice(1, -1).toLowerCase().trim()
+    if (!sourceLower.includes(inner.substring(0, 25))) {
+      warnings.push({ text: q, type: 'quote' })
+    }
+  }
+
+  const namePattern = /\b[A-Z][a-z]+(?:\s+(?:de|van|von|di|el|al|bin|mc|mac|le|la|dos|das))?(?:\s+[A-Z][a-z]+)+\b/g
+  const nameMatches = generated.match(namePattern) || []
+  const commonWords = new Set(['Premier League', 'Champions League', 'La Liga', 'Serie A', 'Bundesliga', 'Europa League', 'World Cup', 'FA Cup', 'League Cup', 'Community Shield', 'Super Cup', 'Conference League', 'Further Details'])
+  for (const name of nameMatches) {
+    if (commonWords.has(name)) continue
+    if (!sourceLower.includes(name.toLowerCase())) {
+      warnings.push({ text: name, type: 'name' })
+    }
+  }
+
+  const seen = new Set<string>()
+  return warnings.filter(w => {
+    const key = w.text.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
