@@ -38,16 +38,24 @@ export async function GET(req: Request) {
     console.log('Cron: auth mismatch, proceeding anyway in dev')
   }
 
-  const minute = new Date().getMinutes()
-  let tierFilter: number[]
+  const url = new URL(req.url)
+  const tierParam = url.searchParams.get('tier')
 
-  if (minute % 5 === 0) {
+  let tierFilter: number[]
+  if (tierParam === 'all') {
     tierFilter = [1, 2, 3]
-  } else if (minute % 3 === 0) {
-    tierFilter = [1, 2]
   } else {
-    tierFilter = [1]
+    const minute = new Date().getMinutes()
+    if (minute % 5 === 0) {
+      tierFilter = [1, 2, 3]
+    } else if (minute % 3 === 0) {
+      tierFilter = [1, 2]
+    } else {
+      tierFilter = [1]
+    }
   }
+
+  const take = tierParam === 'all' ? 65 : 20
 
   const feeds = await prisma.feedSource.findMany({
     where: {
@@ -55,7 +63,7 @@ export async function GET(req: Request) {
       tier: { in: tierFilter },
     },
     orderBy: { lastFetch: 'asc' },
-    take: 20,
+    take,
   })
 
   let totalNew = 0
