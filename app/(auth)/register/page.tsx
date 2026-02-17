@@ -2,11 +2,10 @@
 
 import { Suspense, useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 function RegisterForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const inviteToken = searchParams.get('invite')
   const [name, setName] = useState('')
@@ -46,10 +45,9 @@ function RegisterForm() {
 
       const signInRes = await signIn('credentials', { email, password, redirect: false })
       if (signInRes?.error) {
-        router.push('/login')
+        window.location.href = '/login'
       } else {
-        router.push('/onboarding')
-        router.refresh()
+        window.location.href = '/onboarding'
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
