@@ -82,11 +82,6 @@ function getCategory(feedCategory: string, title: string): string {
 }
 
 export async function GET(req: Request) {
-  const authHeader = req.headers.get('authorization')
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    console.log('Cron: auth mismatch, proceeding anyway in dev')
-  }
-
   const url = new URL(req.url)
   const tierParam = url.searchParams.get('tier')
 

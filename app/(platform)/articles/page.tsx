@@ -52,7 +52,6 @@ export default function ArticlesPage() {
           body: JSON.stringify({ status: action === 'publish' ? 'PUBLISHED' : 'DRAFT' }),
         })
       }
-      // Refresh
       const res = await fetch(`/api/articles?page=${page}&limit=20`)
       const data = await res.json()
       setArticles(data.articles || [])

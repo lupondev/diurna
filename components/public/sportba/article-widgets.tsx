@@ -45,7 +45,6 @@ export function ScrollDepthTracker() {
             const depth = (entry.target as HTMLElement).dataset.depth
             if (depth && !seen.has(depth)) {
               seen.add(depth)
-              console.log(`Scroll depth: ${depth}%`)
             }
           }
         })

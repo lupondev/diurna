@@ -43,7 +43,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Apply theme attribute and lang
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])

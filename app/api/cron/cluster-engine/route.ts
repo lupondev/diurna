@@ -275,14 +275,12 @@ export async function GET(req: Request) {
 
   try {
     const entities = await prisma.entity.findMany()
-    console.log(`[Cluster Engine] Loaded ${entities.length} entities`)
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
     const newsItems = await prisma.newsItem.findMany({
       where: { pubDate: { gte: since } },
       orderBy: { pubDate: 'desc' },
     })
-    console.log(`[Cluster Engine] Found ${newsItems.length} items from last 24h`)
 
     if (newsItems.length === 0) {
       return NextResponse.json({ message: 'No items to cluster', clusters: 0 })
@@ -309,8 +307,6 @@ export async function GET(req: Request) {
       existing.push(item)
       clusterMap.set(item.clusterKey, existing)
     }
-
-    console.log(`[Cluster Engine] Found ${clusterMap.size} clusters`)
 
     let clustersCreated = 0
     let clustersUpdated = 0

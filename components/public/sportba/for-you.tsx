@@ -81,9 +81,7 @@ export function ForYou() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) setFollowed(JSON.parse(stored))
-    } catch {
-      /* empty */
-    }
+    } catch {}
     setMounted(true)
   }, [])
 

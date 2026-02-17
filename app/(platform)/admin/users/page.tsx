@@ -66,7 +66,7 @@ export default function AdminUsersPage() {
       if (res.ok) {
         setUsers((prev) => prev.filter((u) => u.id !== userId))
       }
-    } catch { /* ignore */ }
+    } catch {}
   }
 
   const isOwner = session?.user?.role === 'OWNER'

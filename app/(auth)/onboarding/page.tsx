@@ -71,7 +71,6 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  // Redirect if already onboarded
   useEffect(() => {
     fetch('/api/auth/session')
       .then((r) => r.json())

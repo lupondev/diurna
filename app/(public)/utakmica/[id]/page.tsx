@@ -170,7 +170,6 @@ export default function MatchPage() {
   const momRef = useRef<HTMLDivElement>(null)
   const pitchRef = useRef<HTMLDivElement>(null)
 
-  // IntersectionObserver for animated sections
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduced) {
