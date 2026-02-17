@@ -103,6 +103,30 @@ function getSourceDomain(item: BreakingItem): string {
   return domain
 }
 
+function extractRealSource(title: string, feedSource: string): string {
+  const match = title.match(/\s*[-–—]\s*([^-–—]+)$/)
+  if (match && (feedSource.toLowerCase().includes('google') || feedSource.toLowerCase().includes('news football'))) {
+    return match[1].trim()
+  }
+  return feedSource
+}
+
+function deduplicateItems(items: BreakingItem[]): BreakingItem[] {
+  const seen = new Map<string, BreakingItem>()
+  return items.filter(item => {
+    const normalized = item.title
+      .toLowerCase()
+      .replace(/\s*[-–—]\s*(bbc|sky sports?|espn|the guardian|marca|goal|mirror|reuters|the athletic|cnn|as|l'equipe|football365|90min|talksport|goal\.com|fourfourtwo|football italia|besoccer|teamtalk|caught offside|planet football|sport witness).*$/i, '')
+      .replace(/[^a-z0-9\s]/g, '')
+      .trim()
+    const key = normalized.split(/\s+/).filter(w => w.length > 3).slice(0, 8).join(' ')
+    if (!key) return true
+    if (seen.has(key)) return false
+    seen.set(key, item)
+    return true
+  })
+}
+
 const SOURCE_AUTHORITY: Record<string, number> = {
   'BBC Sport': 95, 'BBC': 95, 'Sky Sports': 90, 'ESPN': 88, 'ESPN FC': 88,
   'The Athletic': 85, 'The Guardian': 85, 'Guardian': 85, 'Reuters': 92, 'AP News': 92,
@@ -351,24 +375,24 @@ export default function NewsroomPage() {
       .catch(() => {})
 
     setBreakingLoading(true)
-    fetch('/api/newsroom/feed?category=breaking&hours=24&limit=30')
+    fetch('/api/newsroom/feed?category=breaking&hours=24&limit=50')
       .then(r => r.json())
       .then(data => {
-        const items = (data.items || []).map((i: { title: string; source: string; sourceUrl: string; pubDate: string }) => ({
-          title: i.title, source: i.source, link: i.sourceUrl, pubDate: i.pubDate
-        }))
+        const items = deduplicateItems((data.items || []).map((i: { title: string; source: string; sourceUrl: string; pubDate: string }) => ({
+          title: i.title, source: extractRealSource(i.title, i.source), link: i.sourceUrl, pubDate: i.pubDate
+        })))
         setBreakingNews(items.length > 0 ? items : MOCK_BREAKING)
       })
       .catch(() => setBreakingNews(MOCK_BREAKING))
       .finally(() => setBreakingLoading(false))
 
     setTransfersLoading(true)
-    fetch('/api/newsroom/feed?category=transfer&hours=48&limit=30')
+    fetch('/api/newsroom/feed?category=transfer&hours=48&limit=50')
       .then(r => r.json())
       .then(data => {
-        const items = (data.items || []).map((i: { title: string; source: string; sourceUrl: string; pubDate: string }) => ({
-          title: i.title, source: i.source, link: i.sourceUrl, pubDate: i.pubDate
-        }))
+        const items = deduplicateItems((data.items || []).map((i: { title: string; source: string; sourceUrl: string; pubDate: string }) => ({
+          title: i.title, source: extractRealSource(i.title, i.source), link: i.sourceUrl, pubDate: i.pubDate
+        })))
         setTransferNews(items.length > 0 ? items : MOCK_TRANSFERS)
       })
       .catch(() => setTransferNews(MOCK_TRANSFERS))
@@ -413,7 +437,8 @@ export default function NewsroomPage() {
 
   const top5 = useMemo(() => {
     if (allNewsItems.length === 0) return []
-    return [...allNewsItems]
+    const deduped = deduplicateItems(allNewsItems)
+    return deduped
       .map(item => ({ ...item, dis: calculateDIS(item, allNewsItems) }))
       .sort((a, b) => b.dis - a.dis)
       .slice(0, 5)

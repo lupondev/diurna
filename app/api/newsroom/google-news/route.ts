@@ -8,7 +8,20 @@ const parser = new Parser()
 let cache: { data: unknown; ts: number; query: string } | null = null
 const CACHE_TTL = 5 * 60 * 1000
 
-const EXCLUDE_KEYWORDS = ['college', 'ncaa', 'big 12', 'big ten', 'sec ', 'nfl', 'mls draft', 'nwsl', 'uswnt', 'usmnt', 'high school', 'padel', 'cricket', 'rugby', 'baseball', 'basketball', 'tennis', 'arizona soccer', 'naval academy']
+const EXCLUDE_KEYWORDS = [
+  'college', 'ncaa', 'big 12', 'big ten', 'sec ', 'nfl', 'mls draft', 'nwsl', 'uswnt', 'usmnt', 'high school',
+  'rugby', 'rugby league', 'cricket', 'baseball', 'basketball', 'tennis', 'golf', 'padel',
+  'boxing', 'fury', 'usyk', 'tyson', 'canelo', 'ufc', 'mma', 'wrestling',
+  'f1', 'formula 1', 'nascar', 'motogp', 'cycling', 'tour de france',
+  'nba', 'nhl', 'mlb', 'afl',
+  'olympic', 'olympics', 'swimming', 'athletics', 'gymnastics',
+  'hockey', 'ice hockey', 'field hockey',
+  'handball', 'volleyball', 'badminton', 'table tennis',
+  'esports', 'gaming',
+  'trivia', 'quiz', 'podcast recap', 'daily discussion', 'monday moan', 'free talk',
+  'arizona soccer', 'naval academy',
+  'hull kr', 'super league', 'hull kingston',
+]
 
 function isFootballArticle(title: string): boolean {
   const lower = title.toLowerCase()

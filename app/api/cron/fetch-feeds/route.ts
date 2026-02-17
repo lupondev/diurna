@@ -7,7 +7,20 @@ const parser = new Parser({
   headers: { 'User-Agent': 'Diurna/1.0 Sports Newsroom Bot' },
 })
 
-const EXCLUDE_KEYWORDS = ['college', 'ncaa', 'big 12', 'big ten', 'sec ', 'nfl', 'mls draft', 'nwsl', 'high school', 'padel', 'cricket', 'rugby', 'baseball', 'basketball', 'tennis', 'arizona soccer', 'naval academy']
+const EXCLUDE_KEYWORDS = [
+  'college', 'ncaa', 'big 12', 'big ten', 'sec ', 'nfl', 'mls draft', 'nwsl', 'uswnt', 'usmnt', 'high school',
+  'rugby', 'rugby league', 'cricket', 'baseball', 'basketball', 'tennis', 'golf', 'padel',
+  'boxing', 'fury', 'usyk', 'tyson', 'canelo', 'ufc', 'mma', 'wrestling',
+  'f1', 'formula 1', 'nascar', 'motogp', 'cycling', 'tour de france',
+  'nba', 'nhl', 'mlb', 'afl',
+  'olympic', 'olympics', 'swimming', 'athletics', 'gymnastics',
+  'hockey', 'ice hockey', 'field hockey',
+  'handball', 'volleyball', 'badminton', 'table tennis',
+  'esports', 'gaming',
+  'trivia', 'quiz', 'podcast recap', 'daily discussion', 'monday moan', 'free talk',
+  'arizona soccer', 'naval academy',
+  'hull kr', 'super league', 'hull kingston',
+]
 
 function isFootballArticle(title: string): boolean {
   const lower = title.toLowerCase()
@@ -44,6 +57,8 @@ export async function GET(req: Request) {
   let tierFilter: number[]
   if (tierParam === 'all') {
     tierFilter = [1, 2, 3]
+  } else if (tierParam) {
+    tierFilter = tierParam.split(',').map(Number).filter(n => !isNaN(n))
   } else {
     const minute = new Date().getMinutes()
     if (minute % 5 === 0) {
@@ -140,6 +155,15 @@ export async function GET(req: Request) {
 
   await prisma.newsItem.deleteMany({
     where: { pubDate: { lt: new Date(Date.now() - 48 * 60 * 60 * 1000) } },
+  }).catch(() => {})
+
+  const CLEANUP_KEYWORDS = ['rugby', 'boxing', 'fury', 'usyk', 'ufc', 'mma', 'trivia', 'quiz', 'hull kr', 'nba', 'nhl', 'cricket', 'wrestling', 'nascar', 'f1', 'formula 1', 'super league', 'hull kingston']
+  await prisma.newsItem.deleteMany({
+    where: {
+      OR: CLEANUP_KEYWORDS.map(kw => ({
+        title: { contains: kw, mode: 'insensitive' as const }
+      }))
+    },
   }).catch(() => {})
 
   await computeDIS()
