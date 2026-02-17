@@ -6,7 +6,14 @@ import Parser from 'rss-parser'
 const parser = new Parser()
 
 let cache: { data: unknown; ts: number; query: string } | null = null
-const CACHE_TTL = 5 * 60 * 1000 // 5 min
+const CACHE_TTL = 5 * 60 * 1000
+
+const EXCLUDE_KEYWORDS = ['college', 'ncaa', 'big 12', 'big ten', 'sec ', 'nfl', 'mls draft', 'nwsl', 'uswnt', 'usmnt', 'high school', 'padel', 'cricket', 'rugby', 'baseball', 'basketball', 'tennis', 'arizona soccer', 'naval academy']
+
+function isFootballArticle(title: string): boolean {
+  const lower = title.toLowerCase()
+  return !EXCLUDE_KEYWORDS.some(kw => lower.includes(kw))
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +22,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const q = req.nextUrl.searchParams.get('q') || 'Premier League OR Champions League OR La Liga OR Serie A OR Bundesliga OR transfer OR football'
+    const q = req.nextUrl.searchParams.get('q') || '"Premier League" OR "Champions League" OR "La Liga" OR "Serie A" OR "Bundesliga" OR "Europa League" OR "football transfer"'
     const hl = req.nextUrl.searchParams.get('hl') || 'en'
 
     if (cache && cache.query === q && Date.now() - cache.ts < CACHE_TTL) {
@@ -25,12 +32,12 @@ export async function GET(req: NextRequest) {
     const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=${hl}`
     const feed = await parser.parseURL(url)
 
-    const items = (feed.items || []).slice(0, 30).map((item) => ({
+    const items = (feed.items || []).slice(0, 50).map((item) => ({
       title: item.title || '',
       source: item.creator || item['dc:creator'] || extractSource(item.title || ''),
       link: item.link || '',
       pubDate: item.pubDate || item.isoDate || '',
-    }))
+    })).filter(item => isFootballArticle(item.title)).slice(0, 30)
 
     const result = { items, total: items.length, query: q, fetchedAt: new Date().toISOString() }
     cache = { data: result, ts: Date.now(), query: q }

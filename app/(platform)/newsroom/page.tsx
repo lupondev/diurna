@@ -737,7 +737,7 @@ export default function NewsroomPage() {
                       <div className="idea-footer">
                         <span className="idea-source-count">{cluster.sourceCount} sources</span>
                         <button className="v4-btn-rewrite" onClick={() => {
-                          const prompt = `Write a comprehensive article about ${cluster.theme}. Key stories: ${cluster.stories.map(s => s.title).join('; ')}. Suggested angle: ${cluster.angles[0]}`
+                          const prompt = `You are given multiple headlines about the same topic. Write ONE unified article that covers the story. Do NOT write a separate paragraph for each headline. Instead, synthesize all information into a single coherent narrative. Maximum 4 paragraphs + TLDR. Each paragraph must contain NEW information not in any other paragraph.\n\nTopic: ${cluster.theme}\nHeadlines:\n${cluster.stories.map(s => `- ${s.title} (${s.source})`).join('\n')}\nSuggested angle: ${cluster.angles[0]}`
                           rewriteArticle(cluster.theme, prompt)
                         }}>Write Article</button>
                         <button className={`v4-btn-cart ${isInCart(cluster.theme) ? 'added' : ''}`} onClick={() => { if (!isInCart(cluster.theme)) addToCart(cluster.theme, `${cluster.sourceCount} sources`, '', 'idea') }} disabled={isInCart(cluster.theme)}>
