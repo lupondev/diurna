@@ -71,6 +71,18 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  // Redirect if already onboarded
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then((r) => r.json())
+      .then((s) => {
+        if (s?.user?.onboardingCompleted) {
+          window.location.href = '/newsroom'
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   function toggleLeague(id: string) {
     setSelectedLeagues((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
@@ -94,8 +106,10 @@ export default function OnboardingPage() {
       if (!res.ok) {
         throw new Error(typeof data.error === 'string' ? data.error : 'Setup failed')
       }
+      // Refresh JWT cookie so middleware sees onboardingCompleted: true
+      await fetch('/api/auth/session')
       setTimeout(() => {
-        window.location.href = data.redirectUrl || '/dashboard'
+        window.location.href = data.redirectUrl || '/newsroom'
       }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Setup failed')
