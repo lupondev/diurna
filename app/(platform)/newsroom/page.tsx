@@ -121,11 +121,33 @@ function filterBySection(clusters: Cluster[], sectionKey: SectionKey): Cluster[]
   return clusters.filter(c => section.eventTypes!.includes(c.eventType))
 }
 
+const CLUB_ALIASES: Record<string, string[]> = {
+  'Manchester City': ['Man City', 'MCFC', 'City'],
+  'Manchester United': ['Man Utd', 'Man United', 'MUFC', 'United'],
+  'Tottenham': ['Tottenham Hotspur', 'Spurs'],
+  'Borussia Dortmund': ['BVB', 'Dortmund'],
+  'Bayern Munich': ['Bayern', 'FCB'],
+  'Paris Saint-Germain': ['PSG'],
+  'Atletico Madrid': ['Atletico', 'Atleti'],
+  'Inter Milan': ['Inter', 'Internazionale'],
+  'AC Milan': ['Milan'],
+  'Real Madrid': ['Madrid', 'Real'],
+  'Barcelona': ['Barca', 'FCB'],
+  'RB Leipzig': ['Leipzig'],
+  'Bayer Leverkusen': ['Leverkusen'],
+}
+
 function filterByLeague(clusters: Cluster[], leagueFilter: string | null): Cluster[] {
   if (!leagueFilter) return clusters
   const clubsInLeague = LEAGUE_CLUB_MAP[leagueFilter] || []
   return clusters.filter(c => {
-    if (c.entities.some(e => e.toLowerCase().includes(leagueFilter.toLowerCase()))) return true
+    const filterLower = leagueFilter.toLowerCase()
+    if (c.entities.some(e => e.toLowerCase().includes(filterLower))) return true
+    if (c.primaryEntity.toLowerCase().includes(filterLower)) return true
+    const filterWords = filterLower.split(' ')
+    if (c.entities.some(e => { const el = e.toLowerCase(); return filterWords.every(w => el.includes(w)) })) return true
+    const aliases = CLUB_ALIASES[leagueFilter] || []
+    if (aliases.length > 0 && c.entities.some(e => aliases.some(a => e.toLowerCase().includes(a.toLowerCase())))) return true
     if (clubsInLeague.length > 0) {
       return c.entities.some(e => clubsInLeague.some(club => e.toLowerCase().includes(club.toLowerCase())))
     }
@@ -432,13 +454,24 @@ export default function NewsroomPage() {
         {/* LEFT COLUMN */}
         <div>
           {/* COMING SOON */}
-          {isComingSoon && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: '#9ca3af' }}>
-              <span style={{ fontSize: 40, marginBottom: 12 }}>{currentSection?.icon}</span>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>{currentSection?.label}</h3>
-              <p style={{ fontSize: 13 }}>Coming soon — requires API-Football integration</p>
-            </div>
-          )}
+          {isComingSoon && (() => {
+            const info: Record<string, { title: string; description: string; icon: string }> = {
+              MATCHES_TABLE: { title: 'Matches & Fixtures', description: 'Live scores, upcoming fixtures, and match results will appear here.', icon: '\u{1F4CA}' },
+              STATISTICS: { title: 'Statistics', description: 'Player and team statistics, league tables, and performance data coming soon.', icon: '\u{1F4C8}' },
+              PLAYERS: { title: 'Players', description: 'Player profiles, stats, transfer history, and performance tracking.', icon: '\u{1F464}' },
+              CLUBS: { title: 'Clubs', description: 'Club profiles, squad lists, fixtures, and historical data.', icon: '\u{1F3DF}\uFE0F' },
+              WATCH_LIVE: { title: 'Watch Live', description: 'Live match streams and real-time coverage will be available here.', icon: '\u{1F4FA}' },
+            }
+            const data = info[activeSection] || { title: currentSection?.label || '', description: 'This section is coming soon.', icon: currentSection?.icon || '' }
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '96px 0', textAlign: 'center' }}>
+                <span style={{ fontSize: 48, marginBottom: 16 }}>{data.icon}</span>
+                <h3 style={{ fontSize: 20, fontWeight: 700, color: '#374151', margin: '0 0 8px' }}>{data.title}</h3>
+                <p style={{ fontSize: 13, color: '#9ca3af', maxWidth: 400, margin: '0 0 16px', lineHeight: 1.5 }}>{data.description}</p>
+                <span style={{ padding: '6px 16px', background: '#f3f4f6', color: '#6b7280', fontSize: 11, fontFamily: 'monospace', borderRadius: 9999, fontWeight: 600 }}>Coming Soon</span>
+              </div>
+            )
+          })()}
 
           {/* VIDEO / SCOREBAT */}
           {isVideoSection && (
@@ -447,15 +480,19 @@ export default function NewsroomPage() {
                 <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>{'\u{1F4F9}'} Video Highlights</span>
                 <span style={{ fontSize: 9, background: '#22c55e', color: '#fff', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>FREE</span>
               </div>
-              <iframe
-                src="https://www.scorebat.com/embed/"
-                frameBorder="0"
-                width="100%"
-                height="760"
-                allowFullScreen
-                allow="autoplay; fullscreen"
-                style={{ display: 'block', overflow: 'hidden', borderRadius: 10, border: '1px solid #e5e7eb' }}
-              />
+              <div style={{ overflow: 'hidden', borderRadius: 10, border: '1px solid #e5e7eb', marginTop: -0 }}>
+                <div style={{ marginTop: -60 }}>
+                  <iframe
+                    src="https://www.scorebat.com/embed/"
+                    frameBorder="0"
+                    width="100%"
+                    height="820"
+                    allowFullScreen
+                    allow="autoplay; fullscreen"
+                    style={{ display: 'block', overflow: 'hidden' }}
+                  />
+                </div>
+              </div>
             </div>
           )}
 
@@ -647,17 +684,8 @@ export default function NewsroomPage() {
                 marginTop: 6, fontSize: 11, color: '#f97316', background: 'none',
                 border: '1px dashed #f97316', borderRadius: 6, padding: '5px 10px',
                 cursor: 'pointer', width: '100%', fontWeight: 600,
-              }}>+ Add League</button>
+              }}>+ Add League or Club</button>
             )}
-          </div>
-
-          {/* Video Highlights */}
-          <div style={{ background: '#f8fafc', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14, marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {'\u{1F4F9}'} VIDEO HIGHLIGHTS
-              <span style={{ fontSize: 9, background: '#22c55e', color: '#fff', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>FREE</span>
-            </div>
-            <div style={{ fontSize: 11, color: '#9ca3af' }}>{'\u{1F3AC}'} Available after matches</div>
           </div>
 
           {/* Signal Guide */}
