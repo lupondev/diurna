@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="bs" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sport.ba — #1 Football News</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════════ */
+:root {
+  /* Palette */
+  --bg-0: #08090c;
+  --bg-1: #0e1015;
+  --bg-2: #14161d;
+  --bg-3: #1a1d27;
+  --bg-4: #222633;
+  --surface: #1c1f2a;
+  --surface-hover: #232738;
+  --border: #262a38;
+  --border-subtle: #1e2130;
+
+  --text-0: #f2f3f7;
+  --text-1: #c8cbd8;
+  --text-2: #8b8fa3;
+  --text-3: #5c6078;
+
+  --accent: #ff5722;
+  --accent-hover: #ff7043;
+  --accent-dim: rgba(255,87,34,0.12);
+  --live: #00e676;
+  --live-dim: rgba(0,230,118,0.1);
+  --win: #00e676;
+  --draw: #ffc107;
+  --loss: #ff5252;
+  --transfer-hot: #ff9100;
+  --sponsored-bg: rgba(255,152,0,0.04);
+  --sponsored-border: rgba(255,152,0,0.15);
+
+  /* Typography */
+  --ff-display: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+  --ff-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --ff-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Sizing */
+  --header-h: 48px;
+  --max-w: 1320px;
+  --gap: 16px;
+  --radius: 8px;
+  --radius-sm: 5px;
+
+  /* Ad slots (reserved, CLS-safe) */
+  --ad-leaderboard-h-d: 90px;
+  --ad-leaderboard-h-m: 50px;
+  --ad-rect-h: 250px;
+  --ad-rail-w: 300px;
+}
+
+/* ═══════════════════════════════════════════
+   RESET + BASE
+   ═══════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px;-webkit-text-size-adjust:100%}
+body{font-family:var(--ff-body);color:var(--text-1);background:var(--bg-0);-webkit-font-smoothing:antialiased;line-height:1.5;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+img{display:block;max-width:100%}
+ul,ol{list-style:none}
+
+/* Utility */
+.container{max-width:var(--max-w);margin:0 auto;padding:0 var(--gap)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+
+/* Focus states (accessibility) */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius)}
+.topbar-btn:focus-visible,.icon-btn:focus-visible,.match-pill:focus-visible,
+.motd-tab:focus-visible,.motd-cta:focus-visible,.transfer-filter:focus-visible,
+.foryou-chip:focus-visible,.standings-expand:focus-visible,.live-strip-more:focus-visible{outline-offset:3px}
+
+/* Skeleton loader */
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.skeleton{background:linear-gradient(90deg,var(--bg-2) 25%,var(--bg-3) 50%,var(--bg-2) 75%);background-size:800px 100%;animation:shimmer 1.5s infinite;border-radius:var(--radius-sm)}
+
+/* ═══════════════════════════════════════════
+   BLOCK 0 — STICKY TOP BAR
+   Height: 48px. Compact. Non-intrusive.
+   ═══════════════════════════════════════════ */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  height:var(--header-h);
+  background:rgba(8,9,12,0.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border-subtle);
+}
+.topbar-inner{
+  max-width:var(--max-w);margin:0 auto;padding:0 var(--gap);
+  height:100%;display:flex;align-items:center;gap:12px;
+}
+.logo{
+  font-family:var(--ff-mono);font-size:17px;font-weight:600;
+  color:var(--accent);letter-spacing:-0.5px;flex-shrink:0;
+}
+.logo span{color:var(--text-0)}
+
+.topbar-search{
+  flex:1;max-width:320px;position:relative;
+}
+.topbar-search input{
+  width:100%;height:32px;border-radius:16px;
+  background:var(--bg-2);border:1px solid var(--border);
+  padding:0 12px 0 34px;font-size:13px;color:var(--text-1);
+  transition:border-color 0.15s;
+}
+.topbar-search input:focus{outline:none;border-color:var(--accent)}
+.topbar-search input::placeholder{color:var(--text-3)}
+.topbar-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3);width:16px;height:16px}
+
+.topbar-nav{display:flex;align-items:center;gap:4px;margin-left:auto}
+.topbar-btn{
+  height:32px;padding:0 10px;border-radius:6px;
+  font-size:12px;font-weight:600;color:var(--text-2);
+  display:flex;align-items:center;gap:5px;
+  transition:all 0.12s;white-space:nowrap;
+}
+.topbar-btn:hover{background:var(--bg-3);color:var(--text-0)}
+.topbar-btn.live-btn{color:var(--live)}
+.topbar-btn.live-btn::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--live);animation:pulse-live 2s infinite;
+}
+@keyframes pulse-live{0%,100%{opacity:1}50%{opacity:0.4}}
+.topbar-btn.my-teams{color:var(--draw)}
+
+.topbar-actions{display:flex;align-items:center;gap:2px}
+.icon-btn{
+  width:32px;height:32px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-2);transition:all 0.12s;
+}
+.icon-btn:hover{background:var(--bg-3);color:var(--text-0)}
+.icon-btn svg{width:16px;height:16px}
+
+/* ═══════════════════════════════════════════
+   SLOT A — LEADERBOARD AD (CLS-safe)
+   ═══════════════════════════════════════════ */
+.ad-slot{
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg-1);border:1px dashed var(--border);
+  border-radius:var(--radius-sm);overflow:hidden;position:relative;
+}
+.ad-slot::after{
+  content:'OGLAS';font-family:var(--ff-mono);font-size:10px;
+  letter-spacing:1px;color:var(--text-3);opacity:0.5;
+}
+.ad-slot.loading::after{display:none}
+.ad-slot.loading{border-style:solid}
+
+.ad-leaderboard{
+  width:100%;max-width:728px;margin:10px auto;
+  height:var(--ad-leaderboard-h-d);
+}
+/* Mobile reorder: live strip above leaderboard */
+.above-fold-wrap{display:flex;flex-direction:column}
+
+/* ═══════════════════════════════════════════
+   BLOCK 1 — LIVE SCORES STRIP
+   Horizontal scroll, SofaScore vibe
+   ═══════════════════════════════════════════ */
+.live-strip{
+  background:var(--bg-1);border-bottom:1px solid var(--border-subtle);
+  padding:8px 0;
+}
+.live-strip-inner{
+  max-width:var(--max-w);margin:0 auto;padding:0 var(--gap);
+  display:flex;align-items:center;gap:6px;
+  overflow-x:auto;scrollbar-width:none;
+}
+.live-strip-inner::-webkit-scrollbar{display:none}
+
+.live-strip-label{
+  font-family:var(--ff-mono);font-size:10px;font-weight:600;
+  letter-spacing:1px;color:var(--live);
+  padding:4px 10px;border-radius:4px;
+  background:var(--live-dim);white-space:nowrap;flex-shrink:0;
+}
+
+.match-pill{
+  flex-shrink:0;display:flex;align-items:center;gap:8px;
+  padding:6px 12px;border-radius:6px;
+  background:var(--bg-2);border:1px solid var(--border);
+  cursor:pointer;transition:all 0.12s;min-width:160px;
+}
+.match-pill:hover{background:var(--surface-hover);border-color:var(--accent)}
+@media(hover:hover) and (pointer:fine){
+  .match-pill:hover{transform:translateY(-1px)}
+}
+.match-pill.is-live{border-color:rgba(0,230,118,0.3)}
+
+.mp-teams{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.mp-team{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:600;color:var(--text-1);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mp-team-logo{width:16px;height:16px;border-radius:3px;background:var(--bg-4);flex-shrink:0}
+.mp-score{
+  font-family:var(--ff-mono);font-size:13px;font-weight:600;
+  min-width:20px;text-align:right;
+}
+.mp-scores{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
+.mp-meta{
+  font-family:var(--ff-mono);font-size:10px;font-weight:600;
+  padding:2px 6px;border-radius:3px;text-align:center;white-space:nowrap;
+}
+.mp-meta.live{background:var(--live-dim);color:var(--live)}
+.mp-meta.ft{background:var(--bg-4);color:var(--text-2)}
+.mp-meta.upcoming{background:var(--bg-4);color:var(--text-3)}
+
+.mp-league{
+  font-size:9px;font-weight:600;color:var(--text-3);
+  letter-spacing:0.5px;font-family:var(--ff-mono);
+}
+
+.live-strip-more{
+  flex-shrink:0;font-family:var(--ff-mono);font-size:11px;
+  font-weight:600;color:var(--accent);padding:6px 12px;
+  border-radius:6px;background:var(--accent-dim);white-space:nowrap;
+}
+.live-strip-more:hover{background:rgba(255,87,34,0.2)}
+
+/* ═══════════════════════════════════════════
+   MAIN LAYOUT — Content + Rail
+   ═══════════════════════════════════════════ */
+.main-layout{
+  max-width:var(--max-w);margin:0 auto;padding:var(--gap);
+  display:grid;grid-template-columns:1fr 300px;gap:24px;
+}
+
+/* ═══════════════════════════════════════════
+   BLOCK 2 — HERO BENTO GRID
+   ═══════════════════════════════════════════ */
+.hero-bento{
+  display:grid;
+  grid-template-columns:1.6fr 1fr;
+  grid-template-rows:auto auto;
+  gap:12px;
+}
+.hero-main{
+  grid-row:1/3;position:relative;border-radius:var(--radius);
+  overflow:hidden;min-height:380px;cursor:pointer;
+  background:var(--bg-2);
+}
+.hero-main-img{
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,#1a2332 0%,#0d1520 50%,#162030 100%);
+}
+.hero-main-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 30%,rgba(8,9,12,0.95) 100%);
+}
+.hero-main-content{
+  position:absolute;bottom:0;left:0;right:0;padding:28px 24px;
+}
+.hero-main:hover .hero-main-title{color:var(--accent)}
+
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-family:var(--ff-mono);font-size:10px;font-weight:600;
+  letter-spacing:0.8px;padding:3px 8px;border-radius:3px;
+  text-transform:uppercase;
+}
+.badge-breaking{background:var(--loss);color:#fff}
+.badge-news{background:#2563eb;color:#fff}
+.badge-transfer{background:var(--transfer-hot);color:#000}
+.badge-match{background:var(--win);color:#000}
+.badge-injury{background:var(--loss);color:#fff}
+.badge-analysis{background:#8b5cf6;color:#fff}
+
+.hero-main-title{
+  font-family:var(--ff-display);font-size:28px;font-weight:400;
+  color:var(--text-0);line-height:1.2;margin:10px 0 8px;
+  transition:color 0.15s;
+}
+.hero-main-excerpt{
+  font-size:14px;color:var(--text-2);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  margin-bottom:10px;
+}
+.hero-meta{
+  font-family:var(--ff-mono);font-size:11px;color:var(--text-3);
+  display:flex;gap:10px;
+}
+
+.hero-side{
+  display:flex;flex-direction:column;gap:12px;
+}
+.hero-card{
+  flex:1;position:relative;border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;background:var(--bg-2);
+  min-height:120px;
+}
+.hero-card-bg{
+  position:absolute;inset:0;opacity:0.35;
+}
+.hero-card-bg-1{background:linear-gradient(135deg,#1e3a5f,#0f2027)}
+.hero-card-bg-2{background:linear-gradient(135deg,#2d1b42,#1a0a2e)}
+.hero-card-bg-3{background:linear-gradient(135deg,#1a3c34,#0f2a22)}
+.hero-card-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 20%,rgba(8,9,12,0.9) 100%);
+}
+.hero-card-content{
+  position:absolute;bottom:0;left:0;right:0;padding:14px 16px;
+}
+.hero-card-title{
+  font-family:var(--ff-display);font-size:16px;
+  color:var(--text-0);line-height:1.3;margin-top:6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.hero-card:hover .hero-card-title{color:var(--accent)}
+
+/* ═══════════════════════════════════════════
+   BLOCK 3 — MATCH OF THE DAY
+   ═══════════════════════════════════════════ */
+.motd{
+  background:var(--bg-2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;margin-top:8px;
+}
+.motd-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;
+}
+.motd-label{
+  font-family:var(--ff-mono);font-size:11px;font-weight:600;
+  color:var(--accent);letter-spacing:1px;text-transform:uppercase;
+}
+.motd-league{
+  font-family:var(--ff-mono);font-size:11px;color:var(--text-3);
+}
+.motd-scoreboard{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:16px 0;
+}
+.motd-team{
+  display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;
+}
+.motd-team-logo{
+  width:48px;height:48px;border-radius:12px;background:var(--bg-4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+}
+.motd-team-name{font-size:14px;font-weight:600;color:var(--text-0)}
+.motd-score{
+  font-family:var(--ff-mono);font-size:36px;font-weight:600;
+  color:var(--text-0);letter-spacing:4px;
+}
+.motd-status{
+  text-align:center;margin-top:-4px;
+}
+.motd-minute{
+  font-family:var(--ff-mono);font-size:12px;font-weight:600;
+  color:var(--live);
+  display:flex;align-items:center;gap:4px;justify-content:center;
+}
+.motd-minute::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--live);animation:pulse-live 2s infinite;
+}
+.motd-tabs{
+  display:flex;gap:4px;margin-top:16px;border-top:1px solid var(--border);
+  padding-top:12px;
+}
+.motd-tab{
+  flex:1;padding:8px;border-radius:6px;text-align:center;
+  font-size:12px;font-weight:600;color:var(--text-2);
+  background:var(--bg-3);transition:all 0.12s;
+}
+.motd-tab:hover,.motd-tab.active{background:var(--accent-dim);color:var(--accent)}
+.motd-cta{
+  display:block;margin-top:12px;padding:10px;border-radius:6px;
+  text-align:center;font-size:13px;font-weight:600;
+  background:var(--accent);color:#fff;transition:background 0.12s;
+}
+.motd-cta:hover{background:var(--accent-hover)}
+
+/* ═══════════════════════════════════════════
+   BLOCK 4 — STANDINGS TABLE
+   Frozen header + frozen first col
+   ═══════════════════════════════════════════ */
+.standings{
+  background:var(--bg-2);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;margin-top:8px;
+}
+.standings-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-bottom:1px solid var(--border);
+}
+.standings-title{
+  font-family:var(--ff-mono);font-size:12px;font-weight:600;
+  color:var(--text-0);letter-spacing:0.5px;
+}
+.standings-league-select{
+  font-family:var(--ff-mono);font-size:11px;color:var(--accent);
+  background:var(--accent-dim);border:none;padding:4px 8px;
+  border-radius:4px;cursor:pointer;
+}
+
+.table-wrap{
+  overflow-x:auto;position:relative;
+}
+.standings-table{
+  width:100%;border-collapse:collapse;font-size:12px;
+  min-width:400px;
+}
+.standings-table thead{position:sticky;top:0;z-index:2}
+.standings-table th{
+  background:var(--bg-3);color:var(--text-3);
+  font-family:var(--ff-mono);font-size:10px;font-weight:600;
+  letter-spacing:0.5px;padding:8px 10px;text-align:center;
+  border-bottom:1px solid var(--border);white-space:nowrap;
+}
+.standings-table th:nth-child(2){text-align:left;position:sticky;left:0;z-index:3;background:var(--bg-3)}
+.standings-table td{
+  padding:8px 10px;text-align:center;
+  border-bottom:1px solid var(--border-subtle);color:var(--text-2);
+  font-family:var(--ff-mono);font-size:12px;
+}
+.standings-table td:first-child{width:32px;font-weight:600}
+.standings-table td:nth-child(2){
+  text-align:left;font-weight:600;color:var(--text-0);
+  position:sticky;left:0;z-index:1;background:var(--bg-2);
+  font-family:var(--ff-body);
+}
+.standings-table td:last-child{font-weight:600;color:var(--text-0)}
+.standings-table tbody tr{transition:background 0.1s}
+.standings-table tbody tr:hover td{background:var(--surface-hover)}
+.standings-table tbody tr:hover td:nth-child(2){background:var(--surface-hover)}
+
+.pos-indicator{
+  display:inline-block;width:3px;height:12px;
+  border-radius:2px;margin-right:4px;vertical-align:middle;
+}
+.pos-cl{background:#2563eb}
+.pos-el{background:#ff9100}
+.pos-rel{background:#ff5252}
+
+.standings-expand{
+  display:block;width:100%;padding:10px;text-align:center;
+  font-family:var(--ff-mono);font-size:11px;font-weight:600;
+  color:var(--accent);background:var(--bg-3);
+  border-top:1px solid var(--border);transition:background 0.12s;
+}
+.standings-expand:hover{background:var(--bg-4)}
+
+/* ═══════════════════════════════════════════
+   SLOT C — RECTANGLE AD (CLS-safe)
+   ═══════════════════════════════════════════ */
+.ad-rectangle{
+  width:100%;height:var(--ad-rect-h);margin:16px 0;
+}
+
+/* ═══════════════════════════════════════════
+   BLOCK 5 — LATEST NEWS FEED
+   4:1 ratio (4 news : 1 native ad)
+   ═══════════════════════════════════════════ */
+.section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 0 12px;
+}
+.section-title{
+  font-family:var(--ff-display);font-size:20px;color:var(--text-0);
+}
+.section-link{
+  font-family:var(--ff-mono);font-size:11px;font-weight:600;
+  color:var(--accent);
+}
+.section-link:hover{text-decoration:underline}
+
+.news-feed{display:flex;flex-direction:column;gap:2px}
+.news-card{
+  display:flex;gap:14px;padding:14px 0;
+  border-bottom:1px solid var(--border-subtle);
+  cursor:pointer;transition:padding-left 0.12s;
+}
+.news-card:hover{padding-left:6px}
+.news-card-img{
+  width:140px;height:88px;border-radius:var(--radius-sm);
+  background:var(--bg-3);flex-shrink:0;overflow:hidden;
+}
+.news-card-img img{width:100%;height:100%;object-fit:cover}
+.news-card-body{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.news-card-title{
+  font-size:15px;font-weight:600;color:var(--text-0);
+  line-height:1.35;margin-bottom:4px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.news-card:hover .news-card-title{color:var(--accent)}
+/* Performance: content-visibility for long feeds */
+.news-feed .news-card:nth-child(n+5){content-visibility:auto;contain-intrinsic-size:auto 120px}
+.news-card-excerpt{
+  font-size:13px;color:var(--text-2);
+  display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;
+  margin-bottom:6px;
+}
+.news-card-meta{
+  font-family:var(--ff-mono);font-size:11px;color:var(--text-3);
+  display:flex;align-items:center;gap:8px;
+}
+
+/* SLOT B — Native In-Feed Ad */
+.native-ad{
+  display:flex;gap:14px;padding:14px;margin:2px 0;
+  border:1px solid var(--sponsored-border);
+  border-radius:var(--radius);background:var(--sponsored-bg);
+}
+.native-ad .news-card-meta{color:var(--transfer-hot)}
+.native-ad-label{
+  font-family:var(--ff-mono);font-size:9px;font-weight:600;
+  letter-spacing:1px;color:var(--transfer-hot);
+  text-transform:uppercase;
+}
+
+/* ═══════════════════════════════════════════
+   BLOCK 6 — TRANSFERS RADAR
+   ═══════════════════════════════════════════ */
+.transfers-section{margin-top:8px}
+.transfer-filters{
+  display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;
+}
+.transfer-filter{
+  font-family:var(--ff-mono);font-size:11px;font-weight:600;
+  padding:5px 12px;border-radius:20px;
+  background:var(--bg-3);color:var(--text-2);
+  border:1px solid var(--border);transition:all 0.12s;
+}
+.transfer-filter:hover,.transfer-filter.active{
+  background:var(--accent-dim);color:var(--accent);
+  border-color:rgba(255,87,34,0.3);
+}
+
+.transfer-card{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 0;border-bottom:1px solid var(--border-subtle);
+  cursor:pointer;transition:padding-left 0.12s;
+}
+.transfer-card:hover{padding-left:6px}
+.transfer-card:last-child{border-bottom:none}
+.transfer-avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--bg-4);flex-shrink:0;
+}
+.transfer-info{flex:1;min-width:0}
+.transfer-name{font-size:14px;font-weight:600;color:var(--text-0)}
+.transfer-detail{
+  font-size:12px;color:var(--text-2);
+  display:flex;align-items:center;gap:4px;margin-top:2px;
+}
+.transfer-arrow{color:var(--accent);font-size:14px}
+.transfer-status{
+  font-family:var(--ff-mono);font-size:10px;font-weight:600;
+  padding:2px 8px;border-radius:3px;white-space:nowrap;
+}
+.transfer-status.hot{background:rgba(255,145,0,0.15);color:var(--transfer-hot)}
+.transfer-status.confirmed{background:var(--live-dim);color:var(--live)}
+.transfer-status.rumour{background:var(--bg-4);color:var(--text-3)}
+
+/* ═══════════════════════════════════════════
+   BLOCK 7 — FOR YOU (Personalization)
+   ═══════════════════════════════════════════ */
+.foryou-section{margin-top:8px}
+.foryou-teams{
+  display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;
+}
+.foryou-chip{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:20px;
+  background:var(--bg-3);border:1px solid var(--border);
+  font-size:12px;font-weight:600;color:var(--text-2);
+  transition:all 0.12s;
+}
+.foryou-chip:hover{border-color:var(--accent);color:var(--accent)}
+.foryou-chip.following{
+  background:var(--accent-dim);border-color:rgba(255,87,34,0.3);
+  color:var(--accent);
+}
+.foryou-chip-logo{width:18px;height:18px;border-radius:4px;background:var(--bg-4)}
+
+/* ═══════════════════════════════════════════
+   RIGHT RAIL (Desktop)
+   ═══════════════════════════════════════════ */
+.right-rail{display:flex;flex-direction:column;gap:16px}
+
+/* SLOT D — Rail Sticky */
+.ad-rail-sticky{
+  position:sticky;top:calc(var(--header-h) + 16px);
+  width:300px;height:250px;
+}
+.ad-rail-sticky::after{content:'OGLAS'}
+.ad-rail-rect{width:300px;height:250px}
+
+/* Rail widget */
+.rail-widget{
+  background:var(--bg-2);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+}
+.rail-widget-header{
+  padding:12px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.rail-widget-title{
+  font-family:var(--ff-mono);font-size:11px;font-weight:600;
+  color:var(--text-0);letter-spacing:0.5px;
+}
+.rail-trending-item{
+  padding:10px 14px;border-bottom:1px solid var(--border-subtle);
+  cursor:pointer;transition:background 0.1s;
+}
+.rail-trending-item:hover{background:var(--surface-hover)}
+.rail-trending-item:last-child{border-bottom:none}
+.rail-trending-num{
+  font-family:var(--ff-mono);font-size:10px;font-weight:600;
+  color:var(--accent);
+}
+.rail-trending-title{
+  font-size:13px;font-weight:600;color:var(--text-0);
+  margin-top:2px;line-height:1.35;
+}
+.rail-trending-meta{
+  font-family:var(--ff-mono);font-size:10px;color:var(--text-3);
+  margin-top:3px;
+}
+
+/* ═══════════════════════════════════════════
+   SLOT E — PRE-FOOTER
+   ═══════════════════════════════════════════ */
+.ad-prefooter{
+  width:100%;max-width:728px;height:var(--ad-leaderboard-h-d);
+  margin:24px auto;
+}
+
+/* ═══════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════ */
+.footer{
+  background:var(--bg-1);border-top:1px solid var(--border);
+  padding:32px 0 20px;margin-top:32px;
+}
+.footer-inner{
+  max-width:var(--max-w);margin:0 auto;padding:0 var(--gap);
+  display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px;
+}
+.footer-brand p{font-size:13px;color:var(--text-3);margin-top:8px;line-height:1.6;max-width:260px}
+.footer-col-title{
+  font-family:var(--ff-mono);font-size:10px;font-weight:600;
+  letter-spacing:1px;color:var(--text-2);text-transform:uppercase;
+  margin-bottom:12px;
+}
+.footer-col a{display:block;font-size:13px;color:var(--text-3);margin-bottom:6px;transition:color 0.12s}
+.footer-col a:hover{color:var(--accent)}
+.footer-bottom{
+  max-width:var(--max-w);margin:0 auto;padding:16px var(--gap) 0;
+  border-top:1px solid var(--border-subtle);margin-top:24px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.footer-copy{font-size:11px;color:var(--text-3)}
+.footer-copy a{color:var(--accent)}
+
+/* ═══════════════════════════════════════════
+   MOBILE-FIRST RESPONSIVE
+   ═══════════════════════════════════════════ */
+@media(max-width:1100px){
+  .main-layout{grid-template-columns:1fr}
+  .right-rail{display:none}
+}
+@media(max-width:768px){
+  :root{--header-h:44px;--gap:12px}
+  html{font-size:14px}
+  .topbar-search{max-width:180px}
+  .topbar-nav .topbar-btn span{display:none}
+  .hero-bento{grid-template-columns:1fr;grid-template-rows:auto}
+  .hero-main{grid-row:auto;min-height:260px}
+  .hero-side{flex-direction:row;overflow-x:auto;gap:10px}
+  .hero-card{min-width:220px;min-height:140px}
+  .hero-main-title{font-size:22px}
+  .motd-scoreboard{gap:16px}
+  .motd-score{font-size:28px}
+  .news-card-img{width:100px;height:66px}
+  .ad-leaderboard{height:var(--ad-leaderboard-h-m)}
+  .ad-prefooter{height:var(--ad-leaderboard-h-m)}
+  /* Move leaderboard below live strip on mobile */
+  .ad-leaderboard-wrap{order:2}
+  .live-strip-wrap{order:1}
+  .footer-inner{grid-template-columns:1fr 1fr;gap:20px}
+  .footer-bottom{flex-direction:column;gap:8px;text-align:center}
+  .standings-table{min-width:360px}
+}
+@media(max-width:480px){
+  .topbar-search{display:none}
+  .hero-main{min-height:220px}
+  .hero-main-title{font-size:20px}
+  .match-pill{min-width:140px;padding:5px 10px}
+  .motd-team-logo{width:40px;height:40px}
+  .motd-score{font-size:24px;letter-spacing:2px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ BLOCK 0 — STICKY TOP BAR ═══ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="/" class="logo">SPORT<span>.BA</span></a>
+
+    <div class="topbar-search">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" placeholder="Pretraži vijesti, timove...">
+    </div>
+
+    <nav class="topbar-nav">
+      <button class="topbar-btn live-btn"><span>Uživo</span></button>
+      <button class="topbar-btn my-teams">⭐ <span>Moji timovi</span></button>
+    </nav>
+
+    <div class="topbar-actions">
+      <button class="icon-btn" title="Jezik">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </button>
+      <button class="icon-btn" title="Tema">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ═══ SLOT A + BLOCK 1 wrapper (mobile reorder: live strip first) ═══ -->
+<div class="above-fold-wrap">
+
+  <!-- ═══ SLOT A — LEADERBOARD AD ═══ -->
+  <div class="container ad-leaderboard-wrap">
+    <div class="ad-slot ad-leaderboard skeleton loading" role="complementary" aria-label="Oglas"></div>
+  </div>
+
+  <!-- ═══ BLOCK 1 — LIVE SCORES STRIP ═══ -->
+  <div class="live-strip live-strip-wrap">
+  <div class="live-strip-inner">
+    <div class="live-strip-label">● UŽIVO</div>
+
+    <div class="match-pill is-live">
+      <div class="mp-teams">
+        <div class="mp-team"><span class="mp-team-logo"></span>Real Madrid</div>
+        <div class="mp-team"><span class="mp-team-logo"></span>Benfica</div>
+      </div>
+      <div class="mp-scores">
+        <div class="mp-score">2</div>
+        <div class="mp-score">1</div>
+      </div>
+      <div><div class="mp-meta live">67'</div><div class="mp-league">UCL</div></div>
+    </div>
+
+    <div class="match-pill is-live">
+      <div class="mp-teams">
+        <div class="mp-team"><span class="mp-team-logo"></span>Galatasaray</div>
+        <div class="mp-team"><span class="mp-team-logo"></span>Juventus</div>
+      </div>
+      <div class="mp-scores">
+        <div class="mp-score">1</div>
+        <div class="mp-score">0</div>
+      </div>
+      <div><div class="mp-meta live">72'</div><div class="mp-league">UCL</div></div>
+    </div>
+
+    <div class="match-pill is-live">
+      <div class="mp-teams">
+        <div class="mp-team"><span class="mp-team-logo"></span>Dortmund</div>
+        <div class="mp-team"><span class="mp-team-logo"></span>Atalanta</div>
+      </div>
+      <div class="mp-scores">
+        <div class="mp-score">2</div>
+        <div class="mp-score">1</div>
+      </div>
+      <div><div class="mp-meta live">81'</div><div class="mp-league">UCL</div></div>
+    </div>
+
+    <div class="match-pill">
+      <div class="mp-teams">
+        <div class="mp-team"><span class="mp-team-logo"></span>Monaco</div>
+        <div class="mp-team"><span class="mp-team-logo"></span>PSG</div>
+      </div>
+      <div class="mp-scores">
+        <div class="mp-score">0</div>
+        <div class="mp-score">1</div>
+      </div>
+      <div><div class="mp-meta ft">FT</div><div class="mp-league">L1</div></div>
+    </div>
+
+    <div class="match-pill">
+      <div class="mp-teams">
+        <div class="mp-team"><span class="mp-team-logo"></span>Arsenal</div>
+        <div class="mp-team"><span class="mp-team-logo"></span>Liverpool</div>
+      </div>
+      <div class="mp-scores">
+        <div class="mp-score">—</div>
+        <div class="mp-score">—</div>
+      </div>
+      <div><div class="mp-meta upcoming">20:45</div><div class="mp-league">PL</div></div>
+    </div>
+
+    <div class="match-pill">
+      <div class="mp-teams">
+        <div class="mp-team"><span class="mp-team-logo"></span>Barcelona</div>
+        <div class="mp-team"><span class="mp-team-logo"></span>Atl. Madrid</div>
+      </div>
+      <div class="mp-scores">
+        <div class="mp-score">—</div>
+        <div class="mp-score">—</div>
+      </div>
+      <div><div class="mp-meta upcoming">21:00</div><div class="mp-league">LL</div></div>
+    </div>
+
+    <button class="live-strip-more">Svi mečevi →</button>
+  </div>
+</div>
+
+</div><!-- /above-fold-wrap -->
+
+<!-- ═══ MAIN LAYOUT ═══ -->
+<div class="main-layout">
+  <main>
+
+    <!-- ═══ BLOCK 2 — HERO BENTO GRID ═══ -->
+    <div class="hero-bento">
+      <article class="hero-main">
+        <div class="hero-main-img"></div>
+        <div class="hero-main-overlay"></div>
+        <div class="hero-main-content">
+          <span class="badge badge-breaking">⚡ UDARNA VIJEST</span>
+          <h1 class="hero-main-title">Mourinho najavio „osvetu" protiv Real Madrida u nokaut fazi Lige prvaka</h1>
+          <p class="hero-main-excerpt">Trener Fenerbahčea opisao je svoj bivši klub kao „ranjivog" i najavio taktičku bitku u srijedu navečer na Santiago Bernabéu.</p>
+          <div class="hero-meta">
+            <span>M. Hodžić</span>
+            <span>Prije 28 min</span>
+            <span>3 min čitanja</span>
+          </div>
+        </div>
+      </article>
+      <div class="hero-side">
+        <article class="hero-card">
+          <div class="hero-card-bg hero-card-bg-1"></div>
+          <div class="hero-card-overlay"></div>
+          <div class="hero-card-content">
+            <span class="badge badge-transfer">TRANSFER</span>
+            <h2 class="hero-card-title">Klopp odbio Man United i Chelsea — agent potvrdio</h2>
+          </div>
+        </article>
+        <article class="hero-card">
+          <div class="hero-card-bg hero-card-bg-2"></div>
+          <div class="hero-card-overlay"></div>
+          <div class="hero-card-content">
+            <span class="badge badge-injury">POVREDA</span>
+            <h2 class="hero-card-title">Haaland upitan za derbi — skeniranje zadnje lože</h2>
+          </div>
+        </article>
+        <article class="hero-card">
+          <div class="hero-card-bg hero-card-bg-3"></div>
+          <div class="hero-card-overlay"></div>
+          <div class="hero-card-content">
+            <span class="badge badge-analysis">ANALIZA</span>
+            <h2 class="hero-card-title">Zašto Barcelonin „lažna 9" sistem više ne funkcioniše</h2>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <!-- ═══ BLOCK 3 — MATCH OF THE DAY ═══ -->
+    <div class="motd">
+      <div class="motd-header">
+        <span class="motd-label">⚽ Utakmica dana</span>
+        <span class="motd-league">UEFA Liga prvaka · Nokaut runda</span>
+      </div>
+      <div class="motd-scoreboard">
+        <div class="motd-team">
+          <div class="motd-team-logo">🇪🇸</div>
+          <div class="motd-team-name">Real Madrid</div>
+        </div>
+        <div style="text-align:center">
+          <div class="motd-score">2 — 1</div>
+          <div class="motd-status">
+            <div class="motd-minute">67'</div>
+          </div>
+        </div>
+        <div class="motd-team">
+          <div class="motd-team-logo">🇵🇹</div>
+          <div class="motd-team-name">Benfica</div>
+        </div>
+      </div>
+      <div class="motd-tabs">
+        <button class="motd-tab active">Statistika</button>
+        <button class="motd-tab">Postave</button>
+        <button class="motd-tab">Uticaj na tabelu</button>
+      </div>
+      <a href="#" class="motd-cta">Otvori Match Center →</a>
+    </div>
+
+    <!-- ═══ BLOCK 4 — STANDINGS ═══ -->
+    <div class="standings">
+      <div class="standings-header">
+        <span class="standings-title">TABELA</span>
+        <select class="standings-league-select">
+          <option>Premier League</option>
+          <option>La Liga</option>
+          <option>Serie A</option>
+          <option>Bundesliga</option>
+          <option>Ligue 1</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="standings-table">
+          <thead>
+            <tr><th>#</th><th>Tim</th><th>U</th><th>GR</th><th>Bod</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="pos-indicator pos-cl"></span>1</td><td>Arsenal</td><td>24</td><td>+32</td><td>58</td></tr>
+            <tr><td><span class="pos-indicator pos-cl"></span>2</td><td>Liverpool</td><td>24</td><td>+28</td><td>55</td></tr>
+            <tr><td><span class="pos-indicator pos-cl"></span>3</td><td>Man City</td><td>24</td><td>+24</td><td>52</td></tr>
+            <tr><td><span class="pos-indicator pos-cl"></span>4</td><td>Aston Villa</td><td>24</td><td>+16</td><td>48</td></tr>
+            <tr><td><span class="pos-indicator pos-el"></span>5</td><td>Newcastle</td><td>24</td><td>+14</td><td>44</td></tr>
+            <tr><td>6</td><td>Chelsea</td><td>24</td><td>+10</td><td>42</td></tr>
+            <tr><td>7</td><td>Tottenham</td><td>24</td><td>+6</td><td>39</td></tr>
+            <tr><td>8</td><td>Brighton</td><td>24</td><td>+4</td><td>36</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <button class="standings-expand">Prikaži cijelu tabelu ↓</button>
+    </div>
+
+    <!-- ═══ SLOT C — RECTANGLE AD ═══ -->
+    <div class="ad-slot ad-rectangle skeleton loading" role="complementary" aria-label="Oglas"></div>
+
+    <!-- ═══ BLOCK 5 — LATEST NEWS ═══ -->
+    <div class="section-header">
+      <h2 class="section-title">Najnovije vijesti</h2>
+      <a href="/news" class="section-link">Sve vijesti →</a>
+    </div>
+    <div class="news-feed">
+
+      <article class="news-card">
+        <div class="news-card-img" style="background:linear-gradient(135deg,#1e3a5f,#2d4a7a)"></div>
+        <div class="news-card-body">
+          <span class="badge badge-news" style="margin-bottom:4px;width:fit-content">VIJESTI</span>
+          <h3 class="news-card-title">Zvijezda Premier lige u centru navodnog plana ucjene</h3>
+          <p class="news-card-excerpt">Policija istražuje navodni pokušaj ucjene fudbalera iz engleskog fudbala.</p>
+          <div class="news-card-meta"><span>Prije 1h</span><span>·</span><span>2 min</span></div>
+        </div>
+      </article>
+
+      <article class="news-card">
+        <div class="news-card-img" style="background:linear-gradient(135deg,#3b1f5e,#5b2d8e)"></div>
+        <div class="news-card-body">
+          <span class="badge badge-news" style="margin-bottom:4px;width:fit-content">VIJESTI</span>
+          <h3 class="news-card-title">Luis Enrique kritikuje „bezvrijedne" analize nakon spora sa Dembélé</h3>
+          <p class="news-card-excerpt">PSG-ov trener odbacuje kritike nakon odluke o Ousmane Dembéleu.</p>
+          <div class="news-card-meta"><span>Prije 2h</span><span>·</span><span>3 min</span></div>
+        </div>
+      </article>
+
+      <article class="news-card">
+        <div class="news-card-img" style="background:linear-gradient(135deg,#1a3c34,#2d6a5e)"></div>
+        <div class="news-card-body">
+          <span class="badge badge-match" style="margin-bottom:4px;width:fit-content">UTAKMICA</span>
+          <h3 class="news-card-title">Flick ne krivi „očigledan" faul u šokantnom porazu Barcelone</h3>
+          <p class="news-card-excerpt">Trener Barcelone frustriran sudijskom odlukom u utakmici protiv Girone.</p>
+          <div class="news-card-meta"><span>Prije 3h</span><span>·</span><span>2 min</span></div>
+        </div>
+      </article>
+
+      <article class="news-card">
+        <div class="news-card-img" style="background:linear-gradient(135deg,#4a1a1a,#7a2d2d)"></div>
+        <div class="news-card-body">
+          <span class="badge badge-news" style="margin-bottom:4px;width:fit-content">VIJESTI</span>
+          <h3 class="news-card-title">Vlastiti gol okončava san o FA Cupu za Macclesfield</h3>
+          <p class="news-card-excerpt">Niželigaški klub eliminisan iz FA Cupa nakon autogola u zadnjim minutama.</p>
+          <div class="news-card-meta"><span>Prije 4h</span><span>·</span><span>2 min</span></div>
+        </div>
+      </article>
+
+      <!-- SLOT B — Native In-Feed Ad (after 4 articles) -->
+      <div class="native-ad" role="complementary" aria-label="Sponzorisani sadržaj">
+        <div class="news-card-img" style="background:linear-gradient(135deg,#2a2a1a,#3a3a24)"></div>
+        <div class="news-card-body">
+          <span class="native-ad-label">SPONZORISANO</span>
+          <h3 class="news-card-title" style="color:var(--text-1)">Novo: Betway aplikacija sa live praćenjem u realnom vremenu</h3>
+          <div class="news-card-meta"><span>Sponzor</span><span>·</span><span>betway.com</span></div>
+        </div>
+      </div>
+
+      <article class="news-card">
+        <div class="news-card-img" style="background:linear-gradient(135deg,#2d1b42,#4a2d6a)"></div>
+        <div class="news-card-body">
+          <span class="badge badge-news" style="margin-bottom:4px;width:fit-content">VIJESTI</span>
+          <h3 class="news-card-title">Man City i Spursi obilježavaju Lunarnu novu godinu novim dresovima</h3>
+          <p class="news-card-excerpt">Dva Premier League kluba predstavila limitirane dresove.</p>
+          <div class="news-card-meta"><span>Prije 5h</span><span>·</span><span>1 min</span></div>
+        </div>
+      </article>
+
+      <article class="news-card">
+        <div class="news-card-img" style="background:linear-gradient(135deg,#1e293b,#334155)"></div>
+        <div class="news-card-body">
+          <span class="badge badge-match" style="margin-bottom:4px;width:fit-content">UTAKMICA</span>
+          <h3 class="news-card-title">Benfica vs Real Madrid: Kompletna analiza i pregled utakmice</h3>
+          <p class="news-card-excerpt">Ancelotti razmatra rotaciju ekipe za putovanje u Lisabon.</p>
+          <div class="news-card-meta"><span>Prije 6h</span><span>·</span><span>4 min</span></div>
+        </div>
+      </article>
+
+    </div>
+
+    <!-- ═══ BLOCK 6 — TRANSFERS RADAR ═══ -->
+    <div class="transfers-section">
+      <div class="section-header">
+        <h2 class="section-title">Transfer Radar</h2>
+        <a href="/transfers" class="section-link">Svi transferi →</a>
+      </div>
+      <div class="transfer-filters">
+        <button class="transfer-filter active">Svi</button>
+        <button class="transfer-filter">Glasine</button>
+        <button class="transfer-filter">Potvrđeni</button>
+        <button class="transfer-filter">Premier League</button>
+        <button class="transfer-filter">La Liga</button>
+      </div>
+      <div>
+        <div class="transfer-card">
+          <div class="transfer-avatar"></div>
+          <div class="transfer-info">
+            <div class="transfer-name">Trent Alexander-Arnold</div>
+            <div class="transfer-detail">Liverpool <span class="transfer-arrow">→</span> Real Madrid</div>
+          </div>
+          <span class="transfer-status hot">VRUĆE</span>
+        </div>
+        <div class="transfer-card">
+          <div class="transfer-avatar"></div>
+          <div class="transfer-info">
+            <div class="transfer-name">Marcus Rashford</div>
+            <div class="transfer-detail">Man United <span class="transfer-arrow">→</span> Barcelona</div>
+          </div>
+          <span class="transfer-status rumour">GLASINA</span>
+        </div>
+        <div class="transfer-card">
+          <div class="transfer-avatar"></div>
+          <div class="transfer-info">
+            <div class="transfer-name">Jürgen Klopp</div>
+            <div class="transfer-detail">Slobodan agent <span class="transfer-arrow">→</span> ?</div>
+          </div>
+          <span class="transfer-status hot">VRUĆE</span>
+        </div>
+        <div class="transfer-card">
+          <div class="transfer-avatar"></div>
+          <div class="transfer-info">
+            <div class="transfer-name">Khvicha Kvaratskhelia</div>
+            <div class="transfer-detail">Napoli <span class="transfer-arrow">→</span> PSG</div>
+          </div>
+          <span class="transfer-status confirmed">POTVRĐEN</span>
+        </div>
+        <div class="transfer-card">
+          <div class="transfer-avatar"></div>
+          <div class="transfer-info">
+            <div class="transfer-name">Mohamed Salah</div>
+            <div class="transfer-detail">Liverpool <span class="transfer-arrow">→</span> ?</div>
+          </div>
+          <span class="transfer-status rumour">UGOVOR</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ BLOCK 7 — FOR YOU ═══ -->
+    <div class="foryou-section">
+      <div class="section-header">
+        <h2 class="section-title">Za tebe</h2>
+        <a href="#" class="section-link">Uredi →</a>
+      </div>
+      <div class="foryou-teams">
+        <button class="foryou-chip following"><span class="foryou-chip-logo"></span> FK Sarajevo</button>
+        <button class="foryou-chip following"><span class="foryou-chip-logo"></span> Real Madrid</button>
+        <button class="foryou-chip"><span class="foryou-chip-logo"></span> Arsenal</button>
+        <button class="foryou-chip"><span class="foryou-chip-logo"></span> Barcelona</button>
+        <button class="foryou-chip"><span class="foryou-chip-logo"></span> Juventus</button>
+        <button class="foryou-chip"><span class="foryou-chip-logo"></span> Bayern</button>
+      </div>
+      <div class="news-feed">
+        <article class="news-card">
+          <div class="news-card-img" style="background:linear-gradient(135deg,#2a1a3a,#4a2d5a)"></div>
+          <div class="news-card-body">
+            <h3 class="news-card-title">Sarajevo pojačava napad — dva imena na listi</h3>
+            <div class="news-card-meta"><span>FK Sarajevo</span><span>·</span><span>Prije 1h</span></div>
+          </div>
+        </article>
+        <article class="news-card">
+          <div class="news-card-img" style="background:linear-gradient(135deg,#1a2a3a,#2d4a5a)"></div>
+          <div class="news-card-body">
+            <h3 class="news-card-title">Vinícius Jr. trenira odvojeno — Real zabrinut pred Ligu prvaka</h3>
+            <div class="news-card-meta"><span>Real Madrid</span><span>·</span><span>Prije 3h</span></div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══ RIGHT RAIL (Desktop only) ═══ -->
+  <aside class="right-rail">
+
+    <!-- Rail: Trending -->
+    <div class="rail-widget">
+      <div class="rail-widget-header">
+        <span class="rail-widget-title">🔥 TRENDING</span>
+      </div>
+      <div class="rail-trending-item">
+        <div class="rail-trending-num">01</div>
+        <div class="rail-trending-title">Mourinho vs Real Madrid — šta očekivati</div>
+        <div class="rail-trending-meta">4.2K čitanja · Prije 28 min</div>
+      </div>
+      <div class="rail-trending-item">
+        <div class="rail-trending-num">02</div>
+        <div class="rail-trending-title">Alexander-Arnold odlazi — Liverpool sprema zamjenu</div>
+        <div class="rail-trending-meta">3.8K čitanja · Prije 1h</div>
+      </div>
+      <div class="rail-trending-item">
+        <div class="rail-trending-num">03</div>
+        <div class="rail-trending-title">Haaland bi mogao propustiti derbi Manchester grada</div>
+        <div class="rail-trending-meta">2.9K čitanja · Prije 2h</div>
+      </div>
+      <div class="rail-trending-item">
+        <div class="rail-trending-num">04</div>
+        <div class="rail-trending-title">Kvaratskhelia debituje za PSG — prvi utisci</div>
+        <div class="rail-trending-meta">2.1K čitanja · Prije 3h</div>
+      </div>
+      <div class="rail-trending-item">
+        <div class="rail-trending-num">05</div>
+        <div class="rail-trending-title">Barcelona: Taktička kriza ili prolazni problem?</div>
+        <div class="rail-trending-meta">1.8K čitanja · Prije 4h</div>
+      </div>
+    </div>
+
+    <!-- SLOT D — Rail Ad (Sticky) -->
+    <div class="ad-slot ad-rail-sticky skeleton loading" role="complementary" aria-label="Oglas"></div>
+
+    <!-- Rail: Quick Standings -->
+    <div class="rail-widget">
+      <div class="rail-widget-header">
+        <span class="rail-widget-title">UCL GRUPA — STANDINGS</span>
+      </div>
+      <div style="padding:8px 14px">
+        <table class="standings-table" style="min-width:auto">
+          <thead><tr><th>#</th><th>Tim</th><th>U</th><th>Bod</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Liverpool</td><td>6</td><td>18</td></tr>
+            <tr><td>2</td><td>Barcelona</td><td>6</td><td>15</td></tr>
+            <tr><td>3</td><td>Arsenal</td><td>6</td><td>13</td></tr>
+            <tr><td>4</td><td>Inter</td><td>6</td><td>13</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+<!-- ═══ SLOT E — PRE-FOOTER AD ═══ -->
+<div class="container">
+  <div class="ad-slot ad-prefooter skeleton loading" role="complementary" aria-label="Oglas"></div>
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="/" class="logo" style="font-size:20px">SPORT<span>.BA</span></a>
+      <p>Najnovije sportske vijesti, transferi, rezultati utakmica i dubinske analize iz svijeta fudbala.</p>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Kategorije</div>
+      <a href="/news">Vijesti</a>
+      <a href="/transfers">Transferi</a>
+      <a href="/matches">Utakmice</a>
+      <a href="/injuries">Povrede</a>
+      <a href="/video">Video</a>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Lige</div>
+      <a href="#">Premier League</a>
+      <a href="#">La Liga</a>
+      <a href="#">Serie A</a>
+      <a href="#">Bundesliga</a>
+      <a href="#">Liga prvaka</a>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Ostalo</div>
+      <a href="/api/feed/rss">RSS Feed</a>
+      <a href="#">O nama</a>
+      <a href="#">Kontakt</a>
+      <a href="#">Privatnost</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 Sport.ba · Powered by <a href="https://diurna.vercel.app">Diurna</a> · <a href="https://luponmedia.com">Lupon Media</a></div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="bs" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>O nama — Sport.ba</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{--accent:#ff5722;--accent-hover:#ff7043;--accent-soft:rgba(255,87,34,0.1);--live:#00e676;--serif:'DM Serif Display',Georgia,'Times New Roman',serif;--sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;--mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;--radius:8px;--radius-sm:5px;--ease:0.2s cubic-bezier(0.4,0,0.2,1);--header-h:48px}
+[data-theme="dark"]{--bg-0:#08090c;--bg-1:#0e1015;--bg-2:#14161d;--bg-3:#1a1d27;--text-0:#f2f3f7;--text-1:#c8cbd8;--text-2:#8b8fa3;--text-3:#5c6078;--border:#262a38;--border-subtle:#1e2130;--header-bg:rgba(8,9,12,0.92)}
+[data-theme="light"]{--bg-0:#faf9f7;--bg-1:#ffffff;--bg-2:#f2f1ed;--bg-3:#eceae6;--text-0:#1a1a18;--text-1:#3d3d38;--text-2:#6b6b63;--text-3:#9c9c92;--border:#e4e3df;--border-subtle:#eceae6;--header-bg:rgba(250,249,247,0.92)}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased}
+body{font-family:var(--sans);font-size:15px;background:var(--bg-0);color:var(--text-1);line-height:1.6;transition:background var(--ease),color var(--ease)}
+a{text-decoration:none;color:inherit}button{cursor:pointer;border:none;background:none;font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+
+/* Header */
+.header{position:sticky;top:0;z-index:100;height:var(--header-h);background:var(--header-bg);backdrop-filter:blur(12px);border-bottom:1px solid var(--border-subtle)}
+.header-inner{max-width:1260px;margin:0 auto;display:flex;align-items:center;height:100%;padding:0 16px;gap:10px}
+.logo{font-family:var(--mono);font-size:17px;font-weight:600;color:var(--accent);letter-spacing:-0.5px}
+.logo span{color:var(--text-0)}
+.header-nav{display:flex;gap:0;flex:1;margin:0 8px;overflow-x:auto;scrollbar-width:none}
+.header-nav::-webkit-scrollbar{display:none}
+.header-nav a{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-2);padding:16px 10px;white-space:nowrap;transition:color var(--ease);letter-spacing:0.3px}
+.header-nav a:hover{color:var(--text-0)}
+.header-actions{display:flex;gap:2px}
+.icon-btn{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--text-2);font-size:14px;transition:all var(--ease)}
+.icon-btn:hover{background:var(--bg-3);color:var(--text-0)}
+.theme-toggle{width:44px;height:24px;background:var(--bg-2);border:1px solid var(--border);border-radius:16px;position:relative;transition:all var(--ease)}
+.theme-toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:var(--accent);border-radius:50%;transition:transform var(--ease)}
+[data-theme="dark"] .theme-toggle::after{transform:translateX(20px)}
+
+/* Page Nav (sub-nav for static pages) */
+.page-nav{background:var(--bg-1);border-bottom:1px solid var(--border-subtle);padding:0}
+.page-nav-inner{max-width:860px;margin:0 auto;display:flex;gap:0;overflow-x:auto;scrollbar-width:none;padding:0 16px}
+.page-nav-inner::-webkit-scrollbar{display:none}
+.page-nav-link{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-2);padding:12px 14px;white-space:nowrap;position:relative;transition:color var(--ease);letter-spacing:0.3px;cursor:pointer}
+.page-nav-link:hover{color:var(--text-0)}
+.page-nav-link.active{color:var(--accent)}
+.page-nav-link.active::after{content:'';position:absolute;bottom:0;left:10px;right:10px;height:2px;background:var(--accent);border-radius:2px 2px 0 0}
+
+/* Content */
+.page-content{max-width:860px;margin:0 auto;padding:32px 16px 64px}
+.page-panel{display:none}.page-panel.active{display:block}
+.page-title{font-family:var(--serif);font-size:clamp(1.5rem,3vw,2rem);color:var(--text-0);margin-bottom:6px}
+.page-subtitle{font-size:14px;color:var(--text-2);margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border-subtle)}
+.page-updated{font-family:var(--mono);font-size:11px;color:var(--text-3);margin-bottom:24px}
+
+/* Prose */
+.prose h2{font-family:var(--serif);font-size:1.25rem;color:var(--text-0);margin:28px 0 10px;padding-top:20px;border-top:1px solid var(--border-subtle)}
+.prose h2:first-child{margin-top:0;padding-top:0;border-top:none}
+.prose h3{font-size:0.95rem;font-weight:600;color:var(--text-0);margin:20px 0 8px}
+.prose p{margin-bottom:14px;color:var(--text-1);line-height:1.7;font-size:14px}
+.prose ul,.prose ol{margin:0 0 14px 20px;color:var(--text-1);font-size:14px;line-height:1.7}
+.prose li{margin-bottom:6px}
+.prose strong{color:var(--text-0)}
+.prose a{color:var(--accent);font-weight:600;transition:opacity var(--ease)}
+.prose a:hover{opacity:0.8}
+.prose .highlight-box{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0;padding:14px 18px;margin:20px 0;font-size:13px;line-height:1.6}
+
+/* Team grid */
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin:20px 0}
+.team-card{background:var(--bg-2);border:1px solid var(--border-subtle);border-radius:var(--radius);padding:16px;transition:all var(--ease)}
+.team-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.team-card-name{font-weight:600;color:var(--text-0);font-size:14px;margin-bottom:2px}
+.team-card-role{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:0.3px}
+.team-card-desc{font-size:12px;color:var(--text-2);margin-top:6px;line-height:1.5}
+
+/* Contact form */
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+@media(max-width:600px){.contact-grid{grid-template-columns:1fr}}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-2);letter-spacing:0.3px}
+.form-input,.form-textarea{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:var(--sans);font-size:13px;color:var(--text-0);transition:border-color var(--ease);outline:none}
+.form-input:focus,.form-textarea:focus{border-color:var(--accent)}
+.form-textarea{min-height:120px;resize:vertical}
+.form-submit{font-family:var(--mono);font-size:12px;font-weight:600;background:var(--accent);color:white;padding:10px 24px;border-radius:var(--radius-sm);transition:background var(--ease);margin-top:8px;width:fit-content}
+.form-submit:hover{background:var(--accent-hover)}
+
+/* Info cards for impressum */
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:16px 0}
+.info-card{background:var(--bg-2);border-radius:var(--radius);padding:16px}
+.info-card-label{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text-3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px}
+.info-card-val{font-size:14px;font-weight:600;color:var(--text-0);line-height:1.5}
+
+/* Footer */
+.footer{background:var(--bg-1);border-top:1px solid var(--border-subtle);padding:24px 16px 14px;margin-top:48px}
+.footer-inner{max-width:860px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.footer-copy{font-family:var(--mono);font-size:11px;color:var(--text-3)}
+.footer-copy a{color:var(--accent)}
+.footer-links{display:flex;gap:12px}
+.footer-links a{font-family:var(--mono);font-size:11px;color:var(--text-2);transition:color var(--ease)}
+.footer-links a:hover{color:var(--accent)}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:0.01ms!important;animation-duration:0.01ms!important}}
+</style>
+</head>
+<body>
+
+<header class="header"><div class="header-inner">
+  <a href="/" class="logo">SPORT<span>.BA</span></a>
+  <nav class="header-nav">
+    <a href="/vijesti">Vijesti</a><a href="/transferi">Transferi</a><a href="/utakmice">Utakmice</a><a href="/povrede">Povrede</a><a href="/video">Video</a>
+  </nav>
+  <div class="header-actions">
+    <button class="icon-btn" aria-label="Pretraži">🔍</button>
+    <button class="theme-toggle" id="themeToggle" role="switch" aria-checked="true" aria-label="Tema"></button>
+  </div>
+</div></header>
+
+<!-- Sub-nav -->
+<div class="page-nav"><div class="page-nav-inner">
+  <button class="page-nav-link active" onclick="showPage('about')">O nama</button>
+  <button class="page-nav-link" onclick="showPage('impressum')">Impressum</button>
+  <button class="page-nav-link" onclick="showPage('privacy')">Privatnost</button>
+  <button class="page-nav-link" onclick="showPage('terms')">Uslovi korištenja</button>
+  <button class="page-nav-link" onclick="showPage('contact')">Kontakt</button>
+  <button class="page-nav-link" onclick="showPage('advertise')">Marketing</button>
+</div></div>
+
+<div class="page-content">
+
+<!-- ═══ O NAMA ═══ -->
+<div class="page-panel active" id="page-about">
+  <h1 class="page-title">O nama</h1>
+  <p class="page-subtitle">Sport.ba je vodeći sportski news portal u Bosni i Hercegovini — brze vijesti, dubinske analize i live praćenje utakmica.</p>
+
+  <div class="prose">
+    <h2>Ko smo mi</h2>
+    <p><strong>Sport.ba</strong> je sportski news portal pokrenut 2026. godine sa ciljem da pruži kvalitetne, brze i nepristrasne sportske vijesti čitaocima u Bosni i Hercegovini i dijaspori. Fokusirani smo na fudbal — od lokalne Premier lige BiH do UEFA Lige prvaka.</p>
+    <p>Pokreće nas <strong>Diurna</strong>, AI-powered CMS platforma razvijena od strane <a href="https://luponmedia.com">Lupon Media</a>, koja kombinira automatiziranu agregaciju vijesti sa uredničkom kontrolom kvaliteta.</p>
+
+    <div class="highlight-box">
+      <strong>Naša misija:</strong> Demokratizirati pristup kvalitetnim sportskim informacijama — brzo, tačno, bez clickbaita.
+    </div>
+
+    <h2>Šta nas izdvaja</h2>
+    <p><strong>Live Match Center</strong> — praćenje utakmica u realnom vremenu sa statistikama, postavama i analizama na nivou SofaScore-a.</p>
+    <p><strong>Transfer Radar</strong> — verifikovane informacije o transferima, ne glasine bez izvora.</p>
+    <p><strong>AI + Urednici</strong> — koristimo AI za brzinu, ali svaki članak prolazi kroz uredničku kontrolu.</p>
+
+    <h2>Tim</h2>
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="team-card-name">Harun Šiljak</div>
+        <div class="team-card-role">CEO & Osnivač</div>
+        <div class="team-card-desc">Osnivač Lupon Media. Programer, ad tech stručnjak i fudbalski entuzijasta.</div>
+      </div>
+      <div class="team-card">
+        <div class="team-card-name">Mirza Hodžić</div>
+        <div class="team-card-role">Glavni urednik</div>
+        <div class="team-card-desc">10+ godina iskustva u sportskom novinarstvu. Bivši urednik sporta na N1.</div>
+      </div>
+      <div class="team-card">
+        <div class="team-card-name">AI Newsroom</div>
+        <div class="team-card-role">Diurna Engine</div>
+        <div class="team-card-desc">Automatizirana agregacija iz 65+ izvora, klasterizacija i generiranje članaka.</div>
+      </div>
+    </div>
+
+    <h2>Tehnologija</h2>
+    <p>Sport.ba je izgrađen na <strong>Next.js</strong> sa <strong>Strapi CMS</strong> backendom, <strong>Cloudflare Workers</strong> za edge delivery i <strong>ClickHouse</strong> za analitiku. Naš AI engine procesira vijesti iz 65+ RSS izvora i klasterizira ih u priče u realnom vremenu.</p>
+  </div>
+</div>
+
+<!-- ═══ IMPRESSUM ═══ -->
+<div class="page-panel" id="page-impressum">
+  <h1 class="page-title">Impressum</h1>
+  <p class="page-subtitle">Pravne informacije o izdavaču portala Sport.ba</p>
+  <div class="page-updated">Posljednje ažuriranje: 17. februar 2026.</div>
+
+  <div class="info-grid">
+    <div class="info-card"><div class="info-card-label">Izdavač</div><div class="info-card-val">Lupon Media d.o.o.</div></div>
+    <div class="info-card"><div class="info-card-label">Direktor</div><div class="info-card-val">Harun Šiljak</div></div>
+    <div class="info-card"><div class="info-card-label">Sjedište</div><div class="info-card-val">Dubai, UAE</div></div>
+    <div class="info-card"><div class="info-card-label">Email</div><div class="info-card-val">info@sport.ba</div></div>
+    <div class="info-card"><div class="info-card-label">Web</div><div class="info-card-val">sport.ba</div></div>
+    <div class="info-card"><div class="info-card-label">Glavni urednik</div><div class="info-card-val">Mirza Hodžić</div></div>
+  </div>
+
+  <div class="prose">
+    <h2>Odgovornost za sadržaj</h2>
+    <p>Za sadržaj portala Sport.ba odgovoran je glavni urednik u skladu sa važećim zakonima. Koristimo automatiziranu agregaciju vijesti uz uredničku kontrolu. Članci generirani pomoću AI tehnologije su jasno označeni.</p>
+
+    <h2>Autorska prava</h2>
+    <p>Sav sadržaj objavljen na Sport.ba je zaštićen autorskim pravima Lupon Media d.o.o. osim ako nije drugačije naznačeno. Preuzimanje sadržaja bez pisane dozvole izdavača nije dozvoljeno. Kratko citiranje uz navođenje izvora i link na originalni članak je dozvoljeno.</p>
+
+    <h2>Fotografije i multimedija</h2>
+    <p>Fotografije korištene na portalu su iz licenciranih izvora (Reuters, Getty Images, AFP) ili su autorsko vlasništvo redakcije. Za svaku fotografiju je naznačen izvor u opisu slike.</p>
+  </div>
+</div>
+
+<!-- ═══ PRIVATNOST ═══ -->
+<div class="page-panel" id="page-privacy">
+  <h1 class="page-title">Politika privatnosti</h1>
+  <p class="page-subtitle">Kako prikupljamo, koristimo i štitimo vaše podatke na Sport.ba</p>
+  <div class="page-updated">Posljednje ažuriranje: 17. februar 2026.</div>
+
+  <div class="prose">
+    <h2>Koje podatke prikupljamo</h2>
+    <p>Sport.ba prikuplja minimalne podatke potrebne za funkcionisanje portala. Ovo uključuje:</p>
+    <ul>
+      <li><strong>Analitički podaci</strong> — anonimizirana statistika posjeta (broj pregleda, trajanje posjete, tip uređaja)</li>
+      <li><strong>Kolačići</strong> — funkcionalni kolačići za temu (dark/light mode) i preferencije personalizacije</li>
+      <li><strong>Newsletter</strong> — email adresa, samo ako se dobrovoljno prijavite</li>
+      <li><strong>Komentari</strong> — ime/pseudonim i sadržaj komentara</li>
+    </ul>
+
+    <h2>Kolačići (Cookies)</h2>
+    <p>Koristimo sljedeće tipove kolačića:</p>
+    <ul>
+      <li><strong>Neophodni</strong> — tema, jezik, sesija. Ne mogu se isključiti.</li>
+      <li><strong>Analitički</strong> — Google Analytics / Plausible za anonimiziranu statistiku posjeta. Možete ih odbiti.</li>
+      <li><strong>Oglašivački</strong> — kolačići naših ad partnera (Lupon SSP, Pubmatic, Criteo). Možete ih odbiti putem cookie bannera.</li>
+    </ul>
+
+    <h2>Kako koristimo vaše podatke</h2>
+    <p>Vaše podatke koristimo isključivo za poboljšanje korisničkog iskustva, personalizaciju sadržaja i prikazivanje relevantnih oglasa. <strong>Nikada ne prodajemo vaše lične podatke trećim stranama.</strong></p>
+
+    <h2>Vaša prava</h2>
+    <p>U skladu sa GDPR regulativom i lokalnim zakonima, imate pravo na pristup svojim podacima, ispravku, brisanje i prigovor na obradu. Za sve zahtjeve kontaktirajte nas na <a href="mailto:privacy@sport.ba">privacy@sport.ba</a>.</p>
+
+    <h2>Treće strane</h2>
+    <p>Koristimo usluge sljedećih partnera koji mogu prikupljati podatke u skladu sa svojim politikama privatnosti: Google Analytics, Cloudflare, Lupon SSP (naša ad tech platforma), Pubmatic, Criteo, Magnite.</p>
+
+    <h2>Sigurnost podataka</h2>
+    <p>Svi podaci se prenose putem HTTPS enkripcije. Naši serveri koriste Cloudflare edge network za dodatnu zaštitu. Pristup korisničkim podacima je ograničen na ovlaštene osobe.</p>
+  </div>
+</div>
+
+<!-- ═══ USLOVI KORIŠTENJA ═══ -->
+<div class="page-panel" id="page-terms">
+  <h1 class="page-title">Uslovi korištenja</h1>
+  <p class="page-subtitle">Pravila i uslovi korištenja portala Sport.ba</p>
+  <div class="page-updated">Posljednje ažuriranje: 17. februar 2026.</div>
+
+  <div class="prose">
+    <h2>Prihvatanje uslova</h2>
+    <p>Korištenjem portala Sport.ba prihvatate ove uslove korištenja. Ako se ne slažete sa bilo kojim dijelom uslova, molimo vas da ne koristite portal.</p>
+
+    <h2>Korištenje sadržaja</h2>
+    <p>Sadržaj objavljen na Sport.ba je namijenjen za ličnu, nekomercijalnu upotrebu. Zabranjeno je bez pisane dozvole izdavača:</p>
+    <ul>
+      <li>Masovno preuzimanje ili scraping sadržaja</li>
+      <li>Redistribucija članaka bez navođenja izvora</li>
+      <li>Korištenje sadržaja u komercijalne svrhe</li>
+      <li>Uklanjanje oznaka autorstva ili vodenih žigova</li>
+    </ul>
+
+    <h2>Komentari i korisnički sadržaj</h2>
+    <p>Korisnici su odgovorni za sadržaj svojih komentara. Zabranjeni su komentari koji sadrže govor mržnje, prijetnje, spam, lažne informacije ili kršenje autorskih prava. Redakcija zadržava pravo brisanja neprimjerenih komentara bez prethodne najave.</p>
+
+    <h2>AI-generirani sadržaj</h2>
+    <p>Dio sadržaja na Sport.ba je generiran uz pomoć AI tehnologije (Diurna Engine). Svi AI članci prolaze kroz uredničku kontrolu prije objavljivanja. AI-generirani članci su označeni odgovarajućom oznakom.</p>
+
+    <h2>Oglasi</h2>
+    <p>Sport.ba prikazuje oglase putem programmatic advertising platforme. Oglasi su jasno označeni. Sponzorirani sadržaji su označeni oznakom "Sponzorisano". Ne preuzimamo odgovornost za sadržaj oglasa trećih strana.</p>
+
+    <h2>Ograničenje odgovornosti</h2>
+    <p>Sport.ba pruža informacije po principu "kao što jesu" (as-is). Ne garantujemo potpunu tačnost informacija u realnom vremenu, posebno za live rezultate koji ovise o trećim izvorima podataka. Za službene rezultate, provjerite sa relevantnim sportskim organizacijama.</p>
+
+    <h2>Izmjene uslova</h2>
+    <p>Zadržavamo pravo izmjene ovih uslova u bilo kom trenutku. Nastavkom korištenja portala nakon izmjena, prihvatate ažurirane uslove.</p>
+  </div>
+</div>
+
+<!-- ═══ KONTAKT ═══ -->
+<div class="page-panel" id="page-contact">
+  <h1 class="page-title">Kontakt</h1>
+  <p class="page-subtitle">Imate pitanje, prijedlog ili poslovnu ponudu? Javite nam se.</p>
+
+  <div class="prose">
+    <div class="info-grid" style="margin-bottom:28px">
+      <div class="info-card"><div class="info-card-label">Redakcija</div><div class="info-card-val">redakcija@sport.ba</div></div>
+      <div class="info-card"><div class="info-card-label">Marketing</div><div class="info-card-val">ads@sport.ba</div></div>
+      <div class="info-card"><div class="info-card-label">Tehnička podrška</div><div class="info-card-val">support@sport.ba</div></div>
+      <div class="info-card"><div class="info-card-label">Privatnost</div><div class="info-card-val">privacy@sport.ba</div></div>
+    </div>
+
+    <h2>Pošaljite poruku</h2>
+  </div>
+
+  <div class="contact-grid">
+    <div class="form-group"><label class="form-label">Ime i prezime</label><input class="form-input" type="text" placeholder="Vaše ime"></div>
+    <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" placeholder="vas@email.ba"></div>
+    <div class="form-group full">
+      <label class="form-label">Tema</label>
+      <select class="form-input"><option>Generalni upit</option><option>Ispravka članka</option><option>Prijava greške</option><option>Marketing / Oglašavanje</option><option>Saradnja</option><option>Ostalo</option></select>
+    </div>
+    <div class="form-group full"><label class="form-label">Poruka</label><textarea class="form-textarea" placeholder="Vaša poruka..."></textarea></div>
+  </div>
+  <button class="form-submit" onclick="this.textContent='✓ Poslano!';this.style.background='var(--live)';setTimeout(()=>{this.textContent='Pošalji';this.style.background=''},3000)">Pošalji</button>
+</div>
+
+<!-- ═══ MARKETING ═══ -->
+<div class="page-panel" id="page-advertise">
+  <h1 class="page-title">Marketing & Oglašavanje</h1>
+  <p class="page-subtitle">Dosegnite sportske fanove u BiH i regionu putem Sport.ba</p>
+
+  <div class="prose">
+    <div class="highlight-box">
+      <strong>Sport.ba Advertising</strong> — powered by <a href="https://luponmedia.com">Lupon Media SSP</a>. Programmatic + direct deals za premium sportski inventar.
+    </div>
+
+    <h2>Zašto Sport.ba?</h2>
+    <p><strong>Ciljana publika</strong> — sportski fanovi 18-45, pretežno muška demografija, visok engagement. Prosječno vrijeme na stranici: 3+ minuta. Mobile-first publika (72% mobilni uređaji).</p>
+
+    <h2>Dostupni formati</h2>
+    <div class="info-grid">
+      <div class="info-card"><div class="info-card-label">Leaderboard</div><div class="info-card-val">728×90 / 320×50<br><span style="font-size:11px;color:var(--text-2)">Above fold, homepage + članci</span></div></div>
+      <div class="info-card"><div class="info-card-label">Rectangle</div><div class="info-card-val">300×250 / 336×280<br><span style="font-size:11px;color:var(--text-2)">Mid-article + sidebar</span></div></div>
+      <div class="info-card"><div class="info-card-label">Native In-Feed</div><div class="info-card-val">Responsive<br><span style="font-size:11px;color:var(--text-2)">Integrisan u news feed</span></div></div>
+      <div class="info-card"><div class="info-card-label">Sticky Sidebar</div><div class="info-card-val">300×600<br><span style="font-size:11px;color:var(--text-2)">Desktop only, premium</span></div></div>
+      <div class="info-card"><div class="info-card-label">Sponzorirani članak</div><div class="info-card-val">Custom<br><span style="font-size:11px;color:var(--text-2)">Native content + branded</span></div></div>
+      <div class="info-card"><div class="info-card-label">Match Sponsor</div><div class="info-card-val">Custom<br><span style="font-size:11px;color:var(--text-2)">Match Center branding</span></div></div>
+    </div>
+
+    <h2>Programmatic</h2>
+    <p>Sport.ba inventar je dostupan putem <strong>Lupon Media SSP</strong> sa integracijom na sve major DSP platforme: Google DV360, The Trade Desk, Xandr, Amazon DSP. Podržavamo Open RTB 2.5, Header Bidding (Prebid.js) i deals (PMP/PG).</p>
+
+    <h2>Better Ads Compliant</h2>
+    <p>Poštujemo <strong>Better Ads Standards 2026</strong> — nema pop-up-ova, sticky video oglasa ili prekomjerne ad gustoće. Korisničko iskustvo je prioritet. Ad density nikad ne prelazi 30% na mobile i 50% na desktop-u.</p>
+
+    <h2>Kontakt za oglašavanje</h2>
+    <p>Za media kit, rate card ili custom kampanje, kontaktirajte nas na <a href="mailto:ads@sport.ba">ads@sport.ba</a> ili putem kontakt forme.</p>
+  </div>
+</div>
+
+</div>
+
+<!-- Footer -->
+<footer class="footer"><div class="footer-inner">
+  <span class="footer-copy">© 2026 Sport.ba · Powered by <a href="https://diurna.vercel.app">Diurna</a> · <a href="https://luponmedia.com">Lupon Media</a></span>
+  <div class="footer-links"><a href="/vijesti">Vijesti</a><a href="/transferi">Transferi</a><a href="/utakmice">Utakmice</a><a href="/api/feed/rss">RSS</a></div>
+</div></footer>
+
+<script>
+(function(){
+  const html=document.documentElement,toggle=document.getElementById('themeToggle');
+  const saved=localStorage.getItem('sportba-theme');
+  if(saved)html.dataset.theme=saved;
+  else if(matchMedia('(prefers-color-scheme:light)').matches)html.dataset.theme='light';
+  toggle.onclick=()=>{const n=html.dataset.theme==='dark'?'light':'dark';html.dataset.theme=n;localStorage.setItem('sportba-theme',n)};
+
+  window.showPage=function(id){
+    document.querySelectorAll('.page-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.page-nav-link').forEach(l=>l.classList.remove('active'));
+    document.getElementById('page-'+id).classList.add('active');
+    event.target.classList.add('active');
+    window.scrollTo({top:0});
+    // Update title
+    const titles={about:'O nama',impressum:'Impressum',privacy:'Privatnost',terms:'Uslovi korištenja',contact:'Kontakt',advertise:'Marketing'};
+    document.title=(titles[id]||'Sport.ba')+' — Sport.ba';
+  };
+})();
+</script>
+</body>
+</html>

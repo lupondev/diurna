@@ -4,16 +4,20 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence, useInView } from 'framer-motion'
 
+/* ═══════════════════════════════════════════════════
+   Data
+   ═══════════════════════════════════════════════════ */
+
 const features = [
-  { icon: '\u{1F9E0}', title: 'Smart Newsroom', desc: 'AI monitors Google Trends, competitor RSS feeds, and football fixtures to surface what\'s trending. Never miss a story.' },
-  { icon: '\u26A1', title: 'One-Click Article Generation', desc: 'Select a trending topic, click generate. Claude AI writes SEO-optimized articles with proper structure, quotes, and stats.' },
-  { icon: '\u270F\uFE0F', title: 'Premium Editor', desc: 'Tiptap-based editor with 2-row toolbar, inline polls/quiz/surveys, Unsplash image search, and drag-drop media.' },
-  { icon: '\u26BD', title: 'Football Widgets', desc: '13 ready-made widgets: standings, fixtures, live scores, top scorers, player stats. Embed anywhere with one script tag.' },
-  { icon: '\u{1F3A8}', title: 'Theme System', desc: 'Two premium themes (Midnight Pro dark, Clean Editorial light) with full branding control. Your site, your look.' },
-  { icon: '\u{1F4CA}', title: 'Analytics Dashboard', desc: 'Track article performance, audience engagement, and content velocity. Know what works.' },
-  { icon: '\u{1F916}', title: 'AI Co-Pilot', desc: 'Originality checking, headline suggestions, SEO optimization, and content improvement \u2014 all built in.' },
-  { icon: '\u{1F4C5}', title: 'Editorial Calendar', desc: 'Autopilot scheduling based on football fixtures. Content calendar that fills itself.' },
-  { icon: '\u{1F50C}', title: 'Integrations', desc: 'WordPress sync, Google Analytics 4, newsletter via Resend, Facebook publishing. Connect your stack.' },
+  { icon: '\u{1F9E0}', title: 'Smart Newsroom', desc: 'AI monitors 65+ RSS sources, Google Trends, Reddit, and football fixtures. Cluster engine groups stories by event. DIS scoring tells you what to write NOW.' },
+  { icon: '\u26A1', title: 'One-Click Generation', desc: 'Select trending topic \u2192 AI generates SEO-optimized article with proper structure, stats verification, and anti-hallucination safeguards. Temperature 0.3 for accuracy.' },
+  { icon: '\u270F\uFE0F', title: 'Premium Editor', desc: 'Tiptap-based editor with 2-row toolbar. Inline polls, quizzes, surveys. Unsplash image search. Drag-drop media. Version history.' },
+  { icon: '\u26BD', title: 'Football Widgets', desc: '13 embeddable widgets: standings, fixtures, live scores, top scorers, player stats, match center. One script tag, works anywhere.' },
+  { icon: '\u{1F3A8}', title: 'Theme System', desc: 'Two premium themes (Midnight Pro dark, Clean Editorial light). Full branding control. Custom CSS variables. Your site, your look.' },
+  { icon: '\u{1F4CA}', title: 'Analytics Dashboard', desc: 'Track article performance, audience engagement, content velocity. Know what works.' },
+  { icon: '\u{1F916}', title: 'AI Co-Pilot', desc: 'Originality checking, SEO optimization, headline suggestions, fact verification via Player DB with 500+ entities.' },
+  { icon: '\u{1F4C5}', title: 'Editorial Calendar', desc: 'Autopilot scheduling based on football fixtures. Calendar fills itself.' },
+  { icon: '\u{1F50C}', title: 'Integrations', desc: 'WordPress sync, GA4, newsletter via Resend, Facebook auto-post to multiple pages.' },
 ]
 
 const standingsData = [
@@ -41,30 +45,28 @@ const topScorersData = [
   { pos: 6, name: 'Ollie Watkins', team: 'Aston Villa', goals: 11, assists: 7 },
 ]
 
-const mockupTopics = [
-  { topic: 'Champions League Final', score: 94 },
-  { topic: 'Premier League Transfer', score: 87 },
-  { topic: 'Mbappe Real Madrid', score: 82 },
-  { topic: 'World Cup Qualifiers', score: 76 },
-  { topic: "Ballon d'Or 2025", score: 71 },
+const newsroomStories = [
+  { title: 'Mourinho: wounded king Madrid vulnerable', dis: 65, trend: 'RISING' as const, tags: ['Mourinho', 'Real Madrid'], sources: 4, time: '12m ago' },
+  { title: 'Premier League extortion plot exposed', dis: 62, trend: 'STABLE' as const, tags: ['Premier League', 'Legal'], sources: 3, time: '28m ago' },
+  { title: 'Luis Enrique slams Demb\u00e9l\u00e9 attitude', dis: 53, trend: 'STABLE' as const, tags: ['PSG', 'Demb\u00e9l\u00e9'], sources: 5, time: '45m ago' },
 ]
 
-const mockupCards = [
-  { title: 'Champions League Final Preview: Real Madrid vs Arsenal', score: 94, cat: 'Sport', velocity: '\u2191', color: 'text-red-400 bg-red-500/10' },
-  { title: 'Premier League Transfer Window: Top 10 Deals to Watch', score: 87, cat: 'Sport', velocity: '\u2191', color: 'text-orange-400 bg-orange-500/10' },
-  { title: 'Trump Announces New Trade Deal with European Union', score: 82, cat: 'Politics', velocity: '\u2192', color: 'text-orange-400 bg-orange-500/10' },
-  { title: 'OpenAI Releases GPT-5 with Real-Time Capabilities', score: 76, cat: 'Tech', velocity: '\u2191', color: 'text-blue-400 bg-blue-500/10' },
-  { title: 'Mbappe Breaks La Liga All-Time Scoring Record', score: 71, cat: 'Sport', velocity: '\u2193', color: 'text-blue-400 bg-blue-500/10' },
-  { title: 'Euro 2028 Host Cities Officially Revealed by UEFA', score: 65, cat: 'Sport', velocity: '\u2192', color: 'text-blue-400 bg-blue-500/10' },
+const sidebarMatches = [
+  { home: 'Galatasaray', away: 'Juventus', time: '18:45' },
+  { home: 'Benfica', away: 'Real Madrid', time: '21:00' },
 ]
+
+/* ═══════════════════════════════════════════════════
+   Components
+   ═══════════════════════════════════════════════════ */
 
 function FadeIn({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0 }}
-      transition={{ duration: 0.6, delay, ease: 'easeOut' }}
+      viewport={{ once: true, amount: 0.1 }}
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
       className={className}
     >
       {children}
@@ -72,14 +74,14 @@ function FadeIn({ children, className = '', delay = 0 }: { children: React.React
   )
 }
 
-function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
+function AnimatedCounter({ target, suffix = '', prefix = '' }: { target: number; suffix?: string; prefix?: string }) {
   const ref = useRef<HTMLSpanElement>(null)
-  const isInView = useInView(ref, { once: true, amount: 0 })
+  const isInView = useInView(ref, { once: true, amount: 0.5 })
   const [count, setCount] = useState(0)
 
   useEffect(() => {
     if (!isInView) return
-    const duration = 2000
+    const duration = 1800
     const start = Date.now()
     const tick = () => {
       const elapsed = Date.now() - start
@@ -91,13 +93,26 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
     requestAnimationFrame(tick)
   }, [isInView, target])
 
-  return <span ref={ref}>{count}{suffix}</span>
+  return <span ref={ref}>{prefix}{count}{suffix}</span>
 }
+
+function CheckIcon() {
+  return (
+    <svg className="w-4 h-4 text-[#00D4AA] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  )
+}
+
+/* ═══════════════════════════════════════════════════
+   Page
+   ═══════════════════════════════════════════════════ */
 
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false)
-  const [activeTab, setActiveTab] = useState<'standings' | 'fixtures' | 'scorers'>('standings')
   const [scrolled, setScrolled] = useState(false)
+  const [demoTab, setDemoTab] = useState<'newsroom' | 'editor' | 'widgets'>('newsroom')
+  const [widgetTab, setWidgetTab] = useState<'standings' | 'fixtures' | 'scorers'>('standings')
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -111,63 +126,39 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] text-white antialiased" style={{ scrollBehavior: 'smooth' }}>
-      <style>{`
-        @keyframes gradient-shift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        @keyframes float-orb-1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -40px) scale(1.05); }
-          66% { transform: translate(-20px, 20px) scale(0.95); }
-        }
-        @keyframes float-orb-2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(-40px, 30px) scale(1.05); }
-          66% { transform: translate(20px, -35px) scale(0.95); }
-        }
-        @keyframes mockup-hover {
-          0%, 100% { transform: perspective(2000px) rotateX(8deg) rotateY(-4deg) translateY(0px); }
-          50% { transform: perspective(2000px) rotateX(8deg) rotateY(-4deg) translateY(-10px); }
-        }
-        .gradient-text {
-          background: linear-gradient(135deg, #3B82F6, #8B5CF6, #EC4899, #3B82F6);
-          background-size: 300% 300%;
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: gradient-shift 8s ease infinite;
-        }
-        .orb-1 { animation: float-orb-1 20s ease-in-out infinite; }
-        .orb-2 { animation: float-orb-2 25s ease-in-out infinite; }
-        .orb-3 { animation: float-orb-1 18s ease-in-out infinite 5s; }
-        .mockup-float { animation: mockup-hover 6s ease-in-out infinite; }
-        .mockup-float:hover { animation-play-state: paused; transform: perspective(2000px) rotateX(2deg) rotateY(-2deg); }
-      `}</style>
+    <div className="min-h-screen antialiased" style={{ background: '#FAFAF9', color: '#1A1A1A', scrollBehavior: 'smooth' }}>
 
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0A0A0B]/80 backdrop-blur-xl border-b border-white/[0.06]' : ''}`}>
+      {/* ══════════ NAV ══════════ */}
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled ? 'shadow-[0_1px_0_rgba(0,0,0,0.06)]' : ''
+        }`}
+        style={{ background: scrolled ? 'rgba(250,250,249,0.85)' : 'transparent', backdropFilter: scrolled ? 'blur(12px)' : 'none', WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none' }}
+      >
         <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/landing" className="text-xl font-display gradient-text font-bold tracking-tight">
-            Diurna
+          <Link href="/landing" className="text-[22px] font-display tracking-tight" style={{ color: '#1A1A1A' }}>
+            Diurna<span style={{ color: '#00D4AA' }}>.</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            <button onClick={() => scrollTo('features')} className="text-sm text-white/50 hover:text-white transition-colors">Features</button>
-            <button onClick={() => scrollTo('pricing')} className="text-sm text-white/50 hover:text-white transition-colors">Pricing</button>
-            <button onClick={() => scrollTo('demo')} className="text-sm text-white/50 hover:text-white transition-colors">Docs</button>
-            <Link href="/login" className="text-sm text-white/50 hover:text-white transition-colors">Sign In</Link>
-            <Link href="/register" className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-blue-500 to-violet-500 rounded-lg hover:opacity-90 transition-opacity">
+            <button onClick={() => scrollTo('features')} className="text-[13px] font-medium transition-colors" style={{ color: '#6B6B6B' }} onMouseEnter={e => e.currentTarget.style.color = '#1A1A1A'} onMouseLeave={e => e.currentTarget.style.color = '#6B6B6B'}>Features</button>
+            <button onClick={() => scrollTo('pricing')} className="text-[13px] font-medium transition-colors" style={{ color: '#6B6B6B' }} onMouseEnter={e => e.currentTarget.style.color = '#1A1A1A'} onMouseLeave={e => e.currentTarget.style.color = '#6B6B6B'}>Pricing</button>
+            <button onClick={() => scrollTo('demo')} className="text-[13px] font-medium transition-colors" style={{ color: '#6B6B6B' }} onMouseEnter={e => e.currentTarget.style.color = '#1A1A1A'} onMouseLeave={e => e.currentTarget.style.color = '#6B6B6B'}>Docs</button>
+            <Link href="/login" className="text-[13px] font-medium transition-colors" style={{ color: '#6B6B6B' }}>Sign In</Link>
+            <Link
+              href="/register"
+              className="px-5 py-2 text-[13px] font-semibold text-white rounded-full transition-all hover:opacity-90 hover:-translate-y-px"
+              style={{ background: '#00D4AA' }}
+            >
               Start Free
             </Link>
           </div>
 
-          <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden p-2" aria-label="Menu">
-            <div className="flex flex-col gap-1.5">
-              <span className={`block w-5 h-0.5 bg-white transition-all duration-300 ${mobileMenu ? 'rotate-45 translate-y-2' : ''}`} />
-              <span className={`block w-5 h-0.5 bg-white transition-all duration-300 ${mobileMenu ? 'opacity-0' : ''}`} />
-              <span className={`block w-5 h-0.5 bg-white transition-all duration-300 ${mobileMenu ? '-rotate-45 -translate-y-2' : ''}`} />
+          <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden p-2 -mr-2" aria-label="Menu">
+            <div className="flex flex-col gap-[5px]">
+              <span className={`block w-[18px] h-[1.5px] transition-all duration-300 ${mobileMenu ? 'rotate-45 translate-y-[6.5px]' : ''}`} style={{ background: '#1A1A1A' }} />
+              <span className={`block w-[18px] h-[1.5px] transition-all duration-300 ${mobileMenu ? 'opacity-0' : ''}`} style={{ background: '#1A1A1A' }} />
+              <span className={`block w-[18px] h-[1.5px] transition-all duration-300 ${mobileMenu ? '-rotate-45 -translate-y-[6.5px]' : ''}`} style={{ background: '#1A1A1A' }} />
             </div>
           </button>
         </div>
@@ -178,14 +169,20 @@ export default function LandingPage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="md:hidden bg-[#0A0A0B]/95 backdrop-blur-xl border-b border-white/[0.06] overflow-hidden"
+              className="md:hidden overflow-hidden"
+              style={{ background: 'rgba(250,250,249,0.98)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}
             >
               <div className="px-6 py-5 flex flex-col gap-4">
-                <button onClick={() => scrollTo('features')} className="text-sm text-white/60 hover:text-white text-left">Features</button>
-                <button onClick={() => scrollTo('pricing')} className="text-sm text-white/60 hover:text-white text-left">Pricing</button>
-                <button onClick={() => scrollTo('demo')} className="text-sm text-white/60 hover:text-white text-left">Docs</button>
-                <Link href="/login" className="text-sm text-white/60 hover:text-white" onClick={() => setMobileMenu(false)}>Sign In</Link>
-                <Link href="/register" className="mt-1 px-4 py-2.5 text-sm font-semibold text-center bg-gradient-to-r from-blue-500 to-violet-500 rounded-lg" onClick={() => setMobileMenu(false)}>
+                <button onClick={() => scrollTo('features')} className="text-left text-[15px] font-medium" style={{ color: '#6B6B6B' }}>Features</button>
+                <button onClick={() => scrollTo('pricing')} className="text-left text-[15px] font-medium" style={{ color: '#6B6B6B' }}>Pricing</button>
+                <button onClick={() => scrollTo('demo')} className="text-left text-[15px] font-medium" style={{ color: '#6B6B6B' }}>Docs</button>
+                <Link href="/login" className="text-[15px] font-medium" style={{ color: '#6B6B6B' }} onClick={() => setMobileMenu(false)}>Sign In</Link>
+                <Link
+                  href="/register"
+                  className="mt-1 px-5 py-2.5 text-[14px] font-semibold text-white text-center rounded-full"
+                  style={{ background: '#00D4AA' }}
+                  onClick={() => setMobileMenu(false)}
+                >
                   Start Free
                 </Link>
               </div>
@@ -194,178 +191,198 @@ export default function LandingPage() {
         </AnimatePresence>
       </nav>
 
-      <section className="relative pt-24 pb-16 md:pt-32 md:pb-20 overflow-hidden">
-        <div className="absolute top-[-200px] left-[20%] w-[600px] h-[600px] rounded-full bg-blue-500/[0.07] blur-[120px] orb-1 pointer-events-none" />
-        <div className="absolute top-[-100px] right-[10%] w-[500px] h-[500px] rounded-full bg-violet-500/[0.07] blur-[120px] orb-2 pointer-events-none" />
-        <div className="absolute top-[200px] left-[50%] w-[400px] h-[400px] rounded-full bg-pink-500/[0.04] blur-[100px] orb-3 pointer-events-none" />
-
-        <div className="max-w-[1200px] mx-auto px-6 text-center relative z-10">
+      {/* ══════════ HERO ══════════ */}
+      <section className="pt-28 pb-16 md:pt-36 md:pb-24 px-6">
+        <div className="max-w-[1200px] mx-auto text-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.8, ease: 'easeOut' }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-medium text-white/50 mb-8"
+            transition={{ delay: 0.1, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12px] font-medium mb-8"
+            style={{ color: '#00A888', border: '1px solid rgba(0,212,170,0.3)', background: 'rgba(0,212,170,0.06)' }}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+            <span className="text-[14px]">{'\u26A1'}</span>
             AI-Powered Sports Publishing
           </motion.div>
 
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.8, ease: 'easeOut' }}
-            className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight leading-[1.05] mb-6"
+            transition={{ delay: 0.2, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="font-display text-[42px] sm:text-[56px] md:text-[68px] lg:text-[80px] leading-[1.05] tracking-tight mb-6"
+            style={{ color: '#1A1A1A' }}
           >
-            The <span className="gradient-text">AI Newsroom</span> for
-            <br className="hidden sm:block" /> Sports Publishers
+            Your Newsroom,<br />Powered by AI.
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.8, ease: 'easeOut' }}
-            className="text-base md:text-lg text-white/50 max-w-[640px] mx-auto mb-10 leading-relaxed"
+            transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="text-[16px] md:text-[18px] leading-relaxed max-w-[600px] mx-auto mb-10"
+            style={{ color: '#6B6B6B' }}
           >
-            From trending topics to published articles in minutes. AI-powered content
-            generation, real-time football data, and embeddable widgets &mdash; all in one platform.
+            From trending topics to published articles in minutes. The complete publishing platform for sports media teams.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.8, ease: 'easeOut' }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 md:mb-20"
+            transition={{ delay: 0.4, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16 md:mb-20"
           >
             <Link
               href="/register"
-              className="w-full sm:w-auto text-center px-8 py-3.5 text-sm font-semibold bg-gradient-to-r from-blue-500 to-violet-500 rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all hover:-translate-y-0.5"
+              className="w-full sm:w-auto text-center px-8 py-3 text-[14px] font-semibold text-white rounded-full transition-all hover:opacity-90 hover:-translate-y-px hover:shadow-lg"
+              style={{ background: '#00D4AA', boxShadow: '0 4px 14px rgba(0,212,170,0.3)' }}
             >
-              Start Free Trial
+              Start Free
             </Link>
             <button
               onClick={() => scrollTo('demo')}
-              className="w-full sm:w-auto px-8 py-3.5 text-sm font-semibold border border-white/[0.12] rounded-xl text-white/80 hover:bg-white/[0.04] hover:border-white/20 transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-3 text-[14px] font-semibold rounded-full transition-all hover:-translate-y-px"
+              style={{ color: '#1A1A1A', border: '1px solid #D4D4D8' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = '#1A1A1A'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = '#D4D4D8'}
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M6.3 2.84A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.27l9.344-5.891a1.5 1.5 0 000-2.538L6.3 2.841z" />
-              </svg>
-              Watch Demo
+              See it in action
             </button>
           </motion.div>
 
+          {/* Browser Mockup */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.8, ease: 'easeOut' }}
-            className="hidden sm:block max-w-[960px] mx-auto"
+            transition={{ delay: 0.6, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-[960px] mx-auto"
           >
             <div
-              className="mockup-float rounded-2xl border border-white/[0.08] bg-[#111113] overflow-hidden"
-              style={{ boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 80px rgba(59,130,246,0.06)' }}
+              className="rounded-2xl overflow-hidden hidden sm:block"
+              style={{
+                background: '#0F1115',
+                boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.08)',
+                transform: 'perspective(2400px) rotateX(2deg)',
+              }}
             >
-              <div className="flex items-center gap-2 px-4 py-3 bg-[#0D0D0F] border-b border-white/[0.06]">
+              {/* Browser chrome */}
+              <div className="flex items-center gap-2 px-4 py-3" style={{ background: '#0A0C10', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
-                  <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
-                  <div className="w-3 h-3 rounded-full bg-[#28CA41]" />
+                  <div className="w-3 h-3 rounded-full" style={{ background: '#FF5F57' }} />
+                  <div className="w-3 h-3 rounded-full" style={{ background: '#FFBD2E' }} />
+                  <div className="w-3 h-3 rounded-full" style={{ background: '#28CA41' }} />
                 </div>
-                <div className="flex-1 ml-3 px-3 py-1 bg-white/[0.04] rounded-md text-[11px] font-mono text-white/30">
-                  app.diurna.io/newsroom
+                <div className="flex-1 ml-3 px-3 py-1.5 rounded-md text-[11px] font-mono" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)' }}>
+                  diurna.vercel.app/newsroom
                 </div>
               </div>
 
+              {/* Newsroom content */}
               <div className="p-4 md:p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <h3 className="text-sm font-bold text-white">Smart Newsroom</h3>
-                    <div className="flex bg-white/[0.04] rounded-lg p-0.5">
-                      <div className="px-3 py-1 bg-gradient-to-r from-blue-500/20 to-violet-500/20 rounded-md text-[10px] font-semibold text-blue-400">
-                        Trending
-                      </div>
-                      <div className="px-3 py-1 text-[10px] font-medium text-white/30">Feed</div>
+                    <span className="text-[14px]">{'\u{1F4F0}'}</span>
+                    <span className="text-[14px] font-bold text-white">Newsroom</span>
+                    <div className="flex gap-1 ml-2">
+                      <span className="px-2.5 py-1 text-[10px] font-semibold rounded-md text-white" style={{ background: 'rgba(0,212,170,0.15)', color: '#00D4AA' }}>News (33)</span>
+                      <span className="px-2.5 py-1 text-[10px] font-medium rounded-md" style={{ color: 'rgba(255,255,255,0.35)' }}>Transfers (11)</span>
                     </div>
-                  </div>
-                  <div className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-violet-500 rounded-md text-[10px] font-bold text-white">
-                    + Generate
                   </div>
                 </div>
 
-                <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-                  {mockupTopics.map((t, i) => (
-                    <div key={i} className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.04] border border-white/[0.06] rounded-full">
-                      <span className="text-[9px]">{'\u{1F525}'}</span>
-                      <span className="text-[10px] font-medium text-white/60 whitespace-nowrap">{t.topic}</span>
-                      <span className="text-[10px] font-mono font-bold text-orange-400">{t.score}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                  {mockupCards.slice(0, typeof window !== 'undefined' && window.innerWidth < 640 ? 3 : 6).map((card, i) => (
-                    <div key={i} className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 relative">
-                      <div className={`absolute top-2 right-2 w-7 h-7 rounded-full ${card.color} flex items-center justify-center text-[9px] font-mono font-bold`}>
-                        {card.score}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                  {newsroomStories.map((story, i) => (
+                    <div key={i} className="rounded-lg p-3.5 relative" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold font-mono rounded" style={{ background: story.dis >= 60 ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)', color: story.dis >= 60 ? '#f87171' : '#60a5fa' }}>{story.dis}</span>
+                        <span className="text-[9px] font-semibold" style={{ color: story.trend === 'RISING' ? '#00D4AA' : 'rgba(255,255,255,0.3)' }}>{story.trend === 'RISING' ? '\u2191 RISING' : '\u2192 STABLE'}</span>
                       </div>
-                      <span className="inline-block px-1.5 py-0.5 text-[8px] font-semibold bg-white/[0.06] text-white/40 rounded mb-1.5">
-                        {card.cat}
-                      </span>
-                      <p className="text-[10px] font-medium text-white/70 leading-tight line-clamp-2 pr-6">{card.title}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[8px] text-white/30">
-                          {card.velocity} {card.velocity === '\u2191' ? 'Rising' : card.velocity === '\u2192' ? 'Peaked' : 'Falling'}
-                        </span>
-                        <span className="text-[8px] text-white/20">{'\u2022'}</span>
-                        <span className="text-[8px] text-white/30">{2 + i} sources</span>
+                      <p className="text-[11px] font-semibold leading-snug mb-2.5" style={{ color: 'rgba(255,255,255,0.8)' }}>{story.title}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+                        {story.tags.map(tag => (
+                          <span key={tag} className="px-1.5 py-0.5 text-[8px] font-medium rounded" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)' }}>{tag}</span>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.25)' }}>{story.sources} sources \u00b7 {story.time}</span>
+                        {i === 0 && (
+                          <span className="px-2 py-1 text-[9px] font-bold rounded text-white" style={{ background: '#00D4AA' }}>Write Article</span>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
-          </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.8, ease: 'easeOut' }}
-            className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-[800px] mx-auto"
-          >
-            {[
-              { value: '1,200+', label: 'Articles Generated' },
-              { value: '50+', label: 'Football Leagues' },
-              { value: '13', label: 'Embeddable Widgets' },
-              { value: '< 2 min', label: 'Avg. Article Time' },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-xl md:text-2xl font-mono font-bold text-white">{stat.value}</div>
-                <div className="text-xs text-white/40 mt-1">{stat.label}</div>
+            {/* Mobile: flat card */}
+            <div
+              className="rounded-xl overflow-hidden sm:hidden"
+              style={{ background: '#0F1115', border: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 20px 40px rgba(0,0,0,0.12)' }}
+            >
+              <div className="flex items-center gap-2 px-3 py-2.5" style={{ background: '#0A0C10', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 rounded-full" style={{ background: '#FF5F57' }} />
+                  <div className="w-2 h-2 rounded-full" style={{ background: '#FFBD2E' }} />
+                  <div className="w-2 h-2 rounded-full" style={{ background: '#28CA41' }} />
+                </div>
+                <div className="flex-1 ml-2 px-2 py-1 rounded text-[9px] font-mono" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.25)' }}>
+                  diurna.vercel.app/newsroom
+                </div>
               </div>
-            ))}
+              <div className="p-3">
+                {newsroomStories.slice(0, 2).map((story, i) => (
+                  <div key={i} className="rounded-lg p-3 mb-2 last:mb-0" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="px-1.5 py-0.5 text-[9px] font-bold font-mono rounded" style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171' }}>{story.dis}</span>
+                      <span className="text-[9px] font-semibold" style={{ color: '#00D4AA' }}>{'\u2191'} {story.trend}</span>
+                    </div>
+                    <p className="text-[11px] font-semibold leading-snug" style={{ color: 'rgba(255,255,255,0.8)' }}>{story.title}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>
 
-      <section id="features" className="py-16 md:py-20">
-        <div className="max-w-[1200px] mx-auto px-6">
+      {/* ══════════ SOCIAL PROOF ══════════ */}
+      <section className="py-8 md:py-10 px-6" style={{ borderTop: '1px solid rgba(0,0,0,0.04)', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+        <div className="max-w-[1200px] mx-auto text-center">
+          <p className="text-[12px] md:text-[13px] mb-4" style={{ color: '#A1A1AA' }}>
+            Powered by Lupon Media SSP &mdash; trusted by publishers across Balkans, UAE &amp; MENA
+          </p>
+          <div className="flex items-center justify-center gap-4 md:gap-8 flex-wrap">
+            {['MCM', 'Pubmatic', 'Criteo', 'Magnite', 'Google Ad Manager'].map(name => (
+              <span key={name} className="text-[11px] font-semibold tracking-wide uppercase px-3 py-1.5 rounded-md" style={{ color: '#A1A1AA', background: 'rgba(0,0,0,0.03)' }}>{name}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ FEATURES ══════════ */}
+      <section id="features" className="py-20 md:py-28 px-6" style={{ background: '#F5F5F0' }}>
+        <div className="max-w-[1200px] mx-auto">
           <FadeIn className="text-center mb-16">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400 mb-4">Features</p>
-            <h2 className="font-display text-3xl md:text-4xl lg:text-5xl tracking-tight mb-4">
+            <h2 className="font-display text-[32px] md:text-[44px] tracking-tight mb-4" style={{ color: '#1A1A1A' }}>
               Everything your newsroom needs
             </h2>
-            <p className="text-white/50 max-w-[520px] mx-auto leading-relaxed">
+            <p className="text-[15px] max-w-[520px] mx-auto leading-relaxed" style={{ color: '#6B6B6B' }}>
               A complete publishing platform designed for sports media teams who want to create better content, faster.
             </p>
           </FadeIn>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {features.map((f, i) => (
-              <FadeIn key={f.title} delay={i * 0.05}>
-                <div className="group h-full p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.12] transition-all duration-300 hover:-translate-y-1">
-                  <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-lg mb-4">
+              <FadeIn key={f.title} delay={i * 0.04}>
+                <div
+                  className="h-full p-6 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md cursor-default"
+                  style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)' }}
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg mb-4" style={{ background: 'rgba(0,212,170,0.08)' }}>
                     {f.icon}
                   </div>
-                  <h3 className="text-[15px] font-semibold text-white mb-2">{f.title}</h3>
-                  <p className="text-sm text-white/40 leading-relaxed">{f.desc}</p>
+                  <h3 className="text-[15px] font-bold mb-2" style={{ color: '#1A1A1A' }}>{f.title}</h3>
+                  <p className="text-[13px] leading-relaxed" style={{ color: '#6B6B6B' }}>{f.desc}</p>
                 </div>
               </FadeIn>
             ))}
@@ -373,282 +390,405 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="demo" className="py-16 md:py-20 bg-[#0D0D0F] border-y border-white/[0.04]">
-        <div className="max-w-[1200px] mx-auto px-6">
+      {/* ══════════ PRODUCT DEMO ══════════ */}
+      <section id="demo" className="py-20 md:py-28 px-6" style={{ background: '#0F1115' }}>
+        <div className="max-w-[1200px] mx-auto">
           <FadeIn className="text-center mb-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400 mb-4">Live Demo</p>
-            <h2 className="font-display text-3xl md:text-4xl lg:text-5xl tracking-tight mb-4">
-              Football Widgets That Just Work
+            <h2 className="font-display text-[32px] md:text-[44px] tracking-tight mb-4 text-white">
+              See it in action
             </h2>
-            <p className="text-white/50 max-w-[520px] mx-auto leading-relaxed">
-              13 embeddable widgets, real-time data from 50+ leagues. Copy one line of code.
+            <p className="text-[15px] max-w-[520px] mx-auto leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              Three core products. One platform. Everything you need to run a modern sports newsroom.
             </p>
           </FadeIn>
 
+          {/* Demo tabs */}
           <FadeIn delay={0.1}>
-            <div className="max-w-[720px] mx-auto">
-              <div className="flex gap-1 bg-white/[0.04] rounded-xl p-1 mb-6 w-fit mx-auto overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-                {(['standings', 'fixtures', 'scorers'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-5 py-2 text-sm font-medium rounded-lg transition-all ${
-                      activeTab === tab
-                        ? 'bg-gradient-to-r from-blue-500/20 to-violet-500/20 text-white border border-white/[0.08]'
-                        : 'text-white/40 hover:text-white/60'
-                    }`}
-                  >
-                    {tab === 'standings' ? 'Standings' : tab === 'fixtures' ? 'Fixtures' : 'Top Scorers'}
-                  </button>
-                ))}
-              </div>
+            <div className="flex gap-1 rounded-xl p-1 mb-8 w-fit mx-auto" style={{ background: 'rgba(255,255,255,0.05)' }}>
+              {(['newsroom', 'editor', 'widgets'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setDemoTab(tab)}
+                  className="px-5 py-2 text-[13px] font-medium rounded-lg transition-all"
+                  style={{
+                    background: demoTab === tab ? 'rgba(0,212,170,0.12)' : 'transparent',
+                    color: demoTab === tab ? '#00D4AA' : 'rgba(255,255,255,0.35)',
+                    border: demoTab === tab ? '1px solid rgba(0,212,170,0.2)' : '1px solid transparent',
+                  }}
+                >
+                  {tab === 'newsroom' ? 'Newsroom' : tab === 'editor' ? 'Editor' : 'Widgets'}
+                </button>
+              ))}
+            </div>
 
-              <div className="rounded-2xl border border-white/[0.08] bg-[#111113] overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06]">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-base">{'\u26BD'}</span>
-                    <span className="text-sm font-bold text-white">Premier League</span>
-                    <span className="px-2 py-0.5 text-[10px] font-bold font-mono bg-emerald-500/10 text-emerald-400 rounded-md">LIVE</span>
-                  </div>
-                  <span className="text-[10px] text-white/30">2024/25</span>
-                </div>
+            <div className="max-w-[960px] mx-auto">
+              <AnimatePresence mode="wait">
 
-                <AnimatePresence mode="wait">
-                  {activeTab === 'standings' && (
-                    <motion.div key="standings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-white/[0.04]">
-                            <th className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-left w-8">#</th>
-                            <th className="py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-left">Team</th>
-                            <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-center">P</th>
-                            <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-center">W</th>
-                            <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-center hidden sm:table-cell">D</th>
-                            <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-center hidden sm:table-cell">L</th>
-                            <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-center">GD</th>
-                            <th className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-center">Pts</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {standingsData.map((row) => (
-                            <tr key={row.pos} className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors">
-                              <td className="px-5 py-2.5 text-xs font-mono font-bold text-white/30">{row.pos}</td>
-                              <td className="py-2.5 text-[13px] font-semibold text-white/80">{row.team}</td>
-                              <td className="px-3 py-2.5 text-xs text-white/40 text-center font-mono">{row.p}</td>
-                              <td className="px-3 py-2.5 text-xs text-white/40 text-center font-mono">{row.w}</td>
-                              <td className="px-3 py-2.5 text-xs text-white/40 text-center font-mono hidden sm:table-cell">{row.d}</td>
-                              <td className="px-3 py-2.5 text-xs text-white/40 text-center font-mono hidden sm:table-cell">{row.l}</td>
-                              <td className="px-3 py-2.5 text-xs text-emerald-400/80 text-center font-mono">{row.gd}</td>
-                              <td className="px-5 py-2.5 text-sm font-bold text-white text-center font-mono">{row.pts}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </motion.div>
-                  )}
-
-                  {activeTab === 'fixtures' && (
-                    <motion.div key="fixtures" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-                      <div className="divide-y divide-white/[0.03]">
-                        {fixturesData.map((fix, i) => (
-                          <div key={i} className="px-5 py-3.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
-                            <div className="flex-1">
-                              <div className="text-[13px] font-semibold text-white/80">
-                                {fix.home} <span className="text-white/20 font-normal mx-2">vs</span> {fix.away}
-                              </div>
-                              <div className="text-[10px] text-white/30 mt-0.5">{fix.date}</div>
+                {/* Newsroom Tab */}
+                {demoTab === 'newsroom' && (
+                  <motion.div key="newsroom" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
+                    <div className="rounded-2xl overflow-hidden" style={{ background: '#161820', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex flex-col md:flex-row">
+                        {/* Main */}
+                        <div className="flex-1 p-4 md:p-5">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[13px] font-bold text-white">{'\u{1F4F0}'} Newsroom</span>
+                              <span className="px-2 py-0.5 text-[10px] font-bold font-mono rounded" style={{ background: 'rgba(0,212,170,0.12)', color: '#00D4AA' }}>33 stories</span>
                             </div>
-                            <div className="text-right">
-                              <div className="text-sm font-mono font-bold text-blue-400">{fix.time}</div>
-                              <div className="text-[10px] text-white/30">{fix.league}</div>
-                            </div>
+                            <span className="px-3 py-1.5 text-[11px] font-bold rounded-md text-white" style={{ background: '#00D4AA' }}>+ Write Article</span>
                           </div>
+                          <div className="flex flex-col gap-2.5">
+                            {newsroomStories.map((story, i) => (
+                              <div key={i} className="rounded-lg p-3.5 flex items-start gap-3" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div className="flex-shrink-0 mt-0.5">
+                                  <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[11px] font-bold font-mono" style={{ background: story.dis >= 60 ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)', color: story.dis >= 60 ? '#f87171' : '#60a5fa' }}>{story.dis}</div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[13px] font-semibold leading-snug mb-1" style={{ color: 'rgba(255,255,255,0.85)' }}>{story.title}</p>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-[10px] font-semibold" style={{ color: story.trend === 'RISING' ? '#00D4AA' : 'rgba(255,255,255,0.3)' }}>{story.trend === 'RISING' ? '\u2191' : '\u2192'} {story.trend}</span>
+                                    <span style={{ color: 'rgba(255,255,255,0.15)' }}>{'\u00b7'}</span>
+                                    <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.25)' }}>{story.sources} sources</span>
+                                    <span style={{ color: 'rgba(255,255,255,0.15)' }}>{'\u00b7'}</span>
+                                    {story.tags.map(tag => (
+                                      <span key={tag} className="px-1.5 py-0.5 text-[9px] font-medium rounded" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)' }}>{tag}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Sidebar */}
+                        <div className="w-full md:w-[220px] p-4 md:p-5 flex-shrink-0" style={{ borderLeft: '1px solid rgba(255,255,255,0.04)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                          <div className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: 'rgba(255,255,255,0.3)' }}>Today&apos;s Matches</div>
+                          {sidebarMatches.map((m, i) => (
+                            <div key={i} className="flex items-center justify-between py-2 mb-1" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                              <div>
+                                <div className="text-[11px] font-semibold" style={{ color: 'rgba(255,255,255,0.7)' }}>{m.home}</div>
+                                <div className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{m.away}</div>
+                              </div>
+                              <span className="text-[11px] font-mono font-bold" style={{ color: '#00D4AA' }}>{m.time}</span>
+                            </div>
+                          ))}
+                          <div className="text-[10px] font-bold uppercase tracking-wider mt-4 mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>My Leagues</div>
+                          {['Premier League', 'La Liga', 'Champions League'].map(l => (
+                            <div key={l} className="text-[11px] py-1" style={{ color: 'rgba(255,255,255,0.45)' }}>{'\u26BD'} {l}</div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Editor Tab */}
+                {demoTab === 'editor' && (
+                  <motion.div key="editor" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
+                    <div className="rounded-2xl overflow-hidden" style={{ background: '#161820', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      {/* Toolbar */}
+                      <div className="px-4 md:px-5 py-3 flex items-center gap-3 flex-wrap" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        {['B', 'I', 'U', 'H1', 'H2', '\u00b6', '\u{1F517}', '\u{1F5BC}', '\u2014'].map((btn, i) => (
+                          <span key={i} className="w-7 h-7 flex items-center justify-center text-[11px] font-bold rounded" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>{btn}</span>
+                        ))}
+                        <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold" style={{ background: 'rgba(0,212,170,0.1)', color: '#00D4AA' }}>
+                          {'\u{1F916}'} AI Score: 94%
+                        </span>
+                      </div>
+                      {/* Article content */}
+                      <div className="p-5 md:p-8">
+                        <div className="text-[10px] uppercase tracking-wider font-bold mb-3" style={{ color: 'rgba(255,255,255,0.2)' }}>Champions League &middot; Preview</div>
+                        <h3 className="font-display text-[22px] md:text-[28px] leading-tight text-white mb-5">
+                          Champions League Semi-Final Preview: Arsenal vs Real Madrid
+                        </h3>
+                        <div className="space-y-3 mb-6">
+                          <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                            Arsenal face their biggest European test in two decades as they welcome Real Madrid to the Emirates for the first leg of the Champions League semi-final. Mikel Arteta&apos;s side arrive in scintillating form, having won 8 of their last 10 matches across all competitions.
+                          </p>
+                          <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                            The Gunners&apos; defensive record has been the foundation of their success &mdash; just 3 goals conceded in 6 Champions League matches this season. William Saliba and Gabriel have formed one of Europe&apos;s most formidable centre-back partnerships, while Declan Rice provides the perfect shield in front of them.
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
+                          <span className="text-[11px] font-mono" style={{ color: 'rgba(255,255,255,0.25)' }}>847 words &middot; 4 min read</span>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-1 text-[10px] font-semibold rounded" style={{ background: 'rgba(16,185,129,0.1)', color: '#10B981' }}>{'\u2705'} Originality: 98%</span>
+                            <span className="px-2.5 py-1 text-[10px] font-semibold rounded" style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa' }}>SEO: 92</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Widgets Tab */}
+                {demoTab === 'widgets' && (
+                  <motion.div key="widgets" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
+                    <div className="max-w-[720px] mx-auto">
+                      {/* Sub-tabs */}
+                      <div className="flex gap-1 rounded-lg p-0.5 mb-5 w-fit mx-auto" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                        {(['standings', 'fixtures', 'scorers'] as const).map((tab) => (
+                          <button
+                            key={tab}
+                            onClick={() => setWidgetTab(tab)}
+                            className="px-4 py-1.5 text-[12px] font-medium rounded-md transition-all"
+                            style={{
+                              background: widgetTab === tab ? 'rgba(255,255,255,0.08)' : 'transparent',
+                              color: widgetTab === tab ? 'white' : 'rgba(255,255,255,0.35)',
+                            }}
+                          >
+                            {tab === 'standings' ? 'Standings' : tab === 'fixtures' ? 'Fixtures' : 'Top Scorers'}
+                          </button>
                         ))}
                       </div>
-                    </motion.div>
-                  )}
 
-                  {activeTab === 'scorers' && (
-                    <motion.div key="scorers" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-white/[0.04]">
-                            <th className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-left w-8">#</th>
-                            <th className="py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-left">Player</th>
-                            <th className="py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-left hidden sm:table-cell">Team</th>
-                            <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-center">G</th>
-                            <th className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 text-center">A</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {topScorersData.map((p) => (
-                            <tr key={p.pos} className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors">
-                              <td className="px-5 py-2.5 text-xs font-mono font-bold text-white/30">{p.pos}</td>
-                              <td className="py-2.5 text-[13px] font-semibold text-white/80">{p.name}</td>
-                              <td className="py-2.5 text-xs text-white/40 hidden sm:table-cell">{p.team}</td>
-                              <td className="px-3 py-2.5 text-sm font-bold text-white text-center font-mono">{p.goals}</td>
-                              <td className="px-5 py-2.5 text-xs text-white/40 text-center font-mono">{p.assists}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                      <div className="rounded-2xl overflow-hidden" style={{ background: '#161820', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-[14px]">{'\u26BD'}</span>
+                            <span className="text-[13px] font-bold text-white">Premier League</span>
+                            <span className="px-2 py-0.5 text-[10px] font-bold font-mono rounded-md" style={{ background: 'rgba(16,185,129,0.1)', color: '#10B981' }}>LIVE</span>
+                          </div>
+                          <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.25)' }}>2025/26</span>
+                        </div>
 
-              <div className="mt-6 rounded-xl border border-white/[0.08] bg-[#0D0D0F] overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06]">
-                  <span className="text-[10px] font-mono text-white/30">embed.html</span>
-                  <button
-                    onClick={() => navigator.clipboard?.writeText('<script src="https://app.diurna.io/api/embed/script?article=YOUR_ID"></script>')}
-                    className="px-2.5 py-1 text-[10px] font-medium text-white/30 hover:text-white/60 bg-white/[0.04] rounded-md transition-colors"
-                  >
-                    Copy
-                  </button>
-                </div>
-                <pre className="p-4 text-[13px] font-mono leading-relaxed overflow-x-auto">
-                  <code>
-                    <span className="text-violet-400">{'<script'}</span>
-                    {' '}<span className="text-blue-300">src</span>
-                    <span className="text-white/40">=</span>
-                    <span className="text-emerald-400">&quot;https://app.diurna.io/api/embed/script?article=YOUR_ID&quot;</span>
-                    <span className="text-violet-400">{'></script>'}</span>
-                  </code>
-                </pre>
-              </div>
+                        <AnimatePresence mode="wait">
+                          {widgetTab === 'standings' && (
+                            <motion.div key="standings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                              <table className="w-full">
+                                <thead>
+                                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                    <th className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-left" style={{ color: 'rgba(255,255,255,0.25)' }}>#</th>
+                                    <th className="py-2.5 text-[10px] font-semibold uppercase tracking-wider text-left" style={{ color: 'rgba(255,255,255,0.25)' }}>Team</th>
+                                    <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>P</th>
+                                    <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>W</th>
+                                    <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-center hidden sm:table-cell" style={{ color: 'rgba(255,255,255,0.25)' }}>D</th>
+                                    <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-center hidden sm:table-cell" style={{ color: 'rgba(255,255,255,0.25)' }}>L</th>
+                                    <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>GD</th>
+                                    <th className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>Pts</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {standingsData.map((row) => (
+                                    <tr key={row.pos} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                      <td className="px-5 py-2.5 text-[12px] font-mono font-bold" style={{ color: 'rgba(255,255,255,0.3)' }}>{row.pos}</td>
+                                      <td className="py-2.5 text-[13px] font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>{row.team}</td>
+                                      <td className="px-3 py-2.5 text-[12px] text-center font-mono" style={{ color: 'rgba(255,255,255,0.35)' }}>{row.p}</td>
+                                      <td className="px-3 py-2.5 text-[12px] text-center font-mono" style={{ color: 'rgba(255,255,255,0.35)' }}>{row.w}</td>
+                                      <td className="px-3 py-2.5 text-[12px] text-center font-mono hidden sm:table-cell" style={{ color: 'rgba(255,255,255,0.35)' }}>{row.d}</td>
+                                      <td className="px-3 py-2.5 text-[12px] text-center font-mono hidden sm:table-cell" style={{ color: 'rgba(255,255,255,0.35)' }}>{row.l}</td>
+                                      <td className="px-3 py-2.5 text-[12px] text-center font-mono" style={{ color: '#00D4AA' }}>{row.gd}</td>
+                                      <td className="px-5 py-2.5 text-[14px] font-bold text-center font-mono text-white">{row.pts}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </motion.div>
+                          )}
+
+                          {widgetTab === 'fixtures' && (
+                            <motion.div key="fixtures" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                              <div>
+                                {fixturesData.map((fix, i) => (
+                                  <div key={i} className="px-5 py-3.5 flex items-center justify-between transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    <div className="flex-1">
+                                      <div className="text-[13px] font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                                        {fix.home} <span className="font-normal mx-2" style={{ color: 'rgba(255,255,255,0.2)' }}>vs</span> {fix.away}
+                                      </div>
+                                      <div className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.25)' }}>{fix.date}</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-[13px] font-mono font-bold" style={{ color: '#00D4AA' }}>{fix.time}</div>
+                                      <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.25)' }}>{fix.league}</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+
+                          {widgetTab === 'scorers' && (
+                            <motion.div key="scorers" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                              <table className="w-full">
+                                <thead>
+                                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                    <th className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-left" style={{ color: 'rgba(255,255,255,0.25)' }}>#</th>
+                                    <th className="py-2.5 text-[10px] font-semibold uppercase tracking-wider text-left" style={{ color: 'rgba(255,255,255,0.25)' }}>Player</th>
+                                    <th className="py-2.5 text-[10px] font-semibold uppercase tracking-wider text-left hidden sm:table-cell" style={{ color: 'rgba(255,255,255,0.25)' }}>Team</th>
+                                    <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>G</th>
+                                    <th className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>A</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {topScorersData.map((p) => (
+                                    <tr key={p.pos} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                      <td className="px-5 py-2.5 text-[12px] font-mono font-bold" style={{ color: 'rgba(255,255,255,0.3)' }}>{p.pos}</td>
+                                      <td className="py-2.5 text-[13px] font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>{p.name}</td>
+                                      <td className="py-2.5 text-[12px] hidden sm:table-cell" style={{ color: 'rgba(255,255,255,0.35)' }}>{p.team}</td>
+                                      <td className="px-3 py-2.5 text-[14px] font-bold text-center font-mono text-white">{p.goals}</td>
+                                      <td className="px-5 py-2.5 text-[12px] text-center font-mono" style={{ color: 'rgba(255,255,255,0.35)' }}>{p.assists}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* Embed code */}
+                      <div className="mt-5 rounded-xl overflow-hidden" style={{ background: '#0A0C10', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                          <span className="text-[10px] font-mono" style={{ color: 'rgba(255,255,255,0.25)' }}>embed.html</span>
+                          <button
+                            onClick={() => navigator.clipboard?.writeText('<script src="https://diurna.vercel.app/api/embed/script?widget=standings"></script>')}
+                            className="px-2.5 py-1 text-[10px] font-medium rounded-md transition-colors"
+                            style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.04)' }}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        <pre className="p-4 text-[12px] font-mono leading-relaxed overflow-x-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                          <code>
+                            <span style={{ color: '#00D4AA' }}>{'<script'}</span>{' '}
+                            <span style={{ color: '#60a5fa' }}>src</span>
+                            <span style={{ color: 'rgba(255,255,255,0.3)' }}>=</span>
+                            <span style={{ color: '#FFBD2E' }}>&quot;https://diurna.vercel.app/api/embed/script?widget=standings&quot;</span>
+                            <span style={{ color: '#00D4AA' }}>{'></script>'}</span>
+                          </code>
+                        </pre>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </FadeIn>
         </div>
       </section>
 
-      <section className="py-16 md:py-20">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <FadeIn className="text-center mb-16 md:mb-20">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400 mb-4">How It Works</p>
-            <h2 className="font-display text-3xl md:text-4xl lg:text-5xl tracking-tight">
+      {/* ══════════ HOW IT WORKS ══════════ */}
+      <section className="py-20 md:py-28 px-6" style={{ background: '#FAFAF9' }}>
+        <div className="max-w-[1200px] mx-auto">
+          <FadeIn className="text-center mb-16">
+            <h2 className="font-display text-[32px] md:text-[44px] tracking-tight mb-4" style={{ color: '#1A1A1A' }}>
               Three steps to launch
             </h2>
           </FadeIn>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4 relative">
-            <div className="hidden md:block absolute top-10 left-[20%] right-[20%] h-px bg-gradient-to-r from-blue-500/40 via-violet-500/40 to-pink-500/40" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6 relative max-w-[900px] mx-auto">
+            {/* Dotted connector */}
+            <div className="hidden md:block absolute top-[52px] left-[20%] right-[20%] h-px" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #D4D4D8 0, #D4D4D8 6px, transparent 6px, transparent 12px)' }} />
 
             {[
-              { num: '01', title: 'Connect', desc: 'Sign up, connect your football leagues, set your topics and competitors to track.' },
-              { num: '02', title: 'Generate', desc: 'AI surfaces trending stories. One click generates full articles with stats, quotes, and SEO optimization.' },
-              { num: '03', title: 'Publish', desc: 'Review in our premium editor, schedule or publish instantly. Embed widgets anywhere.' },
+              { num: '01', icon: '\u{1F517}', title: 'Connect', desc: 'Set up leagues, competitors, topics. Connect your RSS sources and football data feeds.' },
+              { num: '02', icon: '\u26A1', title: 'Generate', desc: 'AI surfaces trending stories. One click generates full articles with stats, quotes, and SEO optimization.' },
+              { num: '03', icon: '\u{1F680}', title: 'Publish', desc: 'Review in the premium editor, schedule, and embed widgets anywhere. Your content, your way.' },
             ].map((step, i) => (
               <FadeIn key={step.num} delay={i * 0.1} className="text-center relative z-10">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#111113] border border-white/[0.08] flex items-center justify-center hover:border-blue-500/30 hover:shadow-[0_0_30px_rgba(59,130,246,0.1)] transition-all duration-300">
-                  <span className="text-xl font-mono font-bold gradient-text">{step.num}</span>
+                <div className="w-[72px] h-[72px] mx-auto mb-5 rounded-full flex items-center justify-center" style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                  <span className="text-[28px]">{step.icon}</span>
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">{step.title}</h3>
-                <p className="text-sm text-white/40 max-w-[280px] mx-auto leading-relaxed">{step.desc}</p>
+                <div className="text-[11px] font-mono font-bold mb-2" style={{ color: '#00D4AA' }}>{step.num}</div>
+                <h3 className="text-[17px] font-bold mb-2" style={{ color: '#1A1A1A' }}>{step.title}</h3>
+                <p className="text-[13px] leading-relaxed max-w-[280px] mx-auto" style={{ color: '#6B6B6B' }}>{step.desc}</p>
               </FadeIn>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-16 md:py-20 bg-[#0D0D0F] border-y border-white/[0.04]">
-        <div className="max-w-[1200px] mx-auto px-6 text-center">
+      {/* ══════════ STATS STRIP ══════════ */}
+      <section className="py-16 md:py-20 px-6" style={{ background: '#00D4AA' }}>
+        <div className="max-w-[1200px] mx-auto">
           <FadeIn>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12 mb-12">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 text-center">
               {[
+                { target: 65, suffix: '+', prefix: '', label: 'RSS Sources' },
                 { target: 50, suffix: '+', prefix: '', label: 'Football Leagues' },
                 { target: 13, suffix: '', prefix: '', label: 'Widget Types' },
-                { target: 2, suffix: '', prefix: '', label: 'Premium Themes' },
                 { target: 2, suffix: ' min', prefix: '< ', label: 'Per Article' },
               ].map((stat) => (
                 <div key={stat.label}>
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-mono font-bold text-white mb-2">
-                    {stat.prefix}<AnimatedCounter target={stat.target} suffix={stat.suffix} />
+                  <div className="text-[36px] sm:text-[44px] md:text-[52px] font-mono font-bold text-white mb-1">
+                    <AnimatedCounter target={stat.target} suffix={stat.suffix} prefix={stat.prefix} />
                   </div>
-                  <div className="text-sm text-white/40">{stat.label}</div>
+                  <div className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>{stat.label}</div>
                 </div>
               ))}
             </div>
-            <p className="text-sm text-white/30 max-w-[600px] mx-auto">
-              Powered by{' '}
-              <a href="https://lupon.media" target="_blank" rel="noopener noreferrer" className="text-white/50 font-semibold hover:text-white/70 transition-colors">
-                Lupon Media
-              </a>
-              {' '}&mdash; trusted SSP partner with MCM, Pubmatic, Criteo, and Magnite integrations.
-            </p>
           </FadeIn>
         </div>
       </section>
 
-      <section id="pricing" className="py-16 md:py-20">
-        <div className="max-w-[1200px] mx-auto px-6">
+      {/* ══════════ PRICING ══════════ */}
+      <section id="pricing" className="py-20 md:py-28 px-6" style={{ background: '#F5F5F0' }}>
+        <div className="max-w-[1200px] mx-auto">
           <FadeIn className="text-center mb-16">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400 mb-4">Pricing</p>
-            <h2 className="font-display text-3xl md:text-4xl lg:text-5xl tracking-tight mb-4">
+            <h2 className="font-display text-[32px] md:text-[44px] tracking-tight mb-4" style={{ color: '#1A1A1A' }}>
               Plans for every publisher
             </h2>
-            <p className="text-white/50 max-w-[520px] mx-auto leading-relaxed">
+            <p className="text-[15px] max-w-[520px] mx-auto leading-relaxed" style={{ color: '#6B6B6B' }}>
               Start free, upgrade when you need more. No credit card required.
             </p>
           </FadeIn>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 max-w-[960px] mx-auto items-start">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-[960px] mx-auto items-start">
+            {/* Starter */}
             <FadeIn>
-              <div className="h-full rounded-2xl border border-white/[0.06] bg-[#111113] p-7 flex flex-col">
-                <h3 className="text-lg font-semibold text-white mb-1">Starter</h3>
+              <div className="h-full rounded-2xl p-7 flex flex-col" style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <h3 className="text-[17px] font-bold mb-1" style={{ color: '#1A1A1A' }}>Starter</h3>
                 <div className="mb-3">
-                  <span className="text-4xl font-mono font-bold text-white">Free</span>
+                  <span className="text-[36px] font-mono font-bold" style={{ color: '#1A1A1A' }}>Free</span>
                 </div>
-                <p className="text-sm text-white/40 mb-6 leading-relaxed">
+                <p className="text-[13px] leading-relaxed mb-6" style={{ color: '#6B6B6B' }}>
                   Perfect for solo journalists getting started with AI publishing.
                 </p>
                 <ul className="space-y-3 mb-8 flex-1">
                   {['1 site', '10 AI articles / month', '3 widgets', 'Basic analytics'].map((f) => (
-                    <li key={f} className="flex items-center gap-3 text-sm text-white/60">
-                      <svg className="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
+                    <li key={f} className="flex items-center gap-3 text-[13px]" style={{ color: '#6B6B6B' }}>
+                      <CheckIcon />
                       {f}
                     </li>
                   ))}
                 </ul>
                 <Link
                   href="/register"
-                  className="block w-full py-3 text-sm font-semibold text-center rounded-xl border border-white/[0.1] text-white/70 hover:bg-white/[0.04] hover:border-white/20 transition-all"
+                  className="block w-full py-3 text-[13px] font-semibold text-center rounded-full transition-all hover:-translate-y-px"
+                  style={{ color: '#1A1A1A', border: '1px solid #D4D4D8' }}
                 >
                   Get Started Free
                 </Link>
               </div>
             </FadeIn>
 
-            <FadeIn delay={0.1}>
-              <div className="relative md:scale-105 md:z-10">
-                <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-blue-500/50 to-violet-500/50" />
-                <div className="relative h-full rounded-2xl bg-[#111113] p-7 flex flex-col">
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-violet-500 rounded-full whitespace-nowrap">
-                    MOST POPULAR
+            {/* Pro */}
+            <FadeIn delay={0.08}>
+              <div className="relative md:-mt-2 md:mb-[-8px]">
+                <div className="h-full rounded-2xl p-7 flex flex-col" style={{ background: '#FFFFFF', borderTop: '4px solid #00D4AA', border: '1px solid rgba(0,0,0,0.06)', borderTopColor: '#00D4AA', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-[17px] font-bold" style={{ color: '#1A1A1A' }}>Pro</h3>
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full text-white" style={{ background: '#00D4AA' }}>MOST POPULAR</span>
                   </div>
-                  <h3 className="text-lg font-semibold text-white mb-1">Pro</h3>
                   <div className="mb-3">
-                    <span className="text-4xl font-mono font-bold text-white">$29</span>
-                    <span className="text-sm text-white/40 ml-1">/month</span>
+                    <span className="text-[36px] font-mono font-bold" style={{ color: '#1A1A1A' }}>$29</span>
+                    <span className="text-[14px] ml-1" style={{ color: '#6B6B6B' }}>/month</span>
                   </div>
-                  <p className="text-sm text-white/40 mb-6 leading-relaxed">
+                  <p className="text-[13px] leading-relaxed mb-6" style={{ color: '#6B6B6B' }}>
                     For growing newsrooms that need full AI power and publishing tools.
                   </p>
                   <ul className="space-y-3 mb-8 flex-1">
                     {['3 sites', '100 AI articles / month', 'All 13 widgets', 'Full analytics', 'Custom branding', 'Calendar autopilot'].map((f) => (
-                      <li key={f} className="flex items-center gap-3 text-sm text-white/60">
-                        <svg className="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                      <li key={f} className="flex items-center gap-3 text-[13px]" style={{ color: '#6B6B6B' }}>
+                        <CheckIcon />
                         {f}
                       </li>
                     ))}
                   </ul>
                   <Link
                     href="/register"
-                    className="block w-full py-3 text-sm font-semibold text-center rounded-xl bg-gradient-to-r from-blue-500 to-violet-500 hover:opacity-90 transition-opacity"
+                    className="block w-full py-3 text-[13px] font-semibold text-center text-white rounded-full transition-all hover:opacity-90 hover:-translate-y-px"
+                    style={{ background: '#00D4AA', boxShadow: '0 4px 14px rgba(0,212,170,0.25)' }}
                   >
                     Start Pro Trial
                   </Link>
@@ -656,28 +796,28 @@ export default function LandingPage() {
               </div>
             </FadeIn>
 
-            <FadeIn delay={0.2}>
-              <div className="h-full rounded-2xl border border-white/[0.06] bg-[#111113] p-7 flex flex-col">
-                <h3 className="text-lg font-semibold text-white mb-1">Enterprise</h3>
+            {/* Enterprise */}
+            <FadeIn delay={0.16}>
+              <div className="h-full rounded-2xl p-7 flex flex-col" style={{ background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <h3 className="text-[17px] font-bold mb-1" style={{ color: '#1A1A1A' }}>Enterprise</h3>
                 <div className="mb-3">
-                  <span className="text-4xl font-mono font-bold text-white">Custom</span>
+                  <span className="text-[36px] font-mono font-bold" style={{ color: '#1A1A1A' }}>Custom</span>
                 </div>
-                <p className="text-sm text-white/40 mb-6 leading-relaxed">
+                <p className="text-[13px] leading-relaxed mb-6" style={{ color: '#6B6B6B' }}>
                   White-label solution for large publishers and media groups.
                 </p>
                 <ul className="space-y-3 mb-8 flex-1">
                   {['Unlimited sites', 'Unlimited AI articles', 'Custom widgets', 'API access', 'Revenue integration', 'Dedicated support', 'White-label'].map((f) => (
-                    <li key={f} className="flex items-center gap-3 text-sm text-white/60">
-                      <svg className="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
+                    <li key={f} className="flex items-center gap-3 text-[13px]" style={{ color: '#6B6B6B' }}>
+                      <CheckIcon />
                       {f}
                     </li>
                   ))}
                 </ul>
                 <a
                   href="mailto:hello@lupon.media"
-                  className="block w-full py-3 text-sm font-semibold text-center rounded-xl border border-white/[0.1] text-white/70 hover:bg-white/[0.04] hover:border-white/20 transition-all"
+                  className="block w-full py-3 text-[13px] font-semibold text-center rounded-full transition-all hover:-translate-y-px"
+                  style={{ color: '#1A1A1A', border: '1px solid #D4D4D8' }}
                 >
                   Contact Sales
                 </a>
@@ -687,92 +827,95 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-16 md:py-20 relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-blue-500/[0.06] blur-[120px] pointer-events-none" />
-        <div className="absolute top-1/2 left-[40%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-violet-500/[0.06] blur-[100px] pointer-events-none" />
-
-        <div className="max-w-[1200px] mx-auto px-6 text-center relative z-10">
+      {/* ══════════ CTA ══════════ */}
+      <section className="py-20 md:py-28 px-6" style={{ background: '#FAFAF9' }}>
+        <div className="max-w-[1200px] mx-auto text-center">
           <FadeIn>
-            <h2 className="font-display text-3xl md:text-4xl lg:text-5xl tracking-tight mb-4">
-              Ready to Transform Your
-              <br className="hidden sm:block" /> Sports Coverage?
+            <h2 className="font-display text-[32px] md:text-[44px] tracking-tight mb-4" style={{ color: '#1A1A1A' }}>
+              Ready to transform your<br className="hidden sm:block" /> sports coverage?
             </h2>
-            <p className="text-white/50 max-w-[520px] mx-auto mb-10 leading-relaxed">
-              Join publishers who are already using AI to 10x their content output.
+            <p className="text-[15px] max-w-[480px] mx-auto mb-10 leading-relaxed" style={{ color: '#6B6B6B' }}>
+              Join publishers who are already using AI to create better content, faster.
             </p>
             <Link
               href="/register"
-              className="inline-flex w-full sm:w-auto justify-center px-10 py-4 text-base font-semibold bg-gradient-to-r from-blue-500 to-violet-500 rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all hover:-translate-y-0.5"
+              className="inline-flex px-10 py-3.5 text-[15px] font-semibold text-white rounded-full transition-all hover:opacity-90 hover:-translate-y-px hover:shadow-lg"
+              style={{ background: '#00D4AA', boxShadow: '0 4px 14px rgba(0,212,170,0.3)' }}
             >
-              Start Free Trial
+              Start Free
             </Link>
-            <p className="text-xs text-white/30 mt-4">No credit card required. Setup in under 2 minutes.</p>
+            <p className="text-[12px] mt-4" style={{ color: '#A1A1AA' }}>No credit card required</p>
           </FadeIn>
         </div>
       </section>
 
-      <footer className="pt-16 pb-8 border-t border-white/[0.04]">
-        <div className="max-w-[1200px] mx-auto px-6">
+      {/* ══════════ FOOTER ══════════ */}
+      <footer className="pt-16 pb-8 px-6" style={{ background: '#F0F0EB', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+        <div className="max-w-[1200px] mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
+            {/* Brand */}
             <div className="col-span-2">
-              <Link href="/landing" className="text-xl font-display gradient-text font-bold tracking-tight">
-                Diurna
+              <Link href="/landing" className="text-[20px] font-display tracking-tight" style={{ color: '#1A1A1A' }}>
+                Diurna<span style={{ color: '#00D4AA' }}>.</span>
               </Link>
-              <p className="text-sm text-white/30 mt-3 max-w-[260px] leading-relaxed">
+              <p className="text-[13px] mt-3 max-w-[260px] leading-relaxed" style={{ color: '#6B6B6B' }}>
                 The AI-powered sports publishing platform by Lupon Media. Create, publish, and monetize &mdash; all in one place.
               </p>
             </div>
 
+            {/* Product */}
             <div>
-              <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-white/50 mb-4">Product</h4>
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] mb-4" style={{ color: '#A1A1AA' }}>Product</h4>
               <div className="space-y-2.5">
-                <button onClick={() => scrollTo('features')} className="block text-sm text-white/30 hover:text-white/60 transition-colors">Features</button>
-                <button onClick={() => scrollTo('pricing')} className="block text-sm text-white/30 hover:text-white/60 transition-colors">Pricing</button>
-                <button onClick={() => scrollTo('demo')} className="block text-sm text-white/30 hover:text-white/60 transition-colors">Docs</button>
-                <Link href="/register" className="block text-sm text-white/30 hover:text-white/60 transition-colors">Get Started</Link>
+                <button onClick={() => scrollTo('features')} className="block text-[13px] transition-colors" style={{ color: '#6B6B6B' }}>Features</button>
+                <button onClick={() => scrollTo('pricing')} className="block text-[13px] transition-colors" style={{ color: '#6B6B6B' }}>Pricing</button>
+                <button onClick={() => scrollTo('demo')} className="block text-[13px] transition-colors" style={{ color: '#6B6B6B' }}>Docs</button>
+                <Link href="/register" className="block text-[13px] transition-colors" style={{ color: '#6B6B6B' }}>Get Started</Link>
               </div>
             </div>
 
+            {/* Company */}
             <div>
-              <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-white/50 mb-4">Company</h4>
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] mb-4" style={{ color: '#A1A1AA' }}>Company</h4>
               <div className="space-y-2.5">
-                <a href="https://lupon.media" target="_blank" rel="noopener noreferrer" className="block text-sm text-white/30 hover:text-white/60 transition-colors">Lupon Media</a>
-                <a href="mailto:hello@lupon.media" className="block text-sm text-white/30 hover:text-white/60 transition-colors">Contact</a>
-                <Link href="/site/about" className="block text-sm text-white/30 hover:text-white/60 transition-colors">About</Link>
+                <a href="https://lupon.media" target="_blank" rel="noopener noreferrer" className="block text-[13px] transition-colors" style={{ color: '#6B6B6B' }}>Lupon Media</a>
+                <a href="mailto:hello@lupon.media" className="block text-[13px] transition-colors" style={{ color: '#6B6B6B' }}>Contact</a>
+                <Link href="/site/about" className="block text-[13px] transition-colors" style={{ color: '#6B6B6B' }}>About</Link>
               </div>
             </div>
 
+            {/* Legal */}
             <div>
-              <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-white/50 mb-4">Legal</h4>
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] mb-4" style={{ color: '#A1A1AA' }}>Legal</h4>
               <div className="space-y-2.5">
-                <Link href="/site/privacy" className="block text-sm text-white/30 hover:text-white/60 transition-colors">Privacy</Link>
-                <Link href="/site/impressum" className="block text-sm text-white/30 hover:text-white/60 transition-colors">Impressum</Link>
-                <a href="#" className="block text-sm text-white/30 hover:text-white/60 transition-colors">Terms</a>
+                <Link href="/site/privacy" className="block text-[13px] transition-colors" style={{ color: '#6B6B6B' }}>Privacy</Link>
+                <Link href="/site/impressum" className="block text-[13px] transition-colors" style={{ color: '#6B6B6B' }}>Impressum</Link>
+                <a href="#" className="block text-[13px] transition-colors" style={{ color: '#6B6B6B' }}>Terms</a>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between pt-8 border-t border-white/[0.04] gap-4">
-            <p className="text-xs text-white/20">
-              &copy; 2025 Diurna. A product by{' '}
-              <a href="https://lupon.media" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-white/50 transition-colors">
+          <div className="flex flex-col sm:flex-row items-center justify-between pt-8 gap-4" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+            <p className="text-[12px]" style={{ color: '#A1A1AA' }}>
+              &copy; 2026 Diurna. A product by{' '}
+              <a href="https://lupon.media" target="_blank" rel="noopener noreferrer" className="font-medium transition-colors" style={{ color: '#6B6B6B' }}>
                 Lupon Media
               </a>
               .
             </p>
-            <div className="flex gap-3">
-              <a href="#" aria-label="Twitter" className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center hover:bg-white/[0.08] hover:border-white/[0.12] transition-all">
-                <svg className="w-3.5 h-3.5 text-white/40" fill="currentColor" viewBox="0 0 24 24">
+            <div className="flex gap-2.5">
+              <a href="#" aria-label="Twitter" className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <svg className="w-3.5 h-3.5" fill="#6B6B6B" viewBox="0 0 24 24">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
               </a>
-              <a href="#" aria-label="LinkedIn" className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center hover:bg-white/[0.08] hover:border-white/[0.12] transition-all">
-                <svg className="w-3.5 h-3.5 text-white/40" fill="currentColor" viewBox="0 0 24 24">
+              <a href="#" aria-label="LinkedIn" className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <svg className="w-3.5 h-3.5" fill="#6B6B6B" viewBox="0 0 24 24">
                   <path d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19a.66.66 0 000 .14V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z" />
                 </svg>
               </a>
-              <a href="#" aria-label="GitHub" className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center hover:bg-white/[0.08] hover:border-white/[0.12] transition-all">
-                <svg className="w-3.5 h-3.5 text-white/40" fill="currentColor" viewBox="0 0 24 24">
+              <a href="#" aria-label="GitHub" className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <svg className="w-3.5 h-3.5" fill="#6B6B6B" viewBox="0 0 24 24">
                   <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
                 </svg>
               </a>
