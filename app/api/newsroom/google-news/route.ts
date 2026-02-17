@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const q = req.nextUrl.searchParams.get('q') || 'football soccer'
+    const q = req.nextUrl.searchParams.get('q') || 'Premier League OR Champions League OR La Liga OR Serie A OR Bundesliga OR transfer OR football'
     const hl = req.nextUrl.searchParams.get('hl') || 'en'
 
     if (cache && cache.query === q && Date.now() - cache.ts < CACHE_TTL) {
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     console.error('Google News error:', error)
     const q = req.nextUrl.searchParams.get('q') || ''
     const mock = q.includes('transfer') ? getMockTransferNews() : getMockBreakingNews()
-    return NextResponse.json({ items: mock, total: mock.length, query: q || 'football soccer', source: 'mock', fetchedAt: new Date().toISOString() })
+    return NextResponse.json({ items: mock, total: mock.length, query: q || 'football', source: 'mock', fetchedAt: new Date().toISOString() })
   }
 }
 
