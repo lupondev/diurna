@@ -438,11 +438,12 @@ model FeedSource {
 }
 
 model Entity {
-  id       String   @id @default(cuid())
-  name     String   @unique
-  type     String
-  aliases  String[]
-  metadata Json?
+  id        String   @id @default(cuid())
+  name      String   @unique
+  type      String
+  aliases   String[]
+  metadata  Json?
+  createdAt DateTime @default(now())
 
   @@index([type])
 }

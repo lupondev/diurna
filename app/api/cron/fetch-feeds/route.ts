@@ -45,10 +45,12 @@ function extractSourceDomain(feedName: string, link: string): string {
 function normalizeUrl(rawUrl: string): string {
   try {
     const u = new URL(rawUrl)
-    u.search = ''
+    const stripParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+                         'ref', 'source', 'fbclid', 'gclid', 'mc_cid', 'mc_eid']
+    stripParams.forEach(p => u.searchParams.delete(p))
     u.hash = ''
     const path = u.pathname.replace(/\/+$/, '')
-    return u.origin + path
+    return u.origin + path + (u.search || '')
   } catch {
     return rawUrl
   }
@@ -58,8 +60,10 @@ function generateContentHash(title: string, source: string): string {
   const normalized = title
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
-    .split(/\s+/)
-    .filter(w => w.length > 2)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(w => w.length > 3)
     .sort()
     .join(' ')
   return crypto
