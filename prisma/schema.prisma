@@ -403,6 +403,7 @@ model NewsItem {
   source       String
   sourceDomain String
   sourceUrl    String
+  contentHash  String?
   content      String?  @db.Text
   category     String   @default("breaking")
   pubDate      DateTime
@@ -415,6 +416,7 @@ model NewsItem {
   updatedAt    DateTime @updatedAt
 
   @@unique([sourceUrl])
+  @@unique([contentHash])
   @@index([pubDate])
   @@index([category])
   @@index([siteId, pubDate])
@@ -433,4 +435,14 @@ model FeedSource {
   errorCount Int       @default(0)
   siteId     String?
   createdAt  DateTime  @default(now())
+}
+
+model Entity {
+  id       String   @id @default(cuid())
+  name     String   @unique
+  type     String
+  aliases  String[]
+  metadata Json?
+
+  @@index([type])
 }

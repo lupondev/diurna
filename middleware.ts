@@ -17,7 +17,7 @@ export async function middleware(req: NextRequest) {
   const isOgRoute = pathname.startsWith('/api/og')
   const isFeedRoute = pathname.startsWith('/feed')
   const isCronRoute = pathname.startsWith('/api/cron')
-  const isSeedRoute = pathname.startsWith('/api/admin/seed-feeds')
+  const isSeedRoute = pathname.startsWith('/api/admin/seed-feeds') || pathname.startsWith('/api/admin/seed-entities')
   const isPublicRoute = pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isCronRoute || isSeedRoute
 
   if (!isPublicRoute) {

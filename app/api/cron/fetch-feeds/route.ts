@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import Parser from 'rss-parser'
+import crypto from 'crypto'
 
 const parser = new Parser({
   timeout: 5000,
@@ -39,6 +40,32 @@ function extractSourceDomain(feedName: string, link: string): string {
   } catch {
     return feedName.toLowerCase().replace(/\s+/g, '') + '.com'
   }
+}
+
+function normalizeUrl(rawUrl: string): string {
+  try {
+    const u = new URL(rawUrl)
+    u.search = ''
+    u.hash = ''
+    const path = u.pathname.replace(/\/+$/, '')
+    return u.origin + path
+  } catch {
+    return rawUrl
+  }
+}
+
+function generateContentHash(title: string, source: string): string {
+  const normalized = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 2)
+    .sort()
+    .join(' ')
+  return crypto
+    .createHash('md5')
+    .update(normalized + '|' + source.toLowerCase())
+    .digest('hex')
 }
 
 function getCategory(feedCategory: string, title: string): string {
@@ -99,12 +126,15 @@ export async function GET(req: Request) {
 
         let newCount = 0
         for (const item of items) {
-          const sourceUrl = item.link || item.guid || ''
-          if (!sourceUrl) continue
+          const rawUrl = item.link || item.guid || ''
+          if (!rawUrl) continue
 
           const pubDate = item.pubDate ? new Date(item.pubDate) : new Date()
           if (isNaN(pubDate.getTime())) continue
           if (Date.now() - pubDate.getTime() > 48 * 60 * 60 * 1000) continue
+
+          const sourceUrl = normalizeUrl(rawUrl)
+          const hash = generateContentHash(item.title || '', feed.name)
 
           try {
             await prisma.newsItem.upsert({
@@ -112,6 +142,7 @@ export async function GET(req: Request) {
               update: {
                 title: item.title || '',
                 pubDate,
+                contentHash: hash,
                 updatedAt: new Date(),
               },
               create: {
@@ -119,6 +150,7 @@ export async function GET(req: Request) {
                 source: feed.name,
                 sourceDomain: extractSourceDomain(feed.name, sourceUrl),
                 sourceUrl,
+                contentHash: hash,
                 content: (item.contentSnippet || item.content || '').slice(0, 500),
                 category: getCategory(feed.category, item.title || ''),
                 pubDate,
@@ -171,6 +203,8 @@ export async function GET(req: Request) {
     },
   }).catch(() => {})
 
+  const dedupDeleted = await crossSourceDedup()
+
   await computeDIS()
 
   return NextResponse.json({
@@ -178,8 +212,47 @@ export async function GET(req: Request) {
     tiers: tierFilter,
     newItems: totalNew,
     errors: totalErrors,
+    deduplicated: dedupDeleted,
     timestamp: new Date().toISOString(),
   })
+}
+
+async function crossSourceDedup(): Promise<number> {
+  const items = await prisma.newsItem.findMany({
+    where: { pubDate: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    orderBy: { pubDate: 'desc' },
+  })
+
+  const groups = new Map<string, typeof items>()
+  for (const item of items) {
+    const key = item.title
+      .toLowerCase()
+      .replace(/\s*[-–—]\s*\w.*$/, '')
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter(w => w.length > 3)
+      .slice(0, 8)
+      .join(' ')
+    if (!key) continue
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(item)
+  }
+
+  let deleted = 0
+  for (const [, group] of Array.from(groups)) {
+    if (group.length <= 1) continue
+    group.sort((a, b) => {
+      if (a.tier !== b.tier) return a.tier - b.tier
+      return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime()
+    })
+    const toDelete = group.slice(1).map(i => i.id)
+    if (toDelete.length > 0) {
+      await prisma.newsItem.deleteMany({ where: { id: { in: toDelete } } })
+      deleted += toDelete.length
+    }
+  }
+
+  return deleted
 }
 
 async function computeDIS() {
