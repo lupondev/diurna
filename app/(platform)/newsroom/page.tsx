@@ -1,593 +1,184 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import './newsroom.css'
 
-type Article = {
+interface ClusterSummary {
+  mainClaims: { claim: string; sources: string[]; tier: number }[]
+  conflictingReports: { topic: string; versions: string[] }[] | null
+  signalIntegrity: { tier1_count: number; tier2_count: number; tier3_count: number; conflicts: boolean; consistency: number; confidence: string }
+  summaryText: string
+  confidence: string
+}
+
+interface Cluster {
   id: string
+  key: string
   title: string
-  slug: string
-  status: string
-  aiGenerated: boolean
-  updatedAt: string
-  createdAt: string
-  publishedAt: string | null
-  excerpt?: string | null
-  content?: Record<string, unknown>
-  category?: { name: string } | null
-  tags?: { tag: { id: string; name: string } }[]
-  site?: { name: string } | null
+  eventType: string
+  primaryEntity: string
+  primaryEntityType: string
+  entities: string[]
+  sourceCount: number
+  tier1Count: number
+  tier2Count: number
+  tier3Count: number
+  hasConflicts: boolean
+  acceleration: number
+  trend: string
+  consistency: number
+  dis: number
+  peakDis: number
+  firstSeen: string
+  latestItem: string
+  newsItems: string[]
+  summary?: ClusterSummary
 }
 
-type BreakingItem = { title: string; source: string; link: string; pubDate: string }
-type FixtureItem = { id: number; date: string; status: string; elapsed: number | null; league: string; homeTeam: string; awayTeam: string; homeGoals: number | null; awayGoals: number | null }
-type LiveMatch = FixtureItem & { events?: { minute: number; type: string; detail: string; team: string }[] }
-type RedditPost = { title: string; score: number; comments: number; link: string; subreddit: string; pubDate: string; selftext: string; flair: string; url: string }
-type YouTubeVideo = { title: string; channel: string; videoId: string; link: string; thumbnail: string; pubDate: string }
-type CartItem = { id: string; title: string; source: string; link: string; role: 'primary' | 'supporting' | 'media'; type: string }
-type TimeFilter = '1h' | '3h' | '6h' | '12h' | '24h' | '48h' | 'all'
-type IdeaCluster = { id: string; theme: string; stories: BreakingItem[]; entities: string[]; angles: string[]; sourceCount: number; avgDIS: number }
-type TabKey = 'breaking' | 'transfers' | 'ideas' | 'live' | 'youtube' | 'fanbuzz'
+type SectionKey = 'ALL' | 'BREAKING' | 'TRANSFERS' | 'MATCHES' | 'INJURIES'
 
-function getTimeAgo(date: string) {
-  if (!date) return ''
-  const parsed = new Date(date)
-  if (isNaN(parsed.getTime())) return ''
-  const diff = Date.now() - parsed.getTime()
-  if (diff < 0) return 'just now'
-  const secs = Math.floor(diff / 1000)
-  if (secs < 60) return 'just now'
-  const mins = Math.floor(secs / 60)
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  return `${Math.floor(days / 30)}mo ago`
+const SECTIONS: { key: SectionKey; label: string; icon: string; eventTypes: string[] | null; minDis?: number }[] = [
+  { key: 'ALL', label: 'All', icon: '\u{1F4F0}', eventTypes: null },
+  { key: 'BREAKING', label: 'Breaking', icon: '\u{1F525}', eventTypes: ['SCANDAL', 'DISCIPLINE', 'BREAKING', 'RECORD'], minDis: 55 },
+  { key: 'TRANSFERS', label: 'Transfer Market', icon: '\u{1F504}', eventTypes: ['TRANSFER', 'CONTRACT'] },
+  { key: 'MATCHES', label: 'Matches', icon: '\u26BD', eventTypes: ['MATCH_PREVIEW', 'MATCH_RESULT', 'POST_MATCH_REACTION'] },
+  { key: 'INJURIES', label: 'Injuries', icon: '\u{1F3E5}', eventTypes: ['INJURY'] },
+]
+
+const TREND_COLORS: Record<string, string> = {
+  SPIKING: '#dc2626',
+  RISING: '#ea580c',
+  STABLE: '#6b7280',
+  FADING: '#d1d5db',
 }
 
-const SOURCE_COLORS: Record<string, { bg: string; color: string }> = {
-  'ESPN': { bg: '#dc2626', color: '#fff' },
-  'ESPN FC': { bg: '#dc2626', color: '#fff' },
-  'BBC': { bg: '#1a1a1a', color: '#fff' },
-  'BBC Sport': { bg: '#1a1a1a', color: '#fff' },
-  'Sky Sports': { bg: '#0369a1', color: '#fff' },
-  'The Athletic': { bg: '#ea580c', color: '#fff' },
-  'The Guardian': { bg: '#172554', color: '#fff' },
-  'Guardian': { bg: '#172554', color: '#fff' },
-  'Reuters': { bg: '#f97316', color: '#fff' },
-  'AP News': { bg: '#dc2626', color: '#fff' },
-  'Goal': { bg: '#1e3a5f', color: '#fff' },
-  'Marca': { bg: '#dc2626', color: '#fff' },
-  'L\'Equipe': { bg: '#1d4ed8', color: '#fff' },
+const TREND_LABELS: Record<string, string> = {
+  SPIKING: 'Write NOW',
+  RISING: 'Cover soon',
+  STABLE: 'Steady',
+  FADING: 'Low priority',
 }
 
-function getSourceStyle(source: string) {
-  for (const [key, style] of Object.entries(SOURCE_COLORS)) {
-    if (source.toLowerCase().includes(key.toLowerCase())) return style
-  }
-  return { bg: 'var(--g200)', color: 'var(--g700)' }
+interface LeagueItem {
+  label: string
+  icon: string
 }
 
-function getDomain(link: string) {
-  try { return new URL(link).hostname.replace('www.', '') } catch { return '' }
+const DEFAULT_LEAGUES: LeagueItem[] = [
+  { label: 'Premier League', icon: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}' },
+  { label: 'La Liga', icon: '\u{1F1EA}\u{1F1F8}' },
+  { label: 'Serie A', icon: '\u{1F1EE}\u{1F1F9}' },
+  { label: 'Bundesliga', icon: '\u{1F1E9}\u{1F1EA}' },
+  { label: 'Ligue 1', icon: '\u{1F1EB}\u{1F1F7}' },
+  { label: 'Champions League', icon: '\u2B50' },
+]
+
+const MOCK_MATCHES = [
+  { home: 'Galatasaray', away: 'Juventus', time: '18:45', comp: 'UCL' },
+  { home: 'Benfica', away: 'Real Madrid', time: '21:00', comp: 'UCL' },
+  { home: 'Dortmund', away: 'Atalanta', time: '21:00', comp: 'UCL' },
+  { home: 'Monaco', away: 'PSG', time: '21:00', comp: 'L1' },
+]
+
+const LS_KEY = 'diurna_my_leagues'
+
+function timeAgo(dateStr: string): string {
+  const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000)
+  if (mins < 1) return 'now'
+  if (mins < 60) return `${mins}m`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h`
+  return `${Math.floor(hrs / 24)}d`
 }
 
-const DOMAIN_MAP: Record<string, string> = {
-  'news.google.com': '',
-  'bbc.co.uk': 'BBC Sport',
-  'bbc.com': 'BBC Sport',
-  'skysports.com': 'Sky Sports',
-  'espn.com': 'ESPN',
-  'theathletic.com': 'The Athletic',
-  'theguardian.com': 'The Guardian',
-  'marca.com': 'Marca',
-  'lequipe.fr': "L'Equipe",
-  'reuters.com': 'Reuters',
-  'apnews.com': 'AP News',
-  'goal.com': 'Goal',
-  'transfermarkt.com': 'Transfermarkt',
-  'football-italia.net': 'Football Italia',
-}
-
-function getSourceDomain(item: BreakingItem): string {
-  const domain = getDomain(item.link)
-  if (domain === 'news.google.com' || domain === 'google.com') {
-    const dashMatch = item.title.match(/\s[-–—]\s([^-–—]+)$/)
-    if (dashMatch) return dashMatch[1].trim()
-  }
-  for (const [key, name] of Object.entries(DOMAIN_MAP)) {
-    if (domain.includes(key)) return name || domain
-  }
-  return domain
-}
-
-function extractRealSource(title: string, feedSource: string): string {
-  const match = title.match(/\s*[-–—]\s*([^-–—]+)$/)
-  if (match && (feedSource.toLowerCase().includes('google') || feedSource.toLowerCase().includes('news football'))) {
-    return match[1].trim()
-  }
-  return feedSource
-}
-
-function cleanTitle(title: string): string {
-  return title
-    .replace(/\s*[-–—]\s*(?:BBC|BBC Sport|Sky Sports?|ESPN|ESPN FC|The Guardian|Guardian|Marca|Goal|Mirror|Reuters|The Athletic|CNN|AS|L'Equipe|Football365|90min|TalkSport|FourFourTwo|SoccerNews|Yahoo Sports?(?:\s+\w+)?|France 24|Asian Football|Soccer America|Goal\.com|Planet Football|101 Great Goals|Caught Offside|TeamTalk|Sport Witness|Inside Futbol|Football Espana|Get French Football News|Calcio Mercato|Tribal Football|BeSoccer|SB Nation|Kicker|Gazzetta|Corriere|Tuttosport|Foot Mercato|World Soccer Talk|Football Italia|FootballTransfers|LiveScore|Sports Illustrated).*$/i, '')
-    .trim()
-}
-
-function deduplicateItems(items: BreakingItem[]): BreakingItem[] {
-  const seen = new Map<string, BreakingItem>()
-  return items.filter(item => {
-    const cleaned = cleanTitle(item.title)
-    const normalized = cleaned
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .trim()
-    const key = normalized.split(/\s+/).filter(w => w.length > 3).slice(0, 8).join(' ')
-    if (!key) return true
-    if (seen.has(key)) return false
-    seen.set(key, item)
-    return true
+function filterBySection(clusters: Cluster[], sectionKey: SectionKey): Cluster[] {
+  const section = SECTIONS.find(s => s.key === sectionKey)
+  if (!section || section.key === 'ALL') return clusters
+  return clusters.filter(c => {
+    if (section.key === 'BREAKING') {
+      return c.dis >= 55 || (section.eventTypes && section.eventTypes.includes(c.eventType))
+    }
+    return section.eventTypes && section.eventTypes.includes(c.eventType)
   })
 }
 
-const SOURCE_AUTHORITY: Record<string, number> = {
-  'BBC Sport': 95, 'BBC': 95, 'Sky Sports': 90, 'ESPN': 88, 'ESPN FC': 88,
-  'The Athletic': 85, 'The Guardian': 85, 'Guardian': 85, 'Reuters': 92, 'AP News': 92,
-  'Marca': 80, 'L\'Equipe': 80, 'Goal': 70,
+function filterByLeague(clusters: Cluster[], leagueFilter: string | null): Cluster[] {
+  if (!leagueFilter) return clusters
+  return clusters.filter(c =>
+    c.entities.some(e => e.toLowerCase().includes(leagueFilter.toLowerCase()))
+  )
 }
 
-function getSourceAuthority(source: string): number {
-  for (const [key, val] of Object.entries(SOURCE_AUTHORITY)) {
-    if (source.toLowerCase().includes(key.toLowerCase())) return val
-  }
-  return 50
+function ConfidenceDots({ confidence }: { confidence: string }) {
+  if (confidence === 'HIGH') return <span style={{ color: '#22c55e', fontSize: 11, letterSpacing: 1 }} title="High confidence">{'\u25CF\u25CF\u25CF'}</span>
+  if (confidence === 'MEDIUM') return <span style={{ letterSpacing: 1, fontSize: 11 }} title="Medium confidence"><span style={{ color: '#d97706' }}>{'\u25CF\u25CF'}</span><span style={{ color: '#9ca3af' }}>{'\u25CB'}</span></span>
+  return <span style={{ letterSpacing: 1, fontSize: 11 }} title="Low confidence"><span style={{ color: '#dc2626' }}>{'\u25CF'}</span><span style={{ color: '#9ca3af' }}>{'\u25CB\u25CB'}</span></span>
 }
 
-function calculateDIS(item: BreakingItem, allItems: BreakingItem[]): number {
-  const hoursOld = Math.max(0, (Date.now() - new Date(item.pubDate).getTime()) / 3600000)
-  const authority = getSourceAuthority(item.source) / 100
-  const words = item.title.toLowerCase().split(/\s+/).filter(w => w.length > 3)
-  let coverage = 0
-  for (const other of allItems) {
-    if (other.title === item.title) continue
-    const otherWords = other.title.toLowerCase().split(/\s+/)
-    const shared = words.filter(w => otherWords.includes(w))
-    if (shared.length >= 2) coverage++
-  }
-  const coverageScore = Math.min(1, coverage / 5)
-  const baseScore = (authority * 0.4 + coverageScore * 0.4 + 0.2) * 100
-  return Math.round(Math.max(1, baseScore * Math.pow(0.5, hoursOld / 6)))
+function TrendBadge({ trend }: { trend: string }) {
+  const color = TREND_COLORS[trend] || '#6b7280'
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700,
+      padding: '2px 8px', borderRadius: 4, color: '#fff',
+      background: color, textTransform: 'uppercase', letterSpacing: 0.5,
+    }}>
+      {trend === 'SPIKING' && '\u{1F534}'}{trend === 'RISING' && '\u{1F7E0}'}{trend === 'STABLE' && '\u26AA'}{trend === 'FADING' && '\u{1F7E4}'}
+      {' '}{trend}
+    </span>
+  )
 }
 
-function getDISLevel(dis: number): 'high' | 'medium' | 'low' {
-  if (dis >= 70) return 'high'
-  if (dis >= 40) return 'medium'
-  return 'low'
+function SkeletonCard() {
+  return (
+    <div style={{ background: '#fff', borderRadius: 10, padding: 16, border: '1px solid #e5e7eb' }}>
+      <div style={{ height: 12, width: 80, background: '#e5e7eb', borderRadius: 4, marginBottom: 12 }} className="animate-pulse" />
+      <div style={{ height: 16, width: '90%', background: '#e5e7eb', borderRadius: 4, marginBottom: 8 }} className="animate-pulse" />
+      <div style={{ height: 16, width: '70%', background: '#e5e7eb', borderRadius: 4, marginBottom: 12 }} className="animate-pulse" />
+      <div style={{ height: 10, width: '50%', background: '#e5e7eb', borderRadius: 4 }} className="animate-pulse" />
+    </div>
+  )
 }
-
-function getDISColor(dis: number): string {
-  if (dis >= 70) return 'var(--coral)'
-  if (dis >= 40) return 'var(--gold)'
-  return '#3B82F6'
-}
-
-const KNOWN_CLUBS = ['Arsenal', 'Chelsea', 'Liverpool', 'Manchester United', 'Man United', 'Man Utd', 'Manchester City', 'Man City', 'Tottenham', 'Spurs', 'Newcastle', 'Real Madrid', 'Barcelona', 'Bayern Munich', 'Bayern', 'PSG', 'Juventus', 'Inter Milan', 'AC Milan', 'Dortmund', 'Aston Villa', 'Brighton', 'West Ham', 'Everton', 'Wolves', 'Atletico Madrid', 'Napoli', 'Ajax', 'Marseille']
-const KNOWN_PLAYERS = ['Haaland', 'Mbappe', 'Salah', 'Bellingham', 'Saka', 'Vinicius', 'Pedri', 'Lewandowski', 'Rashford', 'Rodri', 'Messi', 'Ronaldo', 'Yamal', 'Gavi', 'Rice', 'Savic']
-
-function extractEntities(title: string): string[] {
-  const entities: string[] = []
-  const lower = title.toLowerCase()
-  for (const club of KNOWN_CLUBS) {
-    if (lower.includes(club.toLowerCase())) entities.push(club)
-  }
-  for (const player of KNOWN_PLAYERS) {
-    if (lower.includes(player.toLowerCase())) entities.push(player)
-  }
-  return Array.from(new Set(entities))
-}
-
-function generateAngles(entities: string[], stories: BreakingItem[]): string[] {
-  const angles: string[] = []
-  const hasClub = entities.some(e => KNOWN_CLUBS.some(c => c.toLowerCase() === e.toLowerCase()))
-  const hasPlayer = entities.some(e => KNOWN_PLAYERS.some(p => p.toLowerCase() === e.toLowerCase()))
-  const isTransfer = stories.some(s => /transfer|sign|deal|fee|move|bid|offer/i.test(s.title))
-  const isMatch = stories.some(s => /score|win|draw|defeat|goal|match|thrash/i.test(s.title))
-  if (isTransfer) angles.push('Transfer analysis & impact assessment')
-  if (isMatch) angles.push('Match report & tactical breakdown')
-  if (hasPlayer && hasClub) angles.push('Player profile & season review')
-  if (stories.length >= 3) angles.push('Comprehensive timeline of events')
-  angles.push('Opinion: What this means going forward')
-  return angles.slice(0, 3)
-}
-
-function clusterStories(items: BreakingItem[], allItems: BreakingItem[]): IdeaCluster[] {
-  const itemsWithEntities = items.map(item => ({
-    item,
-    entities: extractEntities(item.title),
-    dis: calculateDIS(item, allItems)
-  }))
-  const used = new Set<number>()
-  const clusters: { stories: BreakingItem[]; entities: Set<string>; disScores: number[] }[] = []
-  for (let i = 0; i < itemsWithEntities.length; i++) {
-    if (used.has(i)) continue
-    const { item, entities, dis } = itemsWithEntities[i]
-    if (entities.length === 0) continue
-    const cluster = { stories: [item], entities: new Set(entities), disScores: [dis] }
-    used.add(i)
-    for (let j = i + 1; j < itemsWithEntities.length; j++) {
-      if (used.has(j)) continue
-      const other = itemsWithEntities[j]
-      const shared = entities.filter(e => other.entities.includes(e))
-      if (shared.length >= 1) {
-        cluster.stories.push(other.item)
-        other.entities.forEach(e => cluster.entities.add(e))
-        cluster.disScores.push(other.dis)
-        used.add(j)
-      }
-    }
-    if (cluster.stories.length >= 2) {
-      clusters.push(cluster)
-    }
-  }
-  return clusters.map((c, i) => ({
-    id: `cluster-${i}`,
-    theme: Array.from(c.entities).slice(0, 3).join(' + '),
-    stories: c.stories,
-    entities: Array.from(c.entities),
-    angles: generateAngles(Array.from(c.entities), c.stories),
-    sourceCount: new Set(c.stories.map(s => s.source)).size,
-    avgDIS: Math.round(c.disScores.reduce((a, b) => a + b, 0) / c.disScores.length)
-  })).sort((a, b) => b.avgDIS - a.avgDIS)
-}
-
-const TIME_FILTERS: { key: TimeFilter; label: string; ms: number }[] = [
-  { key: '1h', label: '1H', ms: 3600000 },
-  { key: '3h', label: '3H', ms: 10800000 },
-  { key: '6h', label: '6H', ms: 21600000 },
-  { key: '12h', label: '12H', ms: 43200000 },
-  { key: '24h', label: '24H', ms: 86400000 },
-  { key: '48h', label: '48H', ms: 172800000 },
-  { key: 'all', label: 'ALL', ms: Infinity },
-]
-
-function filterByTime<T>(items: T[], filter: TimeFilter, getDate: (item: T) => string): T[] {
-  if (filter === 'all') return items
-  const tf = TIME_FILTERS.find(f => f.key === filter)
-  if (!tf) return items
-  const cutoff = Date.now() - tf.ms
-  return items.filter(item => {
-    const d = new Date(getDate(item)).getTime()
-    return !isNaN(d) && d > cutoff
-  })
-}
-
-const SMART_GEN_STEPS = [
-  'Analyzing trending topic...',
-  'Generating original content...',
-  'Creating poll & quiz...',
-  'Optimizing SEO...',
-  'Finalizing article package...',
-]
-
-const MOCK_BREAKING: BreakingItem[] = [
-  { title: 'Arsenal extend Premier League lead with dominant win over Wolves', source: 'BBC Sport', link: 'https://bbc.co.uk/sport/football', pubDate: new Date(Date.now() - 1800000).toISOString() },
-  { title: 'Haaland scores hat-trick as Man City thrash Everton 5-0', source: 'Sky Sports', link: 'https://skysports.com/football', pubDate: new Date(Date.now() - 3600000).toISOString() },
-  { title: 'Liverpool confirm Salah contract extension through 2027', source: 'ESPN', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 5400000).toISOString() },
-  { title: 'Real Madrid eye summer move for Premier League midfielder', source: 'The Guardian', link: 'https://theguardian.com/football', pubDate: new Date(Date.now() - 7200000).toISOString() },
-  { title: 'Champions League draw: Barcelona face Bayern Munich in quarter-finals', source: 'ESPN FC', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 9000000).toISOString() },
-  { title: 'VAR controversy overshadows Manchester derby as City snatch late equalizer', source: 'BBC Sport', link: 'https://bbc.co.uk/sport/football', pubDate: new Date(Date.now() - 10800000).toISOString() },
-  { title: 'Newcastle United announce record commercial deal worth £40m per year', source: 'Sky Sports', link: 'https://skysports.com/football', pubDate: new Date(Date.now() - 14400000).toISOString() },
-  { title: 'Tottenham sack manager after five consecutive Premier League defeats', source: 'The Athletic', link: 'https://theathletic.com/football', pubDate: new Date(Date.now() - 18000000).toISOString() },
-  { title: 'Mbappe suffers hamstring injury, could miss Champions League tie', source: 'Marca', link: 'https://marca.com', pubDate: new Date(Date.now() - 21600000).toISOString() },
-  { title: 'Chelsea youngster breaks through with stunning debut goal against Aston Villa', source: 'ESPN', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 25200000).toISOString() },
-]
-
-const MOCK_TRANSFERS: BreakingItem[] = [
-  { title: '[Fabrizio Romano] Arsenal complete signing of Spain international — here we go confirmed', source: 'The Guardian', link: 'https://theguardian.com/football', pubDate: new Date(Date.now() - 3600000).toISOString() },
-  { title: 'Manchester United agree £65m fee for Bundesliga striker', source: 'Sky Sports', link: 'https://skysports.com/football', pubDate: new Date(Date.now() - 7200000).toISOString() },
-  { title: 'Chelsea target Ajax defender as squad overhaul continues', source: 'ESPN', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 10800000).toISOString() },
-  { title: 'Liverpool identify La Liga winger as Salah long-term successor', source: 'The Athletic', link: 'https://theathletic.com/football', pubDate: new Date(Date.now() - 14400000).toISOString() },
-  { title: 'Real Madrid to trigger €120m release clause for Premier League star', source: 'Marca', link: 'https://marca.com', pubDate: new Date(Date.now() - 18000000).toISOString() },
-  { title: 'PSG offer Barcelona forward in swap deal for midfielder', source: 'ESPN FC', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 21600000).toISOString() },
-  { title: 'Tottenham close in on Serie A midfielder for £30m transfer', source: 'BBC Sport', link: 'https://bbc.co.uk/sport/football', pubDate: new Date(Date.now() - 25200000).toISOString() },
-  { title: 'Newcastle enter race for Napoli winger rated at €80m', source: 'The Guardian', link: 'https://theguardian.com/football', pubDate: new Date(Date.now() - 36000000).toISOString() },
-]
-
-const MOCK_YOUTUBE: YouTubeVideo[] = [
-  { title: 'HIGHLIGHTS | Real Madrid 3-1 Barcelona | El Clasico', channel: 'Real Madrid', videoId: '6stlCkUDG_s', link: 'https://www.youtube.com/watch?v=6stlCkUDG_s', thumbnail: 'https://i.ytimg.com/vi/6stlCkUDG_s/mqdefault.jpg', pubDate: new Date(Date.now() - 3600000).toISOString() },
-  { title: 'Champions League BEST GOALS of the Week!', channel: 'UEFA Champions League', videoId: 'MFb3PCVyiGk', link: 'https://www.youtube.com/watch?v=MFb3PCVyiGk', thumbnail: 'https://i.ytimg.com/vi/MFb3PCVyiGk/mqdefault.jpg', pubDate: new Date(Date.now() - 7200000).toISOString() },
-  { title: 'Transfer News LIVE: Latest Signings and Deals', channel: 'Sky Sports', videoId: 'Wz_DNrKVifQ', link: 'https://www.youtube.com/watch?v=Wz_DNrKVifQ', thumbnail: 'https://i.ytimg.com/vi/Wz_DNrKVifQ/mqdefault.jpg', pubDate: new Date(Date.now() - 14400000).toISOString() },
-  { title: 'Premier League Preview: Matchday 28 Analysis', channel: 'ESPN FC', videoId: 'JHkA3te0dEY', link: 'https://www.youtube.com/watch?v=JHkA3te0dEY', thumbnail: 'https://i.ytimg.com/vi/JHkA3te0dEY/mqdefault.jpg', pubDate: new Date(Date.now() - 21600000).toISOString() },
-  { title: 'Top 10 Goals | Premier League 2024/25', channel: 'Premier League', videoId: 'TkwF2dOGjY4', link: 'https://www.youtube.com/watch?v=TkwF2dOGjY4', thumbnail: 'https://i.ytimg.com/vi/TkwF2dOGjY4/mqdefault.jpg', pubDate: new Date(Date.now() - 54000000).toISOString() },
-  { title: 'Tactical Breakdown: How Arsenal Dominated the League', channel: 'The Athletic FC', videoId: 'v0IjjKXGvLQ', link: 'https://www.youtube.com/watch?v=v0IjjKXGvLQ', thumbnail: 'https://i.ytimg.com/vi/v0IjjKXGvLQ/mqdefault.jpg', pubDate: new Date(Date.now() - 86400000).toISOString() },
-]
-
-const MOCK_REDDIT: RedditPost[] = [
-  { title: 'Salah breaks Premier League assist record with stunning through ball', score: 12400, comments: 1823, link: 'https://reddit.com/r/soccer/comments/abc123', subreddit: 'soccer', pubDate: new Date(Date.now() - 1800000).toISOString(), selftext: 'Mohamed Salah has broken the Premier League assist record with his 21st assist of the season, a perfectly weighted through ball to set up the winning goal.', flair: 'Stats', url: 'https://reddit.com' },
-  { title: '[Fabrizio Romano] Arsenal complete signing of midfielder — here we go confirmed', score: 9800, comments: 2105, link: 'https://reddit.com/r/soccer/comments/def456', subreddit: 'soccer', pubDate: new Date(Date.now() - 3600000).toISOString(), selftext: '', flair: 'Transfer', url: 'https://twitter.com/FabrizioRomano/status/123' },
-  { title: 'Post Match Thread: Real Madrid 3-2 Barcelona [La Liga]', score: 8200, comments: 4521, link: 'https://reddit.com/r/soccer/comments/ghi789', subreddit: 'soccer', pubDate: new Date(Date.now() - 7200000).toISOString(), selftext: 'FT: Real Madrid 3-2 Barcelona\n\nGoals: Vinicius Jr 12\', 67\', Bellingham 45+2\' — Yamal 34\', Lewandowski 78\'\n\nRed card: Araujo 55\' (second yellow)', flair: 'Post Match Thread', url: 'https://reddit.com' },
-  { title: 'VAR decision in City vs Liverpool sparks massive debate', score: 7600, comments: 3200, link: 'https://reddit.com/r/PremierLeague/comments/jkl012', subreddit: 'PremierLeague', pubDate: new Date(Date.now() - 10800000).toISOString(), selftext: 'The VAR decision to disallow Liverpool\'s equalizer has caused huge controversy.', flair: 'Discussion', url: 'https://streamable.com/abc' },
-  { title: 'Haaland scores hat-trick to go top of Golden Boot race', score: 6100, comments: 890, link: 'https://reddit.com/r/PremierLeague/comments/mno345', subreddit: 'PremierLeague', pubDate: new Date(Date.now() - 14400000).toISOString(), selftext: 'Erling Haaland has scored his third hat-trick of the season, taking his tally to 28 goals in 25 Premier League appearances.', flair: 'Stats', url: 'https://reddit.com' },
-  { title: 'Bayern Munich sack manager after Champions League exit', score: 5400, comments: 1450, link: 'https://reddit.com/r/soccer/comments/pqr678', subreddit: 'soccer', pubDate: new Date(Date.now() - 18000000).toISOString(), selftext: '', flair: 'News', url: 'https://fcbayern.com/en/news' },
-]
-
-const MOCK_LIVE_MATCHES: LiveMatch[] = [
-  {
-    id: 9001, date: new Date().toISOString(), status: 'LIVE', elapsed: 34, league: 'Premier League',
-    homeTeam: 'Manchester United', awayTeam: 'Chelsea', homeGoals: 1, awayGoals: 2,
-    events: [
-      { minute: 12, type: 'goal', detail: 'Palmer 1-0 (pen)', team: 'Chelsea' },
-      { minute: 23, type: 'goal', detail: 'Rashford 1-1', team: 'Manchester United' },
-      { minute: 31, type: 'goal', detail: 'Jackson 1-2', team: 'Chelsea' },
-    ],
-  },
-  {
-    id: 9002, date: new Date().toISOString(), status: 'LIVE', elapsed: 67, league: 'La Liga',
-    homeTeam: 'Barcelona', awayTeam: 'Atletico Madrid', homeGoals: 3, awayGoals: 0,
-    events: [
-      { minute: 8, type: 'goal', detail: 'Yamal 1-0', team: 'Barcelona' },
-      { minute: 35, type: 'goal', detail: 'Lewandowski 2-0', team: 'Barcelona' },
-      { minute: 44, type: 'red', detail: 'Savic — second yellow', team: 'Atletico Madrid' },
-      { minute: 58, type: 'goal', detail: 'Pedri 3-0', team: 'Barcelona' },
-    ],
-  },
-  {
-    id: 9003, date: new Date(Date.now() + 3 * 3600000).toISOString(), status: 'NS', elapsed: null, league: 'Serie A',
-    homeTeam: 'AC Milan', awayTeam: 'Inter Milan', homeGoals: null, awayGoals: null,
-  },
-  {
-    id: 9004, date: new Date(Date.now() - 2 * 3600000).toISOString(), status: 'FT', elapsed: 90, league: 'Bundesliga',
-    homeTeam: 'Bayern Munich', awayTeam: 'Borussia Dortmund', homeGoals: 2, awayGoals: 2,
-    events: [
-      { minute: 15, type: 'goal', detail: 'Musiala 1-0', team: 'Bayern Munich' },
-      { minute: 38, type: 'goal', detail: 'Brandt 1-1', team: 'Borussia Dortmund' },
-      { minute: 52, type: 'goal', detail: 'Kane 2-1 (pen)', team: 'Bayern Munich' },
-      { minute: 89, type: 'goal', detail: 'Adeyemi 2-2', team: 'Borussia Dortmund' },
-    ],
-  },
-]
 
 export default function NewsroomPage() {
   const router = useRouter()
-  const [, setArticles] = useState<Article[]>([])
-  const [search, setSearch] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
-  const [activeTab, setActiveTab] = useState<TabKey>('breaking')
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [generatingTopic, setGeneratingTopic] = useState<string | null>(null)
-  const [genStep, setGenStep] = useState(0)
-  const [genError, setGenError] = useState<string | null>(null)
+  const [clusters, setClusters] = useState<Cluster[]>([])
+  const [loading, setLoading] = useState(true)
+  const [clusterMeta, setClusterMeta] = useState({ count: 0 })
+  const [activeSection, setActiveSection] = useState<SectionKey>('ALL')
+  const [search, setSearch] = useState('')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [activeLeague, setActiveLeague] = useState<string | null>(null)
+  const [leagues, setLeagues] = useState<LeagueItem[]>(DEFAULT_LEAGUES)
+  const [addingLeague, setAddingLeague] = useState(false)
+  const [newLeagueName, setNewLeagueName] = useState('')
 
-  const [breakingNews, setBreakingNews] = useState<BreakingItem[]>([])
-  const [breakingLoading, setBreakingLoading] = useState(false)
-  const [fixtures, setFixtures] = useState<FixtureItem[]>([])
-  const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([])
-  const [fixturesLoading, setFixturesLoading] = useState(false)
-  const [redditPosts, setRedditPosts] = useState<RedditPost[]>([])
-  const [redditLoading, setRedditLoading] = useState(false)
-  const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideo[]>([])
-  const [youtubeLoading, setYoutubeLoading] = useState(false)
-  const [transferNews, setTransferNews] = useState<BreakingItem[]>([])
-  const [transfersLoading, setTransfersLoading] = useState(false)
-
-  useEffect(() => {
-    fetch('/api/articles?limit=50')
-      .then(r => r.json())
-      .then(data => setArticles(data.articles || data || []))
-      .catch(() => {})
-
-    setBreakingLoading(true)
-    fetch('/api/newsroom/feed?category=breaking&hours=24&limit=50')
-      .then(r => r.json())
-      .then(data => {
-        const items = deduplicateItems((data.items || []).map((i: { title: string; source: string; sourceUrl: string; pubDate: string }) => ({
-          title: i.title, source: extractRealSource(i.title, i.source), link: i.sourceUrl, pubDate: i.pubDate
-        })))
-        setBreakingNews(items.length > 0 ? items : MOCK_BREAKING)
-      })
-      .catch(() => setBreakingNews(MOCK_BREAKING))
-      .finally(() => setBreakingLoading(false))
-
-    setTransfersLoading(true)
-    fetch('/api/newsroom/feed?category=transfer&hours=48&limit=50')
-      .then(r => r.json())
-      .then(data => {
-        const items = deduplicateItems((data.items || []).map((i: { title: string; source: string; sourceUrl: string; pubDate: string }) => ({
-          title: i.title, source: extractRealSource(i.title, i.source), link: i.sourceUrl, pubDate: i.pubDate
-        })))
-        setTransferNews(items.length > 0 ? items : MOCK_TRANSFERS)
-      })
-      .catch(() => setTransferNews(MOCK_TRANSFERS))
-      .finally(() => setTransfersLoading(false))
-  }, [])
-
-  useEffect(() => {
-    if (activeTab === 'live' && fixtures.length === 0 && !fixturesLoading) {
-      setFixturesLoading(true)
-      fetch('/api/newsroom/fixtures')
-        .then(r => r.json())
-        .then(data => { setFixtures(data.fixtures || []); setLiveMatches(data.live || []) })
-        .catch(() => {})
-        .finally(() => setFixturesLoading(false))
-    }
-    if (activeTab === 'fanbuzz' && redditPosts.length === 0 && !redditLoading) {
-      setRedditLoading(true)
-      fetch('/api/newsroom/reddit')
-        .then(r => r.json())
-        .then(data => {
-          const posts = data.posts || []
-          setRedditPosts(posts.length > 0 ? posts : MOCK_REDDIT)
-        })
-        .catch(() => setRedditPosts(MOCK_REDDIT))
-        .finally(() => setRedditLoading(false))
-    }
-    if (activeTab === 'youtube' && youtubeVideos.length === 0 && !youtubeLoading) {
-      setYoutubeLoading(true)
-      fetch('/api/newsroom/youtube')
-        .then(r => r.json())
-        .then(data => {
-          const vids = data.videos || []
-          setYoutubeVideos(vids.length > 0 ? vids : MOCK_YOUTUBE)
-        })
-        .catch(() => setYoutubeVideos(MOCK_YOUTUBE))
-        .finally(() => setYoutubeLoading(false))
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
-
-  const allNewsItems = useMemo(() => [...breakingNews, ...transferNews], [breakingNews, transferNews])
-
-  const top5 = useMemo(() => {
-    if (allNewsItems.length === 0) return []
-    const deduped = deduplicateItems(allNewsItems)
-    return deduped
-      .map(item => ({ ...item, dis: calculateDIS(item, allNewsItems) }))
-      .sort((a, b) => b.dis - a.dis)
-      .slice(0, 5)
-  }, [allNewsItems])
-
-  const ideaClusters = useMemo(() => {
-    if (allNewsItems.length === 0) return []
-    return clusterStories(allNewsItems, allNewsItems)
-  }, [allNewsItems])
-
-  const searchLower = search.toLowerCase()
-
-  const top5Titles = useMemo(() => new Set(top5.map(i => cleanTitle(i.title).toLowerCase())), [top5])
-
-  const filteredBreaking = useMemo(() => {
-    let items = breakingNews.filter(i => !top5Titles.has(cleanTitle(i.title).toLowerCase()))
-    items = filterByTime(items, timeFilter, i => i.pubDate)
-    if (search) items = items.filter(i => i.title.toLowerCase().includes(searchLower))
-    return items
-  }, [breakingNews, top5Titles, timeFilter, search, searchLower])
-
-  const filteredTransfers = useMemo(() => {
-    let items = transferNews.filter(i => !top5Titles.has(cleanTitle(i.title).toLowerCase()))
-    items = filterByTime(items, timeFilter, i => i.pubDate)
-    if (search) items = items.filter(i => i.title.toLowerCase().includes(searchLower))
-    return items
-  }, [transferNews, top5Titles, timeFilter, search, searchLower])
-
-  const filteredYoutube = useMemo(() => {
-    let items = youtubeVideos
-    items = filterByTime(items, timeFilter, i => i.pubDate)
-    if (search) items = items.filter(i => i.title.toLowerCase().includes(searchLower) || i.channel.toLowerCase().includes(searchLower))
-    return items
-  }, [youtubeVideos, timeFilter, search, searchLower])
-
-  const filteredReddit = useMemo(() => {
-    let items = redditPosts
-    items = filterByTime(items, timeFilter, i => i.pubDate)
-    if (search) items = items.filter(i => i.title.toLowerCase().includes(searchLower))
-    return items
-  }, [redditPosts, timeFilter, search, searchLower])
-
-  const activeLiveMatches = liveMatches.length > 0 ? liveMatches : MOCK_LIVE_MATCHES
-  const activeLive = activeLiveMatches.filter(m => m.status === 'LIVE' || (m.elapsed !== null && m.elapsed > 0 && m.status !== 'FT' && m.status !== 'NS'))
-  const activeFinished = activeLiveMatches.filter(m => m.status === 'FT')
-  const activeUpcoming = activeLiveMatches.filter(m => m.status === 'NS' || (m.elapsed === null && m.status !== 'FT'))
-  const filteredLive = activeLive.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower))
-  const filteredFinished = activeFinished.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower))
-  const filteredUpcoming = activeUpcoming.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower))
-  const filteredFixtures = fixtures.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower))
-
-  const filteredIdeas = useMemo(() => {
-    if (!search) return ideaClusters
-    return ideaClusters.filter(c => c.theme.toLowerCase().includes(searchLower) || c.stories.some(s => s.title.toLowerCase().includes(searchLower)))
-  }, [ideaClusters, search, searchLower])
-
-  const addToCart = useCallback((title: string, source: string, link: string, type: string) => {
-    setCart(prev => {
-      if (prev.some(c => c.title === title)) return prev
-      const role: CartItem['role'] = type === 'youtube' ? 'media' : prev.length === 0 ? 'primary' : 'supporting'
-      return [...prev, { id: `cart-${Date.now()}`, title, source, link, role, type }]
-    })
-  }, [])
-
-  const removeFromCart = useCallback((id: string) => {
-    setCart(prev => prev.filter(c => c.id !== id))
-  }, [])
-
-  const generateFromCart = useCallback(() => {
-    const sources = cart.map(c => ({ title: c.title, source: c.source, role: c.role }))
-    sessionStorage.setItem('diurna_combined_sources', JSON.stringify(sources))
-    router.push('/editor?mode=combined')
-  }, [cart, router])
-
-  const generateFromTopic = useCallback(async (topic: { id: string; title: string; category: string; suggestedType: string }) => {
-    setGeneratingTopic(topic.id)
-    setGenStep(0)
-    setGenError(null)
-    const stepInterval = setInterval(() => {
-      setGenStep(prev => { if (prev >= SMART_GEN_STEPS.length - 1) { clearInterval(stepInterval); return prev }; return prev + 1 })
-    }, 1500)
+  const fetchClusters = useCallback(async () => {
     try {
-      const res = await fetch('/api/ai/smart-generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: topic.title, category: topic.category, articleType: topic.suggestedType }),
-      })
-      clearInterval(stepInterval)
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Generation failed') }
+      const res = await fetch('/api/newsroom/clusters?limit=50')
       const data = await res.json()
-      setGenStep(SMART_GEN_STEPS.length)
-      sessionStorage.setItem('smartArticle', JSON.stringify(data))
-      const params = new URLSearchParams()
-      params.set('smartGenerate', 'true')
-      params.set('title', data.title || topic.title)
-      if (data.excerpt) params.set('excerpt', data.excerpt)
-      if (data.category) params.set('category', data.category)
-      setTimeout(() => { router.push(`/editor?${params.toString()}`) }, 800)
-    } catch (err) {
-      clearInterval(stepInterval)
-      setGenError(err instanceof Error ? err.message : 'Generation failed')
-      setTimeout(() => { setGeneratingTopic(null); setGenError(null) }, 3000)
+      setClusters(data.clusters || [])
+      setClusterMeta({ count: data.count || 0 })
+    } catch {
+      setClusters([])
+    } finally {
+      setLoading(false)
     }
-  }, [router])
+  }, [])
 
-  async function rewriteArticle(title: string, prompt?: string, sourceUrl?: string) {
-    sessionStorage.setItem('editorTopic', title)
-    if (sourceUrl) {
-      try {
-        const res = await fetch('/api/newsroom/fetch-source', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: sourceUrl }),
-        })
-        if (res.ok) {
-          const data = await res.json()
-          if (data.text) {
-            sessionStorage.setItem('diurna_rewrite_source', JSON.stringify({
-              title,
-              sourceText: data.text,
-              domain: data.domain,
-              prompt: prompt || `Rewrite this news story in our editorial voice: ${title}`,
-            }))
-            router.push('/editor?mode=rewrite')
-            return
-          }
-        }
-      } catch {}
-    }
-    sessionStorage.setItem('diurna_headline_only', JSON.stringify({ title }))
-    router.push('/editor?mode=headline-only')
-  }
+  useEffect(() => {
+    fetchClusters()
+    const interval = setInterval(fetchClusters, 60000)
+    return () => clearInterval(interval)
+  }, [fetchClusters])
 
-  const isInCart = useCallback((title: string) => cart.some(c => c.title === title), [cart])
-
-  const tabs: { key: TabKey; icon: string; label: string; count: number }[] = [
-    { key: 'breaking', icon: '📰', label: 'BREAKING', count: filteredBreaking.length },
-    { key: 'transfers', icon: '🔄', label: 'TRANSFERS', count: filteredTransfers.length },
-    { key: 'ideas', icon: '💡', label: 'IDEAS', count: ideaClusters.length },
-    { key: 'live', icon: '⚽', label: 'LIVE', count: liveMatches.length },
-    { key: 'youtube', icon: '📺', label: 'YOUTUBE', count: filteredYoutube.length },
-    { key: 'fanbuzz', icon: '💬', label: 'FAN BUZZ', count: filteredReddit.length },
-  ]
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LS_KEY)
+      if (stored) setLeagues(JSON.parse(stored))
+    } catch {}
+  }, [])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -600,464 +191,484 @@ export default function NewsroomPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  function getEngagement(item: BreakingItem): number {
-    const words = item.title.toLowerCase().split(/\s+/).filter(w => w.length > 3)
-    let count = 1
-    for (const other of allNewsItems) {
-      if (other.title === item.title) continue
-      const otherWords = other.title.toLowerCase().split(/\s+/)
-      if (words.filter(w => otherWords.includes(w)).length >= 2) count++
+  const saveLeagues = useCallback((updated: LeagueItem[]) => {
+    setLeagues(updated)
+    localStorage.setItem(LS_KEY, JSON.stringify(updated))
+  }, [])
+
+  const addLeague = useCallback(() => {
+    const name = newLeagueName.trim()
+    if (!name) return
+    if (leagues.some(l => l.label.toLowerCase() === name.toLowerCase())) {
+      setNewLeagueName('')
+      setAddingLeague(false)
+      return
     }
-    return count
-  }
+    saveLeagues([...leagues, { label: name, icon: '\u{1F3C6}' }])
+    setNewLeagueName('')
+    setAddingLeague(false)
+  }, [newLeagueName, leagues, saveLeagues])
 
-  function renderNewsCard(item: BreakingItem, index: number, type: 'breaking' | 'transfer') {
-    const dis = calculateDIS(item, allNewsItems)
-    const level = getDISLevel(dis)
-    const srcStyle = getSourceStyle(item.source)
-    const sourceDomain = getSourceDomain(item)
-    const inCart = isInCart(item.title)
-    const engagement = getEngagement(item)
+  const removeLeague = useCallback((label: string) => {
+    const updated = leagues.filter(l => l.label !== label)
+    saveLeagues(updated)
+    if (activeLeague === label) setActiveLeague(null)
+  }, [leagues, activeLeague, saveLeagues])
 
-    return (
-      <div key={index} className={`news-card-v4 ${inCart ? 'in-cart' : ''}`} style={{ animationDelay: `${index * 50}ms` }}>
-        <div className="v4-dis-bar" style={{ background: getDISColor(dis) }} />
-        <div className="v4-card-header">
-          <span className="v4-source-badge" style={{ background: srcStyle.bg, color: srcStyle.color }}>{item.source}</span>
-          <div className="v4-card-meta-right">
-            {engagement > 1 && <span className="v4-engagement">{engagement} sources</span>}
-            <span className="v4-time">{getTimeAgo(item.pubDate)}</span>
-          </div>
-        </div>
-        <h3 className="v4-card-title">{cleanTitle(item.title)}</h3>
-        <div className="v4-card-footer">
-          <div className="v4-dis-score">
-            <span className={`v4-dis-num ${level}`}>{dis}</span>
-            <span className="v4-dis-label">DIS</span>
-          </div>
-          {sourceDomain && <a href={item.link} target="_blank" rel="noopener noreferrer" className="v4-domain">{sourceDomain} →</a>}
-          <div className="v4-card-actions">
-            <button className="v4-btn-rewrite" onClick={() => rewriteArticle(item.title, type === 'transfer' ? `Write a transfer analysis: ${item.title}` : undefined, item.link)}>Rewrite</button>
-            <button className={`v4-btn-cart ${inCart ? 'added' : ''}`} onClick={() => { if (!inCart) addToCart(item.title, item.source, item.link, type) }} disabled={inCart}>
-              {inCart ? '✓' : '+'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
+  const searchLower = search.toLowerCase()
+
+  const filtered = useMemo(() => {
+    let result = filterBySection(clusters, activeSection)
+    result = filterByLeague(result, activeLeague)
+    if (search) {
+      result = result.filter(c =>
+        c.title.toLowerCase().includes(searchLower) ||
+        c.entities.some(e => e.toLowerCase().includes(searchLower))
+      )
+    }
+    return result.sort((a, b) => b.dis - a.dis)
+  }, [clusters, activeSection, activeLeague, search, searchLower])
+
+  const sectionCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const s of SECTIONS) {
+      counts[s.key] = filterBySection(clusters, s.key).length
+    }
+    return counts
+  }, [clusters])
+
+  const topStory = filtered[0] || null
+  const restStories = filtered.slice(1)
+
+  function writeArticle(cluster: Cluster) {
+    const params = new URLSearchParams()
+    params.set('title', cluster.title)
+    params.set('clusterId', cluster.id)
+    router.push(`/editor?${params.toString()}`)
   }
 
   return (
-    <div className="nr5">
-      <div className="nr5-head">
-        <div className="nr5-head-left">
-          <h1 className="nr5-title">Newsroom</h1>
-          <span className="nr5-live">V4</span>
-        </div>
-        <div className="nr5-search-box">
-          <span className="nr5-search-icon">🔍</span>
-          <input ref={searchRef} type="text" className="nr5-search-input" placeholder="Search across all tabs..." value={search} onChange={e => setSearch(e.target.value)} />
-          {search && <button className="nr5-search-clear" onClick={() => setSearch('')}>✕</button>}
-          <span className="nr5-search-shortcut">/</span>
-        </div>
-        {cart.length > 0 && (
-          <button className="nr5-cart-badge" onClick={() => document.getElementById('cart-bar')?.scrollIntoView({ behavior: 'smooth' })}>
-            🛒 {cart.length}
-          </button>
-        )}
-      </div>
+    <div style={{ background: '#f5f6f8', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* HEADER */}
+      <header style={{
+        background: '#0c0f1a', borderBottom: '1px solid #1e293b', padding: '0 24px',
+        height: 52, display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, zIndex: 50,
+      }}>
+        <span style={{ color: '#f97316', fontWeight: 800, fontSize: 15, fontFamily: 'monospace', letterSpacing: 1, flexShrink: 0 }}>DIURNA</span>
 
-      <div className="time-filter-bar">
-        <span className="time-filter-label">TIME</span>
-        {TIME_FILTERS.map(tf => (
-          <button key={tf.key} className={`time-filter-btn ${timeFilter === tf.key ? 'active' : ''}`} onClick={() => setTimeFilter(tf.key)}>
-            {tf.label}
-          </button>
-        ))}
-      </div>
+        <nav style={{ display: 'flex', gap: 4, overflowX: 'auto', flexShrink: 1 }}>
+          {SECTIONS.map(s => {
+            const active = activeSection === s.key
+            return (
+              <button key={s.key} onClick={() => setActiveSection(s.key)} style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 6,
+                border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+                background: active ? '#1e293b' : 'transparent', color: active ? '#fff' : '#64748b',
+                transition: 'all 0.15s',
+              }}>
+                <span>{s.icon}</span>
+                <span>{s.label}</span>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10, fontFamily: 'monospace',
+                  background: active ? '#f97316' : '#334155', color: active ? '#fff' : '#94a3b8',
+                }}>{sectionCounts[s.key] || 0}</span>
+              </button>
+            )
+          })}
+        </nav>
 
-      {top5.length > 0 && !breakingLoading && (
-        <div className="top5-section">
-          <div className="top5-label">⚡ TOP STORIES</div>
-          <div className="top5-scroll">
-            {top5.map((item, i) => {
-              const level = getDISLevel(item.dis)
-              return (
-                <button key={i} className={`top5-card ${level}`} onClick={() => addToCart(item.title, item.source, item.link, 'breaking')}>
-                  <div className="top5-rank">#{i + 1}</div>
-                  <div className="top5-content">
-                    <div className="top5-title">{cleanTitle(item.title)}</div>
-                    <div className="top5-meta">
-                      <span className={`top5-dis ${level}`}>{item.dis}</span>
-                      <span className="top5-source">{item.source}</span>
-                      <span className="top5-time">{getTimeAgo(item.pubDate)}</span>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
+        <div style={{ flex: 1 }} />
+
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <input
+            ref={searchRef}
+            type="text"
+            placeholder="Search stories..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
+              padding: '6px 32px 6px 10px', color: '#e2e8f0', fontSize: 12, width: 180,
+              outline: 'none',
+            }}
+          />
+          {search ? (
+            <button onClick={() => setSearch('')} style={{
+              position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 13,
+            }}>{'\u2715'}</button>
+          ) : (
+            <span style={{
+              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+              color: '#475569', fontSize: 10, fontFamily: 'monospace',
+            }}>/</span>
+          )}
+        </div>
+
+        <button onClick={fetchClusters} style={{
+          background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
+          padding: '5px 8px', cursor: 'pointer', color: '#94a3b8', fontSize: 14, flexShrink: 0,
+        }} title="Refresh">{'\u21BB'}</button>
+
+        <span style={{
+          fontSize: 11, color: '#64748b', fontFamily: 'monospace', display: 'flex',
+          alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap',
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+          {clusterMeta.count} clusters
+        </span>
+      </header>
+
+      {/* MAIN */}
+      <div style={{
+        maxWidth: 1200, margin: '0 auto', width: '100%', padding: '16px 16px 0',
+        display: 'grid', gridTemplateColumns: '1fr 260px', gap: 16, flex: 1,
+      }} className="newsroom-grid">
+        {/* LEFT COLUMN */}
+        <div>
+          {/* Section title */}
+          <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
+              {SECTIONS.find(s => s.key === activeSection)?.icon} {SECTIONS.find(s => s.key === activeSection)?.label}
+            </span>
+            <span style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'monospace' }}>
+              {filtered.length} {filtered.length === 1 ? 'story' : 'stories'}
+            </span>
+            {activeLeague && (
+              <span style={{
+                fontSize: 11, background: '#dbeafe', color: '#1d4ed8', padding: '2px 8px',
+                borderRadius: 10, fontWeight: 600,
+              }}>
+                {activeLeague}
+                <button onClick={() => setActiveLeague(null)} style={{
+                  background: 'none', border: 'none', cursor: 'pointer', color: '#1d4ed8',
+                  marginLeft: 4, fontSize: 11,
+                }}>{'\u2715'}</button>
+              </span>
+            )}
           </div>
-        </div>
-      )}
 
-      <div className="smart-tabs">
-        {tabs.map(tab => (
-          <button key={tab.key} className={`smart-tab ${activeTab === tab.key ? 'active' : ''}`} onClick={() => setActiveTab(tab.key)}>
-            {tab.icon} {tab.label}
-            {tab.count > 0 && <span className="smart-tab-count">{tab.count}</span>}
-          </button>
-        ))}
-      </div>
+          {/* LOADING */}
+          {loading && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="stories-grid">
+              {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+            </div>
+          )}
 
-      <div className="nr5-main-layout">
-        <div className="nr5-main-content">
-          {activeTab === 'breaking' && (
-            <div className="smart-trending">
-              {breakingLoading ? (
-                <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Fetching breaking news...</div></div>
-              ) : filteredBreaking.length === 0 ? (
-                <div className="smart-empty"><div className="smart-empty-icon">📰</div><div className="smart-empty-title">{search || timeFilter !== 'all' ? 'No matching news for this filter' : 'No breaking news found'}</div></div>
+          {/* NO CLUSTERS */}
+          {!loading && clusters.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>{'\u{1F4F0}'}</div>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>No stories available.</div>
+              <div style={{ fontSize: 12 }}>Run the cluster engine to generate stories.</div>
+            </div>
+          )}
+
+          {/* NO RESULTS FOR FILTER */}
+          {!loading && clusters.length > 0 && filtered.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>
+              {search ? (
+                <div style={{ fontSize: 14 }}>No stories matching &apos;{search}&apos;</div>
               ) : (
-                <div className="v4-grid">
-                  {filteredBreaking.map((item, i) => renderNewsCard(item, i, 'breaking'))}
-                </div>
+                <div style={{ fontSize: 14 }}>No stories in {SECTIONS.find(s => s.key === activeSection)?.label}</div>
               )}
             </div>
           )}
 
-          {activeTab === 'transfers' && (
-            <div className="smart-trending">
-              {transfersLoading ? (
-                <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Scanning transfer news...</div></div>
-              ) : filteredTransfers.length === 0 ? (
-                <div className="smart-empty"><div className="smart-empty-icon">🔄</div><div className="smart-empty-title">{search || timeFilter !== 'all' ? 'No matching transfers' : 'No transfer news found'}</div></div>
-              ) : (
-                <div className="v4-grid">
-                  {filteredTransfers.map((item, i) => renderNewsCard(item, i, 'transfer'))}
+          {/* TOP STORY HERO */}
+          {!loading && topStory && (
+            <div style={{
+              background: '#0c0f1a', borderRadius: 12, padding: 0, marginBottom: 16,
+              overflow: 'hidden', position: 'relative',
+            }}>
+              <div style={{ height: 3, background: 'linear-gradient(90deg, #f97316, #dc2626)' }} />
+              <div style={{ padding: '16px 20px 18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 4,
+                    background: '#f97316', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.8,
+                  }}>TOP STORY</span>
+                  <TrendBadge trend={topStory.trend} />
+                  <span style={{
+                    fontSize: 18, fontWeight: 800, color: '#f97316', fontFamily: 'monospace', marginLeft: 'auto',
+                  }}>{topStory.dis}</span>
                 </div>
-              )}
+                <h2 style={{
+                  fontSize: 21, fontWeight: 700, color: '#f1f5f9', margin: '0 0 10px',
+                  fontFamily: 'Georgia, serif', lineHeight: 1.3, maxWidth: '88%',
+                }}>{topStory.title}</h2>
+                {topStory.summary && (
+                  <p style={{ fontSize: 13, color: '#7c8aa0', lineHeight: 1.5, margin: '0 0 14px' }}>
+                    {topStory.summary.summaryText}
+                  </p>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
+                    <span style={{ color: '#94a3b8' }}>{topStory.sourceCount} sources</span>
+                    {topStory.tier1Count > 0 && (
+                      <span style={{ color: '#22c55e', fontWeight: 600 }}>{'\u2605'}{topStory.tier1Count} tier-1</span>
+                    )}
+                    <ConfidenceDots confidence={topStory.summary?.confidence || 'LOW'} />
+                    {topStory.hasConflicts && (
+                      <span style={{ color: '#fbbf24', fontSize: 11, fontWeight: 600 }}>{'\u26A0'} Sources conflict</span>
+                    )}
+                    <span style={{ color: '#475569', fontFamily: 'monospace', fontSize: 11 }}>{timeAgo(topStory.latestItem)}</span>
+                  </div>
+                  <button onClick={() => writeArticle(topStory)} style={{
+                    background: '#f97316', color: '#fff', border: 'none', borderRadius: 6,
+                    padding: '7px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    {'\u270D'} Write Article
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
-          {activeTab === 'ideas' && (
-            <div className="smart-trending">
-              {(breakingLoading || transfersLoading) ? (
-                <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Clustering stories into ideas...</div></div>
-              ) : filteredIdeas.length === 0 ? (
-                <div className="smart-empty"><div className="smart-empty-icon">💡</div><div className="smart-empty-title">{search ? 'No matching ideas' : 'No story clusters found'}</div></div>
-              ) : (
-                <div className="ideas-grid">
-                  {filteredIdeas.map(cluster => (
-                    <div key={cluster.id} className="idea-card">
-                      <div className="idea-header">
-                        <div className="idea-theme">{cluster.theme}</div>
-                        <span className={`v4-dis-num ${getDISLevel(cluster.avgDIS)}`}>{cluster.avgDIS}</span>
-                      </div>
-                      <div className="idea-entities">
-                        {cluster.entities.map((e, i) => (
-                          <span key={i} className="idea-entity">{e}</span>
-                        ))}
-                      </div>
-                      <div className="idea-stories">
-                        {cluster.stories.map((s, i) => (
-                          <div key={i} className="idea-story-row">
-                            <span className="idea-story-source" style={{ background: getSourceStyle(s.source).bg, color: getSourceStyle(s.source).color }}>{s.source}</span>
-                            <span className="idea-story-title">{cleanTitle(s.title)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="idea-angles">
-                        <div className="idea-angles-label">Suggested angles:</div>
-                        {cluster.angles.map((a, i) => (
-                          <div key={i} className="idea-angle">{a}</div>
-                        ))}
-                      </div>
-                      <div className="idea-footer">
-                        <span className="idea-source-count">{cluster.sourceCount} sources</span>
-                        <button className="v4-btn-rewrite" onClick={() => {
-                          const prompt = `You are given multiple headlines about the same topic. Write ONE unified article that covers the story. Do NOT write a separate paragraph for each headline. Instead, synthesize all information into a single coherent narrative. Maximum 4 paragraphs + TLDR. Each paragraph must contain NEW information not in any other paragraph.\n\nTopic: ${cluster.theme}\nHeadlines:\n${cluster.stories.map(s => `- ${s.title} (${s.source})`).join('\n')}\nSuggested angle: ${cluster.angles[0]}`
-                          rewriteArticle(cluster.theme, prompt)
-                        }}>Write Article</button>
-                        <button className={`v4-btn-cart ${isInCart(cluster.theme) ? 'added' : ''}`} onClick={() => { if (!isInCart(cluster.theme)) addToCart(cluster.theme, `${cluster.sourceCount} sources`, '', 'idea') }} disabled={isInCart(cluster.theme)}>
-                          {isInCart(cluster.theme) ? '✓' : '+'}
-                        </button>
-                      </div>
+          {/* STORY CARDS GRID */}
+          {!loading && restStories.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }} className="stories-grid">
+              {restStories.map(c => {
+                const expanded = expandedId === c.id
+                const trendColor = TREND_COLORS[c.trend] || '#6b7280'
+                return (
+                  <div key={c.id} onClick={() => setExpandedId(expanded ? null : c.id)} style={{
+                    background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb',
+                    borderLeft: `3px solid ${trendColor}`, padding: '12px 14px', cursor: 'pointer',
+                    transition: 'box-shadow 0.15s',
+                  }}>
+                    {/* Row 1: trend + conflict + DIS */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <TrendBadge trend={c.trend} />
+                      {c.hasConflicts && (
+                        <span style={{ fontSize: 10, color: '#d97706', fontWeight: 600 }}>{'\u26A0'} conflict</span>
+                      )}
+                      <span style={{
+                        marginLeft: 'auto', fontSize: 16, fontWeight: 800, color: '#9ca3af',
+                        fontFamily: 'monospace',
+                      }}>{c.dis}</span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
-          {activeTab === 'live' && (
-            <div className="smart-trending">
-              {fixturesLoading ? (
-                <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Loading fixtures...</div></div>
-              ) : (
-                <>
-                  {filteredLive.length > 0 && (
-                    <>
-                      <div className="section-label live">🔴 LIVE NOW</div>
-                      <div className="live-grid-2col">
-                        {filteredLive.map(m => (
-                          <div key={m.id} className="smart-card live-card">
-                            <div className="live-header">
-                              <span className="live-league">{m.league}</span>
-                              <span className="live-minute"><span className="live-pulse" />{m.elapsed}&apos;</span>
-                            </div>
-                            <div className="live-score-row">
-                              <div className="live-team">{m.homeTeam}</div>
-                              <div className="live-score">{m.homeGoals ?? 0} - {m.awayGoals ?? 0}</div>
-                              <div className="live-team">{m.awayTeam}</div>
-                            </div>
-                            {m.events && m.events.length > 0 && (
-                              <div className="live-events">
-                                {m.events.map((ev, ei) => (
-                                  <div key={ei} className={`live-event ${ev.type}`}>
-                                    <span className="live-event-min">{ev.minute}&apos;</span>
-                                    <span className="live-event-icon">{ev.type === 'goal' ? '⚽' : ev.type === 'red' ? '🟥' : ev.type === 'yellow' ? '🟨' : '📋'}</span>
-                                    <span className="live-event-text">{ev.detail}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            <div className="smart-card-actions">
-                              <button className="smart-generate-btn" onClick={() => generateFromTopic({ id: `live-${m.id}`, title: `${m.homeTeam} ${m.homeGoals}-${m.awayGoals} ${m.awayTeam} - ${m.league} Live`, category: 'Sport', suggestedType: 'breaking' })} disabled={!!generatingTopic}>
-                                ⚡ Live Report
-                              </button>
-                              <button className={`v4-btn-cart ${isInCart(`${m.homeTeam} vs ${m.awayTeam}`) ? 'added' : ''}`} onClick={() => addToCart(`${m.homeTeam} vs ${m.awayTeam}`, m.league, '', 'breaking')} disabled={isInCart(`${m.homeTeam} vs ${m.awayTeam}`)}>
-                                {isInCart(`${m.homeTeam} vs ${m.awayTeam}`) ? '✓' : '+'}
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                  {filteredFinished.length > 0 && (
-                    <>
-                      <div className="section-label">🏁 FULL TIME</div>
-                      <div className="live-grid-2col">
-                        {filteredFinished.map(m => (
-                          <div key={m.id} className="smart-card ft-card">
-                            <div className="live-header">
-                              <span className="live-league">{m.league}</span>
-                              <span className="ft-badge">FT</span>
-                            </div>
-                            <div className="live-score-row">
-                              <div className="live-team">{m.homeTeam}</div>
-                              <div className="live-score">{m.homeGoals ?? 0} - {m.awayGoals ?? 0}</div>
-                              <div className="live-team">{m.awayTeam}</div>
-                            </div>
-                            {m.events && m.events.length > 0 && (
-                              <div className="live-events">
-                                {m.events.map((ev, ei) => (
-                                  <div key={ei} className={`live-event ${ev.type}`}>
-                                    <span className="live-event-min">{ev.minute}&apos;</span>
-                                    <span className="live-event-icon">{ev.type === 'goal' ? '⚽' : ev.type === 'red' ? '🟥' : ev.type === 'yellow' ? '🟨' : '📋'}</span>
-                                    <span className="live-event-text">{ev.detail}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            <div className="smart-card-actions">
-                              <button className="smart-generate-btn" onClick={() => generateFromTopic({ id: `ft-${m.id}`, title: `${m.homeTeam} ${m.homeGoals}-${m.awayGoals} ${m.awayTeam} - ${m.league} Match Report`, category: 'Sport', suggestedType: 'breaking' })} disabled={!!generatingTopic}>
-                                📝 Match Report
-                              </button>
-                              <button className={`v4-btn-cart ${isInCart(`${m.homeTeam} vs ${m.awayTeam}`) ? 'added' : ''}`} onClick={() => addToCart(`${m.homeTeam} vs ${m.awayTeam}`, m.league, '', 'breaking')} disabled={isInCart(`${m.homeTeam} vs ${m.awayTeam}`)}>
-                                {isInCart(`${m.homeTeam} vs ${m.awayTeam}`) ? '✓' : '+'}
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                  {filteredUpcoming.length > 0 && (
-                    <>
-                      <div className="section-label">📅 UPCOMING</div>
-                      <div className="live-grid-2col">
-                        {filteredUpcoming.map(m => {
-                          const matchDate = new Date(m.date)
-                          const diffMs = matchDate.getTime() - Date.now()
-                          const diffH = Math.max(0, Math.floor(diffMs / 3600000))
-                          const diffD = Math.floor(diffH / 24)
-                          const countdown = diffD > 0 ? `${diffD}d ${diffH % 24}h` : diffH > 0 ? `${diffH}h` : 'Soon'
-                          return (
-                            <div key={m.id} className="smart-card">
-                              <div className="fixture-header">
-                                <span className="fixture-league">{m.league}</span>
-                                <span className="fixture-countdown">⏱ {countdown}</span>
-                              </div>
-                              <div className="live-score-row" style={{ margin: '16px 0' }}>
-                                <div className="live-team">{m.homeTeam}</div>
-                                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g400)' }}>vs</div>
-                                <div className="live-team">{m.awayTeam}</div>
-                              </div>
-                              <div className="fixture-date">
-                                {matchDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} • {matchDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                              <div className="smart-card-actions">
-                                <button className="smart-generate-btn" onClick={() => generateFromTopic({ id: `up-${m.id}`, title: `${m.homeTeam} vs ${m.awayTeam} - ${m.league} Preview`, category: 'Sport', suggestedType: 'preview' })} disabled={!!generatingTopic}>
-                                  📝 Generate Preview
-                                </button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </>
-                  )}
-                  {filteredFixtures.length > 0 && (
-                    <>
-                      <div className="section-label">📅 MORE FIXTURES</div>
-                      <div className="live-grid-2col">
-                        {filteredFixtures.map(f => {
-                          const matchDate = new Date(f.date)
-                          const diffMs = matchDate.getTime() - Date.now()
-                          const diffH = Math.max(0, Math.floor(diffMs / 3600000))
-                          const diffD = Math.floor(diffH / 24)
-                          const countdown = diffD > 0 ? `${diffD}d ${diffH % 24}h` : diffH > 0 ? `${diffH}h` : 'Soon'
-                          return (
-                            <div key={f.id} className="smart-card">
-                              <div className="fixture-header">
-                                <span className="fixture-league">{f.league}</span>
-                                <span className="fixture-countdown">⏱ {countdown}</span>
-                              </div>
-                              <div className="live-score-row" style={{ margin: '16px 0' }}>
-                                <div className="live-team">{f.homeTeam}</div>
-                                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g400)' }}>vs</div>
-                                <div className="live-team">{f.awayTeam}</div>
-                              </div>
-                              <div className="fixture-date">
-                                {matchDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} • {matchDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                              <div className="smart-card-actions">
-                                <button className="smart-generate-btn" onClick={() => generateFromTopic({ id: `fix-${f.id}`, title: `${f.homeTeam} vs ${f.awayTeam} - ${f.league} Preview`, category: 'Sport', suggestedType: 'preview' })} disabled={!!generatingTopic}>
-                                  📝 Generate Preview
-                                </button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </>
-                  )}
-                  {filteredLive.length === 0 && filteredFinished.length === 0 && filteredUpcoming.length === 0 && filteredFixtures.length === 0 && (
-                    <div className="smart-empty">
-                      <div className="smart-empty-icon">⚽</div>
-                      <div className="smart-empty-title">No matches found</div>
+                    {/* Row 2: title */}
+                    <h3 style={{
+                      fontSize: 14, fontWeight: 600, color: '#111827', margin: '0 0 6px',
+                      fontFamily: 'Georgia, serif', lineHeight: 1.35,
+                    }}>{c.title}</h3>
+
+                    {/* Row 3: meta */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#6b7280', marginBottom: 6 }}>
+                      <span>{c.sourceCount} src</span>
+                      {c.tier1Count > 0 && <span style={{ color: '#22c55e', fontWeight: 600 }}>{'\u2605'}{c.tier1Count}</span>}
+                      <ConfidenceDots confidence={c.summary?.confidence || 'LOW'} />
+                      <span style={{ fontFamily: 'monospace' }}>{timeAgo(c.latestItem)}</span>
                     </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
 
-          {activeTab === 'youtube' && (
-            <div className="smart-trending">
-              {youtubeLoading ? (
-                <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Loading YouTube feeds...</div></div>
-              ) : filteredYoutube.length === 0 ? (
-                <div className="smart-empty"><div className="smart-empty-icon">📺</div><div className="smart-empty-title">{search || timeFilter !== 'all' ? 'No matching videos' : 'No videos found'}</div></div>
-              ) : (
-                <div className="yt-grid">
-                  {filteredYoutube.map((vid, i) => (
-                    <div key={i} className="yt-card-v4">
-                      <div className="yt-thumb">
-                        <img src={vid.thumbnail} alt={vid.title} className="yt-thumb-img" />
-                        <a href={vid.link} target="_blank" rel="noopener noreferrer" className="yt-play">▶</a>
-                      </div>
-                      <div className="yt-card-body">
-                        <h3 className="yt-card-title">{vid.title}</h3>
-                        <div className="yt-card-meta">
-                          <span className="yt-channel">{vid.channel}</span>
-                          <span className="yt-date">{getTimeAgo(vid.pubDate)}</span>
-                        </div>
-                        <div className="yt-card-actions">
-                          <a href={vid.link} target="_blank" rel="noopener noreferrer" className="v4-btn-rewrite">Watch</a>
-                          <button className="v4-btn-rewrite" onClick={() => rewriteArticle(vid.title, `Write an article inspired by this video: ${vid.title}`)}>Article</button>
-                          <button className={`v4-btn-cart ${isInCart(vid.title) ? 'added' : ''}`} onClick={() => { if (!isInCart(vid.title)) addToCart(vid.title, vid.channel, vid.link, 'youtube') }} disabled={isInCart(vid.title)}>
-                            {isInCart(vid.title) ? '✓' : '+'}
-                          </button>
-                        </div>
-                      </div>
+                    {/* Row 4: entity pills */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {c.entities.slice(0, 3).map((e, i) => (
+                        <span key={i} style={{
+                          fontSize: 10, background: '#f1f5f9', color: '#475569', padding: '2px 7px',
+                          borderRadius: 10, fontWeight: 500,
+                        }}>{e}</span>
+                      ))}
+                      {c.entities.length > 3 && (
+                        <span style={{ fontSize: 10, color: '#9ca3af' }}>+{c.entities.length - 3}</span>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
-          {activeTab === 'fanbuzz' && (
-            <div className="smart-trending">
-              {redditLoading ? (
-                <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Scanning Reddit communities...</div></div>
-              ) : filteredReddit.length === 0 ? (
-                <div className="smart-empty"><div className="smart-empty-icon">💬</div><div className="smart-empty-title">{search || timeFilter !== 'all' ? 'No matching discussions' : 'No fan discussions found'}</div></div>
-              ) : (
-                <div className="reddit-grid">
-                  {filteredReddit.map((post, i) => {
-                    const heat = post.score >= 5000 ? 'hot' : post.score >= 1000 ? 'warm' : 'cool'
-                    return (
-                      <div key={i} className="reddit-card-v4">
-                        <div className="reddit-card-header">
-                          <div className={`reddit-score ${heat}`}>
-                            {post.score >= 1000 ? `${(post.score / 1000).toFixed(1)}k` : post.score}
-                          </div>
-                          <span className="reddit-sub">r/{post.subreddit}</span>
-                          {post.flair && <span className="reddit-flair">{post.flair}</span>}
-                          <span className="reddit-time">{getTimeAgo(post.pubDate)}</span>
-                        </div>
-                        <h3 className="reddit-title">{post.title}</h3>
-                        {post.selftext && (
-                          <p className="reddit-preview">{post.selftext.length > 200 ? post.selftext.slice(0, 200) + '...' : post.selftext}</p>
+                    {/* Expanded */}
+                    {expanded && (
+                      <div onClick={e => e.stopPropagation()} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #e5e7eb' }}>
+                        {c.summary && (
+                          <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5, margin: '0 0 10px' }}>
+                            {c.summary.summaryText}
+                          </p>
                         )}
-                        <div className="reddit-stats">
-                          <span>💬 {post.comments >= 1000 ? `${(post.comments / 1000).toFixed(1)}k` : post.comments} comments</span>
-                          <span>⬆ {post.score >= 1000 ? `${(post.score / 1000).toFixed(1)}k` : post.score} upvotes</span>
-                        </div>
-                        <div className="reddit-actions">
-                          <button className="v4-btn-rewrite" onClick={() => {
-                            const context = post.selftext
-                              ? `Write an article based on this Reddit discussion.\n\nTitle: ${post.title}\nSubreddit: r/${post.subreddit}\nContext: ${post.selftext}`
-                              : `Write an article about this trending topic from r/${post.subreddit}: ${post.title}`
-                            rewriteArticle(post.title, context)
-                          }}>Write About This</button>
-                          <a href={post.link} target="_blank" rel="noopener noreferrer" className="v4-btn-link">Reddit</a>
-                          <button className={`v4-btn-cart ${isInCart(post.title) ? 'added' : ''}`} onClick={() => { if (!isInCart(post.title)) addToCart(post.title, `r/${post.subreddit}`, post.link, 'reddit') }} disabled={isInCart(post.title)}>
-                            {isInCart(post.title) ? '✓' : '+'}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => writeArticle(c)} style={{
+                            background: '#f97316', color: '#fff', border: 'none', borderRadius: 6,
+                            padding: '6px 14px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                          }}>
+                            {'\u270D'} Write Article
+                          </button>
+                          <button onClick={() => {}} style={{
+                            background: '#f1f5f9', color: '#475569', border: '1px solid #e5e7eb', borderRadius: 6,
+                            padding: '6px 14px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                          }}>
+                            View Sources ({c.sourceCount})
                           </button>
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-              )}
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
-      </div>
 
-      {cart.length > 0 && (
-        <div className="cart-bar" id="cart-bar">
-          <div className="cart-label">🛒 ARTICLE CART ({cart.length})</div>
-          <div className="cart-items">
-            {cart.map(item => (
-              <div key={item.id} className="cart-item">
-                <span className={`cart-role ${item.role}`}>{item.role === 'primary' ? 'P' : item.role === 'supporting' ? 'S' : 'M'}</span>
-                <span className="cart-item-title">{item.title}</span>
-                <button className="cart-remove" onClick={() => removeFromCart(item.id)}>✕</button>
+        {/* SIDEBAR */}
+        <aside className="newsroom-sidebar">
+          {/* Today's Matches */}
+          <div style={{
+            background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14, marginBottom: 12,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {'\u26BD'} Today&apos;s Matches
+            </div>
+            {MOCK_MATCHES.map((m, i) => (
+              <div key={i} style={{
+                display: 'grid', gridTemplateColumns: '1fr 48px 1fr', alignItems: 'center',
+                padding: '6px 0', borderBottom: i < MOCK_MATCHES.length - 1 ? '1px solid #f1f5f9' : 'none',
+                fontSize: 12,
+              }}>
+                <span style={{ textAlign: 'right', fontWeight: 500, color: '#111827' }}>{m.home}</span>
+                <span style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 11, color: '#6b7280', fontWeight: 600 }}>{m.time}</span>
+                <span style={{ fontWeight: 500, color: '#111827' }}>{m.away}</span>
               </div>
             ))}
+            <div style={{
+              display: 'flex', justifyContent: 'flex-end', marginTop: 8,
+            }}>
+              <span style={{ fontSize: 11, color: '#f97316', fontWeight: 600, cursor: 'pointer' }}>
+                All fixtures {'\u2192'}
+              </span>
+            </div>
           </div>
-          <button className="cart-generate" onClick={generateFromCart}>Generate Combined Article</button>
-        </div>
-      )}
 
-      <div className="nr5-shortcuts">
-        <div className="nr5-sc"><kbd>/</kbd> Search</div>
+          {/* My Leagues */}
+          <div style={{
+            background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14, marginBottom: 12,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 10 }}>
+              {'\u{1F3C6}'} My Leagues
+            </div>
+            {leagues.map((l) => {
+              const isActive = activeLeague === l.label
+              return (
+                <div key={l.label} className="league-row" style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', borderRadius: 6,
+                  cursor: 'pointer', fontSize: 12, fontWeight: isActive ? 700 : 500,
+                  background: isActive ? '#dbeafe' : 'transparent',
+                  color: isActive ? '#1d4ed8' : '#374151',
+                  transition: 'background 0.15s',
+                  position: 'relative',
+                }} onClick={() => setActiveLeague(isActive ? null : l.label)}>
+                  <span>{l.icon}</span>
+                  <span style={{ flex: 1 }}>{l.label}</span>
+                  <button className="league-remove" onClick={(e) => { e.stopPropagation(); removeLeague(l.label) }} style={{
+                    background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer',
+                    fontSize: 11, padding: '0 2px', opacity: 0, transition: 'opacity 0.15s',
+                  }}>{'\u2715'}</button>
+                </div>
+              )
+            })}
+            {addingLeague ? (
+              <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="League or club..."
+                  value={newLeagueName}
+                  onChange={e => setNewLeagueName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') addLeague(); if (e.key === 'Escape') { setAddingLeague(false); setNewLeagueName('') } }}
+                  style={{
+                    flex: 1, fontSize: 11, padding: '4px 8px', border: '1px solid #e5e7eb',
+                    borderRadius: 4, outline: 'none',
+                  }}
+                />
+                <button onClick={addLeague} style={{
+                  fontSize: 11, padding: '4px 8px', background: '#f97316', color: '#fff',
+                  border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600,
+                }}>Add</button>
+              </div>
+            ) : (
+              <button onClick={() => setAddingLeague(true)} style={{
+                marginTop: 6, fontSize: 11, color: '#f97316', background: 'none',
+                border: '1px dashed #f97316', borderRadius: 6, padding: '5px 10px',
+                cursor: 'pointer', width: '100%', fontWeight: 600,
+              }}>+ Add League</button>
+            )}
+          </div>
+
+          {/* Video Highlights */}
+          <div style={{
+            background: '#f8fafc', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14, marginBottom: 12,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {'\u{1F4F9}'} VIDEO HIGHLIGHTS
+              <span style={{
+                fontSize: 9, background: '#22c55e', color: '#fff', padding: '1px 6px',
+                borderRadius: 4, fontWeight: 700,
+              }}>FREE</span>
+            </div>
+            <div style={{ fontSize: 11, color: '#9ca3af' }}>
+              {'\u{1F3AC}'} Available after matches
+            </div>
+          </div>
+
+          {/* Signal Guide */}
+          <div style={{
+            background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 10 }}>Signal Guide</div>
+            {Object.entries(TREND_LABELS).map(([trend, label]) => (
+              <div key={trend} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 11 }}>
+                <span style={{
+                  width: 10, height: 10, borderRadius: 2, background: TREND_COLORS[trend],
+                  display: 'inline-block', flexShrink: 0,
+                }} />
+                <span style={{ fontWeight: 600, color: '#374151', width: 60 }}>{trend}</span>
+                <span style={{ color: '#6b7280' }}>{label}</span>
+              </div>
+            ))}
+            <div style={{
+              borderTop: '1px solid #e5e7eb', marginTop: 8, paddingTop: 8, fontSize: 10, color: '#9ca3af',
+              lineHeight: 1.6,
+            }}>
+              <span style={{ color: '#22c55e' }}>{'\u25CF\u25CF\u25CF'}</span> verified {'\u00B7'}{' '}
+              <span style={{ color: '#d97706' }}>{'\u25CF\u25CF'}</span><span>{'\u25CB'}</span> partial {'\u00B7'}{' '}
+              <span style={{ color: '#dc2626' }}>{'\u25CF'}</span><span>{'\u25CB\u25CB'}</span> conflicting
+            </div>
+          </div>
+        </aside>
       </div>
+
+      {/* FOOTER */}
+      <footer style={{
+        background: '#0c0f1a', borderTop: '1px solid #1e293b', padding: '20px 24px', marginTop: 32,
+      }}>
+        <div style={{
+          maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div>
+            <span style={{ color: '#f97316', fontWeight: 800, fontSize: 14, fontFamily: 'monospace' }}>DIURNA</span>
+            <span style={{ color: '#475569', fontSize: 12, marginLeft: 12 }}>AI-Powered Sports Newsroom</span>
+          </div>
+          <div style={{ color: '#475569', fontSize: 11 }}>
+            Powered by Lupon Media {'\u00B7'} {new Date().getFullYear()}
+          </div>
+        </div>
+      </footer>
+
+      {/* INLINE STYLES for hover effects + responsive */}
+      <style>{`
+        .newsroom-grid { grid-template-columns: 1fr 260px; }
+        .stories-grid { grid-template-columns: 1fr 1fr; }
+        .league-row:hover { background: #f8fafc !important; }
+        .league-row:hover .league-remove { opacity: 1 !important; }
+        @media (max-width: 768px) {
+          .newsroom-grid { grid-template-columns: 1fr !important; }
+          .newsroom-sidebar { order: 2; }
+          .stories-grid { grid-template-columns: 1fr !important; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+      `}</style>
     </div>
   )
 }
