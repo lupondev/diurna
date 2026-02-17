@@ -13,3 +13,6 @@ export {
 export { MetaBar } from './meta-bar'
 export { Reactions } from './reactions'
 export { NewsletterForm } from './newsletter-form'
+export { MatchTabs } from './match-tabs'
+export { StaticNav } from './static-nav'
+export { ContactForm } from './contact-form'

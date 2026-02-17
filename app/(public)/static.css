@@ -1,0 +1,497 @@
+/* ═══════════════════════════════════════════════════
+   Sport.ba Static Pages Shared Styles
+   ═══════════════════════════════════════════════════ */
+
+/* ── Page Container ── */
+.sba-sp {
+  background: var(--sba-bg-0);
+  min-height: 100vh;
+  font-family: var(--sba-sans);
+  color: var(--sba-text-0);
+}
+
+/* ── Sub-Nav Bar ── */
+.sba-static-nav {
+  background: var(--sba-bg-1);
+  border-bottom: 1px solid var(--sba-border);
+}
+
+.sba-static-nav-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  padding: 0 16px;
+}
+
+.sba-static-nav-inner::-webkit-scrollbar {
+  display: none;
+}
+
+.sba-static-nav-link {
+  font-family: var(--sba-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sba-text-3);
+  text-decoration: none;
+  padding: 12px 14px;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color var(--sba-ease), border-color var(--sba-ease);
+}
+
+.sba-static-nav-link[aria-current='page'] {
+  color: var(--sba-accent);
+  border-bottom-color: var(--sba-accent);
+}
+
+.sba-static-nav-link:focus-visible {
+  outline: 2px solid var(--sba-accent);
+  outline-offset: -2px;
+}
+
+@media (hover: hover) {
+  .sba-static-nav-link:hover {
+    color: var(--sba-text-1);
+  }
+}
+
+/* ── Content Container ── */
+.sba-sp-content {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+}
+
+/* ── Prose ── */
+.sba-sp-title {
+  font-family: var(--sba-serif);
+  font-size: 32px;
+  line-height: 1.2;
+  color: var(--sba-text-0);
+  margin: 0 0 24px;
+}
+
+@media (min-width: 640px) {
+  .sba-sp-title {
+    font-size: 38px;
+  }
+}
+
+.sba-sp-prose {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--sba-text-1);
+}
+
+.sba-sp-prose p {
+  margin: 0 0 1.25em;
+}
+
+.sba-sp-prose a {
+  color: var(--sba-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sba-sp-prose a:focus-visible {
+  outline: 2px solid var(--sba-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (hover: hover) {
+  .sba-sp-prose a:hover {
+    color: var(--sba-accent-hover);
+  }
+}
+
+.sba-sp-prose h2 {
+  font-family: var(--sba-serif);
+  font-size: 22px;
+  color: var(--sba-text-0);
+  margin: 2.5em 0 0.8em;
+  padding-top: 1.5em;
+  border-top: 1px solid var(--sba-border);
+  line-height: 1.3;
+}
+
+.sba-sp-prose h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.sba-sp-prose h3 {
+  font-family: var(--sba-sans);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--sba-text-0);
+  margin: 1.5em 0 0.5em;
+}
+
+.sba-sp-prose ul, .sba-sp-prose ol {
+  margin: 0 0 1.25em;
+  padding-left: 24px;
+}
+
+.sba-sp-prose li {
+  margin-bottom: 0.4em;
+}
+
+.sba-sp-prose strong {
+  font-weight: 600;
+  color: var(--sba-text-0);
+}
+
+/* ── Team Grid ── */
+.sba-sp-team-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+@media (min-width: 640px) {
+  .sba-sp-team-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.sba-sp-team-card {
+  background: var(--sba-bg-1);
+  border: 1px solid var(--sba-border);
+  border-radius: var(--sba-radius);
+  padding: 20px;
+}
+
+.sba-sp-team-name {
+  font-family: var(--sba-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--sba-text-0);
+  margin-bottom: 4px;
+}
+
+.sba-sp-team-role {
+  font-family: var(--sba-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sba-accent);
+  margin-bottom: 10px;
+  display: block;
+}
+
+.sba-sp-team-desc {
+  font-size: 13px;
+  color: var(--sba-text-2);
+  line-height: 1.5;
+}
+
+/* ── Info Cards Grid ── */
+.sba-sp-info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+@media (min-width: 640px) {
+  .sba-sp-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .sba-sp-info-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.sba-sp-info-card {
+  background: var(--sba-bg-1);
+  border: 1px solid var(--sba-border);
+  border-radius: var(--sba-radius);
+  padding: 16px;
+}
+
+.sba-sp-info-label {
+  font-family: var(--sba-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sba-text-3);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.sba-sp-info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sba-text-0);
+  line-height: 1.4;
+}
+
+/* ── Email Cards ── */
+.sba-sp-email-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+@media (min-width: 640px) {
+  .sba-sp-email-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.sba-sp-email-card {
+  background: var(--sba-bg-1);
+  border: 1px solid var(--sba-border);
+  border-radius: var(--sba-radius);
+  padding: 16px;
+  text-decoration: none;
+  display: block;
+  transition: border-color var(--sba-ease);
+}
+
+.sba-sp-email-card:focus-visible {
+  outline: 2px solid var(--sba-accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .sba-sp-email-card:hover {
+    border-color: var(--sba-accent);
+  }
+}
+
+.sba-sp-email-dept {
+  font-family: var(--sba-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sba-text-3);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.sba-sp-email-addr {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sba-accent);
+}
+
+.sba-sp-email-desc {
+  font-size: 12px;
+  color: var(--sba-text-2);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* ── Contact Form ── */
+.sba-sp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.sba-sp-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sba-sp-label {
+  font-family: var(--sba-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sba-text-2);
+}
+
+.sba-sp-input,
+.sba-sp-select,
+.sba-sp-textarea {
+  font-family: var(--sba-sans);
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: var(--sba-radius-sm);
+  border: 1px solid var(--sba-border);
+  background: var(--sba-bg-1);
+  color: var(--sba-text-0);
+  outline: none;
+  transition: border-color var(--sba-ease);
+}
+
+.sba-sp-input:focus,
+.sba-sp-select:focus,
+.sba-sp-textarea:focus {
+  border-color: var(--sba-accent);
+}
+
+.sba-sp-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%238b8fa3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.sba-sp-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.sba-sp-submit {
+  font-family: var(--sba-mono);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: var(--sba-radius-sm);
+  border: none;
+  background: var(--sba-accent);
+  color: #fff;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background var(--sba-ease);
+}
+
+.sba-sp-submit:focus-visible {
+  outline: 2px solid var(--sba-accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .sba-sp-submit:hover {
+    background: var(--sba-accent-hover);
+  }
+}
+
+.sba-sp-form-success {
+  text-align: center;
+  padding: 24px;
+  color: var(--sba-green);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── Highlight Box ── */
+.sba-sp-highlight {
+  background: var(--sba-accent-soft);
+  border: 1px solid var(--sba-accent);
+  border-radius: var(--sba-radius);
+  padding: 20px;
+  margin: 24px 0;
+}
+
+.sba-sp-highlight-title {
+  font-family: var(--sba-sans);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--sba-accent);
+  margin-bottom: 8px;
+}
+
+.sba-sp-highlight-text {
+  font-size: 14px;
+  color: var(--sba-text-1);
+  line-height: 1.6;
+}
+
+/* ── Ad Format Cards ── */
+.sba-sp-ad-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+@media (min-width: 640px) {
+  .sba-sp-ad-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .sba-sp-ad-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.sba-sp-ad-card {
+  background: var(--sba-bg-1);
+  border: 1px solid var(--sba-border);
+  border-radius: var(--sba-radius);
+  padding: 16px;
+}
+
+.sba-sp-ad-card-name {
+  font-family: var(--sba-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sba-text-0);
+  margin-bottom: 4px;
+}
+
+.sba-sp-ad-card-size {
+  font-family: var(--sba-mono);
+  font-size: 11px;
+  color: var(--sba-accent);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.sba-sp-ad-card-desc {
+  font-size: 12px;
+  color: var(--sba-text-2);
+  line-height: 1.5;
+}
+
+/* ── Audience Stats ── */
+.sba-sp-audience {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 24px 0;
+}
+
+@media (min-width: 640px) {
+  .sba-sp-audience {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.sba-sp-audience-stat {
+  background: var(--sba-bg-1);
+  border: 1px solid var(--sba-border);
+  border-radius: var(--sba-radius);
+  padding: 16px;
+  text-align: center;
+}
+
+.sba-sp-audience-num {
+  font-family: var(--sba-mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--sba-accent);
+  display: block;
+}
+
+.sba-sp-audience-label {
+  font-size: 12px;
+  color: var(--sba-text-2);
+  margin-top: 4px;
+  display: block;
+}
