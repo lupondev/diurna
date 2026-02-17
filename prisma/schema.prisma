@@ -472,40 +472,51 @@ model Player {
 }
 
 model StoryCluster {
-  id            String   @id @default(cuid())
-  clusterKey    String   @unique
-  title         String
-  summary       String?  @db.Text
-  eventType     String?
-  entityNames   String[]
-  articleCount  Int      @default(0)
-  sourceCount   Int      @default(0)
-  avgDis        Int      @default(0)
-  maxDis        Int      @default(0)
-  velocity      Float    @default(0)
-  acceleration  Float    @default(0)
-  firstSeen     DateTime
-  lastUpdated   DateTime
-  expiresAt     DateTime
-  createdAt     DateTime @default(now())
+  id              String   @id @default(cuid())
+  key             String   @unique
+  title           String
+  eventType       String
+  primaryEntity   String
+  primaryEntityType String
+  entities        String[]
+  sourceCount     Int      @default(0)
+  tier1Count      Int      @default(0)
+  tier2Count      Int      @default(0)
+  tier3Count      Int      @default(0)
+  hasConflicts    Boolean  @default(false)
+  velocity30m     Int      @default(0)
+  velocityPrev30m Int      @default(0)
+  acceleration    Float    @default(1.0)
+  trend           String   @default("STABLE")
+  consistency     Float    @default(1.0)
+  dis             Int      @default(0)
+  peakDis         Int      @default(0)
+  peakAt          DateTime?
+  firstSeen       DateTime
+  latestItem      DateTime
+  siteId          String?
+  newsItems       String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  summaries ClusterSummary[]
+  summary         ClusterSummary?
 
+  @@index([dis])
   @@index([eventType])
-  @@index([lastUpdated])
-  @@index([expiresAt])
+  @@index([trend])
+  @@index([primaryEntity])
 }
 
 model ClusterSummary {
-  id         String       @id @default(cuid())
-  clusterId  String
-  cluster    StoryCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
-  version    Int          @default(1)
-  text       String       @db.Text
-  method     String       @default("deterministic")
-  createdAt  DateTime     @default(now())
-
-  @@index([clusterId])
+  id                 String       @id @default(cuid())
+  clusterId          String       @unique
+  cluster            StoryCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  mainClaims         Json
+  conflictingReports Json?
+  signalIntegrity    Json
+  summaryText        String       @db.Text
+  confidence         String       @default("MEDIUM")
+  generatedAt        DateTime     @default(now())
 }
 
 model MatchResult {

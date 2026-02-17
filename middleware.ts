@@ -18,7 +18,8 @@ export async function middleware(req: NextRequest) {
   const isFeedRoute = pathname.startsWith('/feed')
   const isCronRoute = pathname.startsWith('/api/cron')
   const isSeedRoute = pathname.startsWith('/api/admin/seed-feeds') || pathname.startsWith('/api/admin/seed-entities') || pathname.startsWith('/api/admin/seed-players') || pathname.startsWith('/api/admin/enrich-players') || pathname.startsWith('/api/admin/seed-matches')
-  const isPublicRoute = pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isCronRoute || isSeedRoute
+  const isNewsroomPublic = pathname.startsWith('/api/newsroom/clusters')
+  const isPublicRoute = pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isCronRoute || isSeedRoute || isNewsroomPublic
 
   if (!isPublicRoute) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })

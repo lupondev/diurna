@@ -1,325 +1,451 @@
-import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import crypto from 'crypto'
+import { Prisma } from '@prisma/client'
+import { NextResponse } from 'next/server'
 
-const EVENT_PATTERNS: { type: string; keywords: string[] }[] = [
-  { type: 'transfer', keywords: ['transfer', 'sign', 'deal', 'bid', 'loan', 'fee', 'contract', 'move', 'swap', 'buyout', 'release clause'] },
-  { type: 'injury', keywords: ['injury', 'injured', 'hamstring', 'acl', 'ruled out', 'sidelined', 'knee', 'ankle', 'muscle', 'fracture'] },
-  { type: 'result', keywords: ['beat', 'defeat', 'draw', 'won', 'lost', 'score', 'goals', 'winner', 'comeback'] },
-  { type: 'manager', keywords: ['sacked', 'fired', 'appointed', 'manager', 'coach', 'resign', 'interim', 'replaced'] },
-  { type: 'preview', keywords: ['preview', 'predicted', 'lineup', 'team news', 'ahead of', 'face', 'clash'] },
-  { type: 'suspension', keywords: ['suspended', 'ban', 'red card', 'sent off', 'suspension', 'yellow card'] },
-  { type: 'tactical', keywords: ['analysis', 'tactical', 'formation', 'pressing', 'xg', 'possession'] },
-  { type: 'award', keywords: ['ballon', 'golden boot', 'best player', 'award', 'nominee', 'winner'] },
-]
+export const dynamic = 'force-dynamic'
 
-const STOP_WORDS = new Set([
-  'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-  'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
-  'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
-  'could', 'should', 'may', 'might', 'shall', 'can', 'need', 'dare',
-  'not', 'so', 'no', 'nor', 'too', 'very', 'just', 'about', 'above',
-  'after', 'again', 'all', 'also', 'am', 'any', 'because', 'before',
-  'between', 'both', 'during', 'each', 'few', 'get', 'got', 'he', 'her',
-  'here', 'him', 'his', 'how', 'if', 'into', 'it', 'its', 'me', 'more',
-  'most', 'my', 'new', 'now', 'off', 'old', 'only', 'other', 'our',
-  'out', 'over', 'own', 'same', 'she', 'some', 'such', 'than', 'that',
-  'their', 'them', 'then', 'there', 'these', 'they', 'this', 'those',
-  'through', 'under', 'until', 'up', 'upon', 'us', 'what', 'when',
-  'where', 'which', 'while', 'who', 'whom', 'why', 'you', 'your',
-  'says', 'said', 'report', 'reports', 'according', 'per', 'via', 'set',
-  'look', 'make', 'going', 'want', 'like', 'back', 'still', 'even',
-  'well', 'way', 'take', 'come', 'know', 'think', 'good', 'give',
-])
+const EVENT_TYPE_KEYWORDS: Record<string, string[]> = {
+  TRANSFER: ['transfer', 'sign', 'signing', 'deal', 'bid', 'loan', 'fee', 'move', 'target', 'interested', 'approach', 'offer', 'swap', 'departure', 'arrival', 'replacement'],
+  INJURY: ['injury', 'injured', 'out', 'ruled out', 'doubtful', 'hamstring', 'knee', 'ankle', 'setback', 'surgery', 'recovery', 'return date', 'sidelined', 'fitness'],
+  MATCH_PREVIEW: ['preview', 'lineup', 'predicted', 'team news', 'ahead of', 'prepare', 'face', 'clash', 'fixture', 'key facts'],
+  MATCH_RESULT: ['beat', 'defeat', 'draw', 'win', 'loss', 'score', 'result', 'victory', 'thriller', 'comeback', 'rout'],
+  POST_MATCH_REACTION: ['praises', 'slams', 'reaction', 'responds', 'says after', 'post-match', 'pleased', 'disappointed', 'furious'],
+  TACTICAL: ['tactics', 'formation', 'analysis', 'system', 'shape', 'pressing', 'counter-attack'],
+  CONTRACT: ['contract', 'extension', 'renewal', 'clause', 'release clause', 'wages', 'salary', 'new deal', 'agrees terms'],
+  MANAGERIAL: ['sacked', 'fired', 'appointed', 'hire', 'manager', 'coach', 'interim', 'replaced', 'steps down', 'resignation'],
+  RECORD: ['record', 'milestone', 'first', 'most', 'all-time', 'historic', 'youngest', 'oldest', 'fastest', 'breaks record'],
+  DISCIPLINE: ['ban', 'suspend', 'red card', 'fine', 'misconduct', 'violent conduct', 'elbow', 'stamp', 'controversy'],
+  SCANDAL: ['scandal', 'investigation', 'probe', 'corruption', 'allegations', 'accused', 'cheat', 'match-fixing'],
+}
 
-function detectEventType(title: string): string | null {
-  const lower = title.toLowerCase()
-  for (const pattern of EVENT_PATTERNS) {
-    if (pattern.keywords.some(kw => lower.includes(kw))) {
-      return pattern.type
+const AMBIGUOUS_ALIASES: Record<string, string[]> = {
+  'United': ['Manchester United', 'Newcastle United', 'Leeds United', 'West Ham United'],
+  'City': ['Manchester City', 'Leicester City', 'Bristol City'],
+  'Real': ['Real Madrid', 'Real Sociedad', 'Real Betis'],
+  'Milan': ['AC Milan', 'Inter Milan'],
+  'Sporting': ['Sporting CP', 'Sporting Kansas City'],
+  'Athletic': ['Athletic Bilbao', 'Atletico Madrid'],
+  'Inter': ['Inter Milan', 'Inter Miami'],
+  'Palace': ['Crystal Palace'],
+  'Forest': ['Nottingham Forest'],
+  'Villa': ['Aston Villa'],
+}
+
+const SAFE_SHORT_ALIASES = new Set(['PSG', 'UCL', 'MLS', 'FIFA', 'UEFA', 'EPL', 'VAR', 'CL', 'EFL', 'BVB', 'CR7', 'KDB', 'VVD', 'TAA', 'FFP', 'RKM'])
+
+interface MatchedEntity {
+  name: string
+  type: string
+  matchedAlias: string
+  position: number
+  metadata: Record<string, unknown>
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function matchEntities(title: string, entities: { name: string; type: string; aliases: string[]; metadata: unknown }[]): MatchedEntity[] {
+  const matched: MatchedEntity[] = []
+  const titleLower = title.toLowerCase()
+
+  for (const entity of entities) {
+    const aliases = [entity.name, ...(entity.aliases || [])]
+    let found = false
+
+    for (const alias of aliases) {
+      if (found) break
+      const aliasLower = alias.toLowerCase()
+
+      if (alias.length < 4 && !SAFE_SHORT_ALIASES.has(alias)) continue
+
+      if (AMBIGUOUS_ALIASES[alias]) {
+        const specificMatch = AMBIGUOUS_ALIASES[alias].some(specific =>
+          titleLower.includes(specific.toLowerCase())
+        )
+        if (!specificMatch) continue
+      }
+
+      const regex = new RegExp(`\\b${escapeRegex(aliasLower)}\\b`, 'i')
+      if (regex.test(title)) {
+        matched.push({
+          name: entity.name,
+          type: entity.type,
+          matchedAlias: alias,
+          position: titleLower.indexOf(aliasLower),
+          metadata: (entity.metadata as Record<string, unknown>) || {},
+        })
+        found = true
+      }
     }
   }
-  return null
+
+  matched.sort((a, b) => a.position - b.position)
+  return matched
 }
 
-function extractSignificantWords(title: string): string[] {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s'-]/g, '')
-    .split(/\s+/)
-    .filter(w => w.length > 2 && !STOP_WORDS.has(w))
+function detectEventType(title: string): string {
+  const titleLower = title.toLowerCase()
+  for (const [eventType, keywords] of Object.entries(EVENT_TYPE_KEYWORDS)) {
+    for (const keyword of keywords) {
+      if (titleLower.includes(keyword)) {
+        return eventType
+      }
+    }
+  }
+  return 'BREAKING'
 }
 
-function buildClusterKey(entityNames: string[], eventType: string | null): string {
-  const sorted = Array.from(new Set(entityNames)).sort()
-  const raw = sorted.join('|') + (eventType ? `::${eventType}` : '')
-  return crypto.createHash('md5').update(raw.toLowerCase()).digest('hex').slice(0, 16)
+function getPrimaryEntity(matchedEntities: MatchedEntity[], eventType: string): { key: string; name: string; type: string } {
+  if (matchedEntities.length === 0) {
+    return { key: 'orphan', name: 'Unknown', type: 'UNKNOWN' }
+  }
+
+  if (['MATCH_PREVIEW', 'MATCH_RESULT', 'POST_MATCH_REACTION'].includes(eventType)) {
+    const clubs = matchedEntities.filter(e => e.type === 'CLUB')
+    if (clubs.length >= 2) {
+      const sorted = [clubs[0].name, clubs[1].name].sort()
+      const key = sorted.map(n => n.toLowerCase().replace(/\s+/g, '-')).join('-vs-')
+      return { key, name: `${clubs[0].name} vs ${clubs[1].name}`, type: 'MATCH' }
+    }
+  }
+
+  const priority = ['PLAYER', 'MANAGER', 'CLUB', 'COMPETITION', 'LEAGUE', 'VENUE', 'REFEREE', 'JOURNALIST', 'AGENT']
+  for (const type of priority) {
+    const match = matchedEntities.find(e => e.type === type)
+    if (match) {
+      return { key: match.name.toLowerCase().replace(/\s+/g, '-'), name: match.name, type: match.type }
+    }
+  }
+
+  const first = matchedEntities[0]
+  return { key: first.name.toLowerCase().replace(/\s+/g, '-'), name: first.name, type: first.type }
+}
+
+function buildClusterKey(primaryKey: string, eventType: string, date: Date): string {
+  const day = date.toISOString().split('T')[0]
+  return `${primaryKey}|${eventType.toLowerCase()}|${day}`
+}
+
+function calculateDIS(cluster: {
+  tier1Count: number
+  tier2Count: number
+  tier3Count: number
+  velocity30m: number
+  velocityPrev30m: number
+  consistency: number
+  firstSeen: Date
+}): { dis: number; acceleration: number; trend: string } {
+  const weighted = (cluster.tier1Count * 3.0) + (cluster.tier2Count * 1.8) + (cluster.tier3Count * 1.0)
+  const sourceComponent = Math.min(50, Math.log(weighted + 1) * 20)
+
+  const acceleration = cluster.velocity30m / Math.max(1, cluster.velocityPrev30m)
+  const velocityComponent = Math.min(30, Math.log(acceleration + 1) * 18)
+
+  const consistencyComponent = (cluster.consistency || 1.0) * 10
+
+  const tier1Bonus = Math.min(10, cluster.tier1Count * 3)
+
+  let rawDis = sourceComponent + velocityComponent + consistencyComponent + tier1Bonus
+
+  if (cluster.tier1Count === 0) {
+    rawDis *= 0.75
+  }
+
+  const hoursOld = (Date.now() - new Date(cluster.firstSeen).getTime()) / 3600000
+  const timeFactor = Math.exp(-hoursOld / 18)
+
+  const finalDis = Math.round(Math.min(100, Math.max(1, rawDis * timeFactor)))
+
+  let trend: string
+  if (timeFactor < 0.3) trend = 'FADING'
+  else if (acceleration > 2.0) trend = 'SPIKING'
+  else if (acceleration > 1.0) trend = 'RISING'
+  else trend = 'STABLE'
+
+  return { dis: finalDis, acceleration, trend }
 }
 
 function generateDeterministicSummary(
-  items: { title: string; source: string; pubDate: Date }[],
-  entityNames: string[],
-  eventType: string | null
-): string {
-  if (items.length === 0) return ''
+  clusterItems: { title: string; source: string; tier: number }[],
+  tier1Count: number,
+  tier2Count: number,
+  tier3Count: number,
+) {
+  const claims = clusterItems.map(item => ({
+    claim: item.title.replace(/\s*[-–—]\s*[^-–—]+$/, '').trim(),
+    sources: [item.source],
+    tier: item.tier,
+  }))
 
-  const sorted = items.sort((a, b) => b.pubDate.getTime() - a.pubDate.getTime())
-  const newest = sorted[0]
-  const sources = Array.from(new Set(items.map(i => i.source)))
-  const sourceStr = sources.length <= 3
-    ? sources.join(', ')
-    : `${sources.slice(0, 2).join(', ')} and ${sources.length - 2} others`
+  const merged: typeof claims = []
+  for (const claim of claims) {
+    const existing = merged.find(m => {
+      const claimWords = claim.claim.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3)
+      const existWords = m.claim.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3)
+      const overlap = claimWords.filter((w: string) => existWords.includes(w)).length
+      return overlap / Math.max(1, Math.min(claimWords.length, existWords.length)) > 0.6
+    })
+    if (existing) {
+      if (!existing.sources.includes(claim.sources[0])) {
+        existing.sources.push(claim.sources[0])
+      }
+      if (claim.tier < existing.tier) existing.tier = claim.tier
+    } else {
+      merged.push({ ...claim })
+    }
+  }
 
-  const entityStr = entityNames.length > 0 ? entityNames.slice(0, 3).join(', ') : 'this story'
+  merged.sort((a, b) => {
+    if (a.tier !== b.tier) return a.tier - b.tier
+    return b.sources.length - a.sources.length
+  })
 
-  const eventLabel = eventType
-    ? eventType.charAt(0).toUpperCase() + eventType.slice(1)
-    : 'Developing story'
+  const topClaims = merged.slice(0, 5)
 
-  const hoursAgo = Math.round((Date.now() - newest.pubDate.getTime()) / 3600000)
-  const timeStr = hoursAgo <= 1 ? 'in the last hour' : `${hoursAgo} hours ago`
+  const conflicts: { topic: string; versions: string[] }[] = []
+  const moneyPattern = /[€£$]\s*(\d+(?:\.\d+)?)\s*m/gi
+  const claimsWithMoney = topClaims
+    .map(c => ({ ...c, money: Array.from(c.claim.matchAll(moneyPattern)).map(m => m[0]) }))
+    .filter(c => c.money.length > 0)
 
-  return `${eventLabel} involving ${entityStr}. ${items.length} reports from ${sourceStr}. Latest update ${timeStr}: "${newest.title}".`
+  if (claimsWithMoney.length >= 2) {
+    const amounts = claimsWithMoney.map(c => c.money[0])
+    const unique = Array.from(new Set(amounts))
+    if (unique.length > 1) {
+      conflicts.push({
+        topic: 'transfer fee',
+        versions: claimsWithMoney.map(c => `${c.money[0]} (${c.sources[0]})`),
+      })
+    }
+  }
+
+  const positiveWords = ['agreed', 'confirmed', 'accepted', 'done deal', 'completed', 'set for']
+  const negativeWords = ['rejected', 'denied', 'refused', 'collapsed', 'off', 'collapses', 'denies']
+  const hasPositive = topClaims.some(c => positiveWords.some(w => c.claim.toLowerCase().includes(w)))
+  const hasNegative = topClaims.some(c => negativeWords.some(w => c.claim.toLowerCase().includes(w)))
+
+  if (hasPositive && hasNegative) {
+    const posSources = topClaims
+      .filter(c => positiveWords.some(w => c.claim.toLowerCase().includes(w)))
+      .flatMap(c => c.sources)
+    const negSources = topClaims
+      .filter(c => negativeWords.some(w => c.claim.toLowerCase().includes(w)))
+      .flatMap(c => c.sources)
+    conflicts.push({
+      topic: 'deal status',
+      versions: [`Confirmed (${posSources.join(', ')})`, `Denied/Collapsed (${negSources.join(', ')})`],
+    })
+  }
+
+  const mostCommonCount = Math.max(...topClaims.map(c => c.sources.length), 1)
+  const totalSources = new Set(clusterItems.map(i => i.source)).size
+  const consistency = mostCommonCount / Math.max(1, totalSources)
+
+  let text = topClaims
+    .slice(0, 3)
+    .map(c => `${c.sources[0]} reports: ${c.claim}`)
+    .join('. ')
+
+  if (conflicts.length > 0) {
+    text += `. Note: reports differ on ${conflicts[0].topic} — ${conflicts[0].versions.join(' vs ')}.`
+  }
+
+  const signalIntegrity = {
+    tier1_count: tier1Count,
+    tier2_count: tier2Count,
+    tier3_count: tier3Count,
+    conflicts: conflicts.length > 0,
+    consistency: Math.round(consistency * 100) / 100,
+    confidence: consistency > 0.8 ? 'HIGH' : consistency > 0.5 ? 'MEDIUM' : 'LOW',
+  }
+
+  return {
+    mainClaims: topClaims.map(c => ({ claim: c.claim, sources: c.sources, tier: c.tier })),
+    conflictingReports: conflicts.length > 0 ? conflicts : null,
+    signalIntegrity,
+    summaryText: text,
+    confidence: signalIntegrity.confidence,
+    consistency,
+  }
 }
 
 export async function GET(req: Request) {
-  const authHeader = req.headers.get('authorization')
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    console.log('Cluster engine: auth mismatch, proceeding anyway in dev')
-  }
+  const startTime = Date.now()
 
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  try {
+    const entities = await prisma.entity.findMany()
+    console.log(`[Cluster Engine] Loaded ${entities.length} entities`)
 
-  const [newsItems, entities] = await Promise.all([
-    prisma.newsItem.findMany({
-      where: { pubDate: { gte: cutoff } },
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const newsItems = await prisma.newsItem.findMany({
+      where: { pubDate: { gte: since } },
       orderBy: { pubDate: 'desc' },
-    }),
-    prisma.entity.findMany(),
-  ])
+    })
+    console.log(`[Cluster Engine] Found ${newsItems.length} items from last 24h`)
 
-  const entityLookup: { name: string; type: string; aliases: string[]; regex: RegExp }[] = entities.map(e => {
-    const allNames = [e.name, ...e.aliases]
-    const escaped = allNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    const pattern = escaped.join('|')
-    return {
-      name: e.name,
-      type: e.type,
-      aliases: e.aliases,
-      regex: new RegExp(`\\b(${pattern})\\b`, 'i'),
+    if (newsItems.length === 0) {
+      return NextResponse.json({ message: 'No items to cluster', clusters: 0 })
     }
-  })
 
-  const itemEntities = new Map<string, string[]>()
-  const itemEventTypes = new Map<string, string | null>()
-  const eventTypeUpdates: { id: string; eventType: string }[] = []
+    const processedItems = newsItems.map(item => {
+      const matchedEntities = matchEntities(item.title, entities)
+      const eventType = detectEventType(item.title)
+      const primary = getPrimaryEntity(matchedEntities, eventType)
+      const clusterKey = buildClusterKey(primary.key, eventType, item.pubDate)
 
-  for (const item of newsItems) {
-    const matched: string[] = []
-    for (const entity of entityLookup) {
-      if (entity.regex.test(item.title)) {
-        matched.push(entity.name)
+      return {
+        ...item,
+        matchedEntities,
+        eventType,
+        primaryEntity: primary,
+        clusterKey,
       }
+    })
+
+    const clusterMap = new Map<string, typeof processedItems>()
+    for (const item of processedItems) {
+      const existing = clusterMap.get(item.clusterKey) || []
+      existing.push(item)
+      clusterMap.set(item.clusterKey, existing)
     }
-    itemEntities.set(item.id, matched)
 
-    const eventType = detectEventType(item.title)
-    itemEventTypes.set(item.id, eventType)
+    console.log(`[Cluster Engine] Found ${clusterMap.size} clusters`)
 
-    if (eventType && eventType !== item.eventType) {
-      eventTypeUpdates.push({ id: item.id, eventType })
-    }
-  }
+    let clustersCreated = 0
+    let clustersUpdated = 0
+    let summariesCreated = 0
+    let errors = 0
 
-  for (let i = 0; i < eventTypeUpdates.length; i += 50) {
-    const batch = eventTypeUpdates.slice(i, i + 50)
-    await Promise.allSettled(
-      batch.map(u => prisma.newsItem.update({ where: { id: u.id }, data: { eventType: u.eventType } }))
-    )
-  }
+    for (const [clusterKey, items] of Array.from(clusterMap.entries())) {
+      try {
+        const primary = items[0].primaryEntity
+        const allEntities = Array.from(new Set(items.flatMap(i => i.matchedEntities.map(e => e.name))))
+        const uniqueSources = Array.from(new Set(items.map(i => i.source)))
 
-  const clusterMap = new Map<string, typeof newsItems>()
-  const clusterEntities = new Map<string, string[]>()
-  const clusterEventTypes = new Map<string, string | null>()
+        const tier1Count = items.filter(i => i.tier === 1).length
+        const tier2Count = items.filter(i => i.tier === 2).length
+        const tier3Count = items.filter(i => i.tier === 3).length
 
-  for (const item of newsItems) {
-    const matched = itemEntities.get(item.id) || []
-    const eventType = itemEventTypes.get(item.id) || null
+        const now = Date.now()
+        const velocity30m = items.filter(i => (now - new Date(i.pubDate).getTime()) < 30 * 60 * 1000).length
+        const velocityPrev30m = items.filter(i => {
+          const age = now - new Date(i.pubDate).getTime()
+          return age >= 30 * 60 * 1000 && age < 60 * 60 * 1000
+        }).length
 
-    if (matched.length === 0) {
-      const words = extractSignificantWords(item.title)
-      if (words.length >= 3) {
-        const keyWords = words.slice(0, 5)
-        const fallbackKey = crypto.createHash('md5').update(keyWords.join('|')).digest('hex').slice(0, 16)
+        const firstSeen = new Date(Math.min(...items.map(i => new Date(i.pubDate).getTime())))
+        const latestItem = new Date(Math.max(...items.map(i => new Date(i.pubDate).getTime())))
 
-        let merged = false
-        for (const [existingKey, existingItems] of Array.from(clusterMap.entries())) {
-          const existingWords = new Set<string>()
-          for (const ei of existingItems) {
-            for (const w of extractSignificantWords(ei.title)) {
-              existingWords.add(w)
-            }
-          }
-          const overlap = keyWords.filter(w => existingWords.has(w)).length
-          if (overlap >= 3) {
-            existingItems.push(item)
-            merged = true
-            break
-          }
+        const bestItem = items.sort((a, b) => a.tier - b.tier)[0]
+        const title = bestItem.title.replace(/\s*[-–—]\s*[^-–—]+$/, '').trim()
+
+        const summary = generateDeterministicSummary(items, tier1Count, tier2Count, tier3Count)
+
+        const { dis, acceleration, trend } = calculateDIS({
+          tier1Count,
+          tier2Count,
+          tier3Count,
+          velocity30m,
+          velocityPrev30m,
+          consistency: summary.consistency,
+          firstSeen,
+        })
+
+        const existingCluster = await prisma.storyCluster.findUnique({ where: { key: clusterKey } })
+
+        const clusterData = {
+          title,
+          eventType: items[0].eventType,
+          primaryEntity: primary.name,
+          primaryEntityType: primary.type,
+          entities: allEntities,
+          sourceCount: uniqueSources.length,
+          tier1Count,
+          tier2Count,
+          tier3Count,
+          hasConflicts: (summary.conflictingReports || []).length > 0,
+          velocity30m,
+          velocityPrev30m,
+          acceleration,
+          trend,
+          consistency: summary.consistency,
+          dis,
+          peakDis: existingCluster ? Math.max(existingCluster.peakDis, dis) : dis,
+          peakAt: (!existingCluster || dis > (existingCluster?.peakDis || 0)) ? new Date() : existingCluster?.peakAt,
+          firstSeen,
+          latestItem,
+          newsItems: items.map(i => i.id),
         }
 
-        if (!merged) {
-          clusterMap.set(fallbackKey, [item])
-          clusterEntities.set(fallbackKey, [])
-          clusterEventTypes.set(fallbackKey, eventType)
-        }
-      }
-      continue
-    }
+        const cluster = await prisma.storyCluster.upsert({
+          where: { key: clusterKey },
+          update: clusterData,
+          create: { key: clusterKey, ...clusterData },
+        })
 
-    const key = buildClusterKey(matched, eventType)
+        if (existingCluster) clustersUpdated++
+        else clustersCreated++
 
-    if (!clusterMap.has(key)) {
-      clusterMap.set(key, [])
-      clusterEntities.set(key, matched)
-      clusterEventTypes.set(key, eventType)
-    } else {
-      const existing = clusterEntities.get(key) || []
-      for (const m of matched) {
-        if (!existing.includes(m)) existing.push(m)
-      }
-      clusterEntities.set(key, existing)
-    }
-    clusterMap.get(key)!.push(item)
-  }
+        const conflictsValue = summary.conflictingReports
+          ? (summary.conflictingReports as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull
 
-  let clustersCreated = 0
-  let clustersUpdated = 0
-  let itemsAssigned = 0
-
-  for (const [clusterKey, items] of Array.from(clusterMap.entries())) {
-    if (items.length < 2) continue
-
-    const entityNames = clusterEntities.get(clusterKey) || []
-    const eventType = clusterEventTypes.get(clusterKey) || null
-    const sources = new Set(items.map(i => i.source))
-    const disValues = items.map(i => i.dis)
-    const avgDis = Math.round(disValues.reduce((a, b) => a + b, 0) / disValues.length)
-    const maxDis = Math.max(...disValues)
-
-    const sorted = items.sort((a, b) => new Date(a.pubDate).getTime() - new Date(b.pubDate).getTime())
-    const firstSeen = new Date(sorted[0].pubDate)
-    const lastUpdated = new Date(sorted[sorted.length - 1].pubDate)
-
-    const ageHours = Math.max(1, (Date.now() - firstSeen.getTime()) / 3600000)
-    const velocity = items.length / ageHours
-
-    const halfTime = ageHours / 2
-    const firstHalf = items.filter(i => (new Date(i.pubDate).getTime() - firstSeen.getTime()) / 3600000 < halfTime).length
-    const secondHalf = items.length - firstHalf
-    const acceleration = halfTime > 0 ? (secondHalf - firstHalf) / halfTime : 0
-
-    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000)
-    const bestTitle = items.sort((a, b) => b.dis - a.dis)[0].title
-
-    const summary = generateDeterministicSummary(
-      items.map(i => ({ title: i.title, source: i.source, pubDate: new Date(i.pubDate) })),
-      entityNames,
-      eventType,
-    )
-
-    const sourceBonus = sources.size * 8
-    const recencyBonus = Math.max(0, 50 - (((Date.now() - lastUpdated.getTime()) / 3600000) * 5))
-    const tierBonus = items.some(i => i.tier === 1) ? 10 : items.some(i => i.tier === 2) ? 5 : 0
-    const volumeBonus = Math.min(20, items.length * 3)
-    const velocityBonus = Math.min(15, Math.round(velocity * 5))
-    const clusterDis = Math.min(100, Math.max(1, Math.round(sourceBonus + recencyBonus + tierBonus + volumeBonus + velocityBonus)))
-
-    try {
-      const existing = await prisma.storyCluster.findUnique({ where: { clusterKey } })
-
-      if (existing) {
-        await prisma.storyCluster.update({
-          where: { clusterKey },
-          data: {
-            title: bestTitle,
-            summary,
-            eventType,
-            entityNames,
-            articleCount: items.length,
-            sourceCount: sources.size,
-            avgDis: clusterDis,
-            maxDis,
-            velocity,
-            acceleration,
-            lastUpdated,
-            expiresAt,
+        await prisma.clusterSummary.upsert({
+          where: { clusterId: cluster.id },
+          update: {
+            mainClaims: summary.mainClaims as unknown as Prisma.InputJsonValue,
+            conflictingReports: conflictsValue,
+            signalIntegrity: summary.signalIntegrity as unknown as Prisma.InputJsonValue,
+            summaryText: summary.summaryText,
+            confidence: summary.confidence,
+            generatedAt: new Date(),
+          },
+          create: {
+            clusterId: cluster.id,
+            mainClaims: summary.mainClaims as unknown as Prisma.InputJsonValue,
+            conflictingReports: conflictsValue,
+            signalIntegrity: summary.signalIntegrity as unknown as Prisma.InputJsonValue,
+            summaryText: summary.summaryText,
+            confidence: summary.confidence,
           },
         })
-        clustersUpdated++
-      } else {
-        await prisma.storyCluster.create({
+        summariesCreated++
+
+        await prisma.newsItem.updateMany({
+          where: { id: { in: items.map(i => i.id) } },
           data: {
-            clusterKey,
-            title: bestTitle,
-            summary,
-            eventType,
-            entityNames,
-            articleCount: items.length,
-            sourceCount: sources.size,
-            avgDis: clusterDis,
-            maxDis,
-            velocity,
-            acceleration,
-            firstSeen,
-            lastUpdated,
-            expiresAt,
-            summaries: {
-              create: {
-                text: summary,
-                method: 'deterministic',
-                version: 1,
-              },
-            },
+            clusterId: cluster.id,
+            eventType: items[0].eventType,
           },
         })
-        clustersCreated++
+      } catch (e) {
+        console.error(`[Cluster Engine] Error processing cluster ${clusterKey}:`, e)
+        errors++
       }
-
-      const itemIds = items.map(i => i.id)
-      await prisma.newsItem.updateMany({
-        where: { id: { in: itemIds } },
-        data: { clusterId: clusterKey },
-      })
-
-      for (const item of items) {
-        const hoursOld = (Date.now() - new Date(item.pubDate).getTime()) / 3600000
-        const itemRecency = Math.max(0, 50 - (hoursOld * 5))
-        const itemDis = Math.min(100, Math.max(1, Math.round(
-          itemRecency + sourceBonus + tierBonus + volumeBonus + velocityBonus
-        )))
-        await prisma.newsItem.update({
-          where: { id: item.id },
-          data: { dis: itemDis },
-        }).catch(() => {})
-      }
-
-      itemsAssigned += items.length
-    } catch (err) {
-      console.error(`Cluster ${clusterKey} error:`, err)
     }
+
+    const staleDate = new Date(Date.now() - 48 * 60 * 60 * 1000)
+    const deleted = await prisma.storyCluster.deleteMany({
+      where: { latestItem: { lt: staleDate } },
+    })
+
+    const duration = Date.now() - startTime
+
+    return NextResponse.json({
+      success: true,
+      duration: `${duration}ms`,
+      items: newsItems.length,
+      clusters: clusterMap.size,
+      created: clustersCreated,
+      updated: clustersUpdated,
+      summaries: summariesCreated,
+      errors,
+      staleDeleted: deleted.count,
+      entityCount: entities.length,
+    })
+  } catch (e) {
+    console.error('[Cluster Engine] Fatal error:', e)
+    return NextResponse.json({ error: 'Cluster engine failed', detail: String(e) }, { status: 500 })
   }
-
-  await prisma.storyCluster.deleteMany({
-    where: { expiresAt: { lt: new Date() } },
-  }).catch(() => {})
-
-  return NextResponse.json({
-    totalItems: newsItems.length,
-    clustersCreated,
-    clustersUpdated,
-    itemsAssigned,
-    totalClusters: clustersCreated + clustersUpdated,
-    timestamp: new Date().toISOString(),
-  })
 }

@@ -61,7 +61,7 @@ const GenerateSchema = z.object({
   customPrompt: z.string().optional(),
   tone: z.enum(['professional', 'casual', 'tabloid', 'analytical']).default('professional'),
   language: z.enum(['bs', 'hr', 'sr', 'en']).default('bs'),
-  wordCount: z.number().default(400),
+  wordCount: z.number().default(300),
 })
 
 function buildPrompt(data: z.infer<typeof GenerateSchema>): { system: string; prompt: string } {
@@ -72,17 +72,7 @@ function buildPrompt(data: z.infer<typeof GenerateSchema>): { system: string; pr
     en: 'English',
   }
   const language = langMap[data.language] || 'Bosnian'
-  const wordTarget = data.wordCount || 400
-
-  const lengthGuide = wordTarget <= 150
-    ? 'FLASH FORMAT: 1 lead paragraph (2-3 sentences) + TLDR. No body paragraphs. Get in, deliver the news, get out.'
-    : wordTarget <= 300
-    ? 'STANDARD FORMAT: 1 lead + 1-2 body paragraphs + TLDR. Keep it tight.'
-    : wordTarget <= 500
-    ? 'DETAILED FORMAT: 1 lead + 2-3 body paragraphs with NEW facts + TLDR.'
-    : 'LONG-FORM FORMAT: 1 lead + 3-4 body paragraphs with NEW facts, context, and quotes from source + TLDR.'
-
-  const maxParagraphs = wordTarget <= 150 ? 1 : wordTarget <= 300 ? 3 : wordTarget <= 500 ? 5 : 6
+  const wordTarget = data.wordCount || 300
 
   const system = `You are a senior sports journalist at BBC Sport / Reuters writing in ${language}. Output valid JSON only, no markdown wrapping.
 
@@ -98,10 +88,12 @@ ABSOLUTE RULES — VIOLATION OF THESE PRODUCES FAKE NEWS:
 9. For any statistical claim (records, streaks, rankings), add the qualifier "according to [source]" unless you are absolutely certain it is a universally known, unchanging fact.
 10. CONFIDENCE MARKERS: If you must include a detail you are not 100% sure about from the source, prefix it with "Reports suggest" or "According to initial reports". Never state uncertain information as confirmed fact.
 
+TARGET LENGTH: Write approximately ${wordTarget} words.
+${wordTarget <= 150 ? '- Write 2-3 short paragraphs + TLDR. Be concise.' : wordTarget <= 300 ? '- Write 3-4 paragraphs + TLDR. Standard coverage.' : wordTarget <= 500 ? '- Write 4-6 paragraphs + TLDR. Include background context.' : '- Write 5-8 paragraphs + TLDR. Include background, analysis, and future implications.'}
+CRITICAL: Do NOT pad with filler to reach the word count. If you only have enough facts for 200 words, write 200 words even if asked for 500. Quality over quantity ALWAYS.
+
 WRITING RULES:
 11. NEVER repeat information. Each paragraph MUST contain a NEW fact. If you only have 2 facts, write 2 paragraphs and STOP.
-12. ${lengthGuide} Maximum ${maxParagraphs} paragraphs.
-13. Target ${wordTarget} words maximum. Shorter is better.
 14. BANNED WORDS AND PHRASES — never use: "landscape", "crucial", "paramount", "delve", "comprehensive", "It remains to be seen", "Only time will tell", "game-changer", "footballing world", "sending shockwaves", "blockbuster", "marquee signing", "meteoric rise", "the beautiful game", "masterclass", "Furthermore", "Moreover", "interconnected nature", "the modern football", "remains fluid", "significant setback", "complex web", "transfer market continues", "adds another layer", "reflects the modern", "highlights the competitive nature", "the timing of these developments", "multiple clubs are reassessing", "in today's game", "represents a significant", "demonstrates the competitive".
 15. Start with the NEWS. First sentence = what happened.
 16. Each paragraph: 2-3 sentences maximum.
@@ -189,7 +181,7 @@ export async function POST(req: NextRequest) {
     const data = GenerateSchema.parse(body)
     const { system, prompt } = buildPrompt(data)
 
-    const maxTokens = Math.max(600, Math.round(data.wordCount * 2.5))
+    const maxTokens = Math.min(4000, Math.max(500, Math.round(data.wordCount * 2.5)))
     const result = await generateContent({ system, prompt, maxTokens, temperature: 0.3 })
 
     let parsed

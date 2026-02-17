@@ -50,10 +50,10 @@ const attachWidgets = [
 ]
 
 const WORD_COUNT_OPTIONS = [
-  { value: 150, label: 'Flash', desc: '~150 words' },
-  { value: 300, label: 'Standard', desc: '~300 words' },
-  { value: 500, label: 'Detailed', desc: '~500 words' },
-  { value: 800, label: 'Long-form', desc: '~800 words' },
+  { value: 150, label: 'Flash', desc: 'Brief news flash' },
+  { value: 300, label: 'Standard', desc: 'Default coverage' },
+  { value: 500, label: 'Detailed', desc: 'Full article' },
+  { value: 800, label: 'Long-form', desc: 'Deep analysis' },
 ]
 
 export default function EditorPage() {
