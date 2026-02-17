@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/fetch-feeds",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/cluster-engine",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

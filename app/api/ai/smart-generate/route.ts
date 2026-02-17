@@ -20,6 +20,7 @@ const schema = z.object({
   mode: z.enum(['single', 'combined', 'rewrite']).default('single'),
   sourceContext: z.string().max(2000).optional(),
   sourceDomain: z.string().optional(),
+  wordCount: z.number().min(50).max(1200).default(400),
 })
 
 type ContextLevel = 'full' | 'combined' | 'headline-only'
@@ -34,6 +35,17 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const input = schema.parse(body)
+    const wordTarget = input.wordCount || 400
+
+    const lengthGuide = wordTarget <= 150
+      ? 'FLASH FORMAT: 1 lead paragraph (2-3 sentences) + TLDR. No body paragraphs.'
+      : wordTarget <= 300
+      ? 'STANDARD FORMAT: 1 lead + 1-2 body paragraphs + TLDR.'
+      : wordTarget <= 500
+      ? 'DETAILED FORMAT: 1 lead + 2-3 body paragraphs with NEW facts + TLDR.'
+      : 'LONG-FORM FORMAT: 1 lead + 3-4 body paragraphs with NEW facts, context, and quotes from source + TLDR.'
+
+    const maxParagraphs = wordTarget <= 150 ? 1 : wordTarget <= 300 ? 3 : wordTarget <= 500 ? 5 : 6
 
     const systemPrompt = `You are a senior sports journalist writing for a digital newsroom. Output valid JSON only, no markdown wrapping.
 
@@ -51,8 +63,8 @@ ABSOLUTE RULES — VIOLATION OF THESE PRODUCES FAKE NEWS:
 
 WRITING RULES:
 11. NEVER repeat information. Each paragraph MUST contain a NEW fact. If you only have 2 facts, write 2 paragraphs and STOP.
-12. Maximum 5 paragraphs. Structure: 1 lead + 2-3 body paragraphs with NEW facts + 1 TLDR line.
-13. Maximum 400 words. Shorter is better.
+12. ${lengthGuide} Maximum ${maxParagraphs} paragraphs.
+13. Target ${wordTarget} words maximum. Shorter is better.
 14. BANNED WORDS AND PHRASES — never use: "landscape", "crucial", "paramount", "delve", "comprehensive", "It remains to be seen", "Only time will tell", "game-changer", "footballing world", "sending shockwaves", "blockbuster", "marquee signing", "meteoric rise", "the beautiful game", "masterclass", "interconnected nature", "the modern football", "remains fluid", "significant setback", "complex web", "transfer market continues", "adds another layer", "reflects the modern", "highlights the competitive nature", "the timing of these developments", "multiple clubs are reassessing", "in today's game", "represents a significant", "demonstrates the competitive".
 15. Write like Reuters or BBC Sport — factual, tight, no fluff. Start with the NEWS.
 16. Each paragraph: 2-3 sentences maximum.
@@ -65,7 +77,7 @@ WRITING RULES:
 The JSON must have this exact structure:
 {
   "title": "Factual headline under 70 chars",
-  "content": "Article in HTML (<h2>, <p>, <ul>, <li> only). Max 400 words. Max 5 paragraphs. Each paragraph MUST contain NEW info. Facts only.",
+  "content": "Article in HTML (<h2>, <p>, <ul>, <li> only). Max ${wordTarget} words. Max ${maxParagraphs} paragraphs. Each paragraph MUST contain NEW info. Facts only.",
   "excerpt": "1-2 sentence factual summary",
   "poll": {
     "question": "Relevant fan opinion question",
@@ -120,7 +132,7 @@ Instructions:
 - Keep all facts from the original but present them in your own voice
 - Do NOT copy any sentences verbatim from the source
 - Do NOT invent new facts not in the source
-- Max 400 words
+- Max ${wordTarget} words
 - Start with the news, not background`
     } else if (input.mode === 'combined' && input.sources && input.sources.length > 0) {
       contextLevel = 'combined'
@@ -141,7 +153,7 @@ CATEGORY: ${input.category || 'Sport'}
 TYPE: ${input.articleType || 'report'}
 LANGUAGE: ${input.language}
 
-Remember: ONLY use facts from the headlines above. Do NOT invent details. Max 400 words. Synthesize, do NOT repeat.`
+Remember: ONLY use facts from the headlines above. Do NOT invent details. Max ${wordTarget} words. Synthesize, do NOT repeat.`
     } else {
       contextLevel = 'headline-only'
       userPrompt = `YOU HAVE NO SOURCE ARTICLE. You ONLY have this headline:
@@ -162,9 +174,10 @@ STRICT RULES FOR HEADLINE-ONLY GENERATION:
 - This is a BREAKING NEWS STUB — short, factual, zero fabrication`
     }
 
+    const maxTokens = Math.max(600, Math.round(wordTarget * 2.5))
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
+      max_tokens: maxTokens,
       temperature: 0.3,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],

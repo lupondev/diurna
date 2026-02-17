@@ -74,6 +74,16 @@ function buildPrompt(data: z.infer<typeof GenerateSchema>): { system: string; pr
   const language = langMap[data.language] || 'Bosnian'
   const wordTarget = data.wordCount || 400
 
+  const lengthGuide = wordTarget <= 150
+    ? 'FLASH FORMAT: 1 lead paragraph (2-3 sentences) + TLDR. No body paragraphs. Get in, deliver the news, get out.'
+    : wordTarget <= 300
+    ? 'STANDARD FORMAT: 1 lead + 1-2 body paragraphs + TLDR. Keep it tight.'
+    : wordTarget <= 500
+    ? 'DETAILED FORMAT: 1 lead + 2-3 body paragraphs with NEW facts + TLDR.'
+    : 'LONG-FORM FORMAT: 1 lead + 3-4 body paragraphs with NEW facts, context, and quotes from source + TLDR.'
+
+  const maxParagraphs = wordTarget <= 150 ? 1 : wordTarget <= 300 ? 3 : wordTarget <= 500 ? 5 : 6
+
   const system = `You are a senior sports journalist at BBC Sport / Reuters writing in ${language}. Output valid JSON only, no markdown wrapping.
 
 ABSOLUTE RULES — VIOLATION OF THESE PRODUCES FAKE NEWS:
@@ -90,7 +100,7 @@ ABSOLUTE RULES — VIOLATION OF THESE PRODUCES FAKE NEWS:
 
 WRITING RULES:
 11. NEVER repeat information. Each paragraph MUST contain a NEW fact. If you only have 2 facts, write 2 paragraphs and STOP.
-12. Maximum 5 paragraphs. Structure: 1 lead + 2-3 body paragraphs with NEW facts + 1 TLDR line.
+12. ${lengthGuide} Maximum ${maxParagraphs} paragraphs.
 13. Target ${wordTarget} words maximum. Shorter is better.
 14. BANNED WORDS AND PHRASES — never use: "landscape", "crucial", "paramount", "delve", "comprehensive", "It remains to be seen", "Only time will tell", "game-changer", "footballing world", "sending shockwaves", "blockbuster", "marquee signing", "meteoric rise", "the beautiful game", "masterclass", "Furthermore", "Moreover", "interconnected nature", "the modern football", "remains fluid", "significant setback", "complex web", "transfer market continues", "adds another layer", "reflects the modern", "highlights the competitive nature", "the timing of these developments", "multiple clubs are reassessing", "in today's game", "represents a significant", "demonstrates the competitive".
 15. Start with the NEWS. First sentence = what happened.
@@ -179,7 +189,8 @@ export async function POST(req: NextRequest) {
     const data = GenerateSchema.parse(body)
     const { system, prompt } = buildPrompt(data)
 
-    const result = await generateContent({ system, prompt, maxTokens: 1500, temperature: 0.3 })
+    const maxTokens = Math.max(600, Math.round(data.wordCount * 2.5))
+    const result = await generateContent({ system, prompt, maxTokens, temperature: 0.3 })
 
     let parsed
     try {

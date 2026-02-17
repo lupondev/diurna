@@ -406,6 +406,7 @@ model NewsItem {
   contentHash  String?
   content      String?  @db.Text
   category     String   @default("breaking")
+  eventType    String?
   pubDate      DateTime
   feedUrl      String
   tier         Int      @default(3)
@@ -420,6 +421,7 @@ model NewsItem {
   @@index([pubDate])
   @@index([category])
   @@index([siteId, pubDate])
+  @@index([clusterId])
 }
 
 model FeedSource {
@@ -467,6 +469,43 @@ model Player {
 
   @@index([name])
   @@index([currentTeam])
+}
+
+model StoryCluster {
+  id            String   @id @default(cuid())
+  clusterKey    String   @unique
+  title         String
+  summary       String?  @db.Text
+  eventType     String?
+  entityNames   String[]
+  articleCount  Int      @default(0)
+  sourceCount   Int      @default(0)
+  avgDis        Int      @default(0)
+  maxDis        Int      @default(0)
+  velocity      Float    @default(0)
+  acceleration  Float    @default(0)
+  firstSeen     DateTime
+  lastUpdated   DateTime
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  summaries ClusterSummary[]
+
+  @@index([eventType])
+  @@index([lastUpdated])
+  @@index([expiresAt])
+}
+
+model ClusterSummary {
+  id         String       @id @default(cuid())
+  clusterId  String
+  cluster    StoryCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  version    Int          @default(1)
+  text       String       @db.Text
+  method     String       @default("deterministic")
+  createdAt  DateTime     @default(now())
+
+  @@index([clusterId])
 }
 
 model MatchResult {

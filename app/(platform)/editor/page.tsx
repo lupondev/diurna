@@ -49,11 +49,11 @@ const attachWidgets = [
   { icon: '📋', name: 'Survey', value: 'reader survey' },
 ]
 
-const genSteps = [
-  'Analyzing topic',
-  'Generating article (~400 words)',
-  'Building SEO metadata',
-  'Final review',
+const WORD_COUNT_OPTIONS = [
+  { value: 150, label: 'Flash', desc: '~150 words' },
+  { value: 300, label: 'Standard', desc: '~300 words' },
+  { value: 500, label: 'Detailed', desc: '~500 words' },
+  { value: 800, label: 'Long-form', desc: '~800 words' },
 ]
 
 export default function EditorPage() {
@@ -81,6 +81,7 @@ export default function EditorPage() {
   const [trends, setTrends] = useState<{ title: string; traffic: string }[]>([])
   const [trendsGeo, setTrendsGeo] = useState('BA')
   const [trendsLoading, setTrendsLoading] = useState(false)
+  const [wordCount, setWordCount] = useState(300)
   const [contextLevel, setContextLevel] = useState<string | null>(null)
   const [factCheck, setFactCheck] = useState<{ warnings: { type: string; detail: string; severity: string }[]; warningCount: number; status: string } | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -339,6 +340,13 @@ export default function EditorPage() {
     return w
   }
 
+  const genSteps = [
+    'Analyzing topic',
+    `Generating article (~${wordCount} words)`,
+    'Building SEO metadata',
+    'Final review',
+  ]
+
   async function startGenerate() {
     if (!prompt.trim()) return
     setScreen('generating')
@@ -358,6 +366,7 @@ export default function EditorPage() {
           customPrompt: prompt,
           tone: 'professional',
           language: 'en',
+          wordCount,
         }),
       })
       const data = await res.json()
@@ -695,6 +704,11 @@ export default function EditorPage() {
                   <span className="tip">Quiz</span>🧠
                 </button>
               </div>
+              <select className="wc-select" value={wordCount} onChange={(e) => setWordCount(Number(e.target.value))}>
+                {WORD_COUNT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label} ({opt.desc})</option>
+                ))}
+              </select>
               <button className="gen-btn" onClick={startGenerate}>🤖 Generate</button>
             </div>
           </div>
@@ -704,7 +718,7 @@ export default function EditorPage() {
               <div className="pci">⚡</div>
               <div className="pcb">
                 <div className="pct">AI will generate:</div>
-                <div className="pcd">~400 words · 2 min read · {widgets.length} widgets</div>
+                <div className="pcd">~{wordCount} words · {Math.max(1, Math.round(wordCount / 200))} min read · {widgets.length} widgets</div>
                 <div className="pcp">
                   {widgets.map((w) => (
                     <span key={w} className="pill">{w}</span>

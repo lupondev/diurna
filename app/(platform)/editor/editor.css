@@ -47,6 +47,8 @@
 .pb-btn.active { background: var(--mint-l); color: var(--mint-d); }
 .pb-btn .tip { display: none; position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); background: var(--g900); color: var(--wh); font-size: 9px; font-weight: 600; padding: 3px 8px; border-radius: 5px; white-space: nowrap; z-index: 10; pointer-events: none; }
 .pb-btn:hover .tip { display: block; }
+.wc-select { padding: 8px 12px; font-size: 12px; font-weight: 600; border: 1px solid var(--brd); border-radius: var(--rl); background: var(--wh); color: var(--g700); cursor: pointer; outline: none; transition: border-color .15s; }
+.wc-select:focus { border-color: var(--mint); }
 .gen-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; font-size: 14px; font-weight: 700; background: var(--mint); color: var(--wh); border-radius: var(--rl); transition: all .15s var(--ease); flex-shrink: 0; border: none; cursor: pointer; }
 .gen-btn:hover { background: var(--mint-d); transform: translateY(-1px); box-shadow: 0 4px 16px var(--mint-g); }
 
