@@ -239,11 +239,12 @@ function FloatingToolbar({ editor }: { editor: NonNullable<ReturnType<typeof use
       const res = await fetch('/api/ai/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'custom', customPrompt: `Rephrase this text concisely, return ONLY the rephrased text with no preamble: "${text}"`, wordCount: 100 }),
+        body: JSON.stringify({ type: 'custom', customPrompt: `Rephrase this text concisely, return ONLY the rephrased text with no preamble: "${text}"`, wordCount: 50 }),
       })
       const data = await res.json()
-      if (data.content) {
-        editor.chain().focus().deleteSelection().insertContent(data.content.trim()).run()
+      const output = typeof data.content === 'string' ? data.content.replace(/^TLDR:.*$/gm, '').trim() : ''
+      if (output) {
+        editor.chain().focus().deleteSelection().insertContent(output).run()
       }
     } catch {}
   }, [editor])
@@ -277,22 +278,24 @@ function EditorSidebar({
       return
     }
     setAiLoading(action)
+    const wordCounts: Record<string, number> = { rephrase: 50, shorten: 30, expand: 150, translate: 50, stats: 100 }
     const prompts: Record<string, string> = {
-      rephrase: `Rephrase this text in a different way, keeping the same meaning. Return ONLY the rephrased text: "${text}"`,
-      shorten: `Shorten this text to be more concise while keeping the key points. Return ONLY the shortened text: "${text}"`,
-      expand: `Expand this text with more detail, examples, and context. Return ONLY the expanded text: "${text}"`,
-      translate: `Translate this text to English (if already English, translate to Bosnian). Return ONLY the translated text: "${text}"`,
-      stats: `Add relevant statistics and data points to enhance this text. Return the text with stats woven in naturally: "${text}"`,
+      rephrase: `Rephrase this text in a different way, keeping the same meaning. Return ONLY the rephrased text, nothing else: "${text}"`,
+      shorten: `Shorten this text to be more concise while keeping the key points. Return ONLY the shortened text, nothing else: "${text}"`,
+      expand: `Expand this text with more detail and context. Return ONLY the expanded text, nothing else: "${text}"`,
+      translate: `Translate this text to English (if already English, translate to Bosnian). Return ONLY the translated text, nothing else: "${text}"`,
+      stats: `Add relevant statistics and data points to enhance this text. Return the text with stats woven in naturally, nothing else: "${text}"`,
     }
     try {
       const res = await fetch('/api/ai/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'custom', customPrompt: prompts[action], wordCount: 200 }),
+        body: JSON.stringify({ type: 'custom', customPrompt: prompts[action], wordCount: wordCounts[action] || 100 }),
       })
       const data = await res.json()
-      if (data.content) {
-        editor.chain().focus().deleteSelection().insertContent(data.content.trim()).run()
+      const output = typeof data.content === 'string' ? data.content.replace(/^TLDR:.*$/gm, '').trim() : ''
+      if (output) {
+        editor.chain().focus().deleteSelection().insertContent(output).run()
       }
     } catch {} finally { setAiLoading(null) }
   }, [editor])

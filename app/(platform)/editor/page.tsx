@@ -50,13 +50,10 @@ const attachWidgets = [
 ]
 
 const genSteps = [
-  'Fetching match data',
-  'Analyzing H2H & form',
-  'Writing article (~1,800 words)',
-  'Creating widgets & quiz',
-  'Generating gallery',
-  'Placing ad slots',
-  'Final review ✅',
+  'Analyzing topic',
+  'Generating article (~400 words)',
+  'Building SEO metadata',
+  'Final review',
 ]
 
 export default function EditorPage() {
@@ -263,7 +260,6 @@ export default function EditorPage() {
           customPrompt: prompt,
           tone: 'professional',
           language: 'en',
-          wordCount: 1500,
         }),
       })
       const data = await res.json()
@@ -580,7 +576,7 @@ export default function EditorPage() {
               <div className="pci">⚡</div>
               <div className="pcb">
                 <div className="pct">AI will generate:</div>
-                <div className="pcd">~1,500 words · {Math.ceil(1500 / 250)} min read · {widgets.length} widgets</div>
+                <div className="pcd">~400 words · 2 min read · {widgets.length} widgets</div>
                 <div className="pcp">
                   {widgets.map((w) => (
                     <span key={w} className="pill">{w}</span>
