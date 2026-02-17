@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
-import { Plus_Jakarta_Sans, JetBrains_Mono, Instrument_Serif } from 'next/font/google'
+import { Plus_Jakarta_Sans, JetBrains_Mono, Instrument_Serif, DM_Serif_Display, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { SessionProvider } from '@/components/providers/session-provider'
 import { GoogleAnalytics } from '@/components/analytics/ga4'
 import './globals.css'
+import './sportba.css'
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -18,6 +19,27 @@ const instrumentSerif = Instrument_Serif({
   subsets: ['latin'],
   weight: '400',
   variable: '--font-display',
+})
+
+const dmSerif = DM_Serif_Display({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-sb-serif',
+  display: 'swap',
+})
+
+const ibmSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '600'],
+  variable: '--font-sb-sans',
+  display: 'swap',
+})
+
+const ibmMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: '600',
+  variable: '--font-sb-mono',
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -57,8 +79,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={`${jakarta.variable} ${jetbrains.variable} ${instrumentSerif.variable} antialiased`}>
+    <html lang="bs">
+      <body className={`${jakarta.variable} ${jetbrains.variable} ${instrumentSerif.variable} ${dmSerif.variable} ${ibmSans.variable} ${ibmMono.variable} antialiased`}>
         <GoogleAnalytics />
         <SessionProvider>{children}</SessionProvider>
       </body>
