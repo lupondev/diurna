@@ -61,7 +61,7 @@ const GenerateSchema = z.object({
   customPrompt: z.string().optional(),
   tone: z.enum(['professional', 'casual', 'tabloid', 'analytical']).default('professional'),
   language: z.enum(['bs', 'hr', 'sr', 'en']).default('bs'),
-  wordCount: z.number().default(600),
+  wordCount: z.number().default(400),
 })
 
 function buildPrompt(data: z.infer<typeof GenerateSchema>): { system: string; prompt: string } {
@@ -72,44 +72,68 @@ function buildPrompt(data: z.infer<typeof GenerateSchema>): { system: string; pr
     en: 'English',
   }
   const language = langMap[data.language] || 'Bosnian'
+  const wordTarget = data.wordCount || 400
 
-  const system = `You are a professional sports journalist writing in ${language}.
-Write in a ${data.tone} tone. Target approximately ${data.wordCount} words.
-IMPORTANT: Respond ONLY with valid JSON in this exact format:
+  const system = `You are a senior sports journalist at BBC Sport / Reuters writing in ${language}. Output valid JSON only, no markdown wrapping.
+
+RULES — follow every single one:
+1. ONLY state facts provided in the user prompt. NEVER invent statistics, transfer fees, quotes, match scores, or details not given.
+2. Target exactly ${wordTarget} words. Do not exceed this. Shorter is better — every sentence must earn its place.
+3. BANNED WORDS AND PHRASES — never use: "landscape", "crucial", "paramount", "delve", "comprehensive", "It remains to be seen", "Only time will tell", "game-changer", "footballing world", "sending shockwaves", "blockbuster", "marquee signing", "meteoric rise", "the beautiful game", "masterclass", "Furthermore", "Moreover".
+4. Start with the NEWS. First sentence = what happened. Do not open with background, history, or scene-setting.
+5. Each paragraph: 2-3 sentences maximum. Tight and factual.
+6. Do NOT add "expert opinions", "analyst reactions", or unnamed source quotes unless explicitly provided in the prompt.
+7. No filler conclusions. Do not end with "This could reshape..." or "Fans will be watching closely..."
+8. End the article with a TLDR line: a single sentence summary of the key fact.
+9. Tone: ${data.tone}. Even casual/tabloid must remain factual — no invented details.
+10. Social posts must be factual summaries, not hype. No clickbait.
+
+Respond with this exact JSON structure:
 {
-  "title": "Article headline",
-  "excerpt": "Short 1-2 sentence summary",
-  "content": "Full article text with paragraphs separated by \\n\\n",
+  "title": "Factual headline under 70 chars",
+  "excerpt": "1-2 sentence factual summary",
+  "content": "Full article with paragraphs separated by \\n\\n. Must end with TLDR. Max ${wordTarget} words.",
   "tags": ["tag1", "tag2", "tag3"]
 }
-Do NOT include any text outside the JSON. Do NOT use markdown code blocks.`
+Do NOT include any text outside the JSON.`
 
   let prompt = ''
 
   switch (data.type) {
     case 'match-report':
-      prompt = `Write a match report: ${data.homeTeam || 'Team A'} vs ${data.awayTeam || 'Team B'}, final score ${data.score || '0-0'}.
+      prompt = `Write a match report. ONLY use facts below — do not invent any details.
+${data.homeTeam || 'Team A'} vs ${data.awayTeam || 'Team B'}, final score: ${data.score || '0-0'}.
 League: ${data.league || 'Unknown'}.
-${data.keyEvents ? `Key events: ${data.keyEvents}` : ''}`
+${data.keyEvents ? `Key events: ${data.keyEvents}` : 'No key events provided — do NOT invent any.'}
+Target: ${wordTarget} words. End with TLDR.`
       break
 
     case 'transfer-news':
-      prompt = `Write a transfer news article: ${data.playerName || 'Player'} is transferring from ${data.fromClub || 'Club A'} to ${data.toClub || 'Club B'}.
-${data.fee ? `Transfer fee: ${data.fee}` : ''}`
+      prompt = `Write a transfer news article. ONLY use facts below — do not invent fee, wages, or quotes.
+Player: ${data.playerName || 'Player'}.
+From: ${data.fromClub || 'Club A'}. To: ${data.toClub || 'Club B'}.
+${data.fee ? `Fee: ${data.fee}` : 'Fee: not disclosed — do NOT invent one.'}
+Target: ${wordTarget} words. End with TLDR.`
       break
 
     case 'match-preview':
-      prompt = `Write a match preview: ${data.homeTeam || 'Team A'} vs ${data.awayTeam || 'Team B'}.
+      prompt = `Write a match preview. ONLY use facts below.
+${data.homeTeam || 'Team A'} vs ${data.awayTeam || 'Team B'}.
 League: ${data.league || 'Unknown'}.
-Cover form, key players, and prediction.`
+Cover form and key players only if factual. Do not invent injury news or stats.
+Target: ${wordTarget} words. End with TLDR.`
       break
 
     case 'analysis':
-      prompt = `Write a tactical/statistical analysis about: ${data.customPrompt || 'the recent match'}.`
+      prompt = `Write a tactical/statistical analysis. ONLY use facts provided — do not invent stats.
+Topic: ${data.customPrompt || 'the recent match'}.
+Target: ${wordTarget} words. End with TLDR.`
       break
 
     case 'custom':
-      prompt = data.customPrompt || 'Write a sports article.'
+      prompt = `${data.customPrompt || 'Write a sports article.'}
+ONLY use facts from the prompt above. Do NOT invent statistics, quotes, or details.
+Target: ${wordTarget} words. End with TLDR.`
       break
   }
 
@@ -144,7 +168,7 @@ export async function POST(req: NextRequest) {
     const data = GenerateSchema.parse(body)
     const { system, prompt } = buildPrompt(data)
 
-    const result = await generateContent({ system, prompt })
+    const result = await generateContent({ system, prompt, maxTokens: 1500, temperature: 0.3 })
 
     let parsed
     try {

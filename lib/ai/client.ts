@@ -8,6 +8,7 @@ export async function generateContent(input: {
   system: string
   prompt: string
   maxTokens?: number
+  temperature?: number
 }): Promise<{
   text: string
   model: string
@@ -16,7 +17,8 @@ export async function generateContent(input: {
 }> {
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: input.maxTokens || 2000,
+    max_tokens: input.maxTokens || 1500,
+    temperature: input.temperature ?? 0.3,
     system: input.system,
     messages: [{ role: 'user', content: input.prompt }],
   })
