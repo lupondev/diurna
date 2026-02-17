@@ -16,7 +16,9 @@ const schema = z.object({
     source: z.string(),
     role: z.enum(['primary', 'supporting', 'media']),
   })).optional(),
-  mode: z.enum(['single', 'combined']).default('single'),
+  mode: z.enum(['single', 'combined', 'rewrite']).default('single'),
+  sourceContext: z.string().max(2000).optional(),
+  sourceDomain: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -85,7 +87,27 @@ The JSON must have this exact structure:
 
     let userPrompt: string
 
-    if (input.mode === 'combined' && input.sources && input.sources.length > 0) {
+    if (input.mode === 'rewrite' && input.sourceContext) {
+      userPrompt = `REWRITE this article in your own editorial voice. Do NOT copy sentences — rewrite completely.
+
+ORIGINAL HEADLINE: ${input.topic}
+SOURCE: ${input.sourceDomain || 'Unknown'}
+
+ORIGINAL ARTICLE TEXT (first 1500 chars):
+${input.sourceContext}
+
+CATEGORY: ${input.category || 'Sport'}
+TYPE: ${input.articleType || 'report'}
+LANGUAGE: ${input.language}
+
+Instructions:
+- Rewrite the article completely — new sentence structures, new phrasing
+- Keep all facts from the original but present them in your own voice
+- Do NOT copy any sentences verbatim from the source
+- Do NOT invent new facts not in the source
+- Max 400 words
+- Start with the news, not background`
+    } else if (input.mode === 'combined' && input.sources && input.sources.length > 0) {
       const primary = input.sources.filter(s => s.role === 'primary')
       const supporting = input.sources.filter(s => s.role === 'supporting')
       const media = input.sources.filter(s => s.role === 'media')

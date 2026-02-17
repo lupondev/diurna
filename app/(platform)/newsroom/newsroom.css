@@ -89,7 +89,8 @@
 .v4-dis-num.medium { color: var(--gold); }
 .v4-dis-num.low { color: #3B82F6; }
 .v4-dis-label { font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--g400); letter-spacing: .04em; }
-.v4-domain { font-family: var(--mono); font-size: 10px; color: var(--g400); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v4-domain { font-family: var(--mono); font-size: 10px; color: var(--g400); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; transition: color .15s; }
+a.v4-domain:hover { color: var(--mint-d); }
 .v4-card-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
 .v4-btn-rewrite { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 6px 12px; background: var(--mint-l); color: var(--mint-d); border: 1px solid rgba(0,212,170,.2); border-radius: var(--rm); cursor: pointer; transition: all .15s var(--ease); font-family: var(--sans); white-space: nowrap; text-decoration: none; }
 .v4-btn-rewrite:hover { background: var(--mint); color: var(--g900); transform: translateY(-1px); }
@@ -145,6 +146,11 @@
 .live-event-icon { font-size: 12px; flex-shrink: 0; }
 .live-event-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.live-grid-2col { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.live-pulse { display: inline-block; width: 8px; height: 8px; background: var(--coral); border-radius: 50%; margin-right: 6px; animation: nr5pulse 1.5s ease-in-out infinite; }
+.ft-card { opacity: .85; }
+.ft-badge { font-family: var(--mono); font-size: 11px; font-weight: 800; color: var(--g500); background: var(--g100); padding: 3px 10px; border-radius: 20px; }
+
 .fixture-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .fixture-league { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--g500); text-transform: uppercase; letter-spacing: .04em; }
 .fixture-countdown { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--mint-d); background: var(--mint-l); padding: 3px 10px; border-radius: 20px; }
@@ -173,8 +179,10 @@
 .reddit-score.warm { border-color: var(--gold); color: var(--gold); background: var(--gold-l); }
 .reddit-score.cool { border-color: #3B82F6; color: #3B82F6; background: #EFF6FF; }
 .reddit-sub { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--mint-d); }
+.reddit-flair { font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 2px 8px; background: var(--elec-l); color: var(--elec); border-radius: 10px; white-space: nowrap; }
 .reddit-time { font-family: var(--mono); font-size: 10px; color: var(--g400); margin-left: auto; }
-.reddit-title { font-family: var(--disp); font-size: 1rem; font-weight: 500; line-height: 1.35; color: var(--g900); margin: 0 0 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.reddit-title { font-family: var(--disp); font-size: 1rem; font-weight: 500; line-height: 1.35; color: var(--g900); margin: 0 0 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.reddit-preview { font-size: 12px; line-height: 1.5; color: var(--g500); margin: 0 0 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .reddit-stats { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--g500); margin-bottom: 12px; }
 .reddit-actions { display: flex; gap: 6px; }
 
@@ -203,6 +211,7 @@
   .yt-grid { grid-template-columns: repeat(2, 1fr); }
   .reddit-grid { grid-template-columns: 1fr; }
   .smart-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .live-grid-2col { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -220,6 +229,7 @@
   .yt-grid { grid-template-columns: 1fr; }
   .reddit-grid { grid-template-columns: 1fr; }
   .smart-grid { grid-template-columns: 1fr; }
+  .live-grid-2col { grid-template-columns: 1fr; }
   .smart-card { padding: 16px; }
   .smart-card-actions { flex-direction: column; }
   .smart-generate-btn { width: 100%; }

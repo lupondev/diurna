@@ -23,7 +23,7 @@ type Article = {
 type BreakingItem = { title: string; source: string; link: string; pubDate: string }
 type FixtureItem = { id: number; date: string; status: string; elapsed: number | null; league: string; homeTeam: string; awayTeam: string; homeGoals: number | null; awayGoals: number | null }
 type LiveMatch = FixtureItem & { events?: { minute: number; type: string; detail: string; team: string }[] }
-type RedditPost = { title: string; score: number; comments: number; link: string; subreddit: string; pubDate: string }
+type RedditPost = { title: string; score: number; comments: number; link: string; subreddit: string; pubDate: string; selftext: string; flair: string; url: string }
 type YouTubeVideo = { title: string; channel: string; videoId: string; link: string; thumbnail: string; pubDate: string }
 type CartItem = { id: string; title: string; source: string; link: string; role: 'primary' | 'supporting' | 'media'; type: string }
 type TimeFilter = '1h' | '3h' | '6h' | '12h' | '24h' | '48h' | 'all'
@@ -72,6 +72,35 @@ function getSourceStyle(source: string) {
 
 function getDomain(link: string) {
   try { return new URL(link).hostname.replace('www.', '') } catch { return '' }
+}
+
+const DOMAIN_MAP: Record<string, string> = {
+  'news.google.com': '',
+  'bbc.co.uk': 'BBC Sport',
+  'bbc.com': 'BBC Sport',
+  'skysports.com': 'Sky Sports',
+  'espn.com': 'ESPN',
+  'theathletic.com': 'The Athletic',
+  'theguardian.com': 'The Guardian',
+  'marca.com': 'Marca',
+  'lequipe.fr': "L'Equipe",
+  'reuters.com': 'Reuters',
+  'apnews.com': 'AP News',
+  'goal.com': 'Goal',
+  'transfermarkt.com': 'Transfermarkt',
+  'football-italia.net': 'Football Italia',
+}
+
+function getSourceDomain(item: BreakingItem): string {
+  const domain = getDomain(item.link)
+  if (domain === 'news.google.com' || domain === 'google.com') {
+    const dashMatch = item.title.match(/\s[-–—]\s([^-–—]+)$/)
+    if (dashMatch) return dashMatch[1].trim()
+  }
+  for (const [key, name] of Object.entries(DOMAIN_MAP)) {
+    if (domain.includes(key)) return name || domain
+  }
+  return domain
 }
 
 const SOURCE_AUTHORITY: Record<string, number> = {
@@ -247,12 +276,48 @@ const MOCK_YOUTUBE: YouTubeVideo[] = [
 ]
 
 const MOCK_REDDIT: RedditPost[] = [
-  { title: 'Salah breaks Premier League assist record with stunning through ball', score: 12400, comments: 1823, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 1800000).toISOString() },
-  { title: '[Fabrizio Romano] Arsenal complete signing of midfielder — here we go confirmed', score: 9800, comments: 2105, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 3600000).toISOString() },
-  { title: 'Post Match Thread: Real Madrid 3-2 Barcelona [La Liga]', score: 8200, comments: 4521, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 7200000).toISOString() },
-  { title: 'VAR decision in City vs Liverpool sparks massive debate', score: 7600, comments: 3200, link: 'https://reddit.com', subreddit: 'PremierLeague', pubDate: new Date(Date.now() - 10800000).toISOString() },
-  { title: 'Haaland scores hat-trick to go top of Golden Boot race', score: 6100, comments: 890, link: 'https://reddit.com', subreddit: 'PremierLeague', pubDate: new Date(Date.now() - 14400000).toISOString() },
-  { title: 'Bayern Munich sack manager after Champions League exit', score: 5400, comments: 1450, link: 'https://reddit.com', subreddit: 'soccer', pubDate: new Date(Date.now() - 18000000).toISOString() },
+  { title: 'Salah breaks Premier League assist record with stunning through ball', score: 12400, comments: 1823, link: 'https://reddit.com/r/soccer/comments/abc123', subreddit: 'soccer', pubDate: new Date(Date.now() - 1800000).toISOString(), selftext: 'Mohamed Salah has broken the Premier League assist record with his 21st assist of the season, a perfectly weighted through ball to set up the winning goal.', flair: 'Stats', url: 'https://reddit.com' },
+  { title: '[Fabrizio Romano] Arsenal complete signing of midfielder — here we go confirmed', score: 9800, comments: 2105, link: 'https://reddit.com/r/soccer/comments/def456', subreddit: 'soccer', pubDate: new Date(Date.now() - 3600000).toISOString(), selftext: '', flair: 'Transfer', url: 'https://twitter.com/FabrizioRomano/status/123' },
+  { title: 'Post Match Thread: Real Madrid 3-2 Barcelona [La Liga]', score: 8200, comments: 4521, link: 'https://reddit.com/r/soccer/comments/ghi789', subreddit: 'soccer', pubDate: new Date(Date.now() - 7200000).toISOString(), selftext: 'FT: Real Madrid 3-2 Barcelona\n\nGoals: Vinicius Jr 12\', 67\', Bellingham 45+2\' — Yamal 34\', Lewandowski 78\'\n\nRed card: Araujo 55\' (second yellow)', flair: 'Post Match Thread', url: 'https://reddit.com' },
+  { title: 'VAR decision in City vs Liverpool sparks massive debate', score: 7600, comments: 3200, link: 'https://reddit.com/r/PremierLeague/comments/jkl012', subreddit: 'PremierLeague', pubDate: new Date(Date.now() - 10800000).toISOString(), selftext: 'The VAR decision to disallow Liverpool\'s equalizer has caused huge controversy.', flair: 'Discussion', url: 'https://streamable.com/abc' },
+  { title: 'Haaland scores hat-trick to go top of Golden Boot race', score: 6100, comments: 890, link: 'https://reddit.com/r/PremierLeague/comments/mno345', subreddit: 'PremierLeague', pubDate: new Date(Date.now() - 14400000).toISOString(), selftext: 'Erling Haaland has scored his third hat-trick of the season, taking his tally to 28 goals in 25 Premier League appearances.', flair: 'Stats', url: 'https://reddit.com' },
+  { title: 'Bayern Munich sack manager after Champions League exit', score: 5400, comments: 1450, link: 'https://reddit.com/r/soccer/comments/pqr678', subreddit: 'soccer', pubDate: new Date(Date.now() - 18000000).toISOString(), selftext: '', flair: 'News', url: 'https://fcbayern.com/en/news' },
+]
+
+const MOCK_LIVE_MATCHES: LiveMatch[] = [
+  {
+    id: 9001, date: new Date().toISOString(), status: 'LIVE', elapsed: 34, league: 'Premier League',
+    homeTeam: 'Manchester United', awayTeam: 'Chelsea', homeGoals: 1, awayGoals: 2,
+    events: [
+      { minute: 12, type: 'goal', detail: 'Palmer 1-0 (pen)', team: 'Chelsea' },
+      { minute: 23, type: 'goal', detail: 'Rashford 1-1', team: 'Manchester United' },
+      { minute: 31, type: 'goal', detail: 'Jackson 1-2', team: 'Chelsea' },
+    ],
+  },
+  {
+    id: 9002, date: new Date().toISOString(), status: 'LIVE', elapsed: 67, league: 'La Liga',
+    homeTeam: 'Barcelona', awayTeam: 'Atletico Madrid', homeGoals: 3, awayGoals: 0,
+    events: [
+      { minute: 8, type: 'goal', detail: 'Yamal 1-0', team: 'Barcelona' },
+      { minute: 35, type: 'goal', detail: 'Lewandowski 2-0', team: 'Barcelona' },
+      { minute: 44, type: 'red', detail: 'Savic — second yellow', team: 'Atletico Madrid' },
+      { minute: 58, type: 'goal', detail: 'Pedri 3-0', team: 'Barcelona' },
+    ],
+  },
+  {
+    id: 9003, date: new Date(Date.now() + 3 * 3600000).toISOString(), status: 'NS', elapsed: null, league: 'Serie A',
+    homeTeam: 'AC Milan', awayTeam: 'Inter Milan', homeGoals: null, awayGoals: null,
+  },
+  {
+    id: 9004, date: new Date(Date.now() - 2 * 3600000).toISOString(), status: 'FT', elapsed: 90, league: 'Bundesliga',
+    homeTeam: 'Bayern Munich', awayTeam: 'Borussia Dortmund', homeGoals: 2, awayGoals: 2,
+    events: [
+      { minute: 15, type: 'goal', detail: 'Musiala 1-0', team: 'Bayern Munich' },
+      { minute: 38, type: 'goal', detail: 'Brandt 1-1', team: 'Borussia Dortmund' },
+      { minute: 52, type: 'goal', detail: 'Kane 2-1 (pen)', team: 'Bayern Munich' },
+      { minute: 89, type: 'goal', detail: 'Adeyemi 2-2', team: 'Borussia Dortmund' },
+    ],
+  },
 ]
 
 export default function NewsroomPage() {
@@ -385,7 +450,13 @@ export default function NewsroomPage() {
     return items
   }, [redditPosts, timeFilter, search, searchLower])
 
-  const filteredLive = liveMatches.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower))
+  const activeLiveMatches = liveMatches.length > 0 ? liveMatches : MOCK_LIVE_MATCHES
+  const activeLive = activeLiveMatches.filter(m => m.status === 'LIVE' || (m.elapsed !== null && m.elapsed > 0 && m.status !== 'FT' && m.status !== 'NS'))
+  const activeFinished = activeLiveMatches.filter(m => m.status === 'FT')
+  const activeUpcoming = activeLiveMatches.filter(m => m.status === 'NS' || (m.elapsed === null && m.status !== 'FT'))
+  const filteredLive = activeLive.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower))
+  const filteredFinished = activeFinished.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower))
+  const filteredUpcoming = activeUpcoming.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower))
   const filteredFixtures = fixtures.filter(i => !search || i.homeTeam.toLowerCase().includes(searchLower) || i.awayTeam.toLowerCase().includes(searchLower) || i.league.toLowerCase().includes(searchLower))
 
   const filteredIdeas = useMemo(() => {
@@ -442,8 +513,30 @@ export default function NewsroomPage() {
     }
   }, [router])
 
-  function rewriteArticle(title: string, prompt?: string) {
+  async function rewriteArticle(title: string, prompt?: string, sourceUrl?: string) {
     sessionStorage.setItem('editorTopic', title)
+    if (sourceUrl) {
+      try {
+        const res = await fetch('/api/newsroom/fetch-source', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: sourceUrl }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.text) {
+            sessionStorage.setItem('diurna_rewrite_source', JSON.stringify({
+              title,
+              sourceText: data.text,
+              domain: data.domain,
+              prompt: prompt || `Rewrite this news story in our editorial voice: ${title}`,
+            }))
+            router.push('/editor?mode=rewrite')
+            return
+          }
+        }
+      } catch {}
+    }
     router.push(`/editor?prompt=${encodeURIComponent(prompt || `Rewrite this news story in our editorial voice: ${title}`)}`)
   }
 
@@ -484,7 +577,7 @@ export default function NewsroomPage() {
     const dis = calculateDIS(item, allNewsItems)
     const level = getDISLevel(dis)
     const srcStyle = getSourceStyle(item.source)
-    const domain = getDomain(item.link)
+    const sourceDomain = getSourceDomain(item)
     const inCart = isInCart(item.title)
     const engagement = getEngagement(item)
 
@@ -504,9 +597,9 @@ export default function NewsroomPage() {
             <span className={`v4-dis-num ${level}`}>{dis}</span>
             <span className="v4-dis-label">DIS</span>
           </div>
-          {domain && <span className="v4-domain">{domain}</span>}
+          {sourceDomain && <a href={item.link} target="_blank" rel="noopener noreferrer" className="v4-domain">{sourceDomain} →</a>}
           <div className="v4-card-actions">
-            <button className="v4-btn-rewrite" onClick={() => rewriteArticle(item.title, type === 'transfer' ? `Write a transfer analysis: ${item.title}` : undefined)}>Rewrite</button>
+            <button className="v4-btn-rewrite" onClick={() => rewriteArticle(item.title, type === 'transfer' ? `Write a transfer analysis: ${item.title}` : undefined, item.link)}>Rewrite</button>
             <button className={`v4-btn-cart ${inCart ? 'added' : ''}`} onClick={() => { if (!inCart) addToCart(item.title, item.source, item.link, type) }} disabled={inCart}>
               {inCart ? '✓' : '+'}
             </button>
@@ -664,15 +757,15 @@ export default function NewsroomPage() {
                 <div className="smart-loading"><div className="smart-loading-spinner" /><div className="smart-loading-text">Loading fixtures...</div></div>
               ) : (
                 <>
-                  {filteredLive.length > 0 ? (
+                  {filteredLive.length > 0 && (
                     <>
                       <div className="section-label live">🔴 LIVE NOW</div>
-                      <div className="smart-grid">
+                      <div className="live-grid-2col">
                         {filteredLive.map(m => (
                           <div key={m.id} className="smart-card live-card">
                             <div className="live-header">
                               <span className="live-league">{m.league}</span>
-                              <span className="live-minute">{m.elapsed}&apos;</span>
+                              <span className="live-minute"><span className="live-pulse" />{m.elapsed}&apos;</span>
                             </div>
                             <div className="live-score-row">
                               <div className="live-team">{m.homeTeam}</div>
@@ -702,25 +795,85 @@ export default function NewsroomPage() {
                         ))}
                       </div>
                     </>
-                  ) : (
-                    <div className="smart-empty">
-                      <div className="smart-empty-icon">⚽</div>
-                      <div className="smart-empty-title">No live matches right now</div>
-                      {fixtures.length > 0 && (
-                        <div className="smart-empty-desc">
-                          Next: {fixtures[0].homeTeam} vs {fixtures[0].awayTeam} in {(() => {
-                            const d = new Date(fixtures[0].date).getTime() - Date.now()
-                            const h = Math.max(0, Math.floor(d / 3600000))
-                            return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : `${h}h`
-                          })()}
-                        </div>
-                      )}
-                    </div>
+                  )}
+                  {filteredFinished.length > 0 && (
+                    <>
+                      <div className="section-label">🏁 FULL TIME</div>
+                      <div className="live-grid-2col">
+                        {filteredFinished.map(m => (
+                          <div key={m.id} className="smart-card ft-card">
+                            <div className="live-header">
+                              <span className="live-league">{m.league}</span>
+                              <span className="ft-badge">FT</span>
+                            </div>
+                            <div className="live-score-row">
+                              <div className="live-team">{m.homeTeam}</div>
+                              <div className="live-score">{m.homeGoals ?? 0} - {m.awayGoals ?? 0}</div>
+                              <div className="live-team">{m.awayTeam}</div>
+                            </div>
+                            {m.events && m.events.length > 0 && (
+                              <div className="live-events">
+                                {m.events.map((ev, ei) => (
+                                  <div key={ei} className={`live-event ${ev.type}`}>
+                                    <span className="live-event-min">{ev.minute}&apos;</span>
+                                    <span className="live-event-icon">{ev.type === 'goal' ? '⚽' : ev.type === 'red' ? '🟥' : ev.type === 'yellow' ? '🟨' : '📋'}</span>
+                                    <span className="live-event-text">{ev.detail}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div className="smart-card-actions">
+                              <button className="smart-generate-btn" onClick={() => generateFromTopic({ id: `ft-${m.id}`, title: `${m.homeTeam} ${m.homeGoals}-${m.awayGoals} ${m.awayTeam} - ${m.league} Match Report`, category: 'Sport', suggestedType: 'breaking' })} disabled={!!generatingTopic}>
+                                📝 Match Report
+                              </button>
+                              <button className={`v4-btn-cart ${isInCart(`${m.homeTeam} vs ${m.awayTeam}`) ? 'added' : ''}`} onClick={() => addToCart(`${m.homeTeam} vs ${m.awayTeam}`, m.league, '', 'breaking')} disabled={isInCart(`${m.homeTeam} vs ${m.awayTeam}`)}>
+                                {isInCart(`${m.homeTeam} vs ${m.awayTeam}`) ? '✓' : '+'}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {filteredUpcoming.length > 0 && (
+                    <>
+                      <div className="section-label">📅 UPCOMING</div>
+                      <div className="live-grid-2col">
+                        {filteredUpcoming.map(m => {
+                          const matchDate = new Date(m.date)
+                          const diffMs = matchDate.getTime() - Date.now()
+                          const diffH = Math.max(0, Math.floor(diffMs / 3600000))
+                          const diffD = Math.floor(diffH / 24)
+                          const countdown = diffD > 0 ? `${diffD}d ${diffH % 24}h` : diffH > 0 ? `${diffH}h` : 'Soon'
+                          return (
+                            <div key={m.id} className="smart-card">
+                              <div className="fixture-header">
+                                <span className="fixture-league">{m.league}</span>
+                                <span className="fixture-countdown">⏱ {countdown}</span>
+                              </div>
+                              <div className="live-score-row" style={{ margin: '16px 0' }}>
+                                <div className="live-team">{m.homeTeam}</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g400)' }}>vs</div>
+                                <div className="live-team">{m.awayTeam}</div>
+                              </div>
+                              <div className="fixture-date">
+                                {matchDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} • {matchDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                              <div className="smart-card-actions">
+                                <button className="smart-generate-btn" onClick={() => generateFromTopic({ id: `up-${m.id}`, title: `${m.homeTeam} vs ${m.awayTeam} - ${m.league} Preview`, category: 'Sport', suggestedType: 'preview' })} disabled={!!generatingTopic}>
+                                  📝 Generate Preview
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
                   )}
                   {filteredFixtures.length > 0 && (
                     <>
-                      <div className="section-label">📅 UPCOMING</div>
-                      <div className="smart-grid">
+                      <div className="section-label">📅 MORE FIXTURES</div>
+                      <div className="live-grid-2col">
                         {filteredFixtures.map(f => {
                           const matchDate = new Date(f.date)
                           const diffMs = matchDate.getTime() - Date.now()
@@ -751,6 +904,12 @@ export default function NewsroomPage() {
                         })}
                       </div>
                     </>
+                  )}
+                  {filteredLive.length === 0 && filteredFinished.length === 0 && filteredUpcoming.length === 0 && filteredFixtures.length === 0 && (
+                    <div className="smart-empty">
+                      <div className="smart-empty-icon">⚽</div>
+                      <div className="smart-empty-title">No matches found</div>
+                    </div>
                   )}
                 </>
               )}
@@ -809,15 +968,24 @@ export default function NewsroomPage() {
                             {post.score >= 1000 ? `${(post.score / 1000).toFixed(1)}k` : post.score}
                           </div>
                           <span className="reddit-sub">r/{post.subreddit}</span>
+                          {post.flair && <span className="reddit-flair">{post.flair}</span>}
                           <span className="reddit-time">{getTimeAgo(post.pubDate)}</span>
                         </div>
                         <h3 className="reddit-title">{post.title}</h3>
+                        {post.selftext && (
+                          <p className="reddit-preview">{post.selftext.length > 200 ? post.selftext.slice(0, 200) + '...' : post.selftext}</p>
+                        )}
                         <div className="reddit-stats">
-                          <span>💬 {post.comments} comments</span>
-                          <span>⬆ {post.score} upvotes</span>
+                          <span>💬 {post.comments >= 1000 ? `${(post.comments / 1000).toFixed(1)}k` : post.comments} comments</span>
+                          <span>⬆ {post.score >= 1000 ? `${(post.score / 1000).toFixed(1)}k` : post.score} upvotes</span>
                         </div>
                         <div className="reddit-actions">
-                          <button className="v4-btn-rewrite" onClick={() => rewriteArticle(post.title)}>Write About This</button>
+                          <button className="v4-btn-rewrite" onClick={() => {
+                            const context = post.selftext
+                              ? `Write an article based on this Reddit discussion.\n\nTitle: ${post.title}\nSubreddit: r/${post.subreddit}\nContext: ${post.selftext}`
+                              : `Write an article about this trending topic from r/${post.subreddit}: ${post.title}`
+                            rewriteArticle(post.title, context)
+                          }}>Write About This</button>
                           <a href={post.link} target="_blank" rel="noopener noreferrer" className="v4-btn-link">Reddit</a>
                           <button className={`v4-btn-cart ${isInCart(post.title) ? 'added' : ''}`} onClick={() => { if (!isInCart(post.title)) addToCart(post.title, `r/${post.subreddit}`, post.link, 'reddit') }} disabled={isInCart(post.title)}>
                             {isInCart(post.title) ? '✓' : '+'}

@@ -112,6 +112,53 @@ export default function EditorPage() {
       } catch {}
     }
 
+    if (searchParams.get('mode') === 'rewrite') {
+      try {
+        const raw = sessionStorage.getItem('diurna_rewrite_source')
+        if (raw) {
+          const data = JSON.parse(raw) as { title: string; sourceText: string; domain: string; prompt: string }
+          sessionStorage.removeItem('diurna_rewrite_source')
+          setPrompt(`Rewriting: ${data.title}`)
+          setScreen('generating')
+          setGenStep(0)
+
+          const runRewriteGenerate = async () => {
+            for (let i = 0; i < genSteps.length; i++) {
+              await new Promise((r) => setTimeout(r, 400 + Math.random() * 300))
+              setGenStep(i + 1)
+            }
+            try {
+              const res = await fetch('/api/ai/smart-generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  topic: data.title,
+                  category: 'Sport',
+                  articleType: 'report',
+                  mode: 'rewrite',
+                  sourceContext: data.sourceText,
+                  sourceDomain: data.domain,
+                }),
+              })
+              const result = await res.json()
+              if (!res.ok) throw new Error(result.error || 'Generation failed')
+              setTitle(result.title || data.title)
+              if (result.tiptapContent) setContent(result.tiptapContent)
+              setAiResult({ model: result.model, tokensIn: result.tokensIn, tokensOut: result.tokensOut })
+              setScreen('editor')
+              setSmartNotice(`Rewritten from ${data.domain} — review and edit before publishing`)
+              setTimeout(() => setSmartNotice(null), 6000)
+            } catch {
+              setTitle(data.title)
+              setContent({})
+              setScreen('editor')
+            }
+          }
+          runRewriteGenerate()
+        }
+      } catch {}
+    }
+
     if (searchParams.get('mode') === 'combined') {
       try {
         const raw = sessionStorage.getItem('diurna_combined_sources')
