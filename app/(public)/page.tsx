@@ -18,38 +18,42 @@ const HERO = [
   {
     title: 'Haaland postiže hat-trick dok City uništava Arsenal u velikom derbiju',
     cat: 'Vijesti',
+    href: '/vijesti/haaland-hat-trick-city-arsenal-derbi',
     meta: '45 min \u00b7 Premier League',
     bg: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
   },
   {
     title: 'Barcelonin novi ugovor sa Laportom \u2014 detalji posla od 80M\u20ac',
     cat: 'Transferi',
+    href: '/transferi/barcelona-laporte-ugovor-80m',
     meta: '2h \u00b7 La Liga',
     bg: 'linear-gradient(135deg, #2d1b69 0%, #11052c 100%)',
   },
   {
     title: 'VAR kontroverza: Tri penala u 10 minuta mijenjaju utakmicu',
     cat: 'Vijesti',
+    href: '/vijesti/var-kontroverza-tri-penala',
     meta: '3h \u00b7 Premier League',
     bg: 'linear-gradient(135deg, #1b4332 0%, #081c15 100%)',
   },
   {
     title: 'Ligaško kolo u brojkama: 42 gola za vikend',
     cat: 'Utakmice',
+    href: '/utakmice/ligasko-kolo-42-gola-vikend',
     meta: '5h \u00b7 Pregled kola',
     bg: 'linear-gradient(135deg, #6b2f00 0%, #2c1203 100%)',
   },
 ]
 
 const NEWS = [
-  { cat: 'VIJESTI', title: "Mourinho se vraća: 'Imam nedovršenog posla u Premijer ligi'", time: '2h', bg: 'linear-gradient(135deg,#1e3a5f,#0d1b2a)' },
-  { cat: 'TRANSFERI', title: 'PSG spreman platiti 120M\u20ac za Floriana Wirtza', time: '4h', bg: 'linear-gradient(135deg,#3d1f00,#1a0d00)' },
-  { cat: 'UTAKMICE', title: 'Napoli-Juventus: Conte traži osvetu protiv bivšeg kluba', time: '5h', bg: 'linear-gradient(135deg,#0d2818,#051208)' },
-  { cat: 'POVREDE', title: 'Mbappé propušta El Clásico \u2014 problemi sa koljenom', time: '6h', bg: 'linear-gradient(135deg,#3b0a0a,#1a0404)' },
-  { cat: 'VIDEO', title: 'Top 10: Najljepši golovi vikenda u Ligi prvaka', time: '8h', bg: 'linear-gradient(135deg,#1a1a2e,#0a0a14)' },
-  { cat: 'VIJESTI', title: 'FIFA potvrđuje novo pravilo o ofsajdu za sezonu 2026/27', time: '10h', bg: 'linear-gradient(135deg,#2d2d00,#141400)' },
-  { cat: 'TRANSFERI', title: 'Arsenal u pregovorima za Osimhena \u2014 ponuda od 70M\u20ac', time: '12h', bg: 'linear-gradient(135deg,#1e3a5f,#0d1b2a)' },
-  { cat: 'UTAKMICE', title: 'Derbi della Madonnina: Inter favorit protiv slabog Milana', time: '14h', bg: 'linear-gradient(135deg,#0d2818,#051208)' },
+  { cat: 'VIJESTI', title: "Mourinho se vraća: 'Imam nedovršenog posla u Premijer ligi'", time: '2h', href: '/vijesti/mourinho-povratak-premijer-liga', bg: 'linear-gradient(135deg,#1e3a5f,#0d1b2a)' },
+  { cat: 'TRANSFERI', title: 'PSG spreman platiti 120M\u20ac za Floriana Wirtza', time: '4h', href: '/transferi/psg-120m-florian-wirtz', bg: 'linear-gradient(135deg,#3d1f00,#1a0d00)' },
+  { cat: 'UTAKMICE', title: 'Napoli-Juventus: Conte traži osvetu protiv bivšeg kluba', time: '5h', href: '/utakmice/napoli-juventus-conte-osveta', bg: 'linear-gradient(135deg,#0d2818,#051208)' },
+  { cat: 'POVREDE', title: 'Mbappé propušta El Clásico \u2014 problemi sa koljenom', time: '6h', href: '/povrede/mbappe-propusta-el-clasico', bg: 'linear-gradient(135deg,#3b0a0a,#1a0404)' },
+  { cat: 'VIDEO', title: 'Top 10: Najljepši golovi vikenda u Ligi prvaka', time: '8h', href: '/video/top-10-golovi-vikenda-liga-prvaka', bg: 'linear-gradient(135deg,#1a1a2e,#0a0a14)' },
+  { cat: 'VIJESTI', title: 'FIFA potvrđuje novo pravilo o ofsajdu za sezonu 2026/27', time: '10h', href: '/vijesti/fifa-novo-pravilo-ofsajd-2026', bg: 'linear-gradient(135deg,#2d2d00,#141400)' },
+  { cat: 'TRANSFERI', title: 'Arsenal u pregovorima za Osimhena \u2014 ponuda od 70M\u20ac', time: '12h', href: '/transferi/arsenal-osimhen-ponuda-70m', bg: 'linear-gradient(135deg,#1e3a5f,#0d1b2a)' },
+  { cat: 'UTAKMICE', title: 'Derbi della Madonnina: Inter favorit protiv slabog Milana', time: '14h', href: '/utakmice/derbi-della-madonnina-inter-milan', bg: 'linear-gradient(135deg,#0d2818,#051208)' },
 ]
 
 const TRANSFERS = [
@@ -62,11 +66,11 @@ const TRANSFERS = [
 ]
 
 const TRENDING = [
-  { title: 'Haaland hat-trick protiv Arsenala', meta: 'Vijesti \u00b7 2h' },
-  { title: 'El Clásico pripreme bez Mbappéa', meta: 'Utakmice \u00b7 4h' },
-  { title: 'Transfer Wirtza u Barcelonu', meta: 'Transferi \u00b7 5h' },
-  { title: 'VAR kontroverza u Premijer ligi', meta: 'Vijesti \u00b7 6h' },
-  { title: 'Conte vs Juventus \u2014 najava utakmice', meta: 'Utakmice \u00b7 8h' },
+  { title: 'Haaland hat-trick protiv Arsenala', meta: 'Vijesti \u00b7 2h', href: '/vijesti/haaland-hat-trick-city-arsenal-derbi' },
+  { title: 'El Clásico pripreme bez Mbappéa', meta: 'Utakmice \u00b7 4h', href: '/utakmice/el-clasico-pripreme-bez-mbappea' },
+  { title: 'Transfer Wirtza u Barcelonu', meta: 'Transferi \u00b7 5h', href: '/transferi/wirtz-transfer-barcelona' },
+  { title: 'VAR kontroverza u Premijer ligi', meta: 'Vijesti \u00b7 6h', href: '/vijesti/var-kontroverza-tri-penala' },
+  { title: 'Conte vs Juventus \u2014 najava utakmice', meta: 'Utakmice \u00b7 8h', href: '/utakmice/napoli-juventus-conte-osveta' },
 ]
 
 const QUICK_STANDINGS = [
@@ -91,7 +95,7 @@ export default function HomePage() {
           {/* ── Hero Bento ── */}
           <section className="sba-hero">
             <Link
-              href="/vijesti"
+              href={HERO[0].href}
               className="sba-hero-card sba-hero-main"
             >
               <div
@@ -107,7 +111,7 @@ export default function HomePage() {
             {HERO.slice(1).map((h, i) => (
               <Link
                 key={i}
-                href="/vijesti"
+                href={h.href}
                 className="sba-hero-card sba-hero-side"
               >
                 <div
@@ -141,7 +145,7 @@ export default function HomePage() {
             </div>
             <div className="sba-feed">
               {NEWS.slice(0, 4).map((n, i) => (
-                <Link key={i} href="/vijesti" className="sba-feed-card">
+                <Link key={i} href={n.href} className="sba-feed-card">
                   <div className="sba-feed-thumb">
                     <div
                       className="sba-feed-thumb-bg"
@@ -180,7 +184,7 @@ export default function HomePage() {
               {NEWS.slice(4).map((n, i) => (
                 <Link
                   key={i + 4}
-                  href="/vijesti"
+                  href={n.href}
                   className="sba-feed-card"
                 >
                   <div className="sba-feed-thumb">
@@ -240,7 +244,7 @@ export default function HomePage() {
               {TRENDING.map((t, i) => (
                 <Link
                   key={i}
-                  href="/vijesti"
+                  href={t.href}
                   className="sba-trending-item"
                 >
                   <span className="sba-trending-rank">{i + 1}</span>
