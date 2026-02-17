@@ -16,7 +16,9 @@ export async function middleware(req: NextRequest) {
   const isEmbedRoute = pathname.startsWith('/api/embed')
   const isOgRoute = pathname.startsWith('/api/og')
   const isFeedRoute = pathname.startsWith('/feed')
-  const isPublicRoute = pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute
+  const isCronRoute = pathname.startsWith('/api/cron')
+  const isSeedRoute = pathname.startsWith('/api/admin/seed-feeds')
+  const isPublicRoute = pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isCronRoute || isSeedRoute
 
   if (!isPublicRoute) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })

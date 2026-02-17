@@ -351,20 +351,24 @@ export default function NewsroomPage() {
       .catch(() => {})
 
     setBreakingLoading(true)
-    fetch('/api/newsroom/google-news')
+    fetch('/api/newsroom/feed?category=breaking&hours=24&limit=30')
       .then(r => r.json())
       .then(data => {
-        const items = data.items || []
+        const items = (data.items || []).map((i: { title: string; source: string; sourceUrl: string; pubDate: string }) => ({
+          title: i.title, source: i.source, link: i.sourceUrl, pubDate: i.pubDate
+        }))
         setBreakingNews(items.length > 0 ? items : MOCK_BREAKING)
       })
       .catch(() => setBreakingNews(MOCK_BREAKING))
       .finally(() => setBreakingLoading(false))
 
     setTransfersLoading(true)
-    fetch('/api/newsroom/google-news?q=football+transfer+official+confirmed')
+    fetch('/api/newsroom/feed?category=transfer&hours=48&limit=30')
       .then(r => r.json())
       .then(data => {
-        const items = data.items || []
+        const items = (data.items || []).map((i: { title: string; source: string; sourceUrl: string; pubDate: string }) => ({
+          title: i.title, source: i.source, link: i.sourceUrl, pubDate: i.pubDate
+        }))
         setTransferNews(items.length > 0 ? items : MOCK_TRANSFERS)
       })
       .catch(() => setTransferNews(MOCK_TRANSFERS))

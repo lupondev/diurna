@@ -392,3 +392,45 @@ enum WidgetType {
   LIVE_SCORE
   STATS_TABLE
 }
+
+// ══════════════════════════════════
+// RSS FEED ENGINE
+// ══════════════════════════════════
+
+model NewsItem {
+  id           String   @id @default(cuid())
+  title        String
+  source       String
+  sourceDomain String
+  sourceUrl    String
+  content      String?  @db.Text
+  category     String   @default("breaking")
+  pubDate      DateTime
+  feedUrl      String
+  tier         Int      @default(3)
+  dis          Int      @default(0)
+  clusterId    String?
+  siteId       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([sourceUrl])
+  @@index([pubDate])
+  @@index([category])
+  @@index([siteId, pubDate])
+}
+
+model FeedSource {
+  id         String    @id @default(cuid())
+  name       String
+  url        String    @unique
+  category   String    @default("breaking")
+  tier       Int       @default(3)
+  country    String    @default("global")
+  active     Boolean   @default(true)
+  lastFetch  DateTime?
+  itemCount  Int       @default(0)
+  errorCount Int       @default(0)
+  siteId     String?
+  createdAt  DateTime  @default(now())
+}
