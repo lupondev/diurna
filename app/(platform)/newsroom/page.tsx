@@ -111,12 +111,18 @@ function extractRealSource(title: string, feedSource: string): string {
   return feedSource
 }
 
+function cleanTitle(title: string): string {
+  return title
+    .replace(/\s*[-–—]\s*(?:BBC|BBC Sport|Sky Sports?|ESPN|ESPN FC|The Guardian|Guardian|Marca|Goal|Mirror|Reuters|The Athletic|CNN|AS|L'Equipe|Football365|90min|TalkSport|FourFourTwo|SoccerNews|Yahoo Sports?(?:\s+\w+)?|France 24|Asian Football|Soccer America|Goal\.com|Planet Football|101 Great Goals|Caught Offside|TeamTalk|Sport Witness|Inside Futbol|Football Espana|Get French Football News|Calcio Mercato|Tribal Football|BeSoccer|SB Nation|Kicker|Gazzetta|Corriere|Tuttosport|Foot Mercato|World Soccer Talk|Football Italia|FootballTransfers|LiveScore|Sports Illustrated).*$/i, '')
+    .trim()
+}
+
 function deduplicateItems(items: BreakingItem[]): BreakingItem[] {
   const seen = new Map<string, BreakingItem>()
   return items.filter(item => {
-    const normalized = item.title
+    const cleaned = cleanTitle(item.title)
+    const normalized = cleaned
       .toLowerCase()
-      .replace(/\s*[-–—]\s*(bbc|sky sports?|espn|the guardian|marca|goal|mirror|reuters|the athletic|cnn|as|l'equipe|football365|90min|talksport|goal\.com|fourfourtwo|football italia|besoccer|teamtalk|caught offside|planet football|sport witness).*$/i, '')
       .replace(/[^a-z0-9\s]/g, '')
       .trim()
     const key = normalized.split(/\s+/).filter(w => w.length > 3).slice(0, 8).join(' ')
@@ -451,19 +457,21 @@ export default function NewsroomPage() {
 
   const searchLower = search.toLowerCase()
 
+  const top5Titles = useMemo(() => new Set(top5.map(i => cleanTitle(i.title).toLowerCase())), [top5])
+
   const filteredBreaking = useMemo(() => {
-    let items = breakingNews
+    let items = breakingNews.filter(i => !top5Titles.has(cleanTitle(i.title).toLowerCase()))
     items = filterByTime(items, timeFilter, i => i.pubDate)
     if (search) items = items.filter(i => i.title.toLowerCase().includes(searchLower))
     return items
-  }, [breakingNews, timeFilter, search, searchLower])
+  }, [breakingNews, top5Titles, timeFilter, search, searchLower])
 
   const filteredTransfers = useMemo(() => {
-    let items = transferNews
+    let items = transferNews.filter(i => !top5Titles.has(cleanTitle(i.title).toLowerCase()))
     items = filterByTime(items, timeFilter, i => i.pubDate)
     if (search) items = items.filter(i => i.title.toLowerCase().includes(searchLower))
     return items
-  }, [transferNews, timeFilter, search, searchLower])
+  }, [transferNews, top5Titles, timeFilter, search, searchLower])
 
   const filteredYoutube = useMemo(() => {
     let items = youtubeVideos
@@ -620,7 +628,7 @@ export default function NewsroomPage() {
             <span className="v4-time">{getTimeAgo(item.pubDate)}</span>
           </div>
         </div>
-        <h3 className="v4-card-title">{item.title}</h3>
+        <h3 className="v4-card-title">{cleanTitle(item.title)}</h3>
         <div className="v4-card-footer">
           <div className="v4-dis-score">
             <span className={`v4-dis-num ${level}`}>{dis}</span>
@@ -677,7 +685,7 @@ export default function NewsroomPage() {
                 <button key={i} className={`top5-card ${level}`} onClick={() => addToCart(item.title, item.source, item.link, 'breaking')}>
                   <div className="top5-rank">#{i + 1}</div>
                   <div className="top5-content">
-                    <div className="top5-title">{item.title}</div>
+                    <div className="top5-title">{cleanTitle(item.title)}</div>
                     <div className="top5-meta">
                       <span className={`top5-dis ${level}`}>{item.dis}</span>
                       <span className="top5-source">{item.source}</span>
@@ -753,7 +761,7 @@ export default function NewsroomPage() {
                         {cluster.stories.map((s, i) => (
                           <div key={i} className="idea-story-row">
                             <span className="idea-story-source" style={{ background: getSourceStyle(s.source).bg, color: getSourceStyle(s.source).color }}>{s.source}</span>
-                            <span className="idea-story-title">{s.title}</span>
+                            <span className="idea-story-title">{cleanTitle(s.title)}</span>
                           </div>
                         ))}
                       </div>

@@ -20,6 +20,11 @@ const EXCLUDE_KEYWORDS = [
   'trivia', 'quiz', 'podcast recap', 'daily discussion', 'monday moan', 'free talk',
   'arizona soccer', 'naval academy',
   'hull kr', 'super league', 'hull kingston',
+  'podcast', 'mailbag', 'q&a', 'ask me anything',
+  'fantasy football', 'fantasy premier league', 'fpl',
+  'betting tips', 'betting odds', 'prediction:',
+  'livescore', 'live stream', 'livestream', 'how to watch', 'where to watch',
+  'highlights video', 'watch:', 'video:',
 ]
 
 function isFootballArticle(title: string): boolean {
@@ -157,7 +162,7 @@ export async function GET(req: Request) {
     where: { pubDate: { lt: new Date(Date.now() - 48 * 60 * 60 * 1000) } },
   }).catch(() => {})
 
-  const CLEANUP_KEYWORDS = ['rugby', 'boxing', 'fury', 'usyk', 'ufc', 'mma', 'trivia', 'quiz', 'hull kr', 'nba', 'nhl', 'cricket', 'wrestling', 'nascar', 'f1', 'formula 1', 'super league', 'hull kingston']
+  const CLEANUP_KEYWORDS = ['rugby', 'boxing', 'fury', 'usyk', 'ufc', 'mma', 'trivia', 'quiz', 'hull kr', 'nba', 'nhl', 'cricket', 'wrestling', 'nascar', 'f1', 'formula 1', 'super league', 'hull kingston', 'podcast', 'fantasy football', 'fantasy premier league', 'fpl', 'betting tips', 'betting odds', 'livescore', 'how to watch', 'where to watch']
   await prisma.newsItem.deleteMany({
     where: {
       OR: CLEANUP_KEYWORDS.map(kw => ({

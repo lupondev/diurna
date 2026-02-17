@@ -21,6 +21,11 @@ const EXCLUDE_KEYWORDS = [
   'trivia', 'quiz', 'podcast recap', 'daily discussion', 'monday moan', 'free talk',
   'arizona soccer', 'naval academy',
   'hull kr', 'super league', 'hull kingston',
+  'podcast', 'mailbag', 'q&a', 'ask me anything',
+  'fantasy football', 'fantasy premier league', 'fpl',
+  'betting tips', 'betting odds', 'prediction:',
+  'livescore', 'live stream', 'livestream', 'how to watch', 'where to watch',
+  'highlights video', 'watch:', 'video:',
 ]
 
 function isFootballArticle(title: string): boolean {
