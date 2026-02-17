@@ -457,6 +457,11 @@ html[data-theme] {
   height: 120px;
 }
 
+.sba-ad--skyscraper {
+  height: 600px;
+  max-width: 300px;
+}
+
 .sba-ad-label {
   position: absolute;
   top: 6px;

@@ -1,5 +1,5 @@
 type AdSlotProps = {
-  variant: 'leaderboard' | 'rectangle' | 'native'
+  variant: 'leaderboard' | 'rectangle' | 'native' | 'skyscraper'
   className?: string
 }
 
