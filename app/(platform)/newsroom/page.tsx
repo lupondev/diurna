@@ -35,14 +35,26 @@ interface Cluster {
   summary?: ClusterSummary
 }
 
-type SectionKey = 'ALL' | 'BREAKING' | 'TRANSFERS' | 'MATCHES' | 'INJURIES'
+type SectionKey = 'NEWS' | 'TRANSFERS' | 'MATCHES_TABLE' | 'STATISTICS' | 'INJURIES' | 'PLAYERS' | 'CLUBS' | 'VIDEO' | 'WATCH_LIVE'
 
-const SECTIONS: { key: SectionKey; label: string; icon: string; eventTypes: string[] | null; minDis?: number }[] = [
-  { key: 'ALL', label: 'All', icon: '\u{1F4F0}', eventTypes: null },
-  { key: 'BREAKING', label: 'Breaking', icon: '\u{1F525}', eventTypes: ['SCANDAL', 'DISCIPLINE', 'BREAKING', 'RECORD'], minDis: 55 },
-  { key: 'TRANSFERS', label: 'Transfer Market', icon: '\u{1F504}', eventTypes: ['TRANSFER', 'CONTRACT'] },
-  { key: 'MATCHES', label: 'Matches', icon: '\u26BD', eventTypes: ['MATCH_PREVIEW', 'MATCH_RESULT', 'POST_MATCH_REACTION'] },
-  { key: 'INJURIES', label: 'Injuries', icon: '\u{1F3E5}', eventTypes: ['INJURY'] },
+const SECTIONS: { key: SectionKey; label: string; icon: string; hasData: boolean | string; eventTypes?: string[] }[] = [
+  { key: 'NEWS', label: 'News', icon: '\u{1F4F0}', hasData: true, eventTypes: ['BREAKING', 'SCANDAL', 'DISCIPLINE', 'RECORD', 'MANAGERIAL', 'TACTICAL', 'POST_MATCH_REACTION', 'MATCH_PREVIEW', 'MATCH_RESULT'] },
+  { key: 'TRANSFERS', label: 'Transfers', icon: '\u{1F504}', hasData: true, eventTypes: ['TRANSFER', 'CONTRACT'] },
+  { key: 'MATCHES_TABLE', label: 'Matches Table', icon: '\u{1F4CA}', hasData: false },
+  { key: 'STATISTICS', label: 'Statistics', icon: '\u{1F4C8}', hasData: false },
+  { key: 'INJURIES', label: 'Injuries', icon: '\u{1F3E5}', hasData: true, eventTypes: ['INJURY'] },
+  { key: 'PLAYERS', label: 'Players', icon: '\u{1F464}', hasData: false },
+  { key: 'CLUBS', label: 'Clubs', icon: '\u{1F3DF}\uFE0F', hasData: false },
+  { key: 'VIDEO', label: 'Video', icon: '\u{1F4F9}', hasData: 'scorebat' },
+  { key: 'WATCH_LIVE', label: 'Watch Live', icon: '\u{1F4FA}', hasData: false },
+]
+
+const TIME_FILTERS: { key: string; label: string; hours: number | null }[] = [
+  { key: '1h', label: '1H', hours: 1 },
+  { key: '6h', label: '6H', hours: 6 },
+  { key: '12h', label: '12H', hours: 12 },
+  { key: '24h', label: '24H', hours: 24 },
+  { key: 'all', label: 'ALL', hours: null },
 ]
 
 const TREND_COLORS: Record<string, string> = {
@@ -59,10 +71,16 @@ const TREND_LABELS: Record<string, string> = {
   FADING: 'Low priority',
 }
 
-interface LeagueItem {
-  label: string
-  icon: string
+const LEAGUE_CLUB_MAP: Record<string, string[]> = {
+  'Premier League': ['Arsenal', 'Aston Villa', 'Bournemouth', 'Brentford', 'Brighton', 'Chelsea', 'Crystal Palace', 'Everton', 'Fulham', 'Ipswich', 'Leicester', 'Liverpool', 'Manchester City', 'Manchester United', 'Newcastle', 'Nottingham Forest', 'Southampton', 'Tottenham', 'West Ham', 'Wolves'],
+  'La Liga': ['Barcelona', 'Real Madrid', 'Atletico Madrid', 'Real Sociedad', 'Athletic Bilbao', 'Real Betis', 'Villarreal', 'Sevilla', 'Valencia', 'Girona', 'Celta Vigo', 'Mallorca', 'Las Palmas', 'Getafe', 'Osasuna', 'Rayo Vallecano', 'Alaves', 'Leganes', 'Espanyol', 'Valladolid'],
+  'Serie A': ['AC Milan', 'Inter Milan', 'Juventus', 'Napoli', 'Roma', 'Lazio', 'Atalanta', 'Fiorentina', 'Bologna', 'Torino', 'Monza', 'Udinese', 'Sassuolo', 'Empoli', 'Cagliari', 'Genoa', 'Lecce', 'Verona', 'Frosinone', 'Salernitana'],
+  'Bundesliga': ['Bayern Munich', 'Borussia Dortmund', 'RB Leipzig', 'Bayer Leverkusen', 'Stuttgart', 'Eintracht Frankfurt', 'Wolfsburg', 'Freiburg', 'Hoffenheim', 'Werder Bremen', 'Mainz', 'Augsburg', 'Union Berlin', 'Heidenheim', 'Darmstadt', 'Koln', 'Bochum', 'Monchengladbach'],
+  'Ligue 1': ['PSG', 'Paris Saint-Germain', 'Marseille', 'Lyon', 'Monaco', 'Lille', 'Nice', 'Lens', 'Rennes', 'Strasbourg', 'Montpellier', 'Toulouse', 'Nantes', 'Reims', 'Brest', 'Le Havre', 'Lorient', 'Metz', 'Clermont'],
+  'Champions League': ['Champions League', 'UCL', 'UEFA'],
 }
+
+interface LeagueItem { label: string; icon: string }
 
 const DEFAULT_LEAGUES: LeagueItem[] = [
   { label: 'Premier League', icon: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}' },
@@ -91,22 +109,36 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hrs / 24)}d`
 }
 
+function filterByTime(clusters: Cluster[], hours: number | null): Cluster[] {
+  if (!hours) return clusters
+  const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000)
+  return clusters.filter(c => new Date(c.latestItem) >= cutoff)
+}
+
 function filterBySection(clusters: Cluster[], sectionKey: SectionKey): Cluster[] {
   const section = SECTIONS.find(s => s.key === sectionKey)
-  if (!section || section.key === 'ALL') return clusters
-  return clusters.filter(c => {
-    if (section.key === 'BREAKING') {
-      return c.dis >= 55 || (section.eventTypes && section.eventTypes.includes(c.eventType))
-    }
-    return section.eventTypes && section.eventTypes.includes(c.eventType)
-  })
+  if (!section || !section.eventTypes) return clusters
+  return clusters.filter(c => section.eventTypes!.includes(c.eventType))
 }
 
 function filterByLeague(clusters: Cluster[], leagueFilter: string | null): Cluster[] {
   if (!leagueFilter) return clusters
-  return clusters.filter(c =>
-    c.entities.some(e => e.toLowerCase().includes(leagueFilter.toLowerCase()))
-  )
+  const clubsInLeague = LEAGUE_CLUB_MAP[leagueFilter] || []
+  return clusters.filter(c => {
+    if (c.entities.some(e => e.toLowerCase().includes(leagueFilter.toLowerCase()))) return true
+    if (clubsInLeague.length > 0) {
+      return c.entities.some(e => clubsInLeague.some(club => e.toLowerCase().includes(club.toLowerCase())))
+    }
+    return false
+  })
+}
+
+function getSectionCount(sectionKey: SectionKey, clusters: Cluster[], timeHours: number | null): number | null {
+  const section = SECTIONS.find(s => s.key === sectionKey)
+  if (!section || section.hasData !== true) return null
+  let filtered = clusters.filter(c => section.eventTypes!.includes(c.eventType))
+  filtered = filterByTime(filtered, timeHours)
+  return filtered.length
 }
 
 function ConfidenceDots({ confidence }: { confidence: string }) {
@@ -140,19 +172,84 @@ function SkeletonCard() {
   )
 }
 
+function StoryCard({ c, expanded, onToggle, onWrite }: { c: Cluster; expanded: boolean; onToggle: () => void; onWrite: () => void }) {
+  const [showSources, setShowSources] = useState(false)
+  const trendColor = TREND_COLORS[c.trend] || '#6b7280'
+
+  return (
+    <div onClick={onToggle} style={{
+      background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb',
+      borderLeft: `3px solid ${trendColor}`, padding: '12px 14px', cursor: 'pointer',
+      transition: 'box-shadow 0.15s',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <TrendBadge trend={c.trend} />
+        {c.hasConflicts && <span style={{ fontSize: 10, color: '#d97706', fontWeight: 600 }}>{'\u26A0'} conflict</span>}
+        <span style={{ marginLeft: 'auto', fontSize: 16, fontWeight: 800, color: '#9ca3af', fontFamily: 'monospace' }}>{c.dis}</span>
+      </div>
+      <h3 style={{ fontSize: 14, fontWeight: 600, color: '#111827', margin: '0 0 6px', fontFamily: 'Georgia, serif', lineHeight: 1.35 }}>{c.title}</h3>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#6b7280', marginBottom: 6 }}>
+        <span>{c.sourceCount} src</span>
+        {c.tier1Count > 0 && <span style={{ color: '#22c55e', fontWeight: 600 }}>{'\u2605'}{c.tier1Count}</span>}
+        <ConfidenceDots confidence={c.summary?.confidence || 'LOW'} />
+        <span style={{ fontFamily: 'monospace' }}>{timeAgo(c.latestItem)}</span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        {c.entities.slice(0, 3).map((e, i) => (
+          <span key={i} style={{ fontSize: 10, background: '#f1f5f9', color: '#475569', padding: '2px 7px', borderRadius: 10, fontWeight: 500 }}>{e}</span>
+        ))}
+        {c.entities.length > 3 && <span style={{ fontSize: 10, color: '#9ca3af' }}>+{c.entities.length - 3}</span>}
+      </div>
+      {expanded && (
+        <div onClick={e => e.stopPropagation()} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #e5e7eb' }}>
+          {c.summary && <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5, margin: '0 0 10px' }}>{c.summary.summaryText}</p>}
+          <div style={{ display: 'flex', gap: 8, marginBottom: showSources ? 10 : 0 }}>
+            <button onClick={onWrite} style={{
+              background: '#f97316', color: '#fff', border: 'none', borderRadius: 6,
+              padding: '6px 14px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            }}>{'\u270D'} Write Article</button>
+            <button onClick={() => setShowSources(!showSources)} style={{
+              background: showSources ? '#1e293b' : '#f1f5f9', color: showSources ? '#fff' : '#475569',
+              border: '1px solid #e5e7eb', borderRadius: 6, padding: '6px 14px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            }}>
+              {showSources ? 'Hide Sources' : `View Sources (${c.sourceCount})`}
+            </button>
+          </div>
+          {showSources && c.summary?.mainClaims && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {c.summary.mainClaims.map((claim, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11 }}>
+                  <span style={{
+                    fontFamily: 'monospace', flexShrink: 0,
+                    color: claim.tier === 1 ? '#16a34a' : claim.tier === 2 ? '#2563eb' : '#9ca3af',
+                  }}>T{claim.tier}</span>
+                  <span style={{ color: '#4b5563' }}>{claim.claim}</span>
+                  <span style={{ color: '#9ca3af', flexShrink: 0 }}>({claim.sources.join(', ')})</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function NewsroomPage() {
   const router = useRouter()
   const searchRef = useRef<HTMLInputElement>(null)
   const [clusters, setClusters] = useState<Cluster[]>([])
   const [loading, setLoading] = useState(true)
   const [clusterMeta, setClusterMeta] = useState({ count: 0 })
-  const [activeSection, setActiveSection] = useState<SectionKey>('ALL')
+  const [activeSection, setActiveSection] = useState<SectionKey>('NEWS')
+  const [timeFilter, setTimeFilter] = useState<string>('24h')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [activeLeague, setActiveLeague] = useState<string | null>(null)
   const [leagues, setLeagues] = useState<LeagueItem[]>(DEFAULT_LEAGUES)
-  const [addingLeague, setAddingLeague] = useState(false)
-  const [newLeagueName, setNewLeagueName] = useState('')
+  const [showLeagueSearch, setShowLeagueSearch] = useState(false)
+  const [leagueSearch, setLeagueSearch] = useState('')
+  const [leagueResults, setLeagueResults] = useState<{ name: string; type: string }[]>([])
 
   const fetchClusters = useCallback(async () => {
     try {
@@ -191,34 +288,59 @@ export default function NewsroomPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  useEffect(() => {
+    if (leagueSearch.length < 2) { setLeagueResults([]); return }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/entities/search?q=${encodeURIComponent(leagueSearch)}`)
+        const data = await res.json()
+        setLeagueResults(data.entities || [])
+      } catch { setLeagueResults([]) }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [leagueSearch])
+
+  useEffect(() => {
+    if (activeSection === 'VIDEO') {
+      const existing = document.getElementById('scorebat-jssdk')
+      if (!existing) {
+        const script = document.createElement('script')
+        script.id = 'scorebat-jssdk'
+        script.src = 'https://www.scorebat.com/embed/embed.js?v=arrv'
+        document.body.appendChild(script)
+      }
+    }
+  }, [activeSection])
+
   const saveLeagues = useCallback((updated: LeagueItem[]) => {
     setLeagues(updated)
     localStorage.setItem(LS_KEY, JSON.stringify(updated))
   }, [])
 
-  const addLeague = useCallback(() => {
-    const name = newLeagueName.trim()
-    if (!name) return
+  const addLeagueFromSearch = useCallback((name: string) => {
     if (leagues.some(l => l.label.toLowerCase() === name.toLowerCase())) {
-      setNewLeagueName('')
-      setAddingLeague(false)
+      setLeagueSearch('')
+      setShowLeagueSearch(false)
       return
     }
     saveLeagues([...leagues, { label: name, icon: '\u{1F3C6}' }])
-    setNewLeagueName('')
-    setAddingLeague(false)
-  }, [newLeagueName, leagues, saveLeagues])
+    setLeagueSearch('')
+    setShowLeagueSearch(false)
+  }, [leagues, saveLeagues])
 
   const removeLeague = useCallback((label: string) => {
-    const updated = leagues.filter(l => l.label !== label)
-    saveLeagues(updated)
+    saveLeagues(leagues.filter(l => l.label !== label))
     if (activeLeague === label) setActiveLeague(null)
   }, [leagues, activeLeague, saveLeagues])
 
+  const activeTimeHours = TIME_FILTERS.find(t => t.key === timeFilter)?.hours ?? null
   const searchLower = search.toLowerCase()
+  const currentSection = SECTIONS.find(s => s.key === activeSection)
 
   const filtered = useMemo(() => {
+    if (!currentSection || currentSection.hasData !== true) return []
     let result = filterBySection(clusters, activeSection)
+    result = filterByTime(result, activeTimeHours)
     result = filterByLeague(result, activeLeague)
     if (search) {
       result = result.filter(c =>
@@ -227,25 +349,25 @@ export default function NewsroomPage() {
       )
     }
     return result.sort((a, b) => b.dis - a.dis)
-  }, [clusters, activeSection, activeLeague, search, searchLower])
-
-  const sectionCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
-    for (const s of SECTIONS) {
-      counts[s.key] = filterBySection(clusters, s.key).length
-    }
-    return counts
-  }, [clusters])
+  }, [clusters, activeSection, activeTimeHours, activeLeague, search, searchLower, currentSection])
 
   const topStory = filtered[0] || null
   const restStories = filtered.slice(1)
 
   function writeArticle(cluster: Cluster) {
     const params = new URLSearchParams()
-    params.set('title', cluster.title)
     params.set('clusterId', cluster.id)
+    params.set('title', cluster.title)
+    if (cluster.summary?.summaryText) params.set('summary', cluster.summary.summaryText)
+    if (cluster.summary?.mainClaims) params.set('sources', cluster.summary.mainClaims.map(c => c.claim).join('|||'))
+    if (cluster.entities.length > 0) params.set('entities', cluster.entities.join(','))
+    params.set('eventType', cluster.eventType)
     router.push(`/editor?${params.toString()}`)
   }
+
+  const isDataSection = currentSection?.hasData === true
+  const isVideoSection = currentSection?.hasData === 'scorebat'
+  const isComingSoon = !isDataSection && !isVideoSection
 
   return (
     <div style={{ background: '#f5f6f8', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -256,22 +378,25 @@ export default function NewsroomPage() {
       }}>
         <span style={{ color: '#f97316', fontWeight: 800, fontSize: 15, fontFamily: 'monospace', letterSpacing: 1, flexShrink: 0 }}>DIURNA</span>
 
-        <nav style={{ display: 'flex', gap: 4, overflowX: 'auto', flexShrink: 1 }}>
+        <nav style={{ display: 'flex', gap: 2, overflowX: 'auto', flexShrink: 1 }} className="section-nav">
           {SECTIONS.map(s => {
             const active = activeSection === s.key
+            const count = getSectionCount(s.key, clusters, activeTimeHours)
             return (
               <button key={s.key} onClick={() => setActiveSection(s.key)} style={{
-                display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 6,
-                border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 6,
+                border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
                 background: active ? '#1e293b' : 'transparent', color: active ? '#fff' : '#64748b',
                 transition: 'all 0.15s',
               }}>
                 <span>{s.icon}</span>
                 <span>{s.label}</span>
-                <span style={{
-                  fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10, fontFamily: 'monospace',
-                  background: active ? '#f97316' : '#334155', color: active ? '#fff' : '#94a3b8',
-                }}>{sectionCounts[s.key] || 0}</span>
+                {count !== null && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 10, fontFamily: 'monospace',
+                    background: active ? '#f97316' : '#334155', color: active ? '#fff' : '#94a3b8',
+                  }}>{count}</span>
+                )}
               </button>
             )
           })}
@@ -280,28 +405,14 @@ export default function NewsroomPage() {
         <div style={{ flex: 1 }} />
 
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <input
-            ref={searchRef}
-            type="text"
-            placeholder="Search stories..."
-            value={search}
+          <input ref={searchRef} type="text" placeholder="Search stories..." value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{
-              background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
-              padding: '6px 32px 6px 10px', color: '#e2e8f0', fontSize: 12, width: 180,
-              outline: 'none',
-            }}
+            style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 6, padding: '6px 32px 6px 10px', color: '#e2e8f0', fontSize: 12, width: 180, outline: 'none' }}
           />
           {search ? (
-            <button onClick={() => setSearch('')} style={{
-              position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-              background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 13,
-            }}>{'\u2715'}</button>
+            <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>{'\u2715'}</button>
           ) : (
-            <span style={{
-              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-              color: '#475569', fontSize: 10, fontFamily: 'monospace',
-            }}>/</span>
+            <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#475569', fontSize: 10, fontFamily: 'monospace' }}>/</span>
           )}
         </div>
 
@@ -310,281 +421,229 @@ export default function NewsroomPage() {
           padding: '5px 8px', cursor: 'pointer', color: '#94a3b8', fontSize: 14, flexShrink: 0,
         }} title="Refresh">{'\u21BB'}</button>
 
-        <span style={{
-          fontSize: 11, color: '#64748b', fontFamily: 'monospace', display: 'flex',
-          alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap',
-        }}>
+        <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
           {clusterMeta.count} clusters
         </span>
       </header>
 
       {/* MAIN */}
-      <div style={{
-        maxWidth: 1200, margin: '0 auto', width: '100%', padding: '16px 16px 0',
-        display: 'grid', gridTemplateColumns: '1fr 260px', gap: 16, flex: 1,
-      }} className="newsroom-grid">
+      <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', padding: '16px 16px 0', display: 'grid', gridTemplateColumns: '1fr 260px', gap: 16, flex: 1 }} className="newsroom-grid">
         {/* LEFT COLUMN */}
         <div>
-          {/* Section title */}
-          <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
-              {SECTIONS.find(s => s.key === activeSection)?.icon} {SECTIONS.find(s => s.key === activeSection)?.label}
-            </span>
-            <span style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'monospace' }}>
-              {filtered.length} {filtered.length === 1 ? 'story' : 'stories'}
-            </span>
-            {activeLeague && (
-              <span style={{
-                fontSize: 11, background: '#dbeafe', color: '#1d4ed8', padding: '2px 8px',
-                borderRadius: 10, fontWeight: 600,
-              }}>
-                {activeLeague}
-                <button onClick={() => setActiveLeague(null)} style={{
-                  background: 'none', border: 'none', cursor: 'pointer', color: '#1d4ed8',
-                  marginLeft: 4, fontSize: 11,
-                }}>{'\u2715'}</button>
-              </span>
-            )}
-          </div>
-
-          {/* LOADING */}
-          {loading && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="stories-grid">
-              {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+          {/* COMING SOON */}
+          {isComingSoon && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: '#9ca3af' }}>
+              <span style={{ fontSize: 40, marginBottom: 12 }}>{currentSection?.icon}</span>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>{currentSection?.label}</h3>
+              <p style={{ fontSize: 13 }}>Coming soon — requires API-Football integration</p>
             </div>
           )}
 
-          {/* NO CLUSTERS */}
-          {!loading && clusters.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>{'\u{1F4F0}'}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>No stories available.</div>
-              <div style={{ fontSize: 12 }}>Run the cluster engine to generate stories.</div>
-            </div>
-          )}
-
-          {/* NO RESULTS FOR FILTER */}
-          {!loading && clusters.length > 0 && filtered.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>
-              {search ? (
-                <div style={{ fontSize: 14 }}>No stories matching &apos;{search}&apos;</div>
-              ) : (
-                <div style={{ fontSize: 14 }}>No stories in {SECTIONS.find(s => s.key === activeSection)?.label}</div>
-              )}
-            </div>
-          )}
-
-          {/* TOP STORY HERO */}
-          {!loading && topStory && (
-            <div style={{
-              background: '#0c0f1a', borderRadius: 12, padding: 0, marginBottom: 16,
-              overflow: 'hidden', position: 'relative',
-            }}>
-              <div style={{ height: 3, background: 'linear-gradient(90deg, #f97316, #dc2626)' }} />
-              <div style={{ padding: '16px 20px 18px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-                  <span style={{
-                    fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 4,
-                    background: '#f97316', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.8,
-                  }}>TOP STORY</span>
-                  <TrendBadge trend={topStory.trend} />
-                  <span style={{
-                    fontSize: 18, fontWeight: 800, color: '#f97316', fontFamily: 'monospace', marginLeft: 'auto',
-                  }}>{topStory.dis}</span>
-                </div>
-                <h2 style={{
-                  fontSize: 21, fontWeight: 700, color: '#f1f5f9', margin: '0 0 10px',
-                  fontFamily: 'Georgia, serif', lineHeight: 1.3, maxWidth: '88%',
-                }}>{topStory.title}</h2>
-                {topStory.summary && (
-                  <p style={{ fontSize: 13, color: '#7c8aa0', lineHeight: 1.5, margin: '0 0 14px' }}>
-                    {topStory.summary.summaryText}
-                  </p>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
-                    <span style={{ color: '#94a3b8' }}>{topStory.sourceCount} sources</span>
-                    {topStory.tier1Count > 0 && (
-                      <span style={{ color: '#22c55e', fontWeight: 600 }}>{'\u2605'}{topStory.tier1Count} tier-1</span>
-                    )}
-                    <ConfidenceDots confidence={topStory.summary?.confidence || 'LOW'} />
-                    {topStory.hasConflicts && (
-                      <span style={{ color: '#fbbf24', fontSize: 11, fontWeight: 600 }}>{'\u26A0'} Sources conflict</span>
-                    )}
-                    <span style={{ color: '#475569', fontFamily: 'monospace', fontSize: 11 }}>{timeAgo(topStory.latestItem)}</span>
-                  </div>
-                  <button onClick={() => writeArticle(topStory)} style={{
-                    background: '#f97316', color: '#fff', border: 'none', borderRadius: 6,
-                    padding: '7px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 4,
-                  }}>
-                    {'\u270D'} Write Article
-                  </button>
-                </div>
+          {/* VIDEO / SCOREBAT */}
+          {isVideoSection && (
+            <div>
+              <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>{'\u{1F4F9}'} Video Highlights</span>
+                <span style={{ fontSize: 9, background: '#22c55e', color: '#fff', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>FREE</span>
               </div>
+              <iframe
+                src="https://www.scorebat.com/embed/"
+                frameBorder="0"
+                width="100%"
+                height="760"
+                allowFullScreen
+                allow="autoplay; fullscreen"
+                style={{ display: 'block', overflow: 'hidden', borderRadius: 10, border: '1px solid #e5e7eb' }}
+              />
             </div>
           )}
 
-          {/* STORY CARDS GRID */}
-          {!loading && restStories.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }} className="stories-grid">
-              {restStories.map(c => {
-                const expanded = expandedId === c.id
-                const trendColor = TREND_COLORS[c.trend] || '#6b7280'
-                return (
-                  <div key={c.id} onClick={() => setExpandedId(expanded ? null : c.id)} style={{
-                    background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb',
-                    borderLeft: `3px solid ${trendColor}`, padding: '12px 14px', cursor: 'pointer',
-                    transition: 'box-shadow 0.15s',
-                  }}>
-                    {/* Row 1: trend + conflict + DIS */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      <TrendBadge trend={c.trend} />
-                      {c.hasConflicts && (
-                        <span style={{ fontSize: 10, color: '#d97706', fontWeight: 600 }}>{'\u26A0'} conflict</span>
-                      )}
-                      <span style={{
-                        marginLeft: 'auto', fontSize: 16, fontWeight: 800, color: '#9ca3af',
-                        fontFamily: 'monospace',
-                      }}>{c.dis}</span>
+          {/* DATA SECTIONS */}
+          {isDataSection && (
+            <>
+              {/* Section title + time filter */}
+              <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                  {currentSection?.icon} {currentSection?.label}
+                </span>
+                <span style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'monospace' }}>
+                  {filtered.length} {filtered.length === 1 ? 'story' : 'stories'}
+                </span>
+                {activeLeague && (
+                  <span style={{ fontSize: 11, background: '#dbeafe', color: '#1d4ed8', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>
+                    {activeLeague}
+                    <button onClick={() => setActiveLeague(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1d4ed8', marginLeft: 4, fontSize: 11 }}>{'\u2715'}</button>
+                  </span>
+                )}
+              </div>
+
+              {/* TIME FILTER */}
+              <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+                {TIME_FILTERS.map(tf => (
+                  <button key={tf.key} onClick={() => setTimeFilter(tf.key)} style={{
+                    padding: '4px 12px', fontSize: 11, fontFamily: 'monospace', borderRadius: 4, cursor: 'pointer', border: timeFilter === tf.key ? 'none' : '1px solid #e5e7eb',
+                    background: timeFilter === tf.key ? '#111827' : '#fff', color: timeFilter === tf.key ? '#fff' : '#6b7280',
+                    fontWeight: 600,
+                  }}>{tf.label}</button>
+                ))}
+              </div>
+
+              {/* LOADING */}
+              {loading && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="stories-grid">
+                  {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+                </div>
+              )}
+
+              {/* NO CLUSTERS */}
+              {!loading && clusters.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>{'\u{1F4F0}'}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>No stories available.</div>
+                  <div style={{ fontSize: 12 }}>Run the cluster engine to generate stories.</div>
+                </div>
+              )}
+
+              {/* NO RESULTS */}
+              {!loading && clusters.length > 0 && filtered.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>
+                  {search ? (
+                    <div style={{ fontSize: 14 }}>No stories matching &apos;{search}&apos;</div>
+                  ) : (
+                    <div style={{ fontSize: 14 }}>No stories in {currentSection?.label}</div>
+                  )}
+                </div>
+              )}
+
+              {/* TOP STORY HERO */}
+              {!loading && topStory && (
+                <div style={{ background: '#0c0f1a', borderRadius: 12, padding: 0, marginBottom: 16, overflow: 'hidden' }}>
+                  <div style={{ height: 3, background: 'linear-gradient(90deg, #f97316, #dc2626)' }} />
+                  <div style={{ padding: '16px 20px 18px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 4, background: '#f97316', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.8 }}>TOP STORY</span>
+                      <TrendBadge trend={topStory.trend} />
+                      <span style={{ fontSize: 18, fontWeight: 800, color: '#f97316', fontFamily: 'monospace', marginLeft: 'auto' }}>{topStory.dis}</span>
                     </div>
-
-                    {/* Row 2: title */}
-                    <h3 style={{
-                      fontSize: 14, fontWeight: 600, color: '#111827', margin: '0 0 6px',
-                      fontFamily: 'Georgia, serif', lineHeight: 1.35,
-                    }}>{c.title}</h3>
-
-                    {/* Row 3: meta */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#6b7280', marginBottom: 6 }}>
-                      <span>{c.sourceCount} src</span>
-                      {c.tier1Count > 0 && <span style={{ color: '#22c55e', fontWeight: 600 }}>{'\u2605'}{c.tier1Count}</span>}
-                      <ConfidenceDots confidence={c.summary?.confidence || 'LOW'} />
-                      <span style={{ fontFamily: 'monospace' }}>{timeAgo(c.latestItem)}</span>
-                    </div>
-
-                    {/* Row 4: entity pills */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      {c.entities.slice(0, 3).map((e, i) => (
-                        <span key={i} style={{
-                          fontSize: 10, background: '#f1f5f9', color: '#475569', padding: '2px 7px',
-                          borderRadius: 10, fontWeight: 500,
-                        }}>{e}</span>
-                      ))}
-                      {c.entities.length > 3 && (
-                        <span style={{ fontSize: 10, color: '#9ca3af' }}>+{c.entities.length - 3}</span>
-                      )}
-                    </div>
-
-                    {/* Expanded */}
-                    {expanded && (
-                      <div onClick={e => e.stopPropagation()} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #e5e7eb' }}>
-                        {c.summary && (
-                          <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5, margin: '0 0 10px' }}>
-                            {c.summary.summaryText}
-                          </p>
-                        )}
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button onClick={() => writeArticle(c)} style={{
-                            background: '#f97316', color: '#fff', border: 'none', borderRadius: 6,
-                            padding: '6px 14px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                          }}>
-                            {'\u270D'} Write Article
-                          </button>
-                          <button onClick={() => {}} style={{
-                            background: '#f1f5f9', color: '#475569', border: '1px solid #e5e7eb', borderRadius: 6,
-                            padding: '6px 14px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                          }}>
-                            View Sources ({c.sourceCount})
-                          </button>
-                        </div>
-                      </div>
+                    <h2 style={{ fontSize: 21, fontWeight: 700, color: '#f1f5f9', margin: '0 0 10px', fontFamily: 'Georgia, serif', lineHeight: 1.3, maxWidth: '88%' }}>{topStory.title}</h2>
+                    {topStory.summary && (
+                      <p style={{ fontSize: 13, color: '#7c8aa0', lineHeight: 1.5, margin: '0 0 14px' }}>{topStory.summary.summaryText}</p>
                     )}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
+                        <span style={{ color: '#94a3b8' }}>{topStory.sourceCount} sources</span>
+                        {topStory.tier1Count > 0 && <span style={{ color: '#22c55e', fontWeight: 600 }}>{'\u2605'}{topStory.tier1Count} tier-1</span>}
+                        <ConfidenceDots confidence={topStory.summary?.confidence || 'LOW'} />
+                        {topStory.hasConflicts && <span style={{ color: '#fbbf24', fontSize: 11, fontWeight: 600 }}>{'\u26A0'} Sources conflict</span>}
+                        <span style={{ color: '#475569', fontFamily: 'monospace', fontSize: 11 }}>{timeAgo(topStory.latestItem)}</span>
+                      </div>
+                      <button onClick={() => writeArticle(topStory)} style={{
+                        background: '#f97316', color: '#fff', border: 'none', borderRadius: 6,
+                        padding: '7px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}>{'\u270D'} Write Article</button>
+                    </div>
                   </div>
-                )
-              })}
-            </div>
+                </div>
+              )}
+
+              {/* STORY CARDS GRID */}
+              {!loading && restStories.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }} className="stories-grid">
+                  {restStories.map(c => (
+                    <StoryCard
+                      key={c.id}
+                      c={c}
+                      expanded={expandedId === c.id}
+                      onToggle={() => setExpandedId(expandedId === c.id ? null : c.id)}
+                      onWrite={() => writeArticle(c)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 
         {/* SIDEBAR */}
         <aside className="newsroom-sidebar">
           {/* Today's Matches */}
-          <div style={{
-            background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14, marginBottom: 12,
-          }}>
+          <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14, marginBottom: 12 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
               {'\u26BD'} Today&apos;s Matches
             </div>
             {MOCK_MATCHES.map((m, i) => (
               <div key={i} style={{
                 display: 'grid', gridTemplateColumns: '1fr 48px 1fr', alignItems: 'center',
-                padding: '6px 0', borderBottom: i < MOCK_MATCHES.length - 1 ? '1px solid #f1f5f9' : 'none',
-                fontSize: 12,
+                padding: '6px 0', borderBottom: i < MOCK_MATCHES.length - 1 ? '1px solid #f1f5f9' : 'none', fontSize: 12,
               }}>
                 <span style={{ textAlign: 'right', fontWeight: 500, color: '#111827' }}>{m.home}</span>
                 <span style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 11, color: '#6b7280', fontWeight: 600 }}>{m.time}</span>
                 <span style={{ fontWeight: 500, color: '#111827' }}>{m.away}</span>
               </div>
             ))}
-            <div style={{
-              display: 'flex', justifyContent: 'flex-end', marginTop: 8,
-            }}>
-              <span style={{ fontSize: 11, color: '#f97316', fontWeight: 600, cursor: 'pointer' }}>
-                All fixtures {'\u2192'}
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+              <span style={{ fontSize: 11, color: '#f97316', fontWeight: 600, cursor: 'pointer' }}>All fixtures {'\u2192'}</span>
             </div>
           </div>
 
           {/* My Leagues */}
-          <div style={{
-            background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14, marginBottom: 12,
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 10 }}>
-              {'\u{1F3C6}'} My Leagues
-            </div>
-            {leagues.map((l) => {
+          <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14, marginBottom: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 10 }}>{'\u{1F3C6}'} My Leagues</div>
+            {leagues.map(l => {
               const isActive = activeLeague === l.label
               return (
                 <div key={l.label} className="league-row" style={{
                   display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', borderRadius: 6,
                   cursor: 'pointer', fontSize: 12, fontWeight: isActive ? 700 : 500,
-                  background: isActive ? '#dbeafe' : 'transparent',
-                  color: isActive ? '#1d4ed8' : '#374151',
+                  background: isActive ? '#dbeafe' : 'transparent', color: isActive ? '#1d4ed8' : '#374151',
                   transition: 'background 0.15s',
-                  position: 'relative',
                 }} onClick={() => setActiveLeague(isActive ? null : l.label)}>
                   <span>{l.icon}</span>
                   <span style={{ flex: 1 }}>{l.label}</span>
-                  <button className="league-remove" onClick={(e) => { e.stopPropagation(); removeLeague(l.label) }} style={{
-                    background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer',
-                    fontSize: 11, padding: '0 2px', opacity: 0, transition: 'opacity 0.15s',
+                  <button className="league-remove" onClick={e => { e.stopPropagation(); removeLeague(l.label) }} style={{
+                    background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 11, padding: '0 2px', opacity: 0, transition: 'opacity 0.15s',
                   }}>{'\u2715'}</button>
                 </div>
               )
             })}
-            {addingLeague ? (
-              <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+            {showLeagueSearch ? (
+              <div style={{ marginTop: 6, position: 'relative' }}>
                 <input
                   autoFocus
                   type="text"
-                  placeholder="League or club..."
-                  value={newLeagueName}
-                  onChange={e => setNewLeagueName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') addLeague(); if (e.key === 'Escape') { setAddingLeague(false); setNewLeagueName('') } }}
-                  style={{
-                    flex: 1, fontSize: 11, padding: '4px 8px', border: '1px solid #e5e7eb',
-                    borderRadius: 4, outline: 'none',
-                  }}
+                  placeholder="Search leagues, clubs..."
+                  value={leagueSearch}
+                  onChange={e => setLeagueSearch(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Escape') { setShowLeagueSearch(false); setLeagueSearch('') } }}
+                  style={{ width: '100%', fontSize: 11, padding: '6px 8px', border: '1px solid #e5e7eb', borderRadius: 4, outline: 'none' }}
                 />
-                <button onClick={addLeague} style={{
-                  fontSize: 11, padding: '4px 8px', background: '#f97316', color: '#fff',
-                  border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600,
-                }}>Add</button>
+                {leagueResults.length > 0 && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff',
+                    border: '1px solid #e5e7eb', borderRadius: 6, marginTop: 2, zIndex: 10,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: 200, overflowY: 'auto',
+                  }}>
+                    {leagueResults.map((ent, i) => (
+                      <button key={i} onClick={() => addLeagueFromSearch(ent.name)} style={{
+                        display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '6px 10px',
+                        border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, textAlign: 'left',
+                      }} className="league-result-row">
+                        <span style={{ color: '#6b7280', fontSize: 9, fontFamily: 'monospace', flexShrink: 0, background: '#f1f5f9', padding: '1px 4px', borderRadius: 3 }}>{ent.type}</span>
+                        <span style={{ color: '#111827', fontWeight: 500 }}>{ent.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {leagueSearch.length >= 2 && leagueResults.length === 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, marginTop: 2, padding: '8px 10px', fontSize: 11, color: '#9ca3af' }}>
+                    No matches found
+                  </div>
+                )}
               </div>
             ) : (
-              <button onClick={() => setAddingLeague(true)} style={{
+              <button onClick={() => setShowLeagueSearch(true)} style={{
                 marginTop: 6, fontSize: 11, color: '#f97316', background: 'none',
                 border: '1px dashed #f97316', borderRadius: 6, padding: '5px 10px',
                 cursor: 'pointer', width: '100%', fontWeight: 600,
@@ -593,40 +652,25 @@ export default function NewsroomPage() {
           </div>
 
           {/* Video Highlights */}
-          <div style={{
-            background: '#f8fafc', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14, marginBottom: 12,
-          }}>
+          <div style={{ background: '#f8fafc', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14, marginBottom: 12 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
               {'\u{1F4F9}'} VIDEO HIGHLIGHTS
-              <span style={{
-                fontSize: 9, background: '#22c55e', color: '#fff', padding: '1px 6px',
-                borderRadius: 4, fontWeight: 700,
-              }}>FREE</span>
+              <span style={{ fontSize: 9, background: '#22c55e', color: '#fff', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>FREE</span>
             </div>
-            <div style={{ fontSize: 11, color: '#9ca3af' }}>
-              {'\u{1F3AC}'} Available after matches
-            </div>
+            <div style={{ fontSize: 11, color: '#9ca3af' }}>{'\u{1F3AC}'} Available after matches</div>
           </div>
 
           {/* Signal Guide */}
-          <div style={{
-            background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14,
-          }}>
+          <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', padding: 14 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 10 }}>Signal Guide</div>
             {Object.entries(TREND_LABELS).map(([trend, label]) => (
               <div key={trend} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 11 }}>
-                <span style={{
-                  width: 10, height: 10, borderRadius: 2, background: TREND_COLORS[trend],
-                  display: 'inline-block', flexShrink: 0,
-                }} />
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: TREND_COLORS[trend], display: 'inline-block', flexShrink: 0 }} />
                 <span style={{ fontWeight: 600, color: '#374151', width: 60 }}>{trend}</span>
                 <span style={{ color: '#6b7280' }}>{label}</span>
               </div>
             ))}
-            <div style={{
-              borderTop: '1px solid #e5e7eb', marginTop: 8, paddingTop: 8, fontSize: 10, color: '#9ca3af',
-              lineHeight: 1.6,
-            }}>
+            <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 8, paddingTop: 8, fontSize: 10, color: '#9ca3af', lineHeight: 1.6 }}>
               <span style={{ color: '#22c55e' }}>{'\u25CF\u25CF\u25CF'}</span> verified {'\u00B7'}{' '}
               <span style={{ color: '#d97706' }}>{'\u25CF\u25CF'}</span><span>{'\u25CB'}</span> partial {'\u00B7'}{' '}
               <span style={{ color: '#dc2626' }}>{'\u25CF'}</span><span>{'\u25CB\u25CB'}</span> conflicting
@@ -636,37 +680,30 @@ export default function NewsroomPage() {
       </div>
 
       {/* FOOTER */}
-      <footer style={{
-        background: '#0c0f1a', borderTop: '1px solid #1e293b', padding: '20px 24px', marginTop: 32,
-      }}>
-        <div style={{
-          maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        }}>
+      <footer style={{ background: '#0c0f1a', borderTop: '1px solid #1e293b', padding: '20px 24px', marginTop: 32 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <span style={{ color: '#f97316', fontWeight: 800, fontSize: 14, fontFamily: 'monospace' }}>DIURNA</span>
             <span style={{ color: '#475569', fontSize: 12, marginLeft: 12 }}>AI-Powered Sports Newsroom</span>
           </div>
-          <div style={{ color: '#475569', fontSize: 11 }}>
-            Powered by Lupon Media {'\u00B7'} {new Date().getFullYear()}
-          </div>
+          <div style={{ color: '#475569', fontSize: 11 }}>Powered by Lupon Media {'\u00B7'} {new Date().getFullYear()}</div>
         </div>
       </footer>
 
-      {/* INLINE STYLES for hover effects + responsive */}
       <style>{`
         .newsroom-grid { grid-template-columns: 1fr 260px; }
         .stories-grid { grid-template-columns: 1fr 1fr; }
         .league-row:hover { background: #f8fafc !important; }
         .league-row:hover .league-remove { opacity: 1 !important; }
+        .league-result-row:hover { background: #f8fafc; }
+        .section-nav { scrollbar-width: none; -ms-overflow-style: none; }
+        .section-nav::-webkit-scrollbar { display: none; }
         @media (max-width: 768px) {
           .newsroom-grid { grid-template-columns: 1fr !important; }
           .newsroom-sidebar { order: 2; }
           .stories-grid { grid-template-columns: 1fr !important; }
         }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
       `}</style>
     </div>

@@ -260,6 +260,27 @@ export default function EditorPage() {
       } catch {}
     }
 
+    if (searchParams.get('clusterId') && searchParams.get('title') && !searchParams.get('mode') && !searchParams.get('smartGenerate')) {
+      const clusterTitle = searchParams.get('title') || ''
+      const clusterSummary = searchParams.get('summary') || ''
+      const clusterSources = searchParams.get('sources') || ''
+      const clusterEntities = searchParams.get('entities') || ''
+      setTitle(clusterTitle)
+      const parts: string[] = []
+      if (clusterSummary) parts.push(clusterSummary)
+      if (clusterSources) {
+        const claims = clusterSources.split('|||').filter(Boolean)
+        if (claims.length > 0) parts.push('\n\nKey claims:\n' + claims.map(c => `- ${c}`).join('\n'))
+      }
+      if (clusterEntities) parts.push('\n\nEntities: ' + clusterEntities)
+      if (parts.length > 0) {
+        setPrompt(`Write an article about: ${clusterTitle}\n\nContext:\n${parts.join('\n')}`)
+      } else {
+        setPrompt(`Write an article about: ${clusterTitle}`)
+      }
+      setScreen('prompt')
+    }
+
     const promptParam = searchParams.get('prompt')
     if (promptParam && !searchParams.get('smartGenerate') && searchParams.get('mode') !== 'combined') {
       setPrompt(promptParam)
