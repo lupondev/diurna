@@ -56,6 +56,21 @@ const WORD_COUNT_OPTIONS = [
   { value: 800, label: 'Long-form', desc: 'Deep analysis' },
 ]
 
+const EVENT_TO_CATEGORY: Record<string, string> = {
+  'TRANSFER': 'transfers',
+  'CONTRACT': 'transfers',
+  'INJURY': 'injuries',
+  'MATCH_PREVIEW': 'matches',
+  'MATCH_RESULT': 'matches',
+  'POST_MATCH_REACTION': 'matches',
+  'BREAKING': 'news',
+  'SCANDAL': 'news',
+  'DISCIPLINE': 'news',
+  'RECORD': 'news',
+  'MANAGERIAL': 'news',
+  'TACTICAL': 'news',
+}
+
 export default function EditorPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -70,7 +85,7 @@ export default function EditorPage() {
   const [saving, setSaving] = useState(false)
   const [articleStatus, setArticleStatus] = useState<'DRAFT' | 'IN_REVIEW' | 'PUBLISHED'>('DRAFT')
   const [siteId, setSiteId] = useState<string | null>(null)
-  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; slug?: string; icon?: string }>>([])
   const [categoryId, setCategoryId] = useState('')
   const [aiResult, setAiResult] = useState<{ model?: string; tokensIn?: number; tokensOut?: number } | null>(null)
   const [sendNewsletter, setSendNewsletter] = useState(false)
@@ -92,10 +107,21 @@ export default function EditorPage() {
       .then((data) => {
         if (data.id) {
           setSiteId(data.id)
-          setCategories(data.categories || [])
+          const cats = data.categories || []
+          setCategories(cats)
+          // Auto-assign category based on eventType from newsroom
+          const eventType = searchParams.get('eventType')
+          if (eventType && !categoryId) {
+            const targetSlug = EVENT_TO_CATEGORY[eventType]
+            if (targetSlug) {
+              const match = cats.find((c: { slug?: string }) => c.slug === targetSlug)
+              if (match) setCategoryId(match.id)
+            }
+          }
         }
       })
       .catch(console.error)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -507,7 +533,7 @@ export default function EditorPage() {
             <select className="ed-select" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
               <option value="">No category</option>
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                <option key={cat.id} value={cat.id}>{cat.icon ? `${cat.icon} ` : ''}{cat.name}</option>
               ))}
             </select>
           </div>

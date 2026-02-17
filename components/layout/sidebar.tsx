@@ -13,10 +13,11 @@ const sections: NavSection[] = [
   {
     label: 'Main',
     items: [
-      { label: 'Dashboard', icon: '📊', href: '/' },
+      { label: 'Dashboard', icon: '📊', href: '/dashboard' },
       { label: 'Newsroom', icon: '📰', href: '/newsroom', badge: '12' },
       { label: 'AI Co-Pilot', icon: '🤖', href: '/copilot' },
       { label: 'Editor', icon: '✍️', href: '/editor' },
+      { label: 'Articles', icon: '📄', href: '/articles' },
     ],
   },
   {

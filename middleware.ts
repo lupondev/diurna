@@ -19,7 +19,11 @@ export async function middleware(req: NextRequest) {
   const isCronRoute = pathname.startsWith('/api/cron')
   const isSeedRoute = pathname.startsWith('/api/admin/seed-feeds') || pathname.startsWith('/api/admin/seed-entities') || pathname.startsWith('/api/admin/seed-players') || pathname.startsWith('/api/admin/enrich-players') || pathname.startsWith('/api/admin/seed-matches')
   const isNewsroomPublic = pathname.startsWith('/api/newsroom/clusters') || pathname.startsWith('/api/entities/search')
-  const isPublicRoute = pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isCronRoute || isSeedRoute || isNewsroomPublic
+  const isSetupRoute = pathname.startsWith('/api/setup/')
+  const isDashboardStats = pathname.startsWith('/api/dashboard/stats')
+  const isCategoriesRoute = pathname.startsWith('/api/categories')
+  const isPublicArticle = /^\/[a-z0-9-]+\/[a-z0-9-]+$/.test(pathname) && !pathname.startsWith('/api') && !pathname.startsWith('/site') && !pathname.startsWith('/feed') && !pathname.startsWith('/landing') && !pathname.startsWith('/login') && !pathname.startsWith('/register') && !pathname.startsWith('/onboarding') && !pathname.startsWith('/admin') && !pathname.startsWith('/editor') && !pathname.startsWith('/newsroom') && !pathname.startsWith('/copilot') && !pathname.startsWith('/dashboard') && !pathname.startsWith('/widgets') && !pathname.startsWith('/widget-creator') && !pathname.startsWith('/media') && !pathname.startsWith('/calendar') && !pathname.startsWith('/analytics') && !pathname.startsWith('/settings') && !pathname.startsWith('/team') && !pathname.startsWith('/templates') && !pathname.startsWith('/export') && !pathname.startsWith('/import') && !pathname.startsWith('/articles')
+  const isPublicRoute = pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isCronRoute || isSeedRoute || isNewsroomPublic || isSetupRoute || isDashboardStats || isCategoriesRoute || isPublicArticle
 
   if (!isPublicRoute) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
