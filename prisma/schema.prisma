@@ -446,3 +446,42 @@ model Entity {
 
   @@index([type])
 }
+
+model Player {
+  id            String   @id @default(cuid())
+  apiFootballId Int?     @unique
+  name          String   @unique
+  shortName     String?
+  nationality   String?
+  position      String?
+  age           Int?
+  currentTeam   String?
+  currentTeamId Int?
+  onLoan        Boolean  @default(false)
+  loanFrom      String?
+  photo         String?
+  marketValue   String?
+  lastUpdated   DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([name])
+  @@index([currentTeam])
+}
+
+model MatchResult {
+  id            String   @id @default(cuid())
+  apiFootballId Int?     @unique
+  homeTeam      String
+  awayTeam      String
+  homeScore     Int?
+  awayScore     Int?
+  league        String?
+  season        String?
+  matchDate     DateTime
+  status        String?
+  events        Json?
+  lastUpdated   DateTime @default(now())
+
+  @@index([matchDate])
+  @@index([homeTeam, awayTeam])
+}

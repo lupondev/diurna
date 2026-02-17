@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 
@@ -22,7 +23,7 @@ const schema = z.object({
 })
 
 type ContextLevel = 'full' | 'combined' | 'headline-only'
-type FactWarning = { text: string; type: 'number' | 'quote' | 'statistic' | 'name' }
+type FactWarning = { type: string; detail: string; severity: 'HIGH' | 'MEDIUM' | 'LOW' }
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,23 +37,30 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = `You are a senior sports journalist writing for a digital newsroom. Output valid JSON only, no markdown wrapping.
 
-RULES — follow every single one:
-1. CRITICAL RULE: NEVER repeat information. Each paragraph MUST contain a NEW fact not mentioned in any previous paragraph. If you have stated that Salah broke the assist record in paragraph 1, you MUST NOT restate this in paragraph 2, 3, or 4 using different words. If you only have 2 facts, write 2 paragraphs and STOP. A 100-word article with 2 unique facts is better than a 500-word article that repeats 1 fact 5 times. Before writing each paragraph, check: does this paragraph add NEW information? If not, delete it and end the article.
-2. Maximum 5 paragraphs for any article. Structure: 1 lead paragraph with the core news + 2-3 body paragraphs each containing NEW facts + 1 TLDR line. That is it. Never write more than 5 paragraphs total. If you run out of new facts after 2 paragraphs, write the TLDR and stop.
-3. ONLY state facts that are directly present in the source headline(s) provided. If the headline says "Arsenal sign midfielder" you may say Arsenal signed a midfielder. You may NOT invent the fee, wage, contract length, or any quote.
-4. NEVER invent statistics, transfer fees, quotes, match scores, or specific details not present in the source material.
-5. Maximum 400 words for the article content. Shorter is better. Every sentence must earn its place.
-6. BANNED WORDS AND PHRASES — never use any of these: "landscape", "crucial", "paramount", "delve", "comprehensive", "It remains to be seen", "Only time will tell", "game-changer", "footballing world", "sending shockwaves", "blockbuster", "marquee signing", "meteoric rise", "the beautiful game", "masterclass", "interconnected nature", "the modern football", "remains fluid", "significant setback", "complex web", "transfer market continues", "adds another layer", "reflects the modern", "highlights the competitive nature", "the timing of these developments", "multiple clubs are reassessing", "in today's game", "represents a significant", "demonstrates the competitive".
-7. Write like a senior sports journalist at Reuters or BBC Sport — factual, tight, no fluff.
-8. Start with the NEWS. First sentence = what happened. Do not open with background, history, or scene-setting.
-9. Each paragraph: 2-3 sentences maximum.
-10. Do NOT add "expert opinions", "analyst reactions", or unnamed source quotes unless they appear in the headline.
-11. No filler conclusions. Do not end with "This could reshape..." or "Fans will be watching closely..." — end with the last relevant fact.
-12. HTML tags allowed: <h2>, <p>, <ul>, <li>. No <blockquote> unless quoting from source. No <h3>.
-13. Article structure: Lead paragraph (the news) → Context (1-2 paragraphs of relevant factual background) → TLDR.
-14. SEO: metaTitle max 60 characters. metaDescription max 155 characters. Both must be factual.
-15. FAQ: Generate exactly 3 questions. Each answer must be based ONLY on information in the article. Do not add external knowledge.
-16. Social posts must be factual summaries, not hype. No clickbait.
+ABSOLUTE RULES — VIOLATION OF THESE PRODUCES FAKE NEWS:
+1. NEVER add player names, goal scorers, match minutes, assist providers, substitutions, or specific match statistics unless they are EXPLICITLY written in the source text provided to you. If the source says "Inter beat Juventus 3-2" but does not name the scorers, you must write "Inter beat Juventus 3-2" and NOTHING MORE about who scored. Do not fill in names from your own knowledge — your knowledge may be outdated or wrong.
+2. NEVER state which team a player currently plays for unless the source text explicitly says so. Players move on loan, get transferred, or change clubs frequently. If you say "Esposito scored for Inter" but he is actually on loan at Spezia, that is FAKE NEWS.
+3. NEVER invent match minutes. If the source says "Kalulu received a red card" do not add "in the 41st minute" unless the source explicitly states that minute.
+4. NEVER invent transfer fees, contract lengths, salary figures, or release clause amounts unless the source explicitly states them.
+5. NEVER invent quotes. If the source does not contain a direct quote, do not create one.
+6. If you only have a headline and NO source article text, write MAXIMUM 3 sentences: Sentence 1: Restate the headline as a news lead. Sentence 2: One sentence of safe, general context ONLY if you are 100% certain it is current. Sentence 3: "Further details are expected to emerge." Then TLDR. Do NOT write more than this without source material.
+7. When you have source text, you may ONLY include facts that appear in that source text. You may rephrase and restructure, but you must not add new factual claims.
+8. If the source mentions a match result but not the scorers, write: "[Team] won [score] against [Team]." Do NOT add: "Goals from [invented names]."
+9. For any statistical claim (records, streaks, rankings), add the qualifier "according to [source]" unless you are absolutely certain it is a universally known, unchanging fact.
+10. CONFIDENCE MARKERS: If you must include a detail you are not 100% sure about from the source, prefix it with "Reports suggest" or "According to initial reports". Never state uncertain information as confirmed fact.
+
+WRITING RULES:
+11. NEVER repeat information. Each paragraph MUST contain a NEW fact. If you only have 2 facts, write 2 paragraphs and STOP.
+12. Maximum 5 paragraphs. Structure: 1 lead + 2-3 body paragraphs with NEW facts + 1 TLDR line.
+13. Maximum 400 words. Shorter is better.
+14. BANNED WORDS AND PHRASES — never use: "landscape", "crucial", "paramount", "delve", "comprehensive", "It remains to be seen", "Only time will tell", "game-changer", "footballing world", "sending shockwaves", "blockbuster", "marquee signing", "meteoric rise", "the beautiful game", "masterclass", "interconnected nature", "the modern football", "remains fluid", "significant setback", "complex web", "transfer market continues", "adds another layer", "reflects the modern", "highlights the competitive nature", "the timing of these developments", "multiple clubs are reassessing", "in today's game", "represents a significant", "demonstrates the competitive".
+15. Write like Reuters or BBC Sport — factual, tight, no fluff. Start with the NEWS.
+16. Each paragraph: 2-3 sentences maximum.
+17. No filler conclusions. End with the last relevant fact.
+18. HTML tags allowed: <h2>, <p>, <ul>, <li>. No <blockquote> unless quoting from source. No <h3>.
+19. SEO: metaTitle max 60 characters. metaDescription max 155 characters.
+20. FAQ: Generate exactly 3 questions. Answers based ONLY on article facts.
+21. Social posts must be factual summaries, not hype.
 
 The JSON must have this exact structure:
 {
@@ -142,12 +150,14 @@ HEADLINE: ${input.topic}
 LANGUAGE: ${input.language}
 
 STRICT RULES FOR HEADLINE-ONLY GENERATION:
-- Write MAXIMUM 2 short paragraphs (2-3 sentences total)
-- Paragraph 1: Restate the headline as a factual news report. Only use facts literally present in the headline.
-- Paragraph 2: A single sentence: "Further details are expected as the story develops."
+- Write MAXIMUM 3 sentences total in a single paragraph:
+  Sentence 1: Restate the headline as a factual news lead.
+  Sentence 2: One sentence of safe, general context ONLY if you are 100% certain it is current.
+  Sentence 3: "Further details are expected to emerge."
+- Then add a TLDR line repeating the core fact.
 - Do NOT invent ANY details: no player names not in the headline, no transfer fees, no quotes, no match scores, no statistics, no contract lengths, no wages
 - Do NOT speculate about implications, reactions, or future consequences
-- Do NOT add background context or historical information
+- Do NOT add background context or historical information you are not 100% certain about
 - The content section in your JSON must be under 80 words total
 - This is a BREAKING NEWS STUB — short, factual, zero fabrication`
     }
@@ -173,15 +183,18 @@ STRICT RULES FOR HEADLINE-ONLY GENERATION:
     }
     const tiptapContent = htmlToTiptap(result.content || '')
 
-    const warnings: FactWarning[] = contextLevel === 'full' && input.sourceContext
-      ? factCheck(result.content || '', input.sourceContext, input.topic)
-      : []
+    const warnings = await basicFactCheck(result.content || '', input.sourceContext || '', input.topic)
 
     return NextResponse.json({
       ...result,
       tiptapContent,
       contextLevel,
-      factWarnings: warnings,
+      factCheck: {
+        warnings,
+        warningCount: warnings.length,
+        status: warnings.length === 0 ? 'CLEAN' :
+                warnings.some(w => w.severity === 'HIGH') ? 'REVIEW_REQUIRED' : 'CAUTION',
+      },
       model: response.model,
       tokensIn: response.usage.input_tokens,
       tokensOut: response.usage.output_tokens,
@@ -302,48 +315,101 @@ function parseInline(html: string): Record<string, unknown>[] {
   return nodes
 }
 
-function factCheck(generatedHtml: string, sourceText: string, headline: string): FactWarning[] {
+async function basicFactCheck(articleHtml: string, sourceContext: string, headline: string): Promise<FactWarning[]> {
   const warnings: FactWarning[] = []
-  const generated = generatedHtml.replace(/<[^>]+>/g, ' ')
-  const sourceLower = (sourceText + ' ' + headline).toLowerCase()
+  const text = articleHtml.replace(/<[^>]+>/g, ' ').toLowerCase()
+  const sourceLower = (sourceContext + ' ' + headline).toLowerCase()
 
-  const moneyMatches = generated.match(/(?:[£€$])\s*\d[\d.,]*\s*(?:m|million|billion|bn)?/gi) || []
-  for (const m of moneyMatches) {
-    const normalized = m.replace(/\s+/g, '').toLowerCase()
-    if (!sourceLower.includes(normalized) && !sourceLower.includes(m.trim().toLowerCase())) {
-      warnings.push({ text: m.trim(), type: 'number' })
+  if (sourceContext && sourceContext.trim().length > 50) {
+    try {
+      const players = await prisma.player.findMany({
+        select: { name: true, shortName: true, currentTeam: true, onLoan: true, loanFrom: true }
+      })
+
+      for (const player of players) {
+        const nameInArticle = text.includes(player.name.toLowerCase()) ||
+                             (player.shortName ? text.includes(player.shortName.toLowerCase()) : false)
+        const nameInSource = sourceLower.includes(player.name.toLowerCase()) ||
+                            (player.shortName ? sourceLower.includes(player.shortName.toLowerCase()) : false)
+
+        if (nameInArticle && !nameInSource) {
+          warnings.push({
+            type: 'PLAYER_NOT_IN_SOURCE',
+            detail: `"${player.name}" appears in article but NOT in source material. This may be hallucinated.`,
+            severity: 'HIGH',
+          })
+        }
+
+        if (nameInArticle && player.onLoan && player.loanFrom) {
+          const parentTeam = player.loanFrom.toLowerCase()
+          if (text.includes(parentTeam)) {
+            warnings.push({
+              type: 'LOAN_STATUS',
+              detail: `"${player.name}" is currently on loan at ${player.currentTeam} (from ${player.loanFrom}). Verify team assignment.`,
+              severity: 'MEDIUM',
+            })
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const minutePattern = /(\d{1,3})(?:st|nd|rd|th)?\s*(?:minute|min|')/g
+  const articleMinutes = Array.from(text.matchAll(minutePattern)).map(m => m[1])
+  if (sourceContext && articleMinutes.length > 0) {
+    const sourceMinutes = Array.from(sourceLower.matchAll(minutePattern)).map(m => m[1])
+    for (const min of articleMinutes) {
+      if (!sourceMinutes.includes(min)) {
+        warnings.push({
+          type: 'MINUTE_NOT_IN_SOURCE',
+          detail: `Match minute "${min}'" appears in article but not in source material.`,
+          severity: 'LOW',
+        })
+      }
     }
   }
 
-  const scoreMatches = generated.match(/\b\d{1,2}\s*[-–]\s*\d{1,2}\b/g) || []
+  const moneyPattern = /[€£$]\s*(\d+(?:\.\d+)?)\s*m/gi
+  const articleMoney = Array.from(text.matchAll(moneyPattern)).map(m => m[0])
+  if (sourceContext && articleMoney.length > 0) {
+    for (const amount of articleMoney) {
+      if (!sourceLower.includes(amount.toLowerCase())) {
+        warnings.push({
+          type: 'AMOUNT_NOT_IN_SOURCE',
+          detail: `Financial figure "${amount}" appears in article but not in source material.`,
+          severity: 'MEDIUM',
+        })
+      }
+    }
+  }
+
+  const quoteMatches = text.match(/"[^"]{10,}"/g) || []
+  for (const q of quoteMatches) {
+    const inner = q.slice(1, -1).trim()
+    if (!sourceLower.includes(inner.substring(0, 25))) {
+      warnings.push({
+        type: 'QUOTE_NOT_IN_SOURCE',
+        detail: `Quote ${q.substring(0, 50)}... not found in source material.`,
+        severity: 'HIGH',
+      })
+    }
+  }
+
+  const scoreMatches = text.match(/\b\d{1,2}\s*[-–]\s*\d{1,2}\b/g) || []
   for (const s of scoreMatches) {
     const plain = s.replace(/\s+/g, '').replace('–', '-')
-    if (!sourceLower.includes(plain) && !sourceLower.includes(s.toLowerCase())) {
-      warnings.push({ text: s.trim(), type: 'statistic' })
-    }
-  }
-
-  const quoteMatches = generated.match(/"[^"]{10,}"/g) || []
-  for (const q of quoteMatches) {
-    const inner = q.slice(1, -1).toLowerCase().trim()
-    if (!sourceLower.includes(inner.substring(0, 25))) {
-      warnings.push({ text: q, type: 'quote' })
-    }
-  }
-
-  const namePattern = /\b[A-Z][a-z]+(?:\s+(?:de|van|von|di|el|al|bin|mc|mac|le|la|dos|das))?(?:\s+[A-Z][a-z]+)+\b/g
-  const nameMatches = generated.match(namePattern) || []
-  const commonWords = new Set(['Premier League', 'Champions League', 'La Liga', 'Serie A', 'Bundesliga', 'Europa League', 'World Cup', 'FA Cup', 'League Cup', 'Community Shield', 'Super Cup', 'Conference League', 'Further Details'])
-  for (const name of nameMatches) {
-    if (commonWords.has(name)) continue
-    if (!sourceLower.includes(name.toLowerCase())) {
-      warnings.push({ text: name, type: 'name' })
+    if (sourceContext && !sourceLower.includes(plain) && !sourceLower.includes(s)) {
+      warnings.push({
+        type: 'SCORE_NOT_IN_SOURCE',
+        detail: `Score "${s}" appears in article but not in source material.`,
+        severity: 'MEDIUM',
+      })
     }
   }
 
   const seen = new Set<string>()
   return warnings.filter(w => {
-    const key = w.text.toLowerCase()
+    const key = w.detail.toLowerCase()
     if (seen.has(key)) return false
     seen.add(key)
     return true

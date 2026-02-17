@@ -82,7 +82,7 @@ export default function EditorPage() {
   const [trendsGeo, setTrendsGeo] = useState('BA')
   const [trendsLoading, setTrendsLoading] = useState(false)
   const [contextLevel, setContextLevel] = useState<string | null>(null)
-  const [factWarnings, setFactWarnings] = useState<{ text: string; type: string }[]>([])
+  const [factCheck, setFactCheck] = useState<{ warnings: { type: string; detail: string; severity: string }[]; warningCount: number; status: string } | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export default function EditorPage() {
               if (result.tiptapContent) setContent(result.tiptapContent)
               setAiResult({ model: result.model, tokensIn: result.tokensIn, tokensOut: result.tokensOut })
               setContextLevel(result.contextLevel || 'full')
-              if (result.factWarnings?.length > 0) setFactWarnings(result.factWarnings)
+              if (result.factCheck?.warnings?.length > 0) setFactCheck(result.factCheck)
               setScreen('editor')
               setSmartNotice(`Rewritten from ${data.domain} — review and edit before publishing`)
               setTimeout(() => setSmartNotice(null), 6000)
@@ -195,6 +195,7 @@ export default function EditorPage() {
               if (result.tiptapContent) setContent(result.tiptapContent)
               setAiResult({ model: result.model, tokensIn: result.tokensIn, tokensOut: result.tokensOut })
               setContextLevel(result.contextLevel || 'headline-only')
+              if (result.factCheck?.warnings?.length > 0) setFactCheck(result.factCheck)
               setScreen('editor')
               setSmartNotice('⚠️ Headline-only — no source article available. Review carefully before publishing.')
               setTimeout(() => setSmartNotice(null), 10000)
@@ -513,22 +514,27 @@ export default function EditorPage() {
         {contextLevel === 'headline-only' && (
           <div className="fact-warning-bar headline-only-warning">
             <span className="fact-warning-icon">⚠️</span>
-            <span>No source article was available. This article was generated from the headline only — MAX 2 sentences. Verify all details before publishing.</span>
+            <span>No source article was available. This article was generated from the headline only — MAX 3 sentences. Verify all details before publishing.</span>
           </div>
         )}
 
-        {factWarnings.length > 0 && (
+        {factCheck && factCheck.warnings.length > 0 && (
           <div className="fact-warning-bar">
             <div className="fact-warning-header">
               <span className="fact-warning-icon">⚠️</span>
-              <span className="fact-warning-title">Unverified Details ({factWarnings.length})</span>
-              <span className="fact-warning-sub">These details were not found in the source article</span>
+              <span className="fact-warning-title">Fact-Check Warnings ({factCheck.warningCount})</span>
+              <span className="fact-warning-sub">
+                {factCheck.status === 'REVIEW_REQUIRED' ? 'Review required — potential hallucinations detected' : 'Some details need verification'}
+              </span>
             </div>
             <div className="fact-warning-list">
-              {factWarnings.map((w, i) => (
-                <span key={i} className={`fact-warning-tag ${w.type}`}>
-                  {w.type === 'quote' ? '💬' : w.type === 'name' ? '👤' : w.type === 'number' ? '💰' : '📊'} {w.text}
-                </span>
+              {factCheck.warnings.map((w, i) => (
+                <div key={i} className="fact-check-item">
+                  <span className={`fact-severity ${w.severity.toLowerCase()}`}>
+                    {w.severity === 'HIGH' ? '🔴' : w.severity === 'MEDIUM' ? '🟡' : '⚪'}
+                  </span>
+                  <span className="fact-check-detail">{w.detail}</span>
+                </div>
               ))}
             </div>
           </div>
