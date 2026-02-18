@@ -185,6 +185,10 @@ export default function CalendarPage() {
   const [addingLang, setAddingLang] = useState(false)
   const [newLangCode, setNewLangCode] = useState('')
 
+  // Run Now
+  const [runningNow, setRunningNow] = useState(false)
+  const [runResult, setRunResult] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null)
+
   // Timeline
   const [tlDate, setTlDate] = useState(() => new Date())
   const [tlView, setTlView] = useState<'Day' | 'Week' | 'Month'>('Day')
@@ -406,6 +410,37 @@ export default function CalendarPage() {
     setAddingLang(false)
   }, [newLangCode, updateConfig, toggleLang])
 
+  const refreshData = useCallback(() => {
+    fetch('/api/autopilot/stats', { credentials: 'include' }).then(r => r.json()).then(setStats).catch(() => {})
+    fetch(`/api/autopilot/timeline?date=${toDateStr(tlDate)}`, { credentials: 'include' })
+      .then(r => r.json()).then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) }).catch(() => {})
+  }, [tlDate])
+
+  const runAutopilotNow = useCallback(async () => {
+    setRunningNow(true)
+    setRunResult(null)
+    try {
+      const res = await fetch('/api/cron/autopilot', { credentials: 'include' })
+      const data = await res.json()
+      if (!res.ok) {
+        setRunResult({ type: 'error', message: data.reason || data.error || 'Request failed' })
+      } else if (data.action === 'generated' && data.article) {
+        setRunResult({ type: 'success', message: `Generated: ${data.article.title}` })
+        refreshData()
+      } else if (data.action === 'skipped') {
+        setRunResult({ type: 'info', message: data.reason || 'Nothing to generate' })
+      } else if (data.action === 'error') {
+        setRunResult({ type: 'error', message: data.reason || 'Generation error' })
+      } else {
+        setRunResult({ type: 'info', message: data.reason || 'No action taken' })
+      }
+    } catch (err) {
+      setRunResult({ type: 'error', message: err instanceof Error ? err.message : 'Network error' })
+    } finally {
+      setRunningNow(false)
+    }
+  }, [refreshData])
+
   /* ── Timeline data ── */
   const today = new Date()
   const isToday = isSameDay(tlDate, today)
@@ -463,7 +498,54 @@ export default function CalendarPage() {
           <div className="cal-stat"><div className="cal-stat-val">{stats.live}</div><div className="cal-stat-lbl">Live Now</div></div>
           <div className="cal-stat"><div className="cal-stat-val">{stats.drafts}</div><div className="cal-stat-lbl">Drafts</div></div>
         </div>
+        <button
+          className="cal-run-now"
+          onClick={runAutopilotNow}
+          disabled={runningNow}
+          style={{
+            marginLeft: 'auto',
+            padding: '6px 16px',
+            fontSize: 12,
+            fontWeight: 700,
+            border: 'none',
+            borderRadius: 8,
+            cursor: runningNow ? 'wait' : 'pointer',
+            background: runningNow ? '#A1A1AA' : '#00D4AA',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {runningNow ? (
+            <><span className="cal-spinner" /> Generating...</>
+          ) : (
+            <><span style={{ fontSize: 14 }}>⚡</span> Run Now</>
+          )}
+        </button>
       </div>
+
+      {/* Run Result Toast */}
+      {runResult && (
+        <div
+          className="cal-fadein"
+          onClick={() => setRunResult(null)}
+          style={{
+            padding: '10px 16px',
+            margin: '0 0 12px',
+            borderRadius: 10,
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+            background: runResult.type === 'success' ? '#DCFCE7' : runResult.type === 'error' ? '#FEE2E2' : '#F0F9FF',
+            color: runResult.type === 'success' ? '#16A34A' : runResult.type === 'error' ? '#DC2626' : '#2563EB',
+            border: `1px solid ${runResult.type === 'success' ? '#BBF7D0' : runResult.type === 'error' ? '#FECACA' : '#BAE6FD'}`,
+          }}
+        >
+          {runResult.type === 'success' ? '✅' : runResult.type === 'error' ? '❌' : 'ℹ️'} {runResult.message}
+        </div>
+      )}
 
       {/* ═══ SECTION 2: Config Panel ═══ */}
       <div className="cal-config cal-fadein" style={{ animationDelay: '.05s' }}>

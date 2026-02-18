@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateContent } from '@/lib/ai/client'
 import { Prisma } from '@prisma/client'
@@ -7,14 +9,23 @@ import { htmlToTiptap } from '@/lib/autopilot'
 export const maxDuration = 30
 
 export async function GET(req: NextRequest) {
+  // Dual auth: Bearer token (cron) or admin session (UI)
   const authHeader = req.headers.get('authorization')
+  let sessionOrgId: string | undefined
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.organizationId || (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    sessionOrgId = session.user.organizationId
   }
 
   try {
+    const where: { isActive: boolean; liveArticles: boolean; orgId?: string } = { isActive: true, liveArticles: true }
+    if (sessionOrgId) where.orgId = sessionOrgId
+
     const configs = await prisma.autopilotConfig.findMany({
-      where: { isActive: true, liveArticles: true },
+      where,
     })
 
     const results: {

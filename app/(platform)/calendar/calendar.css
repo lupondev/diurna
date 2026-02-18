@@ -9,6 +9,8 @@
 .cal-status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00D4AA; box-shadow: 0 0 12px #00D4AA, 0 0 24px rgba(0,212,170,.3); animation: calPulse 2s ease infinite; flex-shrink: 0; }
 .cal-status.paused .cal-status-dot { background: #71717A; box-shadow: none; animation: none; }
 @keyframes calPulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+@keyframes calSpin { to { transform: rotate(360deg); } }
+.cal-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: calSpin .6s linear infinite; }
 .cal-status-label { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #00D4AA; }
 .cal-status.paused .cal-status-label { color: #71717A; }
 .cal-status-stats { display: flex; gap: 20px; margin-left: auto; position: relative; z-index: 1; }

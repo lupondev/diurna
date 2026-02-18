@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateContent } from '@/lib/ai/client'
 import { Prisma } from '@prisma/client'
@@ -13,15 +15,33 @@ import {
 
 export const maxDuration = 60
 
-export async function GET(req: NextRequest) {
+async function authenticate(req: NextRequest): Promise<{ ok: true; orgId?: string } | { ok: false; response: NextResponse }> {
+  // Method 1: Bearer token (cron jobs)
   const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authHeader === `Bearer ${process.env.CRON_SECRET}`) {
+    return { ok: true }
   }
 
+  // Method 2: Session cookie (admin UI)
+  const session = await getServerSession(authOptions)
+  if (session?.user?.organizationId && (session.user.role === 'ADMIN' || session.user.role === 'OWNER')) {
+    return { ok: true, orgId: session.user.organizationId }
+  }
+
+  return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+}
+
+export async function GET(req: NextRequest) {
+  const auth = await authenticate(req)
+  if (!auth.ok) return auth.response
+
   try {
+    // If session-based, only process the user's org
+    const where: { isActive: boolean; orgId?: string } = { isActive: true }
+    if (auth.orgId) where.orgId = auth.orgId
+
     const configs = await prisma.autopilotConfig.findMany({
-      where: { isActive: true },
+      where,
       include: {
         categories: { orderBy: { sortOrder: 'asc' } },
         leagues: { where: { isActive: true } },
@@ -29,11 +49,19 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    const results: { orgId: string; action: string; articleId?: string }[] = []
+    const results: {
+      orgId: string
+      action: string
+      articleId?: string
+      title?: string
+      category?: string
+      status?: string
+      reason?: string
+    }[] = []
 
     for (const config of configs) {
       if (!shouldGenerateNow(config)) {
-        results.push({ orgId: config.orgId, action: 'outside_schedule' })
+        results.push({ orgId: config.orgId, action: 'skipped', reason: 'Outside active schedule' })
         continue
       }
 
@@ -42,7 +70,7 @@ export async function GET(req: NextRequest) {
       })
 
       if (!site) {
-        results.push({ orgId: config.orgId, action: 'no_site' })
+        results.push({ orgId: config.orgId, action: 'skipped', reason: 'No site configured' })
         continue
       }
 
@@ -59,7 +87,7 @@ export async function GET(req: NextRequest) {
       const task = await getNextTask(config, site.id, todayCount)
 
       if (!task) {
-        results.push({ orgId: config.orgId, action: 'no_task_available' })
+        results.push({ orgId: config.orgId, action: 'skipped', reason: 'All quotas met for current hour' })
         continue
       }
 
@@ -107,7 +135,7 @@ export async function GET(req: NextRequest) {
         }
         parsed = JSON.parse(cleaned)
       } catch {
-        results.push({ orgId: config.orgId, action: 'parse_error' })
+        results.push({ orgId: config.orgId, action: 'error', reason: 'Failed to parse AI response' })
         continue
       }
 
@@ -187,14 +215,40 @@ export async function GET(req: NextRequest) {
 
       results.push({
         orgId: config.orgId,
-        action: `generated_${task.priority}`,
+        action: 'generated',
         articleId: article.id,
+        title,
+        category: task.category,
+        status: config.autoPublish ? 'published' : 'draft',
+        reason: `${task.priority}: ${task.category} (${task.categorySlug})`,
       })
     }
 
-    return NextResponse.json({ processed: configs.length, results })
+    // Return structured response
+    const generated = results.filter(r => r.action === 'generated')
+    const skipped = results.filter(r => r.action === 'skipped')
+
+    return NextResponse.json({
+      success: true,
+      processed: configs.length,
+      action: generated.length > 0 ? 'generated' : 'skipped',
+      article: generated[0] ? {
+        id: generated[0].articleId,
+        title: generated[0].title,
+        category: generated[0].category,
+        status: generated[0].status,
+      } : undefined,
+      reason: generated.length > 0
+        ? generated[0].reason
+        : skipped[0]?.reason || 'No active configs',
+      results,
+    })
   } catch (error) {
     console.error('Autopilot cron error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({
+      success: false,
+      action: 'error',
+      reason: error instanceof Error ? error.message : 'Internal server error',
+    }, { status: 500 })
   }
 }
