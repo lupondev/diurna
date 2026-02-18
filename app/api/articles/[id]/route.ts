@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { postToMultiplePages } from '@/lib/facebook'
+import { distributeArticle } from '@/lib/distribution'
 import { z } from 'zod'
 
 const UpdateArticleSchema = z.object({
@@ -134,6 +135,9 @@ export async function PATCH(
       } catch (fbError) {
         console.error('Facebook auto-post error:', fbError)
       }
+
+      // Distribution channels (Twitter, Telegram, Newsletter, etc.)
+      distributeArticle(params.id).catch(err => console.error('Distribution error:', err))
     }
 
     return NextResponse.json(article)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { distributeArticle } from '@/lib/distribution'
 import { z } from 'zod'
 
 const CreateArticleSchema = z.object({
@@ -60,6 +61,11 @@ export async function POST(req: NextRequest) {
         publishedAt: data.status === 'PUBLISHED' ? new Date() : null,
       },
     })
+
+    // Distribute if publishing
+    if (data.status === 'PUBLISHED') {
+      distributeArticle(article.id).catch(err => console.error('Distribution error:', err))
+    }
 
     return NextResponse.json(article, { status: 201 })
   } catch (error) {

@@ -97,6 +97,10 @@ export async function POST(req: NextRequest) {
     const siteName = article.site?.name || 'Diurna'
     const excerpt = article.excerpt || extractExcerpt(article.content as Record<string, unknown>)
 
+    if (!resend) {
+      return NextResponse.json({ error: 'Email service not configured', sent: 0 }, { status: 200 })
+    }
+
     let sent = 0
     let failed = 0
 
@@ -105,7 +109,7 @@ export async function POST(req: NextRequest) {
       const results = await Promise.allSettled(
         batch.map((sub) => {
           const unsubscribeUrl = `${baseUrl}/api/newsletter/unsubscribe?token=${generateUnsubscribeToken(sub.id)}`
-          return resend.emails.send({
+          return resend!.emails.send({
             from: `${siteName} <onboarding@resend.dev>`,
             to: sub.email,
             subject: article.title,

@@ -178,8 +178,9 @@ model Article {
   publishedAt  DateTime?
   scheduledAt  DateTime?
 
-  metaTitle       String?
-  metaDescription String?
+  metaTitle          String?
+  metaDescription    String?
+  distributionStatus Json?
 
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
