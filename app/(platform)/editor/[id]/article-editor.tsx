@@ -1,13 +1,18 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import '../editor.css'
 
 const TiptapEditor = dynamic(() => import('@/components/editor/tiptap-editor'), {
   ssr: false,
-  loading: () => <div style={{ minHeight: 400, background: 'var(--wh)', border: '1px solid var(--brd)', borderRadius: 'var(--rl)', animation: 'pulse 2s infinite' }} />,
+  loading: () => <div className="te-loading" />,
+})
+
+const AISidebar = dynamic(() => import('@/components/editor/ai-sidebar').then(m => ({ default: m.AISidebar })), {
+  ssr: false,
+  loading: () => null,
 })
 
 type Version = { id: string; version: number; title: string; content: Record<string, unknown>; createdAt: string }
@@ -29,18 +34,21 @@ export default function ArticleEditor({ id }: { id: string }) {
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [aiGenerated, setAiGenerated] = useState(false)
-
   const [showSchedule, setShowSchedule] = useState(false)
   const [scheduledAt, setScheduledAt] = useState('')
-
   const [showHistory, setShowHistory] = useState(false)
   const [versions, setVersions] = useState<Version[]>([])
-
   const [sendNewsletter, setSendNewsletter] = useState(false)
   const [articleTags, setArticleTags] = useState<TagItem[]>([])
   const [allTags, setAllTags] = useState<TagItem[]>([])
   const [tagInput, setTagInput] = useState('')
   const [showTagSuggestions, setShowTagSuggestions] = useState(false)
+  const [showAI, setShowAI] = useState(false)
+  const [showSEO, setShowSEO] = useState(false)
+  const [metaTitle, setMetaTitle] = useState('')
+  const [metaDesc, setMetaDesc] = useState('')
+  const editorRef = useRef<unknown>(null)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     fetch(`/api/articles/${id}`)
@@ -52,6 +60,8 @@ export default function ArticleEditor({ id }: { id: string }) {
         setStatus(data.status || 'DRAFT')
         setSlug(data.slug || '')
         setAiGenerated(data.aiGenerated || false)
+        setMetaTitle(data.metaTitle || '')
+        setMetaDesc(data.metaDescription || '')
         if (data.scheduledAt) setScheduledAt(new Date(data.scheduledAt).toISOString().slice(0, 16))
         if (data.versions) setVersions(data.versions)
         if (data.tags) setArticleTags(data.tags.map((t: ArticleTag) => t.tag))
@@ -67,10 +77,48 @@ export default function ArticleEditor({ id }: { id: string }) {
     if (!slugEdited) setSlug(slugify(val))
   }, [slugEdited])
 
+  // Auto-save every 30s
+  const autoSave = useCallback(async () => {
+    if (!title.trim() || saving) return
+    try {
+      await fetch(`/api/articles/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content }),
+      })
+    } catch {}
+  }, [id, title, content, saving])
+
+  useEffect(() => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(autoSave, 30000)
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  }, [autoSave])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
+        handleSave()
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault()
+        handleSave('PUBLISHED')
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, content, status])
+
   async function handleSave(newStatus?: string) {
     setSaving(true)
     try {
-      const body: Record<string, unknown> = { title, content, status: newStatus || status, slug }
+      const body: Record<string, unknown> = {
+        title, content, status: newStatus || status, slug,
+        metaTitle: metaTitle || undefined,
+        metaDescription: metaDesc || undefined,
+      }
       if (newStatus === 'SCHEDULED' && scheduledAt) {
         body.scheduledAt = scheduledAt
         body.status = 'SCHEDULED'
@@ -78,16 +126,14 @@ export default function ArticleEditor({ id }: { id: string }) {
       body.tagIds = articleTags.map((t) => t.id)
 
       const res = await fetch(`/api/articles/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       if (res.ok) {
         if (newStatus) setStatus(newStatus)
         if (sendNewsletter && newStatus === 'PUBLISHED') {
           fetch('/api/newsletter/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ articleId: id }),
           }).catch(console.error)
           setSendNewsletter(false)
@@ -101,16 +147,14 @@ export default function ArticleEditor({ id }: { id: string }) {
       } else if (res.status === 409) {
         alert('This slug is already taken. Please choose a different one.')
       }
-    } catch {} finally {
-      setSaving(false)
-    }
+    } catch {} finally { setSaving(false) }
   }
 
   async function handleDelete() {
     if (!confirm('Are you sure you want to delete this article?')) return
     try {
       const res = await fetch(`/api/articles/${id}`, { method: 'DELETE' })
-      if (res.ok) { router.push('/newsroom'); router.refresh() }
+      if (res.ok) { router.push('/articles'); router.refresh() }
     } catch {}
   }
 
@@ -124,29 +168,15 @@ export default function ArticleEditor({ id }: { id: string }) {
   async function addTag(name: string) {
     const existing = allTags.find((t) => t.name.toLowerCase() === name.toLowerCase())
     if (existing) {
-      if (!articleTags.find((t) => t.id === existing.id)) {
-        setArticleTags((prev) => [...prev, existing])
-      }
+      if (!articleTags.find((t) => t.id === existing.id)) setArticleTags((prev) => [...prev, existing])
     } else {
       try {
-        const res = await fetch('/api/tags', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name }),
-        })
-        if (res.ok) {
-          const tag = await res.json()
-          setAllTags((prev) => [...prev, tag])
-          setArticleTags((prev) => [...prev, tag])
-        }
+        const res = await fetch('/api/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) })
+        if (res.ok) { const tag = await res.json(); setAllTags((prev) => [...prev, tag]); setArticleTags((prev) => [...prev, tag]) }
       } catch {}
     }
     setTagInput('')
     setShowTagSuggestions(false)
-  }
-
-  function removeTag(tagId: string) {
-    setArticleTags((prev) => prev.filter((t) => t.id !== tagId))
   }
 
   const tagSuggestions = allTags.filter((t) =>
@@ -163,12 +193,13 @@ export default function ArticleEditor({ id }: { id: string }) {
   }
 
   const statusLabel = status === 'DRAFT' ? 'Draft' : status === 'IN_REVIEW' ? 'In Review' : status === 'SCHEDULED' ? 'Scheduled' : status === 'PUBLISHED' ? 'Published' : status
-  const statusCls = status === 'PUBLISHED' ? 'published' : status === 'DRAFT' ? 'draft' : status === 'SCHEDULED' ? 'in-review' : 'in-review'
+  const statusCls = status === 'PUBLISHED' ? 'published' : status === 'DRAFT' ? 'draft' : 'in-review'
 
   return (
-    <div>
+    <div className="editor-layout">
+      {/* Top bar */}
       <div className="ed-top">
-        <button className="ed-back" onClick={() => router.push('/newsroom')}>← Newsroom</button>
+        <button className="ed-back" onClick={() => router.push('/articles')}>← Articles</button>
         <div className="ed-title-bar">
           Edit Article
           {aiGenerated && <span className="badge-ai">AI</span>}
@@ -176,7 +207,7 @@ export default function ArticleEditor({ id }: { id: string }) {
         </div>
         <button className="ed-btn ed-btn-secondary" onClick={() => setShowHistory(true)}>🕐 History</button>
         <button className="ed-btn ed-btn-secondary" onClick={() => setShowSchedule(true)}>📅 Schedule</button>
-        <button className="ed-btn ed-btn-secondary" onClick={handleDelete}>🗑️ Delete</button>
+        <button className="ed-btn ed-btn-secondary" onClick={handleDelete}>🗑️</button>
         <button className="ed-btn ed-btn-secondary" onClick={() => handleSave()} disabled={saving}>
           💾 {saving ? 'Saving...' : 'Save'}
         </button>
@@ -184,7 +215,7 @@ export default function ArticleEditor({ id }: { id: string }) {
           <>
             <label className="ed-nl-check">
               <input type="checkbox" checked={sendNewsletter} onChange={(e) => setSendNewsletter(e.target.checked)} />
-              <span>📧 Newsletter</span>
+              <span>📧</span>
             </label>
             <button className="ed-btn ed-btn-primary" onClick={() => handleSave('PUBLISHED')} disabled={saving}>
               ⚡ Publish
@@ -193,71 +224,99 @@ export default function ArticleEditor({ id }: { id: string }) {
         )}
       </div>
 
-      <div className="ed-form">
-        <input
-          type="text"
-          className="ed-title-input"
-          placeholder="Article title..."
-          value={title}
-          onChange={(e) => handleTitleChange(e.target.value)}
-        />
+      <div className="editor-main">
+        {/* LEFT: Editor */}
+        <div className="editor-left">
+          <div className="ed-form">
+            <input type="text" className="ed-title-input" placeholder="Article title..."
+              value={title} onChange={(e) => handleTitleChange(e.target.value)} />
 
-        <div className="ed-meta">
-          <div className="ed-slug-row">
-            <span className="ed-slug-label">Slug:</span>
-            <input
-              type="text"
-              className="ed-slug-input"
-              value={slug}
-              onChange={(e) => { setSlug(slugify(e.target.value)); setSlugEdited(true) }}
-              placeholder="article-slug"
-            />
-          </div>
-
-          <div className="ed-tags-row">
-            <span className="ed-slug-label">Tags:</span>
-            <div className="ed-tags-container">
-              {articleTags.map((t) => (
-                <span key={t.id} className="ed-tag">
-                  {t.name}
-                  <button className="ed-tag-remove" onClick={() => removeTag(t.id)}>×</button>
-                </span>
-              ))}
-              <div className="ed-tag-input-wrap">
-                <input
-                  type="text"
-                  className="ed-tag-input"
-                  placeholder="Add tag..."
-                  value={tagInput}
-                  onChange={(e) => { setTagInput(e.target.value); setShowTagSuggestions(true) }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && tagInput.trim()) { e.preventDefault(); addTag(tagInput.trim()) }
-                  }}
-                  onFocus={() => setShowTagSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)}
-                />
-                {showTagSuggestions && tagSuggestions.length > 0 && (
-                  <div className="ed-tag-suggestions">
-                    {tagSuggestions.slice(0, 6).map((t) => (
-                      <div key={t.id} className="ed-tag-suggestion" onMouseDown={() => addTag(t.name)}>
-                        {t.name}
+            <div className="ed-meta">
+              <div className="ed-slug-row">
+                <span className="ed-slug-label">Slug:</span>
+                <input type="text" className="ed-slug-input"
+                  value={slug} onChange={(e) => { setSlug(slugify(e.target.value)); setSlugEdited(true) }}
+                  placeholder="article-slug" />
+              </div>
+              <div className="ed-tags-row">
+                <span className="ed-slug-label">Tags:</span>
+                <div className="ed-tags-container">
+                  {articleTags.map((t) => (
+                    <span key={t.id} className="ed-tag">
+                      {t.name}
+                      <button className="ed-tag-remove" onClick={() => setArticleTags((prev) => prev.filter((p) => p.id !== t.id))}>×</button>
+                    </span>
+                  ))}
+                  <div className="ed-tag-input-wrap">
+                    <input type="text" className="ed-tag-input" placeholder="Add tag..."
+                      value={tagInput}
+                      onChange={(e) => { setTagInput(e.target.value); setShowTagSuggestions(true) }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && tagInput.trim()) { e.preventDefault(); addTag(tagInput.trim()) } }}
+                      onFocus={() => setShowTagSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)} />
+                    {showTagSuggestions && tagSuggestions.length > 0 && (
+                      <div className="ed-tag-suggestions">
+                        {tagSuggestions.slice(0, 6).map((t) => (
+                          <div key={t.id} className="ed-tag-suggestion" onMouseDown={() => addTag(t.name)}>{t.name}</div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
+
+            {initialContent && (
+              <TiptapEditor
+                content={initialContent}
+                onChange={(json) => setContent(json)}
+                onEditorReady={(e) => { editorRef.current = e }}
+              />
+            )}
+          </div>
+
+          {/* Bottom: SEO */}
+          <div className="ed-bottom">
+            <button className="ed-seo-toggle" onClick={() => setShowSEO(!showSEO)}>
+              {showSEO ? '▾' : '▸'} SEO Settings
+            </button>
+            {showSEO && (
+              <div className="ed-seo-panel">
+                <div className="ed-seo-field">
+                  <label>Meta Title</label>
+                  <input type="text" value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} placeholder={title} maxLength={60} />
+                  <span className="ed-seo-count">{(metaTitle || title).length}/60</span>
+                </div>
+                <div className="ed-seo-field">
+                  <label>Meta Description</label>
+                  <textarea value={metaDesc} onChange={(e) => setMetaDesc(e.target.value)} placeholder="Article description..." maxLength={155} rows={2} />
+                  <span className="ed-seo-count">{metaDesc.length}/155</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {initialContent && (
-          <TiptapEditor
-            content={initialContent}
-            onChange={(json) => setContent(json)}
-          />
+        {/* RIGHT: AI Sidebar */}
+        {showAI && (
+          <div className="editor-right">
+            <AISidebar
+              editor={editorRef.current as import('@tiptap/react').Editor | null}
+              onGenerate={(result) => {
+                if (result.title) setTitle(result.title)
+                if (result.content) { setContent(result.content); setInitialContent(result.content) }
+              }}
+            />
+          </div>
         )}
       </div>
 
+      {/* Floating AI toggle */}
+      <button className="ai-toggle-btn" onClick={() => setShowAI(!showAI)} title="Toggle AI Co-Pilot">
+        {showAI ? '✕' : '🤖'} {showAI ? '' : 'AI'}
+      </button>
+
+      {/* Schedule modal */}
       {showSchedule && (
         <div className="ed-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowSchedule(false) }}>
           <div className="ed-modal">
@@ -267,37 +326,24 @@ export default function ArticleEditor({ id }: { id: string }) {
             </div>
             <div className="ed-modal-body">
               <label className="ed-modal-label">Publish date and time</label>
-              <input
-                type="datetime-local"
-                className="ed-schedule-input"
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
-              />
+              <input type="datetime-local" className="ed-schedule-input" value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)} min={new Date().toISOString().slice(0, 16)} />
               {scheduledAt && (
                 <div className="ed-schedule-preview">
-                  Will publish on {new Date(scheduledAt).toLocaleString('en-GB', {
-                    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
-                  })}
+                  Will publish on {new Date(scheduledAt).toLocaleString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </div>
               )}
               <div className="ed-modal-actions">
-                <button className="ed-btn ed-btn-secondary" onClick={() => { setScheduledAt(''); setShowSchedule(false) }}>
-                  Clear Schedule
-                </button>
-                <button
-                  className="ed-btn ed-btn-primary"
-                  disabled={!scheduledAt}
-                  onClick={() => { handleSave('SCHEDULED'); setShowSchedule(false) }}
-                >
-                  📅 Schedule
-                </button>
+                <button className="ed-btn ed-btn-secondary" onClick={() => { setScheduledAt(''); setShowSchedule(false) }}>Clear</button>
+                <button className="ed-btn ed-btn-primary" disabled={!scheduledAt}
+                  onClick={() => { handleSave('SCHEDULED'); setShowSchedule(false) }}>📅 Schedule</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* History modal */}
       {showHistory && (
         <div className="ed-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowHistory(false) }}>
           <div className="ed-modal">
@@ -307,7 +353,7 @@ export default function ArticleEditor({ id }: { id: string }) {
             </div>
             <div className="ed-modal-body">
               {versions.length === 0 ? (
-                <div className="ed-history-empty">No previous versions yet. Save the article to create a version.</div>
+                <div className="ed-history-empty">No previous versions yet.</div>
               ) : (
                 <div className="ed-history-list">
                   {versions.map((v) => (
@@ -316,14 +362,10 @@ export default function ArticleEditor({ id }: { id: string }) {
                         <div className="ed-history-ver">v{v.version}</div>
                         <div className="ed-history-title">{v.title}</div>
                         <div className="ed-history-date">
-                          {new Date(v.createdAt).toLocaleString('en-GB', {
-                            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                          })}
+                          {new Date(v.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
-                      <button className="ed-btn ed-btn-secondary" onClick={() => restoreVersion(v)}>
-                        Restore
-                      </button>
+                      <button className="ed-btn ed-btn-secondary" onClick={() => restoreVersion(v)}>Restore</button>
                     </div>
                   ))}
                 </div>
