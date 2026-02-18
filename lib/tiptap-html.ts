@@ -220,7 +220,14 @@ function renderChildren(node: TiptapNode): string {
 }
 
 export function tiptapToHtml(doc: unknown): string {
-  if (!doc || typeof doc !== 'object') return ''
+  if (!doc) return ''
+  // Raw HTML string passthrough
+  if (typeof doc === 'string') return doc
+  if (typeof doc !== 'object') return ''
+  // { html: "..." } format — raw HTML stored in wrapper
+  const obj = doc as Record<string, unknown>
+  if (typeof obj.html === 'string') return obj.html
+  // Standard Tiptap JSON
   const root = doc as TiptapNode
   if (root.type !== 'doc' || !root.content) return ''
   return root.content.map(renderNode).join('')

@@ -426,6 +426,37 @@ function safeParseJson<T>(json: string | undefined, fallback: T): T {
   try { return JSON.parse(json) } catch { return fallback }
 }
 
+/** Normalize gallery images — accept { url, caption } or { src, caption } */
+function normalizeGalleryImages(raw: unknown[]): { src: string; caption: string }[] {
+  return raw.map((img: unknown) => {
+    const o = img as Record<string, string>
+    return { src: o.src || o.url || '', caption: o.caption || '' }
+  })
+}
+
+/** Normalize sources — accept string[] or { name, url }[] */
+function normalizeSources(raw: unknown[]): { name: string; url: string }[] {
+  if (raw.length === 0) return []
+  if (typeof raw[0] === 'string') {
+    return (raw as string[]).map((name) => ({ name, url: '#' }))
+  }
+  return raw as { name: string; url: string }[]
+}
+
+/** Build player stats from individual data attributes */
+function buildPlayerStats(data: Record<string, string>): { label: string; value: string }[] {
+  // Try parsed JSON stats first
+  const parsed = safeParseJson<{ label: string; value: string }[]>(data.stats, [])
+  if (parsed.length > 0) return parsed
+  // Build from individual attributes
+  const stats: { label: string; value: string }[] = []
+  if (data.rating) stats.push({ label: 'Ocjena', value: data.rating })
+  if (data.goals) stats.push({ label: 'Golovi', value: data.goals })
+  if (data.assists) stats.push({ label: 'Asistencije', value: data.assists })
+  if (data['market-value']) stats.push({ label: 'Vrijednost', value: data['market-value'] })
+  return stats
+}
+
 /* ═══════════════════════════════════════════════════
    Portal — replaces placeholder element with React
    ═══════════════════════════════════════════════════ */
@@ -509,18 +540,18 @@ export function ArticleRenderer({ html }: { html: string }) {
               number={w.data.number || ''}
               nationality={w.data.nationality || ''}
               image={w.data.image || ''}
-              stats={safeParseJson<{ label: string; value: string }[]>(w.data.stats, [])}
+              stats={buildPlayerStats(w.data)}
             />
           )}
           {w.type === 'video' && (
             <VideoWidget
-              src={w.data.src || ''}
-              title={w.data.title || ''}
+              src={w.data.src || w.data.url || ''}
+              title={w.data.title || w.data.caption || ''}
             />
           )}
           {w.type === 'gallery' && (
             <GalleryWidget
-              images={safeParseJson<{ src: string; caption: string }[]>(w.data.images, [])}
+              images={normalizeGalleryImages(safeParseJson<unknown[]>(w.data.images, []))}
             />
           )}
           {w.type === 'match' && (
@@ -529,22 +560,22 @@ export function ArticleRenderer({ html }: { html: string }) {
               away={w.data.away || ''}
               score={w.data.score || '0-0'}
               date={w.data.date || ''}
-              competition={w.data.competition || ''}
+              competition={w.data.competition || w.data.league || ''}
               stadium={w.data.stadium || ''}
             />
           )}
           {w.type === 'social-embed' && (
             <SocialEmbedWidget
-              platform={w.data.platform || ''}
+              platform={w.data.platform || 'twitter'}
               author={w.data.author || ''}
-              handle={w.data.handle || ''}
+              handle={w.data.handle || w.data.author || ''}
               text={w.data.text || ''}
-              date={w.data.date || ''}
+              date={w.data.date || w.data.timestamp || ''}
             />
           )}
           {w.type === 'sources' && (
             <SourcesWidget
-              sources={safeParseJson<{ name: string; url: string }[]>(w.data.sources, [])}
+              sources={normalizeSources(safeParseJson<unknown[]>(w.data.sources, []))}
             />
           )}
         </WidgetPortal>
