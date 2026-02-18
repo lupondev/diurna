@@ -697,6 +697,7 @@ model AutopilotConfig {
 
   contentStyle    String   @default("signal_only")
   translateLang   String   @default("bs")
+  translateLanguages String[] @default(["bs"])
   alwaysCreditSources Boolean @default(true)
   linkOriginal    Boolean  @default(true)
   addSourceTag    Boolean  @default(true)

@@ -22,6 +22,7 @@ type AutopilotConfig = {
   gapHours: number
   contentStyle: string
   translateLang: string
+  translateLanguages: string[]
   alwaysCreditSources: boolean
   linkOriginal: boolean
   addSourceTag: boolean
@@ -169,7 +170,7 @@ export default function CalendarPage() {
   const [showAllSources, setShowAllSources] = useState(false)
 
   // Config panel
-  const [configOpen, setConfigOpen] = useState(true)
+  const [configOpen, setConfigOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('output')
   const [addingCat, setAddingCat] = useState(false)
   const [newCat, setNewCat] = useState({ name: '', slug: '', color: '#3B82F6', percentage: 10 })
@@ -179,6 +180,10 @@ export default function CalendarPage() {
   const [newTopic, setNewTopic] = useState({ name: '', icon: '', keywords: '' })
   const [addingChannel, setAddingChannel] = useState(false)
   const [newChannel, setNewChannel] = useState({ platform: 'twitter', accountName: '', filter: 'all' })
+  const [addingSource, setAddingSource] = useState(false)
+  const [newSource, setNewSource] = useState({ name: '', url: '', tier: 2 })
+  const [addingLang, setAddingLang] = useState(false)
+  const [newLangCode, setNewLangCode] = useState('')
 
   // Timeline
   const [tlDate, setTlDate] = useState(() => new Date())
@@ -339,6 +344,67 @@ export default function CalendarPage() {
       setAddingChannel(false)
     }).catch(() => {})
   }, [newChannel])
+
+  const toggleChannel = useCallback((id: string, isActive: boolean) => {
+    setConfig(prev => prev ? { ...prev, channels: prev.channels.map(c => c.id === id ? { ...c, isActive } : c) } : prev)
+    fetch(`/api/autopilot/channels/${id}`, {
+      method: 'PUT', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive }),
+    }).catch(() => {})
+  }, [])
+
+  const togglePlatformChannels = useCallback((platform: string, isActive: boolean) => {
+    setConfig(prev => {
+      if (!prev) return prev
+      const updated = prev.channels.map(c => c.platform === platform ? { ...c, isActive } : c)
+      // Fire API calls for each channel
+      prev.channels.filter(c => c.platform === platform).forEach(c => {
+        fetch(`/api/autopilot/channels/${c.id}`, {
+          method: 'PUT', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isActive }),
+        }).catch(() => {})
+      })
+      return { ...prev, channels: updated }
+    })
+  }, [])
+
+  const addSource = useCallback(() => {
+    if (!newSource.name || !newSource.url) return
+    const id = `src-${Date.now()}`
+    setSources(prev => [...prev, { id, name: newSource.name, tier: newSource.tier, active: true, category: 'breaking' }])
+    setNewSource({ name: '', url: '', tier: 2 })
+    setAddingSource(false)
+  }, [newSource])
+
+  const toggleLang = useCallback((code: string) => {
+    setConfig(prev => {
+      if (!prev) return prev
+      const langs = prev.translateLanguages || ['bs']
+      const next = langs.includes(code) ? langs.filter(l => l !== code) : [...langs, code]
+      if (next.length === 0) return prev // must have at least one
+      updateConfig({ translateLanguages: next })
+      return { ...prev, translateLanguages: next }
+    })
+  }, [updateConfig])
+
+  const addCustomLang = useCallback(() => {
+    if (!newLangCode.trim()) return
+    const code = newLangCode.trim().toLowerCase()
+    if (LANGS.find(l => l.code === code)) { toggleLang(code); setNewLangCode(''); setAddingLang(false); return }
+    // Add to translate languages
+    setConfig(prev => {
+      if (!prev) return prev
+      const langs = prev.translateLanguages || ['bs']
+      if (langs.includes(code)) return prev
+      const next = [...langs, code]
+      updateConfig({ translateLanguages: next })
+      return { ...prev, translateLanguages: next }
+    })
+    setNewLangCode('')
+    setAddingLang(false)
+  }, [newLangCode, updateConfig, toggleLang])
 
   /* ── Timeline data ── */
   const today = new Date()
@@ -591,6 +657,22 @@ export default function CalendarPage() {
                       <button className="cfg-add-btn" style={{ marginTop: 0 }} onClick={() => setShowAllSources(true)}>Show all</button>
                     )}
                   </div>
+                  {addingSource ? (
+                    <div className="cfg-inline-form" style={{ marginTop: 12 }}>
+                      <input className="cfg-input" placeholder="Source name" value={newSource.name} onChange={e => setNewSource({ ...newSource, name: e.target.value })} style={{ flex: 1 }} />
+                      <input className="cfg-input" placeholder="RSS URL" value={newSource.url} onChange={e => setNewSource({ ...newSource, url: e.target.value })} style={{ flex: 2 }} />
+                      <select className="cfg-input" value={newSource.tier} onChange={e => setNewSource({ ...newSource, tier: +e.target.value })}>
+                        <option value={1}>Tier 1</option>
+                        <option value={2}>Tier 2</option>
+                        <option value={3}>Tier 3</option>
+                        <option value={4}>Tier 4</option>
+                      </select>
+                      <button className="cfg-save-btn" onClick={addSource}>Save</button>
+                      <button className="cfg-cancel-btn" onClick={() => setAddingSource(false)}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button className="cfg-add-btn" onClick={() => setAddingSource(true)}>+ Add Source</button>
+                  )}
                 </div>
               )}
 
@@ -599,16 +681,21 @@ export default function CalendarPage() {
                 <div>
                   {DIST_PLATFORMS.map(dp => {
                     const channels = config.channels.filter(c => c.platform === dp.platform)
+                    const allActive = channels.length > 0 && channels.every(c => c.isActive)
+                    const someActive = channels.some(c => c.isActive)
                     return (
-                      <div key={dp.platform} className="cfg-dist-group">
+                      <div key={dp.platform} className="cfg-dist-group" style={{ opacity: channels.length > 0 && !someActive ? 0.5 : 1 }}>
                         <div className="cfg-dist-head">
                           <span className="cfg-dist-icon">{dp.icon}</span>
                           <span className="cfg-dist-name">{dp.label}</span>
                           <span className="cfg-dist-count">{channels.length} account{channels.length !== 1 ? 's' : ''}</span>
-                          <Toggle checked={channels.some(c => c.isActive)} onChange={() => {}} />
+                          {channels.length > 0 && (
+                            <Toggle checked={allActive} onChange={v => togglePlatformChannels(dp.platform, v)} />
+                          )}
                         </div>
                         {channels.map(ch => (
-                          <div key={ch.id} className="cfg-dist-acct">
+                          <div key={ch.id} className="cfg-dist-acct" style={{ opacity: ch.isActive ? 1 : 0.4 }}>
+                            <Toggle checked={ch.isActive} onChange={v => toggleChannel(ch.id, v)} />
                             <span className="cfg-dist-acct-name">{ch.accountName}</span>
                             <span className="cfg-dist-acct-filter">{ch.filter}</span>
                             {ch.followers && <span className="cfg-dist-acct-followers">{ch.followers}</span>}
@@ -652,12 +739,28 @@ export default function CalendarPage() {
                         </div>
                         <div className="cfg-style-desc">{opt.desc}</div>
                         {opt.value === 'translate_only' && config.contentStyle === 'translate_only' && (
-                          <div className="cfg-tone-chips" style={{ marginTop: 8 }}>
+                          <div className="cfg-tone-chips" style={{ marginTop: 8, flexWrap: 'wrap' }}>
                             {LANGS.map(l => (
-                              <span key={l.code} className={`cfg-lang-chip${config.translateLang === l.code ? ' act' : ''}`} onClick={e => { e.stopPropagation(); updateConfig({ translateLang: l.code }) }}>
+                              <span key={l.code} className={`cfg-lang-chip${(config.translateLanguages || []).includes(l.code) ? ' act' : ''}`} onClick={e => { e.stopPropagation(); toggleLang(l.code) }}>
                                 {l.label}
                               </span>
                             ))}
+                            {(config.translateLanguages || []).filter(code => !LANGS.find(l => l.code === code)).map(code => (
+                              <span key={code} className="cfg-lang-chip act" onClick={e => { e.stopPropagation(); toggleLang(code) }}>
+                                {code.toUpperCase()} ✕
+                              </span>
+                            ))}
+                            {addingLang ? (
+                              <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                                <input className="cfg-input cfg-input-sm" placeholder="Code" value={newLangCode} onChange={e => setNewLangCode(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addCustomLang() }} style={{ width: 60, fontSize: 11 }} autoFocus />
+                                <button className="cfg-save-btn" style={{ fontSize: 10, padding: '2px 6px' }} onClick={addCustomLang}>+</button>
+                                <button className="cfg-cancel-btn" style={{ fontSize: 10, padding: '2px 6px' }} onClick={() => setAddingLang(false)}>✕</button>
+                              </span>
+                            ) : (
+                              <span className="cfg-lang-chip" style={{ cursor: 'pointer', border: '1px dashed #A1A1AA' }} onClick={e => { e.stopPropagation(); setAddingLang(true) }}>
+                                + Add
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
