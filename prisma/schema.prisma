@@ -675,3 +675,107 @@ model MatchResult {
   @@index([matchDate])
   @@index([homeTeam, awayTeam])
 }
+
+model AutopilotConfig {
+  id              String   @id @default(cuid())
+  orgId           String   @unique
+
+  dailyTarget     Int      @default(200)
+  defaultLength   Int      @default(800)
+  scheduleStart   String   @default("08:00")
+  scheduleEnd     String   @default("00:00")
+  is24h           Boolean  @default(false)
+
+  autoPublish     Boolean  @default(true)
+  matchAutoCoverage Boolean @default(true)
+  liveArticles    Boolean  @default(true)
+  breakingNews    Boolean  @default(true)
+  breakingThreshold Int    @default(70)
+  gapDetection    Boolean  @default(true)
+  gapHours        Int      @default(2)
+
+  contentStyle    String   @default("signal_only")
+  translateLang   String   @default("bs")
+  alwaysCreditSources Boolean @default(true)
+  linkOriginal    Boolean  @default(true)
+  addSourceTag    Boolean  @default(true)
+  tone            String   @default("neutral")
+
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  categories      AutopilotCategory[]
+  leagues         AutopilotLeague[]
+  topics          AutopilotTopic[]
+  channels        DistributionChannel[]
+}
+
+model AutopilotCategory {
+  id              String   @id @default(cuid())
+  configId        String
+  config          AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  name            String
+  slug            String
+  color           String
+  percentage      Int      @default(10)
+
+  widgetPoll      Boolean  @default(false)
+  widgetQuiz      Boolean  @default(false)
+  widgetStats     Boolean  @default(false)
+  widgetPlayer    Boolean  @default(false)
+  widgetVideo     Boolean  @default(false)
+  widgetGallery   Boolean  @default(false)
+
+  sortOrder       Int      @default(0)
+
+  @@unique([configId, slug])
+  @@index([configId])
+}
+
+model AutopilotLeague {
+  id              String   @id @default(cuid())
+  configId        String
+  config          AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  name            String
+  apiFootballId   Int?
+  flag            String?
+  weight          Int      @default(10)
+  isActive        Boolean  @default(true)
+
+  @@unique([configId, apiFootballId])
+  @@index([configId])
+}
+
+model AutopilotTopic {
+  id              String   @id @default(cuid())
+  configId        String
+  config          AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  name            String
+  icon            String?
+  keywords        String[]
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+
+  @@index([configId])
+}
+
+model DistributionChannel {
+  id              String   @id @default(cuid())
+  configId        String
+  config          AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  platform        String
+  accountName     String
+  accountId       String?
+  followers       String?
+  filter          String   @default("all")
+  isActive        Boolean  @default(true)
+
+  @@index([configId])
+}

@@ -13,10 +13,9 @@ const sections: NavSection[] = [
   {
     label: 'Main',
     items: [
-      { label: 'Dashboard', icon: '📊', href: '/dashboard' },
       { label: 'Newsroom', icon: '📰', href: '/newsroom', badge: '12' },
-      { label: 'AI Co-Pilot', icon: '🤖', href: '/copilot' },
       { label: 'Editor', icon: '✍️', href: '/editor' },
+      { label: 'Calendar', icon: '📅', href: '/calendar' },
       { label: 'Articles', icon: '📄', href: '/articles' },
     ],
   },
@@ -26,8 +25,6 @@ const sections: NavSection[] = [
       { label: 'Widgets', icon: '🧩', href: '/widgets' },
       { label: 'Widget Creator', icon: '🛠️', href: '/widget-creator' },
       { label: 'Media', icon: '🖼️', href: '/media' },
-      { label: 'Calendar', icon: '📅', href: '/calendar' },
-      { label: 'Analytics', icon: '📈', href: '/analytics' },
     ],
   },
   {
