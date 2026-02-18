@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 type EntityDef = { name: string; type: string; aliases: string[]; metadata?: Record<string, unknown> }
 
@@ -289,7 +291,16 @@ const NOTABLE: EntityDef[] = [
   { name: 'David Ornstein', type: 'JOURNALIST', aliases: ['Ornstein', 'Orny'] },
 ]
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const auth = req.headers.get('authorization')
+  const session = await getServerSession(authOptions)
+  const isCron = auth === `Bearer ${process.env.CRON_SECRET}` || auth === `Bearer ${process.env.FOOTBALL_API_KEY}`
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'OWNER'
+
+  if (!isCron && !isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const ALL_ENTITIES = [...PLAYERS, ...CLUBS, ...COMPETITIONS, ...MANAGERS, ...VENUES, ...NOTABLE]
 
   let created = 0

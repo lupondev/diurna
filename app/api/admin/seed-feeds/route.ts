@@ -1,4 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 const DEFAULT_FEEDS = [
@@ -73,7 +75,16 @@ const DEFAULT_FEEDS = [
   { name: 'Google News Football', url: 'https://news.google.com/rss/search?q=%22Premier+League%22+OR+%22Champions+League%22+OR+%22La+Liga%22+OR+%22Serie+A%22+OR+%22Bundesliga%22&hl=en', tier: 3, category: 'breaking', country: 'global' },
 ]
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const auth = req.headers.get('authorization')
+  const session = await getServerSession(authOptions)
+  const isCron = auth === `Bearer ${process.env.CRON_SECRET}` || auth === `Bearer ${process.env.FOOTBALL_API_KEY}`
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'OWNER'
+
+  if (!isCron && !isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   let created = 0
   for (const feed of DEFAULT_FEEDS) {
     try {

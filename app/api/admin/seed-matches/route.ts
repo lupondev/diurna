@@ -1,7 +1,18 @@
 import { prisma } from '@/lib/prisma'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = req.headers.get('authorization')
+  const session = await getServerSession(authOptions)
+  const isCron = auth === `Bearer ${process.env.CRON_SECRET}` || auth === `Bearer ${process.env.FOOTBALL_API_KEY}`
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'OWNER'
+
+  if (!isCron && !isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   if (!process.env.API_FOOTBALL_KEY) {
     return NextResponse.json({ error: 'API_FOOTBALL_KEY not set. Set it in Vercel env vars to enable match verification.' })
   }

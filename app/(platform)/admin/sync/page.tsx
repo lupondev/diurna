@@ -27,7 +27,7 @@ export default function SyncPage() {
   async function runJob(index: number) {
     setResults(prev => prev.map((r, i) => i === index ? { ...r, status: 'running' } : r))
     try {
-      const res = await fetch(SYNC_JOBS[index].path, { method: 'POST' })
+      const res = await fetch(SYNC_JOBS[index].path, { method: 'POST', credentials: 'include' })
       const data = await res.json()
       setResults(prev => prev.map((r, i) => i === index ? { ...r, status: 'done', data } : r))
     } catch {

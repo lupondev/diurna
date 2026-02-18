@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 const API_KEY = process.env.FOOTBALL_API_KEY
@@ -24,7 +26,11 @@ async function fetchAPI(endpoint: string) {
 
 export async function POST(req: NextRequest) {
   const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET || API_KEY}`) {
+  const session = await getServerSession(authOptions)
+  const isCron = auth === `Bearer ${process.env.CRON_SECRET}` || auth === `Bearer ${process.env.FOOTBALL_API_KEY}`
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'OWNER'
+
+  if (!isCron && !isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

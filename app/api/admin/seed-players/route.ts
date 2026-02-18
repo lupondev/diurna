@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 const TOP_PLAYERS: { name: string; shortName: string; currentTeam: string; position: string; nationality: string }[] = [
   { name: 'Erling Haaland', shortName: 'Haaland', currentTeam: 'Manchester City', position: 'ST', nationality: 'Norway' },
@@ -68,7 +70,16 @@ const TOP_PLAYERS: { name: string; shortName: string; currentTeam: string; posit
   { name: 'Michael Carrick', shortName: 'Carrick', currentTeam: 'Middlesbrough', position: 'Manager', nationality: 'England' },
 ]
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const auth = req.headers.get('authorization')
+  const session = await getServerSession(authOptions)
+  const isCron = auth === `Bearer ${process.env.CRON_SECRET}` || auth === `Bearer ${process.env.FOOTBALL_API_KEY}`
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'OWNER'
+
+  if (!isCron && !isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   let created = 0
   for (const player of TOP_PLAYERS) {
     try {
