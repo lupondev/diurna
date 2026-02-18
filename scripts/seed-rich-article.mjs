@@ -87,6 +87,7 @@ async function main() {
     article = await prisma.article.update({
       where: { id: TARGET_ID },
       data: {
+        siteId: site.id,
         title: ARTICLE_TITLE,
         slug: ARTICLE_SLUG,
         content: { html: ARTICLE_HTML },
