@@ -330,10 +330,13 @@ export function slugify(text: string): string {
 export async function getNextTask(
   config: AutopilotConfigFull,
   siteId: string,
-  todayCount: number
+  todayCount: number,
+  force = false
 ): Promise<GenerationTask | null> {
-  const needed = getArticlesNeeded(config.dailyTarget, todayCount)
-  if (needed <= 0) return null
+  if (!force) {
+    const needed = getArticlesNeeded(config.dailyTarget, todayCount)
+    if (needed <= 0) return null
+  }
 
   const startOfDay = new Date()
   startOfDay.setHours(0, 0, 0, 0)
@@ -649,6 +652,61 @@ export async function getNextTask(
           matchId: completedMatch.id,
           wordCount: config.defaultLength,
         }
+      }
+    }
+  }
+
+  // ── Priority 7 (force only): Latest news fallback ──
+  // When no clusters/matches exist, use the freshest news items directly
+  if (force) {
+    // Try any cluster first, even low DIS
+    const anyCluster = await prisma.storyCluster.findFirst({
+      where: { latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+      orderBy: { dis: 'desc' },
+    })
+
+    if (anyCluster) {
+      const newsItems = await prisma.newsItem.findMany({
+        where: { clusterId: anyCluster.id },
+        orderBy: { pubDate: 'desc' },
+        take: 5,
+      })
+      const catConfig = config.categories[0]
+      return {
+        priority: 'category_fill',
+        title: anyCluster.title,
+        category: catConfig?.name || 'Vijesti',
+        categorySlug: catConfig?.slug || 'vijesti',
+        sources: newsItems.map((n) => ({
+          title: n.title,
+          source: n.source,
+          content: n.content || undefined,
+        })),
+        clusterId: anyCluster.id,
+        wordCount: config.defaultLength,
+      }
+    }
+
+    // No clusters at all — use raw news items
+    const latestNews = await prisma.newsItem.findMany({
+      where: { pubDate: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+      orderBy: { pubDate: 'desc' },
+      take: 5,
+    })
+
+    if (latestNews.length > 0) {
+      const catConfig = config.categories[0]
+      return {
+        priority: 'category_fill',
+        title: latestNews[0].title,
+        category: catConfig?.name || 'Vijesti',
+        categorySlug: catConfig?.slug || 'vijesti',
+        sources: latestNews.map((n) => ({
+          title: n.title,
+          source: n.source,
+          content: n.content || undefined,
+        })),
+        wordCount: config.defaultLength,
       }
     }
   }

@@ -35,6 +35,8 @@ export async function GET(req: NextRequest) {
   const auth = await authenticate(req)
   if (!auth.ok) return auth.response
 
+  const force = req.nextUrl.searchParams.get('force') === 'true'
+
   try {
     // If session-based, only process the user's org
     const where: { isActive: boolean; orgId?: string } = { isActive: true }
@@ -60,7 +62,7 @@ export async function GET(req: NextRequest) {
     }[] = []
 
     for (const config of configs) {
-      if (!shouldGenerateNow(config)) {
+      if (!force && !shouldGenerateNow(config)) {
         results.push({ orgId: config.orgId, action: 'skipped', reason: 'Outside active schedule' })
         continue
       }
@@ -84,10 +86,16 @@ export async function GET(req: NextRequest) {
         },
       })
 
-      const task = await getNextTask(config, site.id, todayCount)
+      const task = await getNextTask(config, site.id, todayCount, force)
 
       if (!task) {
-        results.push({ orgId: config.orgId, action: 'skipped', reason: 'All quotas met for current hour' })
+        results.push({
+          orgId: config.orgId,
+          action: 'skipped',
+          reason: force
+            ? 'No news items or clusters available — run Feed Fetch first'
+            : 'All quotas met for current hour',
+        })
         continue
       }
 

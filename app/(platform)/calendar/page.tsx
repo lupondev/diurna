@@ -420,7 +420,7 @@ export default function CalendarPage() {
     setRunningNow(true)
     setRunResult(null)
     try {
-      const res = await fetch('/api/cron/autopilot', { credentials: 'include' })
+      const res = await fetch('/api/cron/autopilot?force=true', { credentials: 'include' })
       const data = await res.json()
       if (!res.ok) {
         setRunResult({ type: 'error', message: data.reason || data.error || 'Request failed' })
