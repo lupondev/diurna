@@ -15,6 +15,14 @@
     {
       "path": "/api/cron/sync-data",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/autopilot",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/live-updates",
+      "schedule": "0 7 * * *"
     }
   ]
 }
