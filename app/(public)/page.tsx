@@ -1,10 +1,14 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { prisma } from '@/lib/prisma'
+import { getDefaultSite } from '@/lib/db'
 import { AdSlot } from '@/components/public/sportba'
 import { MatchOfDay } from '@/components/public/sportba/match-of-day'
 import { StandingsTable } from '@/components/public/sportba/standings-table'
 import { ForYou } from '@/components/public/sportba/for-you'
 import './home.css'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Sport.ba \u2014 Sportske vijesti, transferi i rezultati',
@@ -12,9 +16,9 @@ export const metadata: Metadata = {
     'Najnovije sportske vijesti, transferi, rezultati uživo i analize iz svijeta fudbala.',
 }
 
-/* ── Demo Data ── */
+/* ── Demo Data (fallback) ── */
 
-const HERO = [
+const HERO_DEMO = [
   {
     title: 'Haaland postiže hat-trick dok City uništava Arsenal u velikom derbiju',
     cat: 'Vijesti',
@@ -45,7 +49,7 @@ const HERO = [
   },
 ]
 
-const NEWS = [
+const NEWS_DEMO = [
   { cat: 'VIJESTI', title: "Mourinho se vraća: 'Imam nedovršenog posla u Premijer ligi'", time: '2h', href: '/vijesti/mourinho-povratak-premijer-liga', bg: 'linear-gradient(135deg,#1e3a5f,#0d1b2a)' },
   { cat: 'TRANSFERI', title: 'PSG spreman platiti 120M\u20ac za Floriana Wirtza', time: '4h', href: '/transferi/psg-120m-florian-wirtz', bg: 'linear-gradient(135deg,#3d1f00,#1a0d00)' },
   { cat: 'UTAKMICE', title: 'Napoli-Juventus: Conte traži osvetu protiv bivšeg kluba', time: '5h', href: '/utakmice/napoli-juventus-conte-osveta', bg: 'linear-gradient(135deg,#0d2818,#051208)' },
@@ -54,6 +58,17 @@ const NEWS = [
   { cat: 'VIJESTI', title: 'FIFA potvrđuje novo pravilo o ofsajdu za sezonu 2026/27', time: '10h', href: '/vijesti/fifa-novo-pravilo-ofsajd-2026', bg: 'linear-gradient(135deg,#2d2d00,#141400)' },
   { cat: 'TRANSFERI', title: 'Arsenal u pregovorima za Osimhena \u2014 ponuda od 70M\u20ac', time: '12h', href: '/transferi/arsenal-osimhen-ponuda-70m', bg: 'linear-gradient(135deg,#1e3a5f,#0d1b2a)' },
   { cat: 'UTAKMICE', title: 'Derbi della Madonnina: Inter favorit protiv slabog Milana', time: '14h', href: '/utakmice/derbi-della-madonnina-inter-milan', bg: 'linear-gradient(135deg,#0d2818,#051208)' },
+]
+
+const GRADIENTS = [
+  'linear-gradient(135deg,#1a1a2e,#0f3460)',
+  'linear-gradient(135deg,#1e3a5f,#0d1b2a)',
+  'linear-gradient(135deg,#3d1f00,#1a0d00)',
+  'linear-gradient(135deg,#0d2818,#051208)',
+  'linear-gradient(135deg,#3b0a0a,#1a0404)',
+  'linear-gradient(135deg,#1a1a2e,#0a0a14)',
+  'linear-gradient(135deg,#2d2d00,#141400)',
+  'linear-gradient(135deg,#2d1b69,#11052c)',
 ]
 
 const TRANSFERS = [
@@ -65,7 +80,7 @@ const TRANSFERS = [
   { status: 'rumour' as const, emoji: '\ud83d\udcac', label: 'RUMOUR', player: 'Alexander Isak', from: 'Newcastle', to: 'Real Madrid', fee: '90M\u20ac' },
 ]
 
-const TRENDING = [
+const TRENDING_DEMO = [
   { title: 'Haaland hat-trick protiv Arsenala', meta: 'Vijesti \u00b7 2h', href: '/vijesti/haaland-hat-trick-city-arsenal-derbi' },
   { title: 'El Clásico pripreme bez Mbappéa', meta: 'Utakmice \u00b7 4h', href: '/utakmice/el-clasico-pripreme-bez-mbappea' },
   { title: 'Transfer Wirtza u Barcelonu', meta: 'Transferi \u00b7 5h', href: '/transferi/wirtz-transfer-barcelona' },
@@ -81,43 +96,92 @@ const QUICK_STANDINGS = [
   { pos: 5, team: 'Tottenham', p: 24, gd: '+10', pts: 45 },
 ]
 
-export default function HomePage() {
+function timeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
+  return `${Math.floor(seconds / 86400)}d`
+}
+
+export default async function HomePage() {
+  // Fetch real articles from DB
+  const site = await getDefaultSite()
+  let dbNews: typeof NEWS_DEMO = []
+  let dbHero: typeof HERO_DEMO = []
+  let dbTrending: typeof TRENDING_DEMO = []
+
+  if (site) {
+    const articles = await prisma.article.findMany({
+      where: {
+        siteId: site.id,
+        status: 'PUBLISHED',
+        deletedAt: null,
+      },
+      include: {
+        category: { select: { name: true, slug: true } },
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: 20,
+    })
+
+    if (articles.length > 0) {
+      // First article → hero main, next 3 → hero sides
+      const heroArticles = articles.slice(0, 4)
+      dbHero = heroArticles.map((a, i) => ({
+        title: a.title,
+        cat: a.category?.name || 'Vijesti',
+        href: `/${a.category?.slug || 'vijesti'}/${a.slug}`,
+        meta: `${a.publishedAt ? timeAgo(a.publishedAt) : 'Novo'} \u00b7 ${a.category?.name || 'Vijesti'}`,
+        bg: GRADIENTS[i % GRADIENTS.length],
+      }))
+
+      // Rest → news feed
+      const newsArticles = articles.slice(4)
+      dbNews = newsArticles.map((a, i) => ({
+        cat: (a.category?.name || 'Vijesti').toUpperCase(),
+        title: a.title,
+        time: a.publishedAt ? timeAgo(a.publishedAt) : 'Novo',
+        href: `/${a.category?.slug || 'vijesti'}/${a.slug}`,
+        bg: GRADIENTS[(i + 4) % GRADIENTS.length],
+      }))
+
+      // Trending = first 5 articles
+      dbTrending = articles.slice(0, 5).map((a) => ({
+        title: a.title,
+        meta: `${a.category?.name || 'Vijesti'} \u00b7 ${a.publishedAt ? timeAgo(a.publishedAt) : 'Novo'}`,
+        href: `/${a.category?.slug || 'vijesti'}/${a.slug}`,
+      }))
+    }
+  }
+
+  // Use DB data if available, otherwise fall back to demo
+  const HERO = dbHero.length >= 4 ? dbHero : [...dbHero, ...HERO_DEMO.slice(dbHero.length)]
+  const NEWS = dbNews.length > 0 ? [...dbNews, ...NEWS_DEMO.slice(Math.max(0, 8 - dbNews.length))] : NEWS_DEMO
+  const TRENDING = dbTrending.length >= 3 ? dbTrending : [...dbTrending, ...TRENDING_DEMO.slice(dbTrending.length)]
+
   return (
     <main className="sba-home">
-      {/* ── Leaderboard Ad ── */}
+      {/* Leaderboard Ad */}
       <div className="sba-home-leaderboard">
         <AdSlot variant="leaderboard" />
       </div>
 
       <div className="sba-home-layout">
-        {/* ══════════ MAIN COLUMN ══════════ */}
+        {/* MAIN COLUMN */}
         <div className="sba-home-main">
-          {/* ── Hero Bento ── */}
+          {/* Hero Bento */}
           <section className="sba-hero">
-            <Link
-              href={HERO[0].href}
-              className="sba-hero-card sba-hero-main"
-            >
-              <div
-                className="sba-hero-bg"
-                style={{ background: HERO[0].bg }}
-              />
+            <Link href={HERO[0].href} className="sba-hero-card sba-hero-main">
+              <div className="sba-hero-bg" style={{ background: HERO[0].bg }} />
               <div className="sba-hero-content">
                 <span className="sba-hero-badge">{HERO[0].cat}</span>
                 <h1 className="sba-hero-title">{HERO[0].title}</h1>
                 <p className="sba-hero-meta">{HERO[0].meta}</p>
               </div>
             </Link>
-            {HERO.slice(1).map((h, i) => (
-              <Link
-                key={i}
-                href={h.href}
-                className="sba-hero-card sba-hero-side"
-              >
-                <div
-                  className="sba-hero-bg"
-                  style={{ background: h.bg }}
-                />
+            {HERO.slice(1, 4).map((h, i) => (
+              <Link key={i} href={h.href} className="sba-hero-card sba-hero-side">
+                <div className="sba-hero-bg" style={{ background: h.bg }} />
                 <div className="sba-hero-content">
                   <span className="sba-hero-badge">{h.cat}</span>
                   <h2 className="sba-hero-title">{h.title}</h2>
@@ -126,31 +190,21 @@ export default function HomePage() {
             ))}
           </section>
 
-          {/* ── Match of Day ── */}
           <MatchOfDay />
-
-          {/* ── Standings ── */}
           <StandingsTable />
-
-          {/* ── Rectangle Ad ── */}
           <AdSlot variant="rectangle" />
 
-          {/* ── News Feed ── */}
+          {/* News Feed */}
           <section>
             <div className="sba-section-head">
               <h2 className="sba-section-title">Najnovije vijesti</h2>
-              <Link href="/vijesti" className="sba-section-more">
-                Sve vijesti &rarr;
-              </Link>
+              <Link href="/vijesti" className="sba-section-more">Sve vijesti &rarr;</Link>
             </div>
             <div className="sba-feed">
               {NEWS.slice(0, 4).map((n, i) => (
                 <Link key={i} href={n.href} className="sba-feed-card">
                   <div className="sba-feed-thumb">
-                    <div
-                      className="sba-feed-thumb-bg"
-                      style={{ background: n.bg }}
-                    />
+                    <div className="sba-feed-thumb-bg" style={{ background: n.bg }} />
                   </div>
                   <div className="sba-feed-body">
                     <span className="sba-feed-cat">{n.cat}</span>
@@ -163,35 +217,18 @@ export default function HomePage() {
               {/* Native Ad */}
               <div className="sba-feed-sponsored">
                 <div className="sba-feed-thumb">
-                  <div
-                    className="sba-feed-thumb-bg"
-                    style={{
-                      background:
-                        'linear-gradient(135deg,#1a1d27,#262a38)',
-                    }}
-                  />
+                  <div className="sba-feed-thumb-bg" style={{ background: 'linear-gradient(135deg,#1a1d27,#262a38)' }} />
                 </div>
                 <div className="sba-feed-body">
-                  <span className="sba-feed-sponsored-label">
-                    Sponzorisano
-                  </span>
-                  <span className="sba-feed-title">
-                    Kladi se odgovorno &mdash; Najbolje kvote za Premijer ligu
-                  </span>
+                  <span className="sba-feed-sponsored-label">Sponzorisano</span>
+                  <span className="sba-feed-title">Kladi se odgovorno &mdash; Najbolje kvote za Premijer ligu</span>
                 </div>
               </div>
 
-              {NEWS.slice(4).map((n, i) => (
-                <Link
-                  key={i + 4}
-                  href={n.href}
-                  className="sba-feed-card"
-                >
+              {NEWS.slice(4, 8).map((n, i) => (
+                <Link key={i + 4} href={n.href} className="sba-feed-card">
                   <div className="sba-feed-thumb">
-                    <div
-                      className="sba-feed-thumb-bg"
-                      style={{ background: n.bg }}
-                    />
+                    <div className="sba-feed-thumb-bg" style={{ background: n.bg }} />
                   </div>
                   <div className="sba-feed-body">
                     <span className="sba-feed-cat">{n.cat}</span>
@@ -203,27 +240,21 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ── Transfer Radar ── */}
+          {/* Transfer Radar */}
           <section>
             <div className="sba-section-head">
               <h2 className="sba-section-title">Transfer radar</h2>
-              <Link href="/transferi" className="sba-section-more">
-                Svi transferi &rarr;
-              </Link>
+              <Link href="/transferi" className="sba-section-more">Svi transferi &rarr;</Link>
             </div>
             <div className="sba-transfers-scroll">
               {TRANSFERS.map((t, i) => (
                 <div key={i} className="sba-transfer-card">
-                  <span
-                    className={`sba-transfer-badge sba-transfer-badge--${t.status}`}
-                  >
+                  <span className={`sba-transfer-badge sba-transfer-badge--${t.status}`}>
                     {t.emoji} {t.label}
                   </span>
                   <span className="sba-transfer-player">{t.player}</span>
                   <span className="sba-transfer-clubs">
-                    {t.from}{' '}
-                    <span className="sba-transfer-arrow">&rarr;</span>{' '}
-                    {t.to}
+                    {t.from} <span className="sba-transfer-arrow">&rarr;</span> {t.to}
                   </span>
                   <span className="sba-transfer-fee">{t.fee}</span>
                 </div>
@@ -231,22 +262,16 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ── For You ── */}
           <ForYou />
         </div>
 
-        {/* ══════════ RIGHT RAIL ══════════ */}
+        {/* RIGHT RAIL */}
         <aside className="sba-home-rail">
-          {/* Trending */}
           <div className="sba-rail-card">
             <div className="sba-rail-head">U trendu</div>
             <div className="sba-trending-list">
               {TRENDING.map((t, i) => (
-                <Link
-                  key={i}
-                  href={t.href}
-                  className="sba-trending-item"
-                >
+                <Link key={i} href={t.href} className="sba-trending-item">
                   <span className="sba-trending-rank">{i + 1}</span>
                   <div className="sba-trending-body">
                     <span className="sba-trending-title">{t.title}</span>
@@ -257,7 +282,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Sticky container: ad + quick standings */}
           <div className="sba-rail-sticky">
             <AdSlot variant="skyscraper" />
 
@@ -275,9 +299,7 @@ export default function HomePage() {
                 <tbody>
                   {QUICK_STANDINGS.map((r) => (
                     <tr key={r.pos}>
-                      <td>
-                        {r.pos}. {r.team}
-                      </td>
+                      <td>{r.pos}. {r.team}</td>
                       <td>{r.p}</td>
                       <td>{r.gd}</td>
                       <td className="sba-quicktable-pts">{r.pts}</td>
@@ -290,7 +312,6 @@ export default function HomePage() {
         </aside>
       </div>
 
-      {/* ── Pre-footer Ad ── */}
       <div className="sba-home-prefooter">
         <AdSlot variant="leaderboard" />
       </div>

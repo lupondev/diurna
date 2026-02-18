@@ -2,6 +2,26 @@
    Sport.ba Article Page Styles
    ═══════════════════════════════════════════════════ */
 
+/* ── Widget CSS Variable Bridge ──
+   Maps --pub-* vars (used by widget CSS in public.css) to --sba-* vars */
+.sba-article-body,
+.sba-article-main {
+  --pub-surface: var(--sba-bg-2);
+  --pub-border: var(--sba-border);
+  --pub-text: var(--sba-text-0);
+  --pub-text-secondary: var(--sba-text-1);
+  --pub-text-muted: var(--sba-text-3);
+  --pub-accent: var(--sba-accent);
+  --pub-accent-hover: var(--sba-accent-hover);
+  --pub-badge-bg: var(--sba-accent-soft);
+  --pub-badge-text: var(--sba-accent);
+  --pub-code-bg: var(--sba-bg-3);
+  --pub-input-bg: var(--sba-bg-1);
+  --pub-input-border: var(--sba-border);
+  --disp: var(--sba-serif);
+  --sans: var(--sba-sans);
+}
+
 /* ── Page Container ── */
 .sba-article {
   background: var(--sba-bg-0);
