@@ -3,92 +3,365 @@
 import { useState } from 'react'
 
 /* ═══════════════════════════════════════════════════
-   Inline Widget Components (self-contained, no CSS deps)
+   COLORS
    ═══════════════════════════════════════════════════ */
 
-const COLORS = {
-  bg: '#1a1a2e',
-  card: '#16213e',
+const C = {
+  bg: '#0d1117',
+  card: '#161b22',
+  surface: '#1c2333',
   accent: '#ff6b35',
-  text: '#e2e8f0',
-  muted: '#94a3b8',
-  border: '#2d3a54',
-  success: '#22c55e',
-  error: '#ef4444',
+  accentSoft: 'rgba(255,107,53,0.15)',
+  teal: '#2dd4bf',
+  text: '#e6edf3',
+  muted: '#8b949e',
+  border: '#30363d',
+  white: '#ffffff',
+  success: '#3fb950',
+  error: '#f85149',
+  gold: '#f0b429',
 }
 
-function WidgetWrapper({ icon, label, children }: { icon: string; label: string; children: React.ReactNode }) {
+/* ═══════════════════════════════════════════════════
+   Match Widget — SofaScore inspired
+   ═══════════════════════════════════════════════════ */
+
+function MatchWidget({ home, away, homeShort, awayShort, score, date, league, status }: {
+  home: string; away: string; homeShort?: string; awayShort?: string
+  score: string; date: string; league: string; status: string
+}) {
+  const [h, a] = score.split('-').map(s => s.trim())
+  const hCode = homeShort || home.slice(0, 3).toUpperCase()
+  const aCode = awayShort || away.slice(0, 3).toUpperCase()
+
   return (
     <div style={{
-      background: COLORS.card, borderRadius: 12, padding: 20, margin: '24px 0',
-      border: `1px solid ${COLORS.border}`, color: COLORS.text,
+      background: 'linear-gradient(135deg, #0d1117 0%, #161b22 100%)',
+      borderRadius: 16, padding: '20px 24px', margin: '24px 0',
+      border: `1px solid ${C.border}`, boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, color: COLORS.accent, fontWeight: 700 }}>
-        <span>{icon}</span>
-        <span>{label}</span>
+      {/* Competition */}
+      <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: C.accent, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 20 }}>
+        {league}
       </div>
-      {children}
+
+      {/* Teams + Score */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0 }}>
+        {/* Home */}
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%', margin: '0 auto 10px',
+            background: 'linear-gradient(135deg, #da1e37, #c71f37)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, color: C.white,
+            boxShadow: '0 2px 12px rgba(218,30,55,0.3)',
+          }}>{hCode}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{home}</div>
+        </div>
+
+        {/* Score */}
+        <div style={{ textAlign: 'center', padding: '0 20px', minWidth: 100 }}>
+          <div style={{ fontSize: 40, fontWeight: 800, color: C.white, letterSpacing: 2, lineHeight: 1 }}>
+            {h}<span style={{ color: C.muted, margin: '0 4px' }}>:</span>{a}
+          </div>
+          <div style={{
+            display: 'inline-block', marginTop: 8, padding: '3px 12px', borderRadius: 12,
+            background: status === 'FT' ? 'rgba(63,185,80,0.15)' : C.accentSoft,
+            color: status === 'FT' ? C.success : C.accent, fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+          }}>{status || 'FT'}</div>
+        </div>
+
+        {/* Away */}
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%', margin: '0 auto 10px',
+            background: 'linear-gradient(135deg, #c4b5fd, #7c3aed)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, color: C.white,
+            boxShadow: '0 2px 12px rgba(124,58,237,0.3)',
+          }}>{aCode}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{away}</div>
+        </div>
+      </div>
+
+      {/* Date */}
+      {date && (
+        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 12, color: C.muted }}>{date}</div>
+      )}
     </div>
   )
 }
 
+/* ═══════════════════════════════════════════════════
+   Player Card — FIFA-style premium card
+   ═══════════════════════════════════════════════════ */
+
+function PlayerCardWidget({ name, team, position, nationality, age, rating, goals, assists, marketValue }: {
+  name: string; team: string; position: string; nationality?: string; age?: string
+  rating?: string; goals?: string; assists?: string; marketValue?: string
+}) {
+  const ratingNum = parseFloat(rating || '0')
+  const ratingColor = ratingNum >= 8 ? C.success : ratingNum >= 7 ? C.gold : C.accent
+
+  const stats: { label: string; value: string; highlight?: boolean }[] = []
+  if (rating) stats.push({ label: 'Ocjena', value: rating, highlight: true })
+  if (goals) stats.push({ label: 'Golovi', value: goals })
+  if (assists) stats.push({ label: 'Asistencije', value: assists })
+  if (marketValue) stats.push({ label: 'Vrijednost', value: marketValue })
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+      borderRadius: 16, overflow: 'hidden', margin: '24px 0',
+      border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+    }}>
+      {/* Top section */}
+      <div style={{ padding: '24px 24px 20px', display: 'flex', alignItems: 'center', gap: 20 }}>
+        {/* Player avatar */}
+        <div style={{
+          width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
+          background: 'linear-gradient(135deg, #ff6b35, #ff8f65)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 800, fontSize: 28, color: C.white,
+          boxShadow: '0 0 0 3px rgba(255,107,53,0.3), 0 4px 16px rgba(255,107,53,0.2)',
+        }}>
+          {name.split(' ').map(n => n[0]).join('')}
+        </div>
+
+        {/* Info */}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.white, lineHeight: 1.2 }}>{name}</div>
+          <div style={{ fontSize: 14, color: C.accent, fontWeight: 600, marginTop: 4 }}>{team}</div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+            {position && <span style={{ fontSize: 12, color: C.muted, background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: 6 }}>{position}</span>}
+            {nationality && <span style={{ fontSize: 12, color: C.muted, background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: 6 }}>{nationality}</span>}
+            {age && <span style={{ fontSize: 12, color: C.muted, background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: 6 }}>{age} god.</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      {stats.length > 0 && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: `repeat(${stats.length}, 1fr)`,
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          {stats.map((s, i) => (
+            <div key={i} style={{
+              textAlign: 'center', padding: '16px 8px',
+              borderRight: i < stats.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+            }}>
+              <div style={{
+                fontSize: s.highlight ? 28 : 22, fontWeight: 800, lineHeight: 1,
+                color: s.highlight ? ratingColor : C.white,
+              }}>{s.value}</div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════
+   Video Widget — Direct YouTube embed
+   ═══════════════════════════════════════════════════ */
+
+function VideoWidget({ url, caption }: { url: string; caption: string }) {
+  let embedUrl = url
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/)
+  if (ytMatch) embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}`
+
+  return (
+    <div style={{ margin: '24px 0' }}>
+      <div style={{
+        position: 'relative', paddingBottom: '56.25%', borderRadius: 12, overflow: 'hidden',
+        background: '#000', boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+      }}>
+        <iframe
+          src={embedUrl}
+          title={caption || 'Video'}
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+        />
+      </div>
+      {caption && (
+        <div style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: C.muted, fontStyle: 'italic' }}>{caption}</div>
+      )}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════
+   Stats Table — Horizontal bar comparison (SofaScore)
+   ═══════════════════════════════════════════════════ */
+
+type StatRow = { label: string; home: string; away: string; homeVal: number; awayVal: number }
+
+function StatsTableWidget({ title, home, away, stats, headers, rows }: {
+  title: string; home?: string; away?: string; stats?: StatRow[]; headers?: string[]; rows?: string[][]
+}) {
+  // Support new format (stats JSON array) and legacy format (headers + rows)
+  let statRows: StatRow[] = stats || []
+  if (statRows.length === 0 && rows && rows.length > 0 && headers && headers.length >= 3) {
+    // Convert legacy format: headers=["", "Benfica", "Real Madrid"], rows=[["Posjed lopte", "45%", "55%"], ...]
+    const homeName = headers[1] || 'Home'
+    const awayName = headers[2] || 'Away'
+    statRows = rows.map(row => {
+      const hv = parseFloat(row[1]) || 0
+      const av = parseFloat(row[2]) || 0
+      return { label: row[0], home: row[1], away: row[2], homeVal: hv, awayVal: av }
+    })
+    if (!home) home = homeName
+    if (!away) away = awayName
+  }
+
+  return (
+    <div style={{
+      background: C.card, borderRadius: 16, padding: '20px 24px', margin: '24px 0',
+      border: `1px solid ${C.border}`, boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
+    }}>
+      {/* Header */}
+      {title && (
+        <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: C.accent, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16 }}>
+          Statistika utakmice
+        </div>
+      )}
+      {(home || away) && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, padding: '0 4px' }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{home}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{away}</span>
+        </div>
+      )}
+
+      {/* Stat rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {statRows.map((stat, i) => {
+          const total = stat.homeVal + stat.awayVal
+          const homePct = total > 0 ? (stat.homeVal / total) * 100 : 50
+          const awayPct = total > 0 ? (stat.awayVal / total) * 100 : 50
+          const homeWins = stat.homeVal > stat.awayVal
+          const awayWins = stat.awayVal > stat.homeVal
+
+          return (
+            <div key={i}>
+              {/* Values + Label */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: homeWins ? C.accent : C.text, minWidth: 40 }}>{stat.home}</span>
+                <span style={{ fontSize: 12, color: C.muted, textAlign: 'center', flex: 1 }}>{stat.label}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: awayWins ? C.teal : C.text, minWidth: 40, textAlign: 'right' }}>{stat.away}</span>
+              </div>
+              {/* Bar */}
+              <div style={{ display: 'flex', gap: 3, height: 6, borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{
+                  width: `${homePct}%`, borderRadius: '3px 0 0 3px',
+                  background: homeWins ? C.accent : 'rgba(255,255,255,0.12)',
+                  transition: 'width 0.5s ease',
+                }} />
+                <div style={{
+                  width: `${awayPct}%`, borderRadius: '0 3px 3px 0',
+                  background: awayWins ? C.teal : 'rgba(255,255,255,0.12)',
+                  transition: 'width 0.5s ease',
+                }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════
+   Poll — Clean modern design
+   ═══════════════════════════════════════════════════ */
+
 function PollWidget({ question, options }: { question: string; options: string[] }) {
   const [voted, setVoted] = useState<number | null>(null)
-  const [votes, setVotes] = useState<number[]>(() => options.map(() => Math.floor(Math.random() * 20) + 5))
+  const [votes, setVotes] = useState<number[]>(() => options.map(() => Math.floor(Math.random() * 40) + 10))
 
   function handleVote(idx: number) {
     if (voted !== null) return
     setVoted(idx)
-    setVotes((prev) => prev.map((v, i) => (i === idx ? v + 1 : v)))
+    setVotes(prev => prev.map((v, i) => (i === idx ? v + 1 : v)))
   }
 
   const total = votes.reduce((a, b) => a + b, 0)
 
   return (
-    <WidgetWrapper icon="📊" label="Anketa">
-      <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 16px', color: '#fff' }}>{question}</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{
+      background: C.card, borderRadius: 16, padding: '24px', margin: '24px 0',
+      border: `1px solid ${C.border}`, boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14 }}>
+        Anketa
+      </div>
+      <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.white, lineHeight: 1.4 }}>{question}</h3>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {options.map((opt, i) => {
           const pct = total > 0 ? Math.round((votes[i] / total) * 100) : 0
+          const isWinner = voted !== null && pct === Math.max(...options.map((_, j) => total > 0 ? Math.round((votes[j] / total) * 100) : 0))
+
           return (
             <button
               key={i}
               onClick={() => handleVote(i)}
               disabled={voted !== null}
               style={{
-                position: 'relative', padding: '12px 16px', borderRadius: 8, border: `1px solid ${voted === i ? COLORS.accent : COLORS.border}`,
-                background: voted === i ? `${COLORS.accent}22` : 'transparent', color: COLORS.text,
-                cursor: voted !== null ? 'default' : 'pointer', textAlign: 'left', fontSize: 14, overflow: 'hidden',
-                transition: 'all 0.2s',
+                position: 'relative', padding: '14px 18px', borderRadius: 12, overflow: 'hidden',
+                border: voted === i ? `2px solid ${C.accent}` : `1px solid ${C.border}`,
+                background: 'transparent', color: C.text, textAlign: 'left', fontSize: 15, fontWeight: 500,
+                cursor: voted !== null ? 'default' : 'pointer', transition: 'all 0.2s',
               }}
             >
               {voted !== null && (
                 <div style={{
-                  position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`,
-                  background: voted === i ? `${COLORS.accent}33` : `${COLORS.muted}15`,
-                  transition: 'width 0.5s ease', borderRadius: 8,
+                  position: 'absolute', left: 0, top: 0, bottom: 0,
+                  width: `${pct}%`,
+                  background: voted === i
+                    ? 'linear-gradient(90deg, rgba(255,107,53,0.25), rgba(255,107,53,0.1))'
+                    : isWinner
+                      ? 'rgba(255,255,255,0.05)'
+                      : 'rgba(255,255,255,0.03)',
+                  transition: 'width 0.6s ease',
+                  borderRadius: 12,
                 }} />
               )}
-              <span style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>{opt}</span>
-                {voted !== null && <span style={{ fontWeight: 700, color: voted === i ? COLORS.accent : COLORS.muted }}>{pct}%</span>}
+                {voted !== null && (
+                  <span style={{
+                    fontWeight: 800, fontSize: 14, marginLeft: 12,
+                    color: voted === i ? C.accent : C.muted,
+                  }}>{pct}%</span>
+                )}
               </span>
             </button>
           )
         })}
       </div>
+
       {voted !== null && (
-        <div style={{ marginTop: 12, fontSize: 12, color: COLORS.muted, textAlign: 'center' }}>{total} glasova</div>
+        <div style={{ marginTop: 14, fontSize: 12, color: C.muted, textAlign: 'center' }}>
+          {total} glasova
+        </div>
       )}
-    </WidgetWrapper>
+    </div>
   )
 }
+
+/* ═══════════════════════════════════════════════════
+   Quiz — Modern card design with step dots
+   ═══════════════════════════════════════════════════ */
 
 function QuizWidget({ title, questions }: { title?: string; questions: { q: string; options: string[]; correct: number }[] }) {
   const [current, setCurrent] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
   const [revealed, setRevealed] = useState(false)
   const [score, setScore] = useState(0)
+  const [answers, setAnswers] = useState<(boolean | null)[]>(() => questions.map(() => null))
   const [finished, setFinished] = useState(false)
 
   if (!questions || questions.length === 0) return null
@@ -98,348 +371,155 @@ function QuizWidget({ title, questions }: { title?: string; questions: { q: stri
   function handleCheck() {
     if (selected === null) return
     setRevealed(true)
-    if (selected === q.correct) setScore((s) => s + 1)
+    const correct = selected === q.correct
+    if (correct) setScore(s => s + 1)
+    setAnswers(prev => { const n = [...prev]; n[current] = correct; return n })
   }
   function handleNext() {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); setRevealed(false) }
+    if (current < questions.length - 1) { setCurrent(c => c + 1); setSelected(null); setRevealed(false) }
     else setFinished(true)
   }
 
   if (finished) {
     const pct = Math.round((score / questions.length) * 100)
+    const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '👏' : pct >= 40 ? '💪' : '📚'
     return (
-      <WidgetWrapper icon="🧠" label={title || 'Kviz — Rezultat'}>
-        <div style={{ textAlign: 'center', padding: 20 }}>
-          <div style={{ fontSize: 48, fontWeight: 800, color: COLORS.accent }}>{score}/{questions.length}</div>
-          <div style={{ fontSize: 16, color: COLORS.muted, marginTop: 8 }}>{pct}% tačno</div>
-          <div style={{ height: 8, background: COLORS.border, borderRadius: 4, marginTop: 16, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${pct}%`, background: COLORS.accent, borderRadius: 4, transition: 'width 0.5s' }} />
-          </div>
+      <div style={{
+        background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+        borderRadius: 16, padding: 32, margin: '24px 0', textAlign: 'center',
+        border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+      }}>
+        <div style={{ fontSize: 48, marginBottom: 8 }}>{emoji}</div>
+        <div style={{ fontSize: 14, color: C.accent, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16 }}>
+          {title || 'Kviz'} — Rezultat
         </div>
-      </WidgetWrapper>
+        <div style={{ fontSize: 56, fontWeight: 800, color: C.white, lineHeight: 1 }}>{score}/{questions.length}</div>
+        <div style={{ fontSize: 16, color: C.muted, marginTop: 8 }}>{pct}% tačnih odgovora</div>
+        <div style={{ height: 8, background: 'rgba(255,255,255,0.1)', borderRadius: 4, marginTop: 24, overflow: 'hidden', maxWidth: 300, margin: '24px auto 0' }}>
+          <div style={{
+            height: '100%', width: `${pct}%`, borderRadius: 4,
+            background: pct >= 60 ? `linear-gradient(90deg, ${C.success}, ${C.teal})` : `linear-gradient(90deg, ${C.accent}, ${C.gold})`,
+            transition: 'width 0.8s ease',
+          }} />
+        </div>
+        {/* Answer dots */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 20 }}>
+          {answers.map((a, i) => (
+            <div key={i} style={{
+              width: 10, height: 10, borderRadius: '50%',
+              background: a === true ? C.success : a === false ? C.error : C.border,
+            }} />
+          ))}
+        </div>
+      </div>
     )
   }
 
   return (
-    <WidgetWrapper icon="🧠" label={`${title || 'Kviz'} — Pitanje ${current + 1}/${questions.length}`}>
-      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px', color: '#fff' }}>{q.q}</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{
+      background: C.card, borderRadius: 16, padding: '24px', margin: '24px 0',
+      border: `1px solid ${C.border}`, boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
+    }}>
+      {/* Step indicator dots */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 20 }}>
+        {questions.map((_, i) => (
+          <div key={i} style={{
+            width: i === current ? 24 : 8, height: 8, borderRadius: 4,
+            background: answers[i] === true ? C.success : answers[i] === false ? C.error : i === current ? C.accent : C.border,
+            transition: 'all 0.3s',
+          }} />
+        ))}
+      </div>
+
+      <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12 }}>
+        {title || 'Kviz'} — Pitanje {current + 1}/{questions.length}
+      </div>
+
+      <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.white, lineHeight: 1.4 }}>{q.q}</h3>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {q.options.map((opt, i) => {
-          let bg = 'transparent'
-          let borderColor = COLORS.border
-          if (selected === i && !revealed) { bg = `${COLORS.accent}22`; borderColor = COLORS.accent }
-          if (revealed && i === q.correct) { bg = `${COLORS.success}22`; borderColor = COLORS.success }
-          if (revealed && selected === i && i !== q.correct) { bg = `${COLORS.error}22`; borderColor = COLORS.error }
+          let bg = C.surface
+          let borderColor = C.border
+          let textColor = C.text
+          if (selected === i && !revealed) { bg = 'rgba(255,107,53,0.12)'; borderColor = C.accent }
+          if (revealed && i === q.correct) { bg = 'rgba(63,185,80,0.12)'; borderColor = C.success; textColor = C.success }
+          if (revealed && selected === i && i !== q.correct) { bg = 'rgba(248,81,73,0.12)'; borderColor = C.error; textColor = C.error }
+
           return (
             <button
               key={i}
               onClick={() => handleSelect(i)}
               disabled={revealed}
               style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 8,
-                border: `1px solid ${borderColor}`, background: bg, color: COLORS.text,
-                cursor: revealed ? 'default' : 'pointer', textAlign: 'left', fontSize: 14, transition: 'all 0.2s',
+                display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12,
+                border: `1.5px solid ${borderColor}`, background: bg, color: textColor,
+                cursor: revealed ? 'default' : 'pointer', textAlign: 'left', fontSize: 14, fontWeight: 500,
+                transition: 'all 0.2s', lineHeight: 1.3,
               }}
             >
               <span style={{
-                width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: COLORS.border, fontWeight: 700, fontSize: 12, flexShrink: 0,
+                width: 26, height: 26, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: selected === i || (revealed && i === q.correct) ? borderColor : 'rgba(255,255,255,0.06)',
+                fontWeight: 700, fontSize: 12, flexShrink: 0,
+                color: selected === i || (revealed && i === q.correct) ? C.white : C.muted,
               }}>{String.fromCharCode(65 + i)}</span>
               <span>{opt}</span>
             </button>
           )
         })}
       </div>
-      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+      <div style={{ marginTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {!revealed ? (
           <button
             onClick={handleCheck}
             disabled={selected === null}
             style={{
-              padding: '10px 24px', borderRadius: 8, border: 'none', background: selected !== null ? COLORS.accent : COLORS.border,
-              color: '#fff', fontWeight: 600, cursor: selected !== null ? 'pointer' : 'default', fontSize: 14,
+              padding: '12px 28px', borderRadius: 12, border: 'none',
+              background: selected !== null ? C.accent : C.border,
+              color: C.white, fontWeight: 700, cursor: selected !== null ? 'pointer' : 'default', fontSize: 14,
+              boxShadow: selected !== null ? '0 2px 12px rgba(255,107,53,0.3)' : 'none',
             }}
           >Provjeri odgovor</button>
         ) : (
           <>
-            <span style={{ color: selected === q.correct ? COLORS.success : COLORS.error, fontWeight: 600, fontSize: 14 }}>
-              {selected === q.correct ? 'Tačno!' : `Netačno! Odgovor: ${q.options[q.correct]}`}
+            <span style={{ color: selected === q.correct ? C.success : C.error, fontWeight: 600, fontSize: 14 }}>
+              {selected === q.correct ? '✓ Tačno!' : `✗ Netačno — ${q.options[q.correct]}`}
             </span>
             <button
               onClick={handleNext}
               style={{
-                padding: '10px 24px', borderRadius: 8, border: 'none', background: COLORS.accent,
-                color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 14,
+                padding: '12px 28px', borderRadius: 12, border: 'none', background: C.accent,
+                color: C.white, fontWeight: 700, cursor: 'pointer', fontSize: 14,
+                boxShadow: '0 2px 12px rgba(255,107,53,0.3)',
               }}
-            >{current < questions.length - 1 ? 'Sljedeće pitanje →' : 'Vidi rezultat →'}</button>
+            >{current < questions.length - 1 ? 'Dalje →' : 'Rezultat →'}</button>
           </>
         )}
       </div>
-    </WidgetWrapper>
+    </div>
   )
 }
 
-function MatchWidget({ home, away, score, date, league, status }: {
-  home: string; away: string; score: string; date: string; league: string; status: string
-}) {
-  const [h, a] = score.split('-').map((s) => s.trim())
+/* ═══════════════════════════════════════════════════
+   Tags Widget — Orange pill badges
+   ═══════════════════════════════════════════════════ */
+
+function TagsWidget({ tags }: { tags: string[] }) {
   return (
-    <WidgetWrapper icon="⚽" label={league || 'Utakmica'}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, padding: '16px 0' }}>
-        <div style={{ textAlign: 'center', flex: 1 }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: '50%', background: COLORS.border, display: 'flex',
-            alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontWeight: 800, fontSize: 14, color: COLORS.accent,
-          }}>{home.slice(0, 3).toUpperCase()}</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{home}</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#fff', letterSpacing: 4 }}>{h} — {a}</div>
-          <div style={{ fontSize: 11, color: COLORS.accent, fontWeight: 600, marginTop: 4 }}>{status || 'FT'}</div>
-        </div>
-        <div style={{ textAlign: 'center', flex: 1 }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: '50%', background: COLORS.border, display: 'flex',
-            alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontWeight: 800, fontSize: 14, color: COLORS.accent,
-          }}>{away.slice(0, 3).toUpperCase()}</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{away}</div>
-        </div>
-      </div>
-      {date && <div style={{ textAlign: 'center', fontSize: 12, color: COLORS.muted }}>{date}</div>}
-    </WidgetWrapper>
-  )
-}
-
-function StatsTableWidget({ title, headers, rows }: { title: string; headers: string[]; rows: string[][] }) {
-  return (
-    <WidgetWrapper icon="📈" label="Statistika">
-      {title && <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px', color: '#fff' }}>{title}</h3>}
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-          {headers.length > 0 && (
-            <thead>
-              <tr>
-                {headers.map((h, i) => (
-                  <th key={i} style={{
-                    padding: '10px 12px', textAlign: i === 0 ? 'left' : 'center', color: COLORS.accent,
-                    borderBottom: `2px solid ${COLORS.border}`, fontWeight: 700, fontSize: 12, textTransform: 'uppercase',
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-          )}
-          <tbody>
-            {rows.map((row, ri) => (
-              <tr key={ri} style={{ background: ri % 2 === 0 ? 'transparent' : `${COLORS.border}33` }}>
-                {row.map((cell, ci) => (
-                  <td key={ci} style={{
-                    padding: '10px 12px', textAlign: ci === 0 ? 'left' : 'center',
-                    borderBottom: `1px solid ${COLORS.border}33`, color: ci === 0 ? '#fff' : COLORS.text,
-                    fontWeight: ci === 0 ? 600 : 400,
-                  }}>{cell}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </WidgetWrapper>
-  )
-}
-
-function PlayerCardWidget({ name, team, position, rating, goals, assists, marketValue }: {
-  name: string; team: string; position: string; rating?: string; goals?: string; assists?: string; marketValue?: string
-}) {
-  const stats: { label: string; value: string }[] = []
-  if (rating) stats.push({ label: 'Ocjena', value: rating })
-  if (goals) stats.push({ label: 'Golovi', value: goals })
-  if (assists) stats.push({ label: 'Asistencije', value: assists })
-  if (marketValue) stats.push({ label: 'Vrijednost', value: marketValue })
-
-  return (
-    <WidgetWrapper icon="👤" label="Profil igrača">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: '50%', background: COLORS.border, display: 'flex',
-          alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: COLORS.accent, flexShrink: 0,
-        }}>{name.split(' ').map(n => n[0]).join('')}</div>
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{name}</div>
-          <div style={{ fontSize: 13, color: COLORS.muted }}>{position} · {team}</div>
-        </div>
-      </div>
-      {stats.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${stats.length}, 1fr)`, gap: 8 }}>
-          {stats.map((s, i) => (
-            <div key={i} style={{
-              textAlign: 'center', padding: 12, background: `${COLORS.border}66`, borderRadius: 8,
-            }}>
-              <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.accent }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-      )}
-    </WidgetWrapper>
-  )
-}
-
-function VideoWidget({ url, caption }: { url: string; caption: string }) {
-  const [playing, setPlaying] = useState(false)
-
-  let embedUrl = url
-  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/)
-  if (ytMatch) embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}`
-
-  return (
-    <WidgetWrapper icon="🎬" label="Video">
-      {caption && <h3 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 12px', color: '#fff' }}>{caption}</h3>}
-      <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 8, overflow: 'hidden', background: '#000' }}>
-        {!playing ? (
-          <button
-            onClick={() => setPlaying(true)}
-            style={{
-              position: 'absolute', inset: 0, width: '100%', border: 'none', background: 'linear-gradient(135deg, #1a1a2e, #0f3460)',
-              cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff',
-            }}
-          >
-            <div style={{
-              width: 64, height: 64, borderRadius: '50%', background: COLORS.accent, display: 'flex',
-              alignItems: 'center', justifyContent: 'center', fontSize: 28,
-            }}>▶</div>
-            <div style={{ marginTop: 12, fontSize: 13, color: COLORS.muted }}>Klikni za reprodukciju</div>
-          </button>
-        ) : (
-          <iframe
-            src={`${embedUrl}?autoplay=1`}
-            title={caption}
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-          />
-        )}
-      </div>
-    </WidgetWrapper>
-  )
-}
-
-function GalleryWidget({ images }: { images: { url: string; caption: string }[] }) {
-  const [lightbox, setLightbox] = useState<number | null>(null)
-
-  return (
-    <WidgetWrapper icon="🖼️" label="Galerija">
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
-        {images.map((img, i) => (
-          <button
-            key={i}
-            onClick={() => setLightbox(i)}
-            style={{
-              border: 'none', padding: 0, cursor: 'pointer', borderRadius: 8, overflow: 'hidden',
-              background: COLORS.border, aspectRatio: '4/3', position: 'relative',
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img.url} alt={img.caption || `Image ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            {img.caption && (
-              <div style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px 8px 6px',
-                background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', fontSize: 11, color: '#fff',
-              }}>{img.caption}</div>
-            )}
-          </button>
-        ))}
-      </div>
-      {lightbox !== null && (
-        <div
-          onClick={() => setLightbox(null)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.9)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: 20,
-          }}
-        >
-          <button
-            onClick={() => setLightbox(null)}
-            style={{
-              position: 'absolute', top: 16, right: 16, width: 40, height: 40, borderRadius: '50%',
-              border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 20, cursor: 'pointer',
-            }}
-          >✕</button>
-          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '80vh' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={images[lightbox].url} alt={images[lightbox].caption || ''} style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: 8 }} />
-            {images[lightbox].caption && (
-              <div style={{ textAlign: 'center', marginTop: 12, color: '#fff', fontSize: 14 }}>{images[lightbox].caption}</div>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 16, marginTop: 16 }}>
-            <button
-              disabled={lightbox === 0}
-              onClick={(e) => { e.stopPropagation(); setLightbox((p) => Math.max(0, (p ?? 0) - 1)) }}
-              style={{
-                padding: '8px 16px', borderRadius: 8, border: 'none', color: '#fff', cursor: lightbox === 0 ? 'default' : 'pointer',
-                background: lightbox === 0 ? 'rgba(255,255,255,0.1)' : COLORS.accent, fontSize: 13,
-              }}
-            >← Prethodna</button>
-            <span style={{ color: COLORS.muted, fontSize: 13, display: 'flex', alignItems: 'center' }}>{lightbox + 1} / {images.length}</span>
-            <button
-              disabled={lightbox === images.length - 1}
-              onClick={(e) => { e.stopPropagation(); setLightbox((p) => Math.min(images.length - 1, (p ?? 0) + 1)) }}
-              style={{
-                padding: '8px 16px', borderRadius: 8, border: 'none', color: '#fff', fontSize: 13,
-                cursor: lightbox === images.length - 1 ? 'default' : 'pointer',
-                background: lightbox === images.length - 1 ? 'rgba(255,255,255,0.1)' : COLORS.accent,
-              }}
-            >Sljedeća →</button>
-          </div>
-        </div>
-      )}
-    </WidgetWrapper>
-  )
-}
-
-function SocialEmbedWidget({ platform, text, author, timestamp }: {
-  platform: string; text: string; author: string; timestamp: string
-}) {
-  const icon = platform === 'twitter' || platform === 'x' ? '𝕏' : platform === 'instagram' ? '📷' : '💬'
-  const platformLabel = platform === 'twitter' || platform === 'x' ? 'X (Twitter)' : platform
-  return (
-    <WidgetWrapper icon={icon} label={platformLabel}>
-      <div style={{
-        padding: 16, background: `${COLORS.border}66`, borderRadius: 8,
-        borderLeft: `3px solid ${COLORS.accent}`,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: '50%', background: COLORS.accent, display: 'flex',
-            alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', fontSize: 16,
-          }}>{(author || 'U').charAt(0).toUpperCase()}</div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 14, color: '#fff' }}>{author}</div>
-          </div>
-        </div>
-        <div style={{ fontSize: 15, lineHeight: 1.6, color: COLORS.text, whiteSpace: 'pre-wrap' }}>{text}</div>
-        {timestamp && <div style={{ marginTop: 12, fontSize: 12, color: COLORS.muted }}>{timestamp}</div>}
-      </div>
-    </WidgetWrapper>
-  )
-}
-
-function SourcesWidget({ sources }: { sources: string[] }) {
-  return (
-    <WidgetWrapper icon="📰" label="Izvori">
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {sources.map((s, i) => (
-          <li key={i} style={{
-            padding: '10px 14px', background: `${COLORS.border}66`, borderRadius: 8,
-            fontSize: 14, color: COLORS.text, display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <span style={{ color: COLORS.accent }}>↗</span>
-            <span>{s}</span>
-          </li>
-        ))}
-      </ul>
-    </WidgetWrapper>
+    <div style={{
+      display: 'flex', flexWrap: 'wrap', gap: 8, margin: '32px 0 16px',
+      paddingTop: 24, borderTop: '1px solid rgba(255,255,255,0.1)',
+    }}>
+      {tags.map((tag, i) => (
+        <span key={i} style={{
+          padding: '6px 14px', borderRadius: 20,
+          background: C.accentSoft, color: C.accent,
+          fontSize: 13, fontWeight: 600, letterSpacing: 0.3,
+        }}>{tag}</span>
+      ))}
+    </div>
   )
 }
 
@@ -458,30 +538,17 @@ function safeJson<T>(raw: string | undefined | null, fallback: T): T {
 
 function renderWidget(type: string, attrs: Record<string, string>) {
   switch (type) {
-    case 'poll':
-      return <PollWidget question={attrs.question || 'Anketa'} options={safeJson<string[]>(attrs.options, [])} />
-
-    case 'quiz':
-      return <QuizWidget title={attrs.title} questions={safeJson(attrs.questions, [])} />
-
     case 'match':
       return (
         <MatchWidget
           home={attrs.home || ''}
           away={attrs.away || ''}
+          homeShort={attrs['home-short']}
+          awayShort={attrs['away-short']}
           score={attrs.score || '0-0'}
           date={attrs.date || ''}
           league={attrs.league || ''}
           status={attrs.status || 'FT'}
-        />
-      )
-
-    case 'stats-table':
-      return (
-        <StatsTableWidget
-          title={attrs.title || ''}
-          headers={safeJson<string[]>(attrs.headers, [])}
-          rows={safeJson<string[][]>(attrs.rows, [])}
         />
       )
 
@@ -491,6 +558,8 @@ function renderWidget(type: string, attrs: Record<string, string>) {
           name={attrs.name || ''}
           team={attrs.team || ''}
           position={attrs.position || ''}
+          nationality={attrs.nationality}
+          age={attrs.age}
           rating={attrs.rating}
           goals={attrs.goals}
           assists={attrs.assists}
@@ -501,21 +570,32 @@ function renderWidget(type: string, attrs: Record<string, string>) {
     case 'video':
       return <VideoWidget url={attrs.url || attrs.src || ''} caption={attrs.caption || ''} />
 
-    case 'gallery':
-      return <GalleryWidget images={safeJson<{ url: string; caption: string }[]>(attrs.images, [])} />
-
-    case 'social-embed':
+    case 'stats-table':
       return (
-        <SocialEmbedWidget
-          platform={attrs.platform || 'twitter'}
-          text={attrs.text || ''}
-          author={attrs.author || ''}
-          timestamp={attrs.timestamp || attrs.date || ''}
+        <StatsTableWidget
+          title={attrs.title || ''}
+          home={attrs.home}
+          away={attrs.away}
+          stats={safeJson<StatRow[]>(attrs.stats, [])}
+          headers={safeJson<string[]>(attrs.headers, [])}
+          rows={safeJson<string[][]>(attrs.rows, [])}
         />
       )
 
+    case 'poll':
+      return <PollWidget question={attrs.question || 'Anketa'} options={safeJson<string[]>(attrs.options, [])} />
+
+    case 'quiz':
+      return <QuizWidget title={attrs.title} questions={safeJson(attrs.questions, [])} />
+
+    case 'tags':
+      return <TagsWidget tags={safeJson<string[]>(attrs.tags, [])} />
+
+    // Removed widgets — return nothing
+    case 'gallery':
+    case 'social-embed':
     case 'sources':
-      return <SourcesWidget sources={safeJson<string[]>(attrs.sources, [])} />
+      return null
 
     default:
       return null
@@ -526,12 +606,10 @@ function renderWidget(type: string, attrs: Record<string, string>) {
    Main Hydrator — splits HTML + renders widgets inline
    ═══════════════════════════════════════════════════ */
 
-// Regex to match self-closing or open+close data-widget divs
 const WIDGET_RE = /<div\s+data-widget="([^"]+)"([^>]*)(?:\/>|><\/div>)/gi
 
 function parseDataAttrs(attrString: string): Record<string, string> {
   const attrs: Record<string, string> = {}
-  // Match data-foo="value" or data-foo='value'
   const re = /data-([\w-]+)=(?:"([^"]*)"|'([^']*)')/g
   let m: RegExpExecArray | null
   while ((m = re.exec(attrString)) !== null) {
@@ -549,25 +627,17 @@ type Segment =
 function splitHtml(html: string): Segment[] {
   const segments: Segment[] = []
   let lastIndex = 0
-
-  // Reset regex
   WIDGET_RE.lastIndex = 0
 
   let match: RegExpExecArray | null
   while ((match = WIDGET_RE.exec(html)) !== null) {
-    // Add preceding HTML
     if (match.index > lastIndex) {
       segments.push({ kind: 'html', html: html.slice(lastIndex, match.index) })
     }
-
-    const widgetType = match[1]
-    const attrString = match[0] // full match for attribute parsing
-    segments.push({ kind: 'widget', type: widgetType, attrs: parseDataAttrs(attrString) })
-
+    segments.push({ kind: 'widget', type: match[1], attrs: parseDataAttrs(match[0]) })
     lastIndex = match.index + match[0].length
   }
 
-  // Trailing HTML
   if (lastIndex < html.length) {
     segments.push({ kind: 'html', html: html.slice(lastIndex) })
   }
@@ -584,7 +654,9 @@ export function WidgetHydrator({ html }: { html: string }) {
         if (seg.kind === 'html') {
           return <div key={i} dangerouslySetInnerHTML={{ __html: seg.html }} />
         }
-        return <div key={i}>{renderWidget(seg.type, seg.attrs)}</div>
+        const widget = renderWidget(seg.type, seg.attrs)
+        if (!widget) return null
+        return <div key={i}>{widget}</div>
       })}
     </div>
   )
