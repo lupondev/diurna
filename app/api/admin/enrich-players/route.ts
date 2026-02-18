@@ -31,7 +31,7 @@ export async function GET() {
             age: p.player.age,
             photo: p.player.photo,
             currentTeam: p.statistics?.[0]?.team?.name || player.currentTeam,
-            lastUpdated: new Date(),
+            lastSyncedAt: new Date(),
           },
         })
         enriched++

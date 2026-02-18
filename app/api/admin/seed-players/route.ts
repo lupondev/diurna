@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
-const TOP_PLAYERS: { name: string; shortName: string; currentTeam: string; position: string; nationality: string; onLoan?: boolean; loanFrom?: string }[] = [
+const TOP_PLAYERS: { name: string; shortName: string; currentTeam: string; position: string; nationality: string }[] = [
   { name: 'Erling Haaland', shortName: 'Haaland', currentTeam: 'Manchester City', position: 'ST', nationality: 'Norway' },
   { name: 'Mohamed Salah', shortName: 'Salah', currentTeam: 'Liverpool', position: 'RW', nationality: 'Egypt' },
   { name: 'Bukayo Saka', shortName: 'Saka', currentTeam: 'Arsenal', position: 'RW', nationality: 'England' },
@@ -36,10 +36,10 @@ const TOP_PLAYERS: { name: string; shortName: string; currentTeam: string; posit
   { name: 'Dusan Vlahovic', shortName: 'Vlahovic', currentTeam: 'Juventus', position: 'ST', nationality: 'Serbia' },
   { name: 'Hakan Calhanoglu', shortName: 'Calhanoglu', currentTeam: 'Inter Milan', position: 'CM', nationality: 'Turkey' },
   { name: 'Rafael Leao', shortName: 'Leao', currentTeam: 'AC Milan', position: 'LW', nationality: 'Portugal' },
-  { name: 'Victor Osimhen', shortName: 'Osimhen', currentTeam: 'Galatasaray', position: 'ST', nationality: 'Nigeria', onLoan: true, loanFrom: 'Napoli' },
+  { name: 'Victor Osimhen', shortName: 'Osimhen', currentTeam: 'Galatasaray', position: 'ST', nationality: 'Nigeria' },
   { name: 'Nicolo Barella', shortName: 'Barella', currentTeam: 'Inter Milan', position: 'CM', nationality: 'Italy' },
-  { name: 'Pierre Kalulu', shortName: 'Kalulu', currentTeam: 'Juventus', position: 'CB', nationality: 'France', onLoan: true, loanFrom: 'AC Milan' },
-  { name: 'Francesco Pio Esposito', shortName: 'Pio Esposito', currentTeam: 'Spezia', position: 'ST', nationality: 'Italy', onLoan: true, loanFrom: 'Inter Milan' },
+  { name: 'Pierre Kalulu', shortName: 'Kalulu', currentTeam: 'Juventus', position: 'CB', nationality: 'France' },
+  { name: 'Francesco Pio Esposito', shortName: 'Pio Esposito', currentTeam: 'Spezia', position: 'ST', nationality: 'Italy' },
   { name: 'Andrea Cambiaso', shortName: 'Cambiaso', currentTeam: 'Juventus', position: 'LB', nationality: 'Italy' },
   { name: 'Manuel Locatelli', shortName: 'Locatelli', currentTeam: 'Juventus', position: 'CM', nationality: 'Italy' },
   { name: 'Piotr Zielinski', shortName: 'Zielinski', currentTeam: 'Inter Milan', position: 'CM', nationality: 'Poland' },
@@ -47,7 +47,7 @@ const TOP_PLAYERS: { name: string; shortName: string; currentTeam: string; posit
   { name: 'Harry Kane', shortName: 'Kane', currentTeam: 'Bayern Munich', position: 'ST', nationality: 'England' },
   { name: 'Florian Wirtz', shortName: 'Wirtz', currentTeam: 'Bayer Leverkusen', position: 'AM', nationality: 'Germany' },
   { name: 'Jamal Musiala', shortName: 'Musiala', currentTeam: 'Bayern Munich', position: 'AM', nationality: 'Germany' },
-  { name: 'Xavi Simons', shortName: 'X. Simons', currentTeam: 'RB Leipzig', position: 'AM', nationality: 'Netherlands', onLoan: true, loanFrom: 'PSG' },
+  { name: 'Xavi Simons', shortName: 'X. Simons', currentTeam: 'RB Leipzig', position: 'AM', nationality: 'Netherlands' },
   { name: 'Ousmane Dembele', shortName: 'Dembele', currentTeam: 'PSG', position: 'RW', nationality: 'France' },
   { name: 'Bradley Barcola', shortName: 'Barcola', currentTeam: 'PSG', position: 'LW', nationality: 'France' },
   { name: 'Achraf Hakimi', shortName: 'Hakimi', currentTeam: 'PSG', position: 'RB', nationality: 'Morocco' },
@@ -72,27 +72,31 @@ export async function POST() {
   let created = 0
   for (const player of TOP_PLAYERS) {
     try {
-      await prisma.player.upsert({
+      const existing = await prisma.player.findFirst({
         where: { name: player.name },
-        update: {
-          currentTeam: player.currentTeam,
-          position: player.position,
-          shortName: player.shortName,
-          nationality: player.nationality,
-          onLoan: player.onLoan || false,
-          loanFrom: player.loanFrom || null,
-          lastUpdated: new Date(),
-        },
-        create: {
-          name: player.name,
-          shortName: player.shortName,
-          currentTeam: player.currentTeam,
-          position: player.position,
-          nationality: player.nationality,
-          onLoan: player.onLoan || false,
-          loanFrom: player.loanFrom || null,
-        },
       })
+
+      if (existing) {
+        await prisma.player.update({
+          where: { id: existing.id },
+          data: {
+            currentTeam: player.currentTeam,
+            position: player.position,
+            shortName: player.shortName,
+            nationality: player.nationality,
+          },
+        })
+      } else {
+        await prisma.player.create({
+          data: {
+            name: player.name,
+            shortName: player.shortName,
+            currentTeam: player.currentTeam,
+            position: player.position,
+            nationality: player.nationality,
+          },
+        })
+      }
       created++
     } catch (e) {
       console.error(`Failed to seed ${player.name}:`, e)

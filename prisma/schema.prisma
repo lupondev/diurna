@@ -451,24 +451,163 @@ model Entity {
 }
 
 model Player {
-  id            String   @id @default(cuid())
-  apiFootballId Int?     @unique
-  name          String   @unique
-  shortName     String?
-  nationality   String?
-  position      String?
-  age           Int?
-  currentTeam   String?
-  currentTeamId Int?
-  onLoan        Boolean  @default(false)
-  loanFrom      String?
-  photo         String?
-  marketValue   String?
-  lastUpdated   DateTime @default(now())
-  createdAt     DateTime @default(now())
+  id               String    @id @default(cuid())
+  apiFootballId    Int?      @unique
+  name             String
+  shortName        String?
+  firstName        String?
+  lastName         String?
+  nationality      String?
+  nationalityFlag  String?
+  dateOfBirth      DateTime?
+  age              Int?
+  height           String?
+  weight           String?
+  photo            String?
+  position         String?
+  detailedPosition String?
+  preferredFoot    String?
+  currentTeam      String?
+  currentTeamId    Int?
+  currentLeague    String?
+  currentLeagueId  Int?
+  jerseyNumber     Int?
+  injured          Boolean   @default(false)
 
-  @@index([name])
-  @@index([currentTeam])
+  salary           Int?
+  salaryNet        Int?
+  salaryAnnual     Int?
+  contractExpiry   DateTime?
+  contractStart    DateTime?
+  marketValue      String?
+
+  capologySlug     String?
+  lastSyncedAt     DateTime?
+  lastSalarySyncAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  seasons   PlayerSeason[]
+  transfers Transfer[]
+  injuries  Injury[]
+
+  @@index([currentTeamId])
+  @@index([currentLeagueId])
+  @@index([nationality])
+  @@index([position])
+}
+
+model PlayerSeason {
+  id            String @id @default(cuid())
+  playerId      String
+  player        Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  season        Int
+  leagueId      Int?
+  leagueName    String?
+  teamId        Int?
+  teamName      String?
+
+  appearances   Int    @default(0)
+  lineups       Int    @default(0)
+  minutes       Int    @default(0)
+
+  goals         Int    @default(0)
+  assists       Int    @default(0)
+  shots         Int    @default(0)
+  shotsOnTarget Int    @default(0)
+
+  totalPasses   Int    @default(0)
+  keyPasses     Int    @default(0)
+  passAccuracy  Float?
+
+  tackles       Int    @default(0)
+  blocks        Int    @default(0)
+  interceptions Int    @default(0)
+
+  dribbleAttempts Int  @default(0)
+  dribbleSuccess  Int  @default(0)
+
+  yellowCards    Int   @default(0)
+  redCards       Int   @default(0)
+  foulsCommitted Int   @default(0)
+  foulsDrawn     Int   @default(0)
+
+  saves          Int?
+  goalsConceded  Int?
+  cleanSheets    Int?
+  penaltySaved   Int?
+
+  rating Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, season, leagueId])
+  @@index([season])
+  @@index([leagueId])
+}
+
+model Transfer {
+  id         String    @id @default(cuid())
+  playerId   String
+  player     Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  date       DateTime?
+  fromTeam   String?
+  fromTeamId Int?
+  toTeam     String?
+  toTeamId   Int?
+  type       String?
+  fee        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([playerId])
+}
+
+model Injury {
+  id        String    @id @default(cuid())
+  playerId  String
+  player    Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  type      String?
+  reason    String?
+  startDate DateTime?
+  endDate   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([playerId])
+}
+
+model ClubFinancials {
+  id            String  @id @default(cuid())
+  teamName      String
+  teamId        Int?
+  leagueName    String?
+  season        Int
+
+  totalPayroll  Int?
+  highestPaid   String?
+  highestSalary Int?
+  averageSalary Int?
+  squadSize     Int?
+
+  revenue           Int?
+  matchdayRevenue   Int?
+  broadcastRevenue  Int?
+  commercialRevenue Int?
+  totalCosts        Int?
+  profit            Int?
+
+  capologySlug String?
+  lastSyncedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamName, season])
+  @@index([leagueName])
+  @@index([season])
 }
 
 model StoryCluster {

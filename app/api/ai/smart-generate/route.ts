@@ -328,7 +328,7 @@ async function basicFactCheck(articleHtml: string, sourceContext: string, headli
   if (sourceContext && sourceContext.trim().length > 50) {
     try {
       const players = await prisma.player.findMany({
-        select: { name: true, shortName: true, currentTeam: true, onLoan: true, loanFrom: true }
+        select: { name: true, shortName: true, currentTeam: true }
       })
 
       for (const player of players) {
@@ -343,17 +343,6 @@ async function basicFactCheck(articleHtml: string, sourceContext: string, headli
             detail: `"${player.name}" appears in article but NOT in source material. This may be hallucinated.`,
             severity: 'HIGH',
           })
-        }
-
-        if (nameInArticle && player.onLoan && player.loanFrom) {
-          const parentTeam = player.loanFrom.toLowerCase()
-          if (text.includes(parentTeam)) {
-            warnings.push({
-              type: 'LOAN_STATUS',
-              detail: `"${player.name}" is currently on loan at ${player.currentTeam} (from ${player.loanFrom}). Verify team assignment.`,
-              severity: 'MEDIUM',
-            })
-          }
         }
       }
     } catch {}

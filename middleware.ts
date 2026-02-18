@@ -17,7 +17,7 @@ export async function middleware(req: NextRequest) {
   const isOgRoute = pathname.startsWith('/api/og')
   const isFeedRoute = pathname.startsWith('/feed')
   const isCronRoute = pathname.startsWith('/api/cron')
-  const isSeedRoute = pathname.startsWith('/api/admin/seed-feeds') || pathname.startsWith('/api/admin/seed-entities') || pathname.startsWith('/api/admin/seed-players') || pathname.startsWith('/api/admin/enrich-players') || pathname.startsWith('/api/admin/seed-matches')
+  const isSeedRoute = pathname.startsWith('/api/admin/seed-feeds') || pathname.startsWith('/api/admin/seed-entities') || pathname.startsWith('/api/admin/seed-players') || pathname.startsWith('/api/admin/enrich-players') || pathname.startsWith('/api/admin/seed-matches') || pathname.startsWith('/api/admin/sync-players') || pathname.startsWith('/api/admin/scrape-salaries')
   const isNewsroomPublic = pathname.startsWith('/api/newsroom/clusters') || pathname.startsWith('/api/entities/search')
   const isSetupRoute = pathname.startsWith('/api/setup/')
   const isDashboardStats = pathname.startsWith('/api/dashboard/stats')

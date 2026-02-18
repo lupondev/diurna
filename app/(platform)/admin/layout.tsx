@@ -9,6 +9,7 @@ const adminNav = [
   { label: 'Invites', href: '/admin/invites', icon: '✉️' },
   { label: 'Audit Log', href: '/admin/audit-log', icon: '📋' },
   { label: 'Site Settings', href: '/admin/site', icon: '⚙️' },
+  { label: 'Data Sync', href: '/admin/sync', icon: '🔄' },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
