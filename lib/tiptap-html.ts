@@ -109,7 +109,7 @@ function renderWidgetBlockquote(node: TiptapNode, widget: { type: string; attrs:
 
   if (widget.type === 'poll') {
     const optionsJson = escapeHtml(JSON.stringify(items))
-    return `<div class="widget-poll" data-question="${question}" data-options="${optionsJson}"></div>`
+    return `<div data-widget="poll" data-question="${question}" data-options="${optionsJson}"></div>`
   }
 
   if (widget.type === 'quiz') {
@@ -124,11 +124,11 @@ function renderWidgetBlockquote(node: TiptapNode, widget: { type: string; attrs:
       return item
     })
     const optionsJson = escapeHtml(JSON.stringify(cleanItems))
-    return `<div class="widget-quiz" data-question="${question}" data-options="${optionsJson}" data-correct="${correct}"></div>`
+    return `<div data-widget="quiz" data-questions="${escapeHtml(JSON.stringify([{ q: question, options: cleanItems, correct }]))}"></div>`
   }
 
   if (widget.type === 'survey') {
-    return `<div class="widget-survey" data-question="${question}"></div>`
+    return `<div data-widget="survey" data-question="${question}"></div>`
   }
 
   return `<blockquote>${renderChildren(node)}</blockquote>`
@@ -199,6 +199,15 @@ function renderNode(node: TiptapNode): string {
 
     case 'hardBreak':
       return '<br />'
+
+    case 'widget': {
+      const widgetType = escapeHtml(String(node.attrs?.widget || ''))
+      const dataAttrs = Object.entries(node.attrs || {})
+        .filter(([k]) => k !== 'widget')
+        .map(([k, v]) => ` data-${escapeHtml(k)}="${escapeHtml(String(v))}"`)
+        .join('')
+      return `<div data-widget="${widgetType}"${dataAttrs}></div>`
+    }
 
     default:
       return renderChildren(node)

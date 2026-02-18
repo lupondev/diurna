@@ -1,6 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+
+/* ═══════════════════════════════════════════════════
+   Widget Components
+   ═══════════════════════════════════════════════════ */
 
 function PollWidget({ question, options }: { question: string; options: string[] }) {
   const [voted, setVoted] = useState<number | null>(null)
@@ -18,7 +23,7 @@ function PollWidget({ question, options }: { question: string; options: string[]
     <div className="aw-widget aw-poll">
       <div className="aw-widget-header">
         <span className="aw-widget-icon">📊</span>
-        <span className="aw-widget-label">Poll</span>
+        <span className="aw-widget-label">Anketa</span>
       </div>
       <h3 className="aw-widget-question">{question}</h3>
       <div className="aw-poll-options">
@@ -43,39 +48,74 @@ function PollWidget({ question, options }: { question: string; options: string[]
         })}
       </div>
       {voted !== null && (
-        <div className="aw-poll-total">{total} votes</div>
+        <div className="aw-poll-total">{total} glasova</div>
       )}
     </div>
   )
 }
 
-function QuizWidget({ question, options, correct }: { question: string; options: string[]; correct: number }) {
+function QuizWidget({ questions }: { questions: { q: string; options: string[]; correct: number }[] }) {
+  const [current, setCurrent] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
   const [revealed, setRevealed] = useState(false)
+  const [score, setScore] = useState(0)
+  const [finished, setFinished] = useState(false)
+
+  const q = questions[current]
 
   function handleSelect(idx: number) {
     if (revealed) return
     setSelected(idx)
   }
 
-  function handleReveal() {
+  function handleCheck() {
     if (selected === null) return
     setRevealed(true)
+    if (selected === q.correct) setScore((s) => s + 1)
+  }
+
+  function handleNext() {
+    if (current < questions.length - 1) {
+      setCurrent((c) => c + 1)
+      setSelected(null)
+      setRevealed(false)
+    } else {
+      setFinished(true)
+    }
+  }
+
+  if (finished) {
+    const pct = Math.round((score / questions.length) * 100)
+    return (
+      <div className="aw-widget aw-quiz">
+        <div className="aw-widget-header">
+          <span className="aw-widget-icon">🧠</span>
+          <span className="aw-widget-label">Kviz — Rezultat</span>
+        </div>
+        <div className="aw-quiz-result-final">
+          <div className="aw-quiz-score">{score}/{questions.length}</div>
+          <div className="aw-quiz-score-pct">{pct}% tačno</div>
+          <div className="aw-quiz-score-bar">
+            <div className="aw-quiz-score-fill" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="aw-widget aw-quiz">
       <div className="aw-widget-header">
         <span className="aw-widget-icon">🧠</span>
-        <span className="aw-widget-label">Quiz</span>
+        <span className="aw-widget-label">Kviz — Pitanje {current + 1}/{questions.length}</span>
       </div>
-      <h3 className="aw-widget-question">{question}</h3>
+      <h3 className="aw-widget-question">{q.q}</h3>
       <div className="aw-quiz-options">
-        {options.map((opt, i) => {
+        {q.options.map((opt, i) => {
           let cls = ''
           if (selected === i && !revealed) cls = 'selected'
-          if (revealed && i === correct) cls = 'correct'
-          if (revealed && selected === i && i !== correct) cls = 'wrong'
+          if (revealed && i === q.correct) cls = 'correct'
+          if (revealed && selected === i && i !== q.correct) cls = 'wrong'
           return (
             <button
               key={i}
@@ -90,12 +130,17 @@ function QuizWidget({ question, options, correct }: { question: string; options:
         })}
       </div>
       {!revealed ? (
-        <button className="aw-quiz-check" onClick={handleReveal} disabled={selected === null}>
-          Check Answer
+        <button className="aw-quiz-check" onClick={handleCheck} disabled={selected === null}>
+          Provjeri odgovor
         </button>
       ) : (
-        <div className={`aw-quiz-result ${selected === correct ? 'correct' : 'wrong'}`}>
-          {selected === correct ? 'Correct!' : `Wrong! The answer is: ${options[correct]}`}
+        <div className="aw-quiz-answer-row">
+          <div className={`aw-quiz-result ${selected === q.correct ? 'correct' : 'wrong'}`}>
+            {selected === q.correct ? 'Tačno!' : `Netačno! Odgovor: ${q.options[q.correct]}`}
+          </div>
+          <button className="aw-quiz-next" onClick={handleNext}>
+            {current < questions.length - 1 ? 'Sljedeće pitanje →' : 'Vidi rezultat →'}
+          </button>
         </div>
       )}
     </div>
@@ -108,16 +153,11 @@ function SurveyWidget({ question }: { question: string }) {
   const [feedback, setFeedback] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
-  function handleSubmit() {
-    if (rating === 0) return
-    setSubmitted(true)
-  }
-
   return (
     <div className="aw-widget aw-survey">
       <div className="aw-widget-header">
         <span className="aw-widget-icon">📋</span>
-        <span className="aw-widget-label">Survey</span>
+        <span className="aw-widget-label">Anketa</span>
       </div>
       <h3 className="aw-widget-question">{question}</h3>
       {!submitted ? (
@@ -138,23 +178,276 @@ function SurveyWidget({ question }: { question: string }) {
           </div>
           <textarea
             className="aw-survey-feedback"
-            placeholder="Leave your feedback (optional)..."
+            placeholder="Ostavite komentar (opcionalno)..."
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             rows={3}
           />
-          <button className="aw-survey-submit" onClick={handleSubmit} disabled={rating === 0}>
-            Submit
+          <button className="aw-survey-submit" onClick={() => { if (rating > 0) setSubmitted(true) }} disabled={rating === 0}>
+            Pošalji
           </button>
         </>
       ) : (
-        <div className="aw-survey-thanks">
-          Thank you for your feedback!
+        <div className="aw-survey-thanks">Hvala na povratnoj informaciji!</div>
+      )}
+    </div>
+  )
+}
+
+function StatsTableWidget({ title, headers, rows }: { title: string; headers: string[]; rows: string[][] }) {
+  return (
+    <div className="aw-widget aw-stats-table">
+      <div className="aw-widget-header">
+        <span className="aw-widget-icon">📈</span>
+        <span className="aw-widget-label">Statistika</span>
+      </div>
+      {title && <h3 className="aw-widget-question">{title}</h3>}
+      <div className="aw-stats-table-wrap">
+        <table className="aw-stats-table-el">
+          {headers.length > 0 && (
+            <thead>
+              <tr>
+                {headers.map((h, i) => <th key={i}>{h}</th>)}
+              </tr>
+            </thead>
+          )}
+          <tbody>
+            {rows.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => <td key={ci}>{cell}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function PlayerCardWidget({ name, team, position, number, nationality, image, stats }: {
+  name: string; team: string; position: string; number: string; nationality: string; image: string
+  stats: { label: string; value: string }[]
+}) {
+  return (
+    <div className="aw-widget aw-player-card">
+      <div className="aw-player-card-top">
+        <div className="aw-player-card-photo" style={{ backgroundImage: image ? `url(${image})` : undefined }}>
+          {!image && <span className="aw-player-card-initials">{name.split(' ').map(n => n[0]).join('')}</span>}
+        </div>
+        <div className="aw-player-card-info">
+          <div className="aw-player-card-number">#{number}</div>
+          <h3 className="aw-player-card-name">{name}</h3>
+          <div className="aw-player-card-meta">{position} · {team}</div>
+          <div className="aw-player-card-nat">{nationality}</div>
+        </div>
+      </div>
+      <div className="aw-player-card-stats">
+        {stats.map((s, i) => (
+          <div key={i} className="aw-player-card-stat">
+            <div className="aw-player-card-stat-value">{s.value}</div>
+            <div className="aw-player-card-stat-label">{s.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function VideoWidget({ src, title }: { src: string; title: string }) {
+  const [playing, setPlaying] = useState(false)
+
+  // Convert YouTube watch URL to embed URL
+  let embedSrc = src
+  const ytMatch = src.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/)
+  if (ytMatch) embedSrc = `https://www.youtube.com/embed/${ytMatch[1]}`
+
+  return (
+    <div className="aw-widget aw-video">
+      <div className="aw-widget-header">
+        <span className="aw-widget-icon">🎬</span>
+        <span className="aw-widget-label">Video</span>
+      </div>
+      {title && <h3 className="aw-widget-question">{title}</h3>}
+      <div className="aw-video-container">
+        {!playing ? (
+          <button className="aw-video-thumb" onClick={() => setPlaying(true)}>
+            <div className="aw-video-play">▶</div>
+            <div className="aw-video-caption">Klikni za reprodukciju</div>
+          </button>
+        ) : (
+          <iframe
+            src={`${embedSrc}?autoplay=1`}
+            title={title}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function GalleryWidget({ images }: { images: { src: string; caption: string }[] }) {
+  const [lightbox, setLightbox] = useState<number | null>(null)
+
+  return (
+    <div className="aw-widget aw-gallery">
+      <div className="aw-widget-header">
+        <span className="aw-widget-icon">🖼️</span>
+        <span className="aw-widget-label">Galerija</span>
+      </div>
+      <div className="aw-gallery-grid">
+        {images.map((img, i) => (
+          <button key={i} className="aw-gallery-item" onClick={() => setLightbox(i)}>
+            <div className="aw-gallery-img" style={{ backgroundImage: `url(${img.src})` }}>
+              {!img.src && <span className="aw-gallery-placeholder">{i + 1}</span>}
+            </div>
+            {img.caption && <div className="aw-gallery-caption">{img.caption}</div>}
+          </button>
+        ))}
+      </div>
+      {lightbox !== null && (
+        <div className="aw-lightbox" onClick={() => setLightbox(null)}>
+          <div className="aw-lightbox-inner" onClick={(e) => e.stopPropagation()}>
+            <button className="aw-lightbox-close" onClick={() => setLightbox(null)}>✕</button>
+            <div className="aw-lightbox-img" style={{ backgroundImage: `url(${images[lightbox].src})` }}>
+              {!images[lightbox].src && <span className="aw-gallery-placeholder">{lightbox + 1}</span>}
+            </div>
+            {images[lightbox].caption && (
+              <div className="aw-lightbox-caption">{images[lightbox].caption}</div>
+            )}
+            <div className="aw-lightbox-nav">
+              <button
+                disabled={lightbox === 0}
+                onClick={() => setLightbox((p) => Math.max(0, (p ?? 0) - 1))}
+              >
+                ← Prethodna
+              </button>
+              <span>{lightbox + 1} / {images.length}</span>
+              <button
+                disabled={lightbox === images.length - 1}
+                onClick={() => setLightbox((p) => Math.min(images.length - 1, (p ?? 0) + 1))}
+              >
+                Sljedeća →
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
   )
 }
+
+function MatchWidget({ home, away, score, date, competition, stadium }: {
+  home: string; away: string; score: string; date: string; competition: string; stadium: string
+}) {
+  const [h, a] = score.split('-').map((s) => s.trim())
+  return (
+    <div className="aw-widget aw-match">
+      <div className="aw-widget-header">
+        <span className="aw-widget-icon">⚽</span>
+        <span className="aw-widget-label">{competition}</span>
+      </div>
+      <div className="aw-match-body">
+        <div className="aw-match-team">
+          <div className="aw-match-team-crest">{home.slice(0, 3).toUpperCase()}</div>
+          <div className="aw-match-team-name">{home}</div>
+        </div>
+        <div className="aw-match-score">
+          <div className="aw-match-score-num">{h} — {a}</div>
+          <div className="aw-match-status">FT</div>
+        </div>
+        <div className="aw-match-team">
+          <div className="aw-match-team-crest">{away.slice(0, 3).toUpperCase()}</div>
+          <div className="aw-match-team-name">{away}</div>
+        </div>
+      </div>
+      <div className="aw-match-meta">
+        {date && <span>{date}</span>}
+        {stadium && <span>· {stadium}</span>}
+      </div>
+    </div>
+  )
+}
+
+function SocialEmbedWidget({ platform, author, handle, text, date }: {
+  platform: string; author: string; handle: string; text: string; date: string
+}) {
+  const icon = platform === 'twitter' || platform === 'x' ? '𝕏' : platform === 'instagram' ? '📷' : '💬'
+  return (
+    <div className="aw-widget aw-social-embed">
+      <div className="aw-widget-header">
+        <span className="aw-widget-icon">{icon}</span>
+        <span className="aw-widget-label">{platform === 'twitter' || platform === 'x' ? 'X (Twitter)' : platform}</span>
+      </div>
+      <div className="aw-social-embed-card">
+        <div className="aw-social-embed-author">
+          <div className="aw-social-embed-avatar">{author.charAt(0)}</div>
+          <div>
+            <div className="aw-social-embed-name">{author}</div>
+            <div className="aw-social-embed-handle">{handle}</div>
+          </div>
+        </div>
+        <div className="aw-social-embed-text">{text}</div>
+        {date && <div className="aw-social-embed-date">{date}</div>}
+      </div>
+    </div>
+  )
+}
+
+function SourcesWidget({ sources }: { sources: { name: string; url: string }[] }) {
+  return (
+    <div className="aw-widget aw-sources">
+      <div className="aw-widget-header">
+        <span className="aw-widget-icon">📰</span>
+        <span className="aw-widget-label">Izvori</span>
+      </div>
+      <ul className="aw-sources-list">
+        {sources.map((s, i) => (
+          <li key={i} className="aw-sources-item">
+            <a href={s.url} target="_blank" rel="noopener noreferrer" className="aw-sources-link">
+              {s.name}
+              <span className="aw-sources-arrow">↗</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════
+   Helper
+   ═══════════════════════════════════════════════════ */
+
+function safeParseJson<T>(json: string | undefined, fallback: T): T {
+  if (!json) return fallback
+  try { return JSON.parse(json) } catch { return fallback }
+}
+
+/* ═══════════════════════════════════════════════════
+   Portal — replaces placeholder element with React
+   ═══════════════════════════════════════════════════ */
+
+function WidgetPortal({ element, children }: { element: Element; children: React.ReactNode }) {
+  const [container] = useState(() => {
+    const div = document.createElement('div')
+    div.className = 'aw-portal'
+    return div
+  })
+
+  useEffect(() => {
+    element.replaceWith(container)
+    return () => {}
+  }, [element, container])
+
+  return createPortal(children, container)
+}
+
+/* ═══════════════════════════════════════════════════
+   Main Renderer
+   ═══════════════════════════════════════════════════ */
 
 export function ArticleRenderer({ html }: { html: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -164,14 +457,12 @@ export function ArticleRenderer({ html }: { html: string }) {
     if (!containerRef.current) return
 
     const found: typeof widgets = []
-    const els = containerRef.current.querySelectorAll('.widget-poll, .widget-quiz, .widget-survey')
+    const els = containerRef.current.querySelectorAll('[data-widget]')
     els.forEach((el, i) => {
-      const type = el.classList.contains('widget-poll') ? 'poll'
-        : el.classList.contains('widget-quiz') ? 'quiz'
-        : 'survey'
+      const type = el.getAttribute('data-widget') || ''
       const data: Record<string, string> = {}
       for (const attr of Array.from(el.attributes)) {
-        if (attr.name.startsWith('data-')) {
+        if (attr.name.startsWith('data-') && attr.name !== 'data-widget') {
           data[attr.name.replace('data-', '')] = attr.value
         }
       }
@@ -192,43 +483,72 @@ export function ArticleRenderer({ html }: { html: string }) {
           {w.type === 'poll' && (
             <PollWidget
               question={w.data.question || 'Poll'}
-              options={safeParseArray(w.data.options)}
+              options={safeParseJson<string[]>(w.data.options, [])}
             />
           )}
           {w.type === 'quiz' && (
             <QuizWidget
-              question={w.data.question || 'Quiz'}
-              options={safeParseArray(w.data.options)}
-              correct={parseInt(w.data.correct || '0') || 0}
+              questions={safeParseJson<{ q: string; options: string[]; correct: number }[]>(w.data.questions, [])}
             />
           )}
           {w.type === 'survey' && (
             <SurveyWidget question={w.data.question || 'Survey'} />
           )}
+          {w.type === 'stats-table' && (
+            <StatsTableWidget
+              title={w.data.title || ''}
+              headers={safeParseJson<string[]>(w.data.headers, [])}
+              rows={safeParseJson<string[][]>(w.data.rows, [])}
+            />
+          )}
+          {w.type === 'player-card' && (
+            <PlayerCardWidget
+              name={w.data.name || ''}
+              team={w.data.team || ''}
+              position={w.data.position || ''}
+              number={w.data.number || ''}
+              nationality={w.data.nationality || ''}
+              image={w.data.image || ''}
+              stats={safeParseJson<{ label: string; value: string }[]>(w.data.stats, [])}
+            />
+          )}
+          {w.type === 'video' && (
+            <VideoWidget
+              src={w.data.src || ''}
+              title={w.data.title || ''}
+            />
+          )}
+          {w.type === 'gallery' && (
+            <GalleryWidget
+              images={safeParseJson<{ src: string; caption: string }[]>(w.data.images, [])}
+            />
+          )}
+          {w.type === 'match' && (
+            <MatchWidget
+              home={w.data.home || ''}
+              away={w.data.away || ''}
+              score={w.data.score || '0-0'}
+              date={w.data.date || ''}
+              competition={w.data.competition || ''}
+              stadium={w.data.stadium || ''}
+            />
+          )}
+          {w.type === 'social-embed' && (
+            <SocialEmbedWidget
+              platform={w.data.platform || ''}
+              author={w.data.author || ''}
+              handle={w.data.handle || ''}
+              text={w.data.text || ''}
+              date={w.data.date || ''}
+            />
+          )}
+          {w.type === 'sources' && (
+            <SourcesWidget
+              sources={safeParseJson<{ name: string; url: string }[]>(w.data.sources, [])}
+            />
+          )}
         </WidgetPortal>
       ))}
     </>
   )
-}
-
-function safeParseArray(json: string | undefined): string[] {
-  if (!json) return []
-  try { return JSON.parse(json) } catch { return [] }
-}
-
-import { createPortal } from 'react-dom'
-
-function WidgetPortal({ element, children }: { element: Element; children: React.ReactNode }) {
-  const [container] = useState(() => {
-    const div = document.createElement('div')
-    div.className = 'aw-portal'
-    return div
-  })
-
-  useEffect(() => {
-    element.replaceWith(container)
-    return () => {}
-  }, [element, container])
-
-  return createPortal(children, container)
 }

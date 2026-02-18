@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
 import { tiptapToHtml } from '@/lib/tiptap-html'
 import { generateNewsArticleSchema } from '@/lib/seo'
+import { ArticleRenderer } from '@/components/public/article-renderer'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
@@ -132,11 +133,9 @@ export default async function PublicArticlePage({ params }: Props) {
       </header>
 
       {/* Article Body */}
-      <article
-        className="pub-article-body"
-        style={{ fontSize: 16, lineHeight: 1.75, color: '#374151' }}
-        dangerouslySetInnerHTML={{ __html: bodyHtml }}
-      />
+      <article style={{ fontSize: 16, lineHeight: 1.75, color: '#374151' }}>
+        <ArticleRenderer html={bodyHtml} />
+      </article>
 
       {/* Tags */}
       {article.tags.length > 0 && (
