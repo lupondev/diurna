@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
 import { tiptapToHtml } from '@/lib/tiptap-html'
-import { ArticleRenderer } from '@/components/public/article-renderer'
+import { WidgetHydrator } from '@/components/public/widget-hydrator'
 import { AdSlot } from '@/components/public/sportba'
 import {
   ReadingProgress,
@@ -270,7 +270,7 @@ function DbArticle({ data }: { data: NonNullable<Awaited<ReturnType<typeof getAr
 
           {/* Article Body with Widget Rendering */}
           <div className="sba-article-body">
-            <ArticleRenderer html={bodyHtml} />
+            <WidgetHydrator html={bodyHtml} />
           </div>
 
           {/* Tags */}

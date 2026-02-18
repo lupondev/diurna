@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
 import { tiptapToHtml } from '@/lib/tiptap-html'
 import { generateNewsArticleSchema } from '@/lib/seo'
-import { ArticleRenderer } from '@/components/public/article-renderer'
+import { WidgetHydrator } from '@/components/public/widget-hydrator'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
@@ -143,7 +143,7 @@ export default async function PublicArticlePage({ params }: Props) {
 
       {/* Article Body */}
       <article style={{ fontSize: 16, lineHeight: 1.75, color: '#374151' }}>
-        <ArticleRenderer html={bodyHtml} />
+        <WidgetHydrator html={bodyHtml} />
       </article>
 
       {/* Tags */}

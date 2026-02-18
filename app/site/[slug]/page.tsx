@@ -4,7 +4,7 @@ import { tiptapToHtml } from '@/lib/tiptap-html'
 import { generateNewsArticleSchema } from '@/lib/seo'
 import { SubscribeWidget } from '@/components/subscribe-widget'
 import { ShareButtons } from '@/components/public/share-buttons'
-import { ArticleRenderer } from '@/components/public/article-renderer'
+import { WidgetHydrator } from '@/components/public/widget-hydrator'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
@@ -131,7 +131,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             </div>
           </header>
 
-          <ArticleRenderer html={bodyHtml} />
+          <WidgetHydrator html={bodyHtml} />
 
           {article.tags.length > 0 && (
             <div className="pub-tags">
