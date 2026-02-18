@@ -20,7 +20,7 @@ async function fetchAPI(endpoint: string) {
     headers: { 'x-apisports-key': API_KEY! },
   })
   if (!res.ok) throw new Error(`API-Football error: ${res.status}`)
-  const data = await res.json()
+  const data = await res.json() as { response: any[] }
   return data.response
 }
 

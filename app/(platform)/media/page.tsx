@@ -31,7 +31,7 @@ export default function MediaPage() {
 
   useEffect(() => {
     fetch('/api/media')
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<MediaItem[]>)
       .then((data) => { setMedia(data); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
@@ -43,7 +43,7 @@ export default function MediaPage() {
       form.append('file', file)
       const res = await fetch('/api/media', { method: 'POST', body: form })
       if (res.ok) {
-        const item = await res.json()
+        const item = await res.json() as MediaItem
         setMedia((prev) => [item, ...prev])
       }
     } catch {

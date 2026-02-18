@@ -31,7 +31,7 @@ export default function AdminInvitesPage() {
   const fetchInvites = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/invites')
-      if (res.ok) setInvites(await res.json())
+      if (res.ok) setInvites(await res.json() as InviteRow[])
     } finally {
       setLoading(false)
     }
@@ -48,7 +48,7 @@ export default function AdminInvitesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, role }),
       })
-      const data = await res.json()
+      const data = await res.json() as { inviteUrl?: string; error?: string }
       if (res.ok) {
         setLastInviteUrl(`${window.location.origin}${data.inviteUrl}`)
         setEmail('')

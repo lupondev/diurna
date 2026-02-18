@@ -41,7 +41,7 @@ export default function AdminAuditLogPage() {
   const fetchLogs = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/audit-log')
-      if (res.ok) setLogs(await res.json())
+      if (res.ok) setLogs(await res.json() as LogEntry[])
     } finally {
       setLoading(false)
     }

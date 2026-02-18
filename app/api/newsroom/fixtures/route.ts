@@ -31,12 +31,12 @@ export async function GET() {
     ])
 
     const upcoming = upcomingRes.status === 'fulfilled' && upcomingRes.value.ok
-      ? await upcomingRes.value.json()
-      : { response: [] }
+      ? await upcomingRes.value.json() as { response: any[] }
+      : { response: [] as any[] }
 
     const live = liveRes.status === 'fulfilled' && liveRes.value.ok
-      ? await liveRes.value.json()
-      : { response: [] }
+      ? await liveRes.value.json() as { response: any[] }
+      : { response: [] as any[] }
 
     type FixtureResponse = {
       fixture: { id: number; date: string; status: { short: string; elapsed: number | null } }

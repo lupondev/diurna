@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { pageId, isActive } = await req.json()
+    const { pageId, isActive } = await req.json() as { pageId?: string; isActive?: boolean }
     if (!pageId || typeof isActive !== 'boolean') {
       return NextResponse.json({ error: 'Missing pageId or isActive' }, { status: 400 })
     }

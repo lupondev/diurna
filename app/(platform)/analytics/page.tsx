@@ -93,7 +93,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetch('/api/analytics/events')
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<WidgetStats>)
       .then(setWidgetStats)
       .catch(() => {})
   }, [])

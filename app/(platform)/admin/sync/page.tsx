@@ -28,7 +28,7 @@ export default function SyncPage() {
     setResults(prev => prev.map((r, i) => i === index ? { ...r, status: 'running' } : r))
     try {
       const res = await fetch(SYNC_JOBS[index].path, { method: 'POST', credentials: 'include' })
-      const data = await res.json()
+      const data = await res.json() as Record<string, unknown>
       setResults(prev => prev.map((r, i) => i === index ? { ...r, status: 'done', data } : r))
     } catch {
       setResults(prev => prev.map((r, i) => i === index ? { ...r, status: 'error', data: { error: 'Request failed' } } : r))

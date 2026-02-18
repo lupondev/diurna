@@ -17,7 +17,7 @@ export function SubscribeWidget({ siteName = 'SportNews Pro' }: { siteName?: str
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-      const data = await res.json()
+      const data = await res.json() as { message?: string; error?: string }
       if (res.ok) {
         setStatus('success')
         setMessage(data.message || 'Subscribed!')

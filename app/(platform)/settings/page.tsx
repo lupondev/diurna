@@ -38,7 +38,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetch('/api/site')
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => r.ok ? r.json() as Promise<{ name?: string; domain?: string; gaId?: string; language?: string; timezone?: string; theme?: string; wpSiteUrl?: string; wpApiKey?: string; competitorFeeds?: string[] }> : null)
       .then((data) => {
         if (!data) return
         if (data.name) setSiteName(data.name)
@@ -56,7 +56,7 @@ export default function SettingsPage() {
 
   function loadFbStatus() {
     fetch('/api/social/facebook')
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => r.ok ? r.json() as Promise<{ authUrl?: string; connected?: boolean; pages?: FbPage[] }> : null)
       .then((data) => {
         if (!data) return
         setFbAuthUrl(data.authUrl || '')
@@ -70,7 +70,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetch('/api/newsletter/subscribe')
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => r.ok ? r.json() as Promise<NewsletterStats> : null)
       .then((data) => { if (data) setNlStats(data) })
       .catch(() => {})
   }, [])
@@ -497,7 +497,7 @@ export default function SettingsPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ action: 'test' }),
                     })
-                    const data = await res.json()
+                    const data = await res.json() as { success?: boolean; message: string }
                     setWpTestResult({ success: data.success || false, message: data.message })
                   } catch {
                     setWpTestResult({ success: false, message: 'Connection failed' })

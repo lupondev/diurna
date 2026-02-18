@@ -13,7 +13,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const { id } = await params
-  const body = await req.json()
+  const body = await req.json() as { tier?: number; active?: boolean; name?: string; category?: string }
 
   const data: Record<string, unknown> = {}
   if (body.tier !== undefined) data.tier = body.tier

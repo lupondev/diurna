@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { url } = await req.json()
+    const { url } = await req.json() as { url?: string }
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ error: 'URL required' }, { status: 400 })
     }

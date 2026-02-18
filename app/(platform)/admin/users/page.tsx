@@ -28,7 +28,7 @@ export default function AdminUsersPage() {
   const fetchUsers = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/users')
-      if (res.ok) setUsers(await res.json())
+      if (res.ok) setUsers(await res.json() as UserRow[])
     } finally {
       setLoading(false)
     }
@@ -47,7 +47,7 @@ export default function AdminUsersPage() {
       if (res.ok) {
         setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u))
       } else {
-        const data = await res.json()
+        const data = await res.json() as { error?: string }
         alert(data.error || 'Failed to change role')
       }
     } finally {

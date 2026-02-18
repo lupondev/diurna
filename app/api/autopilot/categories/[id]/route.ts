@@ -13,7 +13,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const { id } = await params
-  const body = await req.json()
+  const body = await req.json() as Record<string, unknown>
   const { configId, config, id: _, ...data } = body
 
   const category = await prisma.autopilotCategory.update({

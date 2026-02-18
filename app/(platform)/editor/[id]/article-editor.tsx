@@ -52,7 +52,7 @@ export default function ArticleEditor({ id }: { id: string }) {
 
   useEffect(() => {
     fetch(`/api/articles/${id}`)
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<{ title?: string; content?: Record<string, unknown>; status?: string; slug?: string; aiGenerated?: boolean; metaTitle?: string; metaDescription?: string; scheduledAt?: string; versions?: Version[]; tags?: ArticleTag[] }>)
       .then((data) => {
         setTitle(data.title || '')
         setInitialContent(data.content || {})
@@ -69,7 +69,7 @@ export default function ArticleEditor({ id }: { id: string }) {
       })
       .catch(() => setLoading(false))
 
-    fetch('/api/tags').then((r) => r.json()).then(setAllTags).catch(() => {})
+    fetch('/api/tags').then((r) => r.json() as Promise<TagItem[]>).then(setAllTags).catch(() => {})
   }, [id])
 
   const handleTitleChange = useCallback((val: string) => {
@@ -138,9 +138,9 @@ export default function ArticleEditor({ id }: { id: string }) {
           }).catch(console.error)
           setSendNewsletter(false)
         }
-        const data = await res.json()
+        const data = await res.json() as { id?: string }
         if (data.id) {
-          const fresh = await fetch(`/api/articles/${id}`).then((r) => r.json())
+          const fresh = await fetch(`/api/articles/${id}`).then((r) => r.json() as Promise<{ versions?: Version[] }>)
           if (fresh.versions) setVersions(fresh.versions)
         }
         router.refresh()
@@ -172,7 +172,7 @@ export default function ArticleEditor({ id }: { id: string }) {
     } else {
       try {
         const res = await fetch('/api/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) })
-        if (res.ok) { const tag = await res.json(); setAllTags((prev) => [...prev, tag]); setArticleTags((prev) => [...prev, tag]) }
+        if (res.ok) { const tag = await res.json() as TagItem; setAllTags((prev) => [...prev, tag]); setArticleTags((prev) => [...prev, tag]) }
       } catch {}
     }
     setTagInput('')

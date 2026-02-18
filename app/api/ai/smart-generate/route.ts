@@ -10,17 +10,17 @@ const client = new Anthropic()
 const schema = z.object({
   topic: z.string().min(3).max(500),
   category: z.string().optional(),
-  articleType: z.enum(['breaking', 'report', 'analysis', 'preview']).optional(),
-  language: z.string().default('en'),
+  articleType: z.enum(['breaking', 'report', 'analysis', 'preview', 'transfer', 'rankings', 'profile']).optional(),
+  language: z.string().default('bs'),
   sources: z.array(z.object({
     title: z.string(),
     source: z.string(),
     role: z.enum(['primary', 'supporting', 'media']),
   })).optional(),
-  mode: z.enum(['single', 'combined', 'rewrite']).default('single'),
+  mode: z.enum(['single', 'combined', 'rewrite', 'copilot']).default('single'),
   sourceContext: z.string().max(2000).optional(),
   sourceDomain: z.string().optional(),
-  wordCount: z.number().min(50).max(1200).default(300),
+  wordCount: z.number().min(50).max(2500).default(300),
 })
 
 type ContextLevel = 'full' | 'combined' | 'headline-only'
@@ -146,6 +146,36 @@ TYPE: ${input.articleType || 'report'}
 LANGUAGE: ${input.language}
 
 Remember: ONLY use facts from the headlines above. Do NOT invent details. Max ${wordTarget} words. Synthesize, do NOT repeat.`
+    } else if (input.mode === 'copilot') {
+      contextLevel = 'full'
+      const typeMap: Record<string, string> = {
+        preview: 'Napiši najavu utakmice. Uključi formu oba tima, historiju međusobnih susreta, ključne igrače i prognozu.',
+        report: 'Napiši izvještaj. Uključi ključne momente, statistiku, ocjene igrača i analizu.',
+        transfer: 'Napiši članak o transferu. Uključi detalje ugovora, reakcije, i kako ovaj transfer utječe na tim.',
+        analysis: 'Napiši taktičku analizu. Uključi formacije, ključne statističke podatke i zaključke.',
+        rankings: 'Napiši ranking listu. Uključi obrazloženje za svaku poziciju.',
+        profile: 'Napiši profil igrača. Uključi karijeru, statistiku, stil igre i tržišnu vrijednost.',
+        breaking: 'Napiši vijest.',
+      }
+      const typeInstruction = typeMap[input.articleType || 'report'] || typeMap.report
+
+      userPrompt = `Write a full sports article based on this prompt from the editor:
+
+PROMPT: ${input.topic}
+
+ARTICLE TYPE GUIDANCE: ${typeInstruction}
+CATEGORY: ${input.category || 'Sport'}
+LANGUAGE: ${input.language === 'bs' ? 'Bosnian' : input.language === 'hr' ? 'Croatian' : input.language === 'sr' ? 'Serbian' : 'English'}
+
+Instructions:
+- Write a complete, well-structured article of approximately ${wordTarget} words
+- Use the prompt as your main topic/direction
+- You may use general knowledge you are confident about (team names, well-known facts)
+- Do NOT invent specific statistics, quotes, match scores, or transfer fees
+- If the prompt mentions specific details, use them; otherwise stay general
+- Write in ${input.language === 'bs' ? 'Bosnian' : input.language === 'hr' ? 'Croatian' : input.language === 'sr' ? 'Serbian' : 'English'}
+- Start with the news lead, not background
+- Include relevant context and analysis where appropriate`
     } else {
       contextLevel = 'headline-only'
       userPrompt = `YOU HAVE NO SOURCE ARTICLE. You ONLY have this headline:

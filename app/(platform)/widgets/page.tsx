@@ -524,10 +524,10 @@ function AIGenerateForm({ type, onGenerated }: { type: string; onGenerated: (dat
         body: JSON.stringify({ type, topic }),
       })
       if (!res.ok) {
-        const err = await res.json()
+        const err = await res.json() as { error?: string }
         throw new Error(err.error || 'Generation failed')
       }
-      const result = await res.json()
+      const result = await res.json() as { data: PollData | QuizData | SurveyData }
       onGenerated(result.data)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Generation failed')

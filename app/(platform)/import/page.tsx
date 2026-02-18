@@ -48,7 +48,7 @@ export default function ImportPage() {
       const form = new FormData()
       form.append('file', file)
       const res = await fetch('/api/import/wordpress', { method: 'POST', body: form })
-      const data = await res.json()
+      const data = await res.json() as { error?: string; articles: ParsedArticle[] }
       if (!res.ok) throw new Error(data.error || 'Parse failed')
       setArticles(data.articles.map((a: ParsedArticle) => ({ ...a, selected: true })))
     } catch (e: any) {
@@ -167,7 +167,7 @@ export default function ImportPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ articles: selected }),
       })
-      const data = await res.json()
+      const data = await res.json() as { error?: string; imported: number; skipped: number }
       if (!res.ok) throw new Error(data.error || 'Import failed')
       setResult({ imported: data.imported, skipped: data.skipped })
       setArticles([])

@@ -164,7 +164,7 @@ async function fetchFootballTrends(): Promise<RawItem[]> {
     })
     if (!res.ok) return items
 
-    const data = await res.json()
+    const data = await res.json() as { matches?: any[]; response?: any[] }
     const matches = data.matches || data.response || []
     for (const m of matches.slice(0, 10)) {
       const home = m.teams?.home?.name || m.homeTeam || ''

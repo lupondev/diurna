@@ -24,7 +24,7 @@ export default function AdminSitePage() {
   const fetchSettings = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/site')
-      if (res.ok) setSettings(await res.json())
+      if (res.ok) setSettings(await res.json() as SiteSettings)
     } finally {
       setLoading(false)
     }
@@ -49,7 +49,7 @@ export default function AdminSitePage() {
         setSaved(true)
         setTimeout(() => setSaved(false), 2000)
       } else {
-        const data = await res.json()
+        const data = await res.json() as { error?: string }
         alert(data.error || 'Failed to save settings')
       }
     } finally {

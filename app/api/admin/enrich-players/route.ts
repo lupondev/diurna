@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       const res = await fetch(`${API_BASE}/players?search=${encodeURIComponent(player.name)}&season=2024`, {
         headers: { 'x-apisports-key': API_FOOTBALL_KEY },
       })
-      const data = await res.json()
+      const data = await res.json() as { response?: { player: { id: number; age?: number; photo?: string }; statistics?: { team?: { name?: string } }[] }[] }
 
       if (data.response && data.response.length > 0) {
         const p = data.response[0]

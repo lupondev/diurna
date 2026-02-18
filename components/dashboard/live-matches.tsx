@@ -87,14 +87,14 @@ export function LiveMatches() {
     async function fetchMatches() {
       try {
         const liveRes = await fetch('/api/football?action=live')
-        const liveData = await liveRes.json()
+        const liveData = await liveRes.json() as { response?: any[] }
 
         if (liveData.response && liveData.response.length > 0) {
           setMatches(sortMatches(liveData.response).slice(0, 6))
           setHasLive(true)
         } else {
           const todayRes = await fetch('/api/football?action=today')
-          const todayData = await todayRes.json()
+          const todayData = await todayRes.json() as { response?: any[] }
           if (todayData.response) {
             setMatches(sortMatches(todayData.response).slice(0, 6))
           }

@@ -321,7 +321,7 @@ function TrendsPanel({ onWriteTrend }: { onWriteTrend: (title: string) => void }
   useEffect(() => {
     setLoading(true)
     fetch(`/api/trends?geo=${geo}`)
-      .then(r => r.json())
+      .then(r => r.json() as Promise<{ trends?: TrendItem[] }>)
       .then(data => { setTrends(data.trends || []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [geo])
@@ -399,7 +399,7 @@ export default function NewsroomPage() {
   const fetchClusters = useCallback(async () => {
     try {
       const res = await fetch('/api/newsroom/clusters?limit=50')
-      const data = await res.json()
+      const data = await res.json() as { clusters?: Cluster[]; count?: number }
       setClusters(data.clusters || [])
       setClusterMeta({ count: data.count || 0 })
     } catch { setClusters([]) }
@@ -410,7 +410,7 @@ export default function NewsroomPage() {
   const fetchFixtures = useCallback(async () => {
     try {
       const res = await fetch('/api/newsroom/fixtures')
-      const data = await res.json()
+      const data = await res.json() as { fixtures?: Fixture[]; live?: Fixture[] }
       setFixtures(data.fixtures || [])
       setLiveMatches(data.live || [])
     } catch {}
@@ -447,7 +447,7 @@ export default function NewsroomPage() {
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(`/api/entities/search?q=${encodeURIComponent(leagueSearch)}`)
-        const data = await res.json()
+        const data = await res.json() as { entities?: { name: string; type: string }[] }
         setLeagueResults(data.entities || [])
       } catch { setLeagueResults([]) }
     }, 300)

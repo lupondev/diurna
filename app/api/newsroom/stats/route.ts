@@ -52,7 +52,7 @@ export async function GET() {
     let topScorers: unknown[] = []
 
     if (standingsRes.status === 'fulfilled' && standingsRes.value.ok) {
-      const data = await standingsRes.value.json()
+      const data = await standingsRes.value.json() as { response?: any[] }
       const league = data.response?.[0]?.league?.standings?.[0] || []
       standings = league.map((t: StandingsTeam) => ({
         rank: t.rank,
@@ -70,7 +70,7 @@ export async function GET() {
     }
 
     if (scorersRes.status === 'fulfilled' && scorersRes.value.ok) {
-      const data = await scorersRes.value.json()
+      const data = await scorersRes.value.json() as { response?: any[] }
       topScorers = (data.response || []).slice(0, 10).map((p: TopScorer) => ({
         name: p.player.name,
         photo: p.player.photo,

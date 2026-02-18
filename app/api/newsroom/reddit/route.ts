@@ -53,7 +53,7 @@ export async function GET() {
           headers: { 'User-Agent': 'Diurna/1.0 (newsroom aggregator)' },
         })
         if (!res.ok) continue
-        const json = await res.json()
+        const json = await res.json() as { data?: { children?: RedditChild[] } }
         const children: RedditChild[] = json?.data?.children || []
 
         for (const child of children) {

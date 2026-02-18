@@ -25,7 +25,7 @@ function PlayerCardComponent({ node, updateAttributes, deleteNode, selected }: {
     if (playerId) {
       setLoading(true)
       fetch(`/api/players/${playerId}`)
-        .then((r) => r.json())
+        .then((r) => r.json() as Promise<any>)
         .then((data) => { if (data.name) setPlayer(data) })
         .catch(() => {})
         .finally(() => setLoading(false))
@@ -37,7 +37,7 @@ function PlayerCardComponent({ node, updateAttributes, deleteNode, selected }: {
     setLoading(true)
     try {
       const res = await fetch(`/api/players?search=${encodeURIComponent(search)}&limit=1`)
-      const data = await res.json()
+      const data = await res.json() as { players?: any[] }
       const players = data.players || data
       if (Array.isArray(players) && players.length > 0) {
         const p = players[0]

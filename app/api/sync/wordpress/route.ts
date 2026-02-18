@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { articleId, action } = await req.json()
+    const { articleId, action } = await req.json() as { articleId?: string; action?: string }
 
     if (action === 'test') {
       try {
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const wpPost = await res.json()
+    const wpPost = await res.json() as { id?: number; link?: string }
 
     return NextResponse.json({
       success: true,

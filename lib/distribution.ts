@@ -110,7 +110,7 @@ async function postToTwitter(article: ArticleForDist): Promise<{ success: boolea
     })
 
     if (res.ok) {
-      const data = await res.json()
+      const data = await res.json() as { data?: { id?: string } }
       return { success: true, postUrl: `https://x.com/i/status/${data.data?.id}` }
     }
     const errData = await res.text()
@@ -145,7 +145,7 @@ async function postToFacebook(article: ArticleForDist): Promise<{ success: boole
     })
 
     if (res.ok) {
-      const data = await res.json()
+      const data = await res.json() as { id?: string }
       return { success: true, postUrl: `https://facebook.com/${data.id}` }
     }
     const errData = await res.text()
@@ -182,7 +182,7 @@ async function postToTelegram(article: ArticleForDist): Promise<{ success: boole
     })
 
     if (res.ok) {
-      const data = await res.json()
+      const data = await res.json() as { result?: { message_id?: number } }
       const msgId = data.result?.message_id
       const chId = channelId.replace('@', '')
       return { success: true, postUrl: `https://t.me/${chId}/${msgId}` }

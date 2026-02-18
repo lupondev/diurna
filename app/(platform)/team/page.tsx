@@ -65,7 +65,7 @@ export default function TeamPage() {
 
   useEffect(() => {
     fetch('/api/team')
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<Member[]>)
       .then((data) => { setMembers(data); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])

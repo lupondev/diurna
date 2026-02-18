@@ -29,7 +29,7 @@ export default function ArticlesPage() {
   useEffect(() => {
     setLoading(true)
     fetch(`/api/articles?page=${page}&limit=20`)
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<{ articles?: Article[]; pagination?: { totalPages?: number } }>)
       .then((data) => {
         setArticles(data.articles || [])
         setTotalPages(data.pagination?.totalPages || 1)
@@ -53,7 +53,7 @@ export default function ArticlesPage() {
         })
       }
       const res = await fetch(`/api/articles?page=${page}&limit=20`)
-      const data = await res.json()
+      const data = await res.json() as { articles?: Article[]; pagination?: { totalPages?: number } }
       setArticles(data.articles || [])
       setTotalPages(data.pagination?.totalPages || 1)
     } catch (e) {

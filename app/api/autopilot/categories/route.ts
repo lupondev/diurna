@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Config not found' }, { status: 404 })
   }
 
-  const body = await req.json()
+  const body = await req.json() as { name: string; slug: string; color?: string; percentage?: number; sortOrder?: number; widgetPoll?: boolean; widgetQuiz?: boolean; widgetStats?: boolean; widgetPlayer?: boolean; widgetVideo?: boolean; widgetGallery?: boolean }
   const category = await prisma.autopilotCategory.create({
     data: {
       configId: config.id,

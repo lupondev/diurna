@@ -74,8 +74,9 @@ export default function OnboardingPage() {
   useEffect(() => {
     fetch('/api/auth/session')
       .then((r) => r.json())
-      .then((s) => {
-        if (s?.user?.onboardingCompleted) {
+      .then((s: unknown) => {
+        const data = s as { user?: { onboardingCompleted?: boolean } }
+        if (data?.user?.onboardingCompleted) {
           window.location.href = '/newsroom'
         }
       })
@@ -101,7 +102,7 @@ export default function OnboardingPage() {
           language,
         }),
       })
-      const data = await res.json()
+      const data = await res.json() as { error?: string; redirectUrl?: string }
       if (!res.ok) {
         throw new Error(typeof data.error === 'string' ? data.error : 'Setup failed')
       }

@@ -64,7 +64,7 @@ function MediaLibraryModal({ onClose, onSelect }: {
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    fetch('/api/media').then((r) => r.json())
+    fetch('/api/media').then((r) => r.json() as Promise<any>)
       .then((data) => { setMedia(Array.isArray(data) ? data : data.media || []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
@@ -78,7 +78,7 @@ function MediaLibraryModal({ onClose, onSelect }: {
     setSearching(true)
     try {
       const res = await fetch(`/api/images/search?query=${encodeURIComponent(query)}&page=${page}`)
-      const data = await res.json()
+      const data = await res.json() as { results: any[]; totalPages: number }
       if (res.ok) {
         setSearchResults(page === 1 ? data.results : [...searchResults, ...data.results])
         setSearchPage(page)

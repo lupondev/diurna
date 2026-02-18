@@ -46,10 +46,10 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}
     throw new Error(`Football API error: ${res.status} ${res.statusText}`)
   }
 
-  const json = await res.json()
+  const json = await res.json() as T
   evictStaleEntries()
   cache.set(cacheKey, { data: json, ts: Date.now() })
-  return json as T
+  return json
 }
 
 export type ApiResponse<T> = {

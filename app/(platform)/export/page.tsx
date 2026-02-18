@@ -13,7 +13,7 @@ export default function ExportPage() {
     try {
       const res = await fetch(`/api/export?format=${format}`)
       if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: 'Export failed' }))
+        const data = await (res.json() as Promise<{ error?: string }>).catch(() => ({ error: 'Export failed' }))
         throw new Error(data.error || 'Export failed')
       }
 

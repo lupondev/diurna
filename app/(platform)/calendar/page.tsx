@@ -199,14 +199,14 @@ export default function CalendarPage() {
 
   /* ── Data fetching ── */
   useEffect(() => {
-    fetch('/api/autopilot/config', { credentials: 'include' }).then(r => r.json()).then(setConfig).catch(() => {})
-    fetch('/api/autopilot/stats', { credentials: 'include' }).then(r => r.json()).then(setStats).catch(() => {})
-    fetch('/api/categories', { credentials: 'include' }).then(r => r.json()).catch(() => {})
+    fetch('/api/autopilot/config', { credentials: 'include' }).then(r => r.json() as Promise<AutopilotConfig>).then(setConfig).catch(() => {})
+    fetch('/api/autopilot/stats', { credentials: 'include' }).then(r => r.json() as Promise<Stats>).then(setStats).catch(() => {})
+    fetch('/api/categories', { credentials: 'include' }).then(r => r.json() as Promise<unknown>).catch(() => {})
   }, [])
 
   useEffect(() => {
     fetch(`/api/autopilot/timeline?date=${toDateStr(tlDate)}`, { credentials: 'include' })
-      .then(r => r.json()).then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) }).catch(() => {})
+      .then(r => r.json() as Promise<{ articles?: TlArticle[]; matches?: TlMatch[] }>).then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) }).catch(() => {})
   }, [tlDate])
 
   useEffect(() => {
@@ -276,7 +276,7 @@ export default function CalendarPage() {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newCat),
-    }).then(r => r.json()).then(cat => {
+    }).then(r => r.json() as Promise<CatConfig>).then(cat => {
       setConfig(prev => prev ? { ...prev, categories: [...prev.categories, cat] } : prev)
       setNewCat({ name: '', slug: '', color: '#3B82F6', percentage: 10 })
       setAddingCat(false)
@@ -306,7 +306,7 @@ export default function CalendarPage() {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newLeague),
-    }).then(r => r.json()).then(lg => {
+    }).then(r => r.json() as Promise<LeagueConfig>).then(lg => {
       setConfig(prev => prev ? { ...prev, leagues: [...prev.leagues, lg] } : prev)
       setNewLeague({ name: '', flag: '', weight: 10 })
       setAddingLeague(false)
@@ -324,7 +324,7 @@ export default function CalendarPage() {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newTopic.name, icon: newTopic.icon || null, keywords: newTopic.keywords.split(',').map(k => k.trim()).filter(Boolean) }),
-    }).then(r => r.json()).then(tp => {
+    }).then(r => r.json() as Promise<TopicConfig>).then(tp => {
       setConfig(prev => prev ? { ...prev, topics: [...prev.topics, tp] } : prev)
       setNewTopic({ name: '', icon: '', keywords: '' })
       setAddingTopic(false)
@@ -342,7 +342,7 @@ export default function CalendarPage() {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newChannel),
-    }).then(r => r.json()).then(ch => {
+    }).then(r => r.json() as Promise<ChannelConfig>).then(ch => {
       setConfig(prev => prev ? { ...prev, channels: [...prev.channels, ch] } : prev)
       setNewChannel({ platform: 'twitter', accountName: '', filter: 'all' })
       setAddingChannel(false)
@@ -411,9 +411,9 @@ export default function CalendarPage() {
   }, [newLangCode, updateConfig, toggleLang])
 
   const refreshData = useCallback(() => {
-    fetch('/api/autopilot/stats', { credentials: 'include' }).then(r => r.json()).then(setStats).catch(() => {})
+    fetch('/api/autopilot/stats', { credentials: 'include' }).then(r => r.json() as Promise<Stats>).then(setStats).catch(() => {})
     fetch(`/api/autopilot/timeline?date=${toDateStr(tlDate)}`, { credentials: 'include' })
-      .then(r => r.json()).then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) }).catch(() => {})
+      .then(r => r.json() as Promise<{ articles?: TlArticle[]; matches?: TlMatch[] }>).then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) }).catch(() => {})
   }, [tlDate])
 
   const runAutopilotNow = useCallback(async () => {
@@ -421,7 +421,7 @@ export default function CalendarPage() {
     setRunResult(null)
     try {
       const res = await fetch('/api/cron/autopilot?force=true', { credentials: 'include' })
-      const data = await res.json()
+      const data = await res.json() as { action?: string; article?: { title: string }; reason?: string; error?: string }
       if (!res.ok) {
         setRunResult({ type: 'error', message: data.reason || data.error || 'Request failed' })
       } else if (data.action === 'generated' && data.article) {

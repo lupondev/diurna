@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 const validEvents = ['poll_vote', 'quiz_start', 'quiz_complete', 'survey_submit', 'widget_view']
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const body = await req.json() as { widgetId?: string; eventType?: string; metadata?: Record<string, unknown> }
     const { widgetId, eventType, metadata } = body
 
     if (!eventType || !validEvents.includes(eventType)) {
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
       data: {
         widgetId: widgetId || null,
         eventType,
-        metadata: metadata || null,
+        metadata: (metadata || Prisma.JsonNull) as Prisma.InputJsonValue,
         country,
         device,
       },

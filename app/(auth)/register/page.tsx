@@ -19,7 +19,7 @@ function RegisterForm() {
     if (inviteToken) {
       setInviteLoading(true)
       fetch(`/api/auth/invite-check?token=${inviteToken}`)
-        .then((res) => res.json())
+        .then((res) => res.json() as Promise<{ email?: string; error?: string }>)
         .then((data) => {
           if (data.email) setEmail(data.email)
           if (data.error) setError(data.error)
@@ -40,7 +40,7 @@ function RegisterForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, inviteToken: inviteToken || undefined }),
       })
-      const data = await res.json()
+      const data = await res.json() as { error?: string }
       if (!res.ok) throw new Error(typeof data.error === 'string' ? data.error : 'Registration failed')
 
       const signInRes = await signIn('credentials', { email, password, redirect: false })

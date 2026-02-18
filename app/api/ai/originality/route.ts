@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 })
     }
 
-    const { content } = await req.json()
+    const { content } = await req.json() as { content?: string }
     if (!content || typeof content !== 'string' || content.trim().length < 50) {
       return NextResponse.json({ error: 'Content must be at least 50 characters' }, { status: 400 })
     }

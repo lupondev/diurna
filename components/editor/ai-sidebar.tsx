@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { Editor } from '@tiptap/react'
 
 const TEMPLATES = [
-  { label: '⚽ Preview', prompt: 'Write a match preview' },
-  { label: '📝 Report', prompt: 'Write a post-match report' },
-  { label: '🔄 Transfer', prompt: 'Write transfer news' },
-  { label: '📊 Analysis', prompt: 'Write a tactical analysis' },
-  { label: '🏆 Rankings', prompt: 'Write top rankings' },
-  { label: '👤 Profile', prompt: 'Write a player profile' },
+  { label: '⚽ Preview', articleType: 'preview', prompt: 'Napiši najavu utakmice' },
+  { label: '📝 Report', articleType: 'report', prompt: 'Napiši izvještaj o utakmici' },
+  { label: '🔄 Transfer', articleType: 'transfer', prompt: 'Napiši članak o transferu' },
+  { label: '📊 Analysis', articleType: 'analysis', prompt: 'Napiši taktičku analizu' },
+  { label: '🏆 Rankings', articleType: 'rankings', prompt: 'Napiši ranking listu' },
+  { label: '👤 Profile', articleType: 'profile', prompt: 'Napiši profil igrača' },
 ]
 
 const COVERAGE = [
@@ -32,16 +32,20 @@ interface AISidebarProps {
   editor: Editor | null
   onGenerate?: (result: { title?: string; content?: Record<string, unknown>; model?: string; tokensIn?: number; tokensOut?: number }) => void
   prefilledPrompt?: string
+  autoGenerate?: boolean
 }
 
-export function AISidebar({ editor, onGenerate, prefilledPrompt }: AISidebarProps) {
+export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }: AISidebarProps) {
   const [prompt, setPrompt] = useState(prefilledPrompt || '')
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
   const [wordCount, setWordCount] = useState(800)
   const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<{ text: string; action: () => void }[]>([])
   const [contextEntities, setContextEntities] = useState<string[]>([])
   const [lastResult, setLastResult] = useState<{ model?: string; tokensIn?: number; tokensOut?: number } | null>(null)
+  const [didAutoGenerate, setDidAutoGenerate] = useState(false)
 
   // Detect context from editor content
   const detectContext = useCallback(() => {
@@ -76,6 +80,7 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt }: AISidebarProp
   async function handleGenerate() {
     if (!prompt.trim() || generating) return
     setGenerating(true)
+    setError(null)
     try {
       const res = await fetch('/api/ai/smart-generate', {
         method: 'POST',
@@ -83,13 +88,14 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt }: AISidebarProp
         body: JSON.stringify({
           topic: prompt,
           category: 'Sport',
-          articleType: 'report',
-          mode: 'single',
+          articleType: selectedTemplate || 'report',
+          mode: 'copilot',
+          language: 'bs',
           wordCount,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Generation failed')
+      const data = await res.json() as { error?: string; model?: string; tokensIn?: number; tokensOut?: number; title?: string; tiptapContent?: Record<string, unknown>; content?: string }
+      if (!res.ok) throw new Error(data.error || 'Generisanje nije uspjelo')
 
       setLastResult({ model: data.model, tokensIn: data.tokensIn, tokensOut: data.tokensOut })
 
@@ -107,11 +113,22 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt }: AISidebarProp
 
       detectContext()
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Generisanje nije uspjelo. Pokušajte ponovo.'
+      setError(message)
       console.error('AI generate error:', err)
     } finally {
       setGenerating(false)
     }
   }
+
+  // Auto-generate on mount if requested (e.g. from Newsroom "Write" button)
+  useEffect(() => {
+    if (autoGenerate && prefilledPrompt && !didAutoGenerate && !generating) {
+      setDidAutoGenerate(true)
+      handleGenerate()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoGenerate, prefilledPrompt, didAutoGenerate])
 
   // AI action on selected text
   const handleAiAction = useCallback(async (action: typeof AI_ACTIONS[0]) => {
@@ -133,7 +150,7 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt }: AISidebarProp
           wordCount: action.key === 'extend' ? 300 : action.key === 'shorten' ? 50 : 150,
         }),
       })
-      const data = await res.json()
+      const data = await res.json() as { content?: string }
       const output = typeof data.content === 'string' ? data.content.replace(/^TLDR:.*$/gm, '').trim() : ''
       if (output) {
         if (action.key === 'factcheck') {
@@ -147,6 +164,11 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt }: AISidebarProp
     }
   }, [editor])
 
+  function handleTemplateClick(t: typeof TEMPLATES[0]) {
+    setSelectedTemplate(t.articleType)
+    setPrompt(t.prompt)
+  }
+
   return (
     <div className="ai-sb">
       <div className="ai-sb-header">
@@ -158,14 +180,18 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt }: AISidebarProp
         <textarea
           className="ai-sb-prompt"
           rows={3}
-          placeholder="Describe what you want — AI handles the rest"
+          placeholder="Opišite temu — AI će napisati članak"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) handleGenerate() }}
         />
         <div className="ai-sb-chips">
           {TEMPLATES.map((t) => (
-            <button key={t.label} className="ai-sb-chip" onClick={() => setPrompt(t.prompt)}>
+            <button
+              key={t.label}
+              className={`ai-sb-chip ${selectedTemplate === t.articleType ? 'active' : ''}`}
+              onClick={() => handleTemplateClick(t)}
+            >
               {t.label}
             </button>
           ))}
@@ -184,6 +210,9 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt }: AISidebarProp
             {generating ? 'Generating...' : '✨ Generate'}
           </button>
         </div>
+        {error && (
+          <div className="ai-sb-error">{error}</div>
+        )}
       </div>
 
       {/* Context panel */}

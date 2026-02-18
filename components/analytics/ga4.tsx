@@ -8,7 +8,7 @@ export function GoogleAnalytics() {
 
   useEffect(() => {
     fetch('/api/site')
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => r.ok ? r.json() as Promise<{ gaId?: string }> : null)
       .then((data) => {
         if (data?.gaId) setGaId(data.gaId)
       })

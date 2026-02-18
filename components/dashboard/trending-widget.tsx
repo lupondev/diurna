@@ -14,7 +14,7 @@ export function TrendingWidget() {
 
   useEffect(() => {
     fetch('/api/trends?geo=BA')
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<{ trends?: Trend[] }>)
       .then((data) => { setTrends(data.trends || []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])

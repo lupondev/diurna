@@ -21,10 +21,10 @@ export async function exchangeCodeForToken(code: string, redirectUri: string): P
   })
   const res = await fetch(`${GRAPH_URL}/oauth/access_token?${params}`)
   if (!res.ok) {
-    const err = await res.json()
+    const err = await res.json() as { error?: { message?: string } }
     throw new Error(err.error?.message || 'Failed to exchange code for token')
   }
-  const data = await res.json()
+  const data = await res.json() as { access_token: string }
   return data.access_token
 }
 
@@ -35,10 +35,10 @@ export async function getUserPages(userToken: string): Promise<Array<{
 }>> {
   const res = await fetch(`${GRAPH_URL}/me/accounts?access_token=${userToken}`)
   if (!res.ok) {
-    const err = await res.json()
+    const err = await res.json() as { error?: { message?: string } }
     throw new Error(err.error?.message || 'Failed to get pages')
   }
-  const data = await res.json()
+  const data = await res.json() as { data?: Array<{ id: string; name: string; access_token: string }> }
   return data.data || []
 }
 
@@ -57,10 +57,10 @@ export async function postToPage(
     body: JSON.stringify(body),
   })
   if (!res.ok) {
-    const err = await res.json()
+    const err = await res.json() as { error?: { message?: string } }
     throw new Error(err.error?.message || 'Failed to post to page')
   }
-  return res.json()
+  return res.json() as Promise<{ id: string }>
 }
 
 export async function postToMultiplePages(

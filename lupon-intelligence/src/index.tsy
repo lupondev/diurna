@@ -1,0 +1,283 @@
+export interface Env {
+  CLICKHOUSE_HOST: string;
+  CLICKHOUSE_USER: string;
+  CLICKHOUSE_PASSWORD: string;
+  ANTHROPIC_API_KEY: string;
+  GLUKKON_API_URL: string;
+}
+
+const PUBLISHER_IDS = [14532, 14596];
+
+// ─── ClickHouse query helper ───────────────────────────────────────────────
+async function clickhouseQuery(env: Env, sql: string): Promise<any> {
+  const url = `https://${env.CLICKHOUSE_HOST}:8443/?query=${encodeURIComponent(sql)}&default_format=JSON`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: "Basic " + btoa(`${env.CLICKHOUSE_USER}:${env.CLICKHOUSE_PASSWORD}`),
+    },
+  });
+  if (!res.ok) throw new Error(`ClickHouse error: ${await res.text()}`);
+  return res.json();
+}
+
+async function clickhouseInsert(env: Env, sql: string): Promise<void> {
+  const url = `https://${env.CLICKHOUSE_HOST}:8443/`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: "Basic " + btoa(`${env.CLICKHOUSE_USER}:${env.CLICKHOUSE_PASSWORD}`),
+      "Content-Type": "text/plain",
+    },
+    body: sql,
+  });
+  if (!res.ok) throw new Error(`ClickHouse insert error: ${await res.text()}`);
+}
+
+// ─── Glukkon API fetch ─────────────────────────────────────────────────────
+async function fetchGlukkon(publisherId: number, metric: string = "geo"): Promise<Record<string, number>> {
+  const url = `${GLUKKON_API_URL}?metric=${metric}&publisher_id=${publisherId}`;
+  const res = await fetch(url);
+  if (!res.ok) return {};
+  const data: any = await res.json();
+  return data.predictions || {};
+}
+
+// ─── ClickHouse stats za posljednja 2 sata ─────────────────────────────────
+async function getRecentStats(env: Env, publisherId: number): Promise<any[]> {
+  const sql = `
+    SELECT
+      geo,
+      device_type,
+      toHour(ts) as hour_slot,
+      bidder_code,
+      countIf(event_type='RESPONSE') as bid_count,
+      countIf(is_winning=1) as win_count,
+      countIf(event_type='TIMEOUT') as timeout_count,
+      round(avgIf(cpm, is_winning=1), 4) as avg_cpm,
+      round(avgIf(floor_price_used, floor_price_used > 0), 4) as avg_floor
+    FROM lupon.auctions
+    WHERE publisher_id = ${publisherId}
+      AND ts >= now() - INTERVAL 2 HOUR
+    GROUP BY geo, device_type, hour_slot, bidder_code
+    ORDER BY bid_count DESC
+    LIMIT 50
+    FORMAT JSON
+  `;
+  const result = await clickhouseQuery(env, sql);
+  return result?.data || [];
+}
+
+// ─── Historical baseline (30 day avg) ─────────────────────────────────────
+async function getBaseline(env: Env, publisherId: number): Promise<Record<string, number>> {
+  const sql = `
+    SELECT
+      geo,
+      round(avgIf(cpm, is_winning=1), 4) as baseline_cpm,
+      round(countIf(is_winning=1) * 1.0 / countIf(event_type='RESPONSE'), 4) as win_rate
+    FROM lupon.auctions
+    WHERE publisher_id = ${publisherId}
+      AND ts >= now() - INTERVAL 30 DAY
+    GROUP BY geo
+    FORMAT JSON
+  `;
+  const result = await clickhouseQuery(env, sql);
+  const baseline: Record<string, number> = {};
+  for (const row of result?.data || []) {
+    baseline[row.geo] = row.baseline_cpm;
+  }
+  return baseline;
+}
+
+// ─── Claude analysis ───────────────────────────────────────────────────────
+interface ClaudeFloorUpdate {
+  publisher_id: number;
+  geo: string;
+  device: string;
+  hour_slot: number;
+  current_floor: number;
+  recommended_floor: number;
+  confidence: number;
+  reason: string;
+}
+
+interface ClaudeAnomaly {
+  type: string;
+  publisher_id: number;
+  bidder: string;
+  geo: string;
+  severity: string;
+  description: string;
+}
+
+interface ClaudeResponse {
+  floor_updates: ClaudeFloorUpdate[];
+  anomalies: ClaudeAnomaly[];
+  summary: string;
+}
+
+async function analyzeWithClaude(
+  env: Env,
+  publisherId: number,
+  glukkonPredictions: Record<string, number>,
+  recentStats: any[],
+  baseline: Record<string, number>
+): Promise<ClaudeResponse> {
+  const prompt = `You are a programmatic advertising optimizer for Lupon Media SSP covering UAE, MENA, and Balkans markets.
+
+Publisher ID: ${publisherId}
+
+Glukkon ML floor price predictions (by geo):
+${JSON.stringify(glukkonPredictions, null, 2)}
+
+Recent 2-hour auction stats:
+${JSON.stringify(recentStats.slice(0, 20), null, 2)}
+
+30-day baseline CPM by geo:
+${JSON.stringify(baseline, null, 2)}
+
+IMPORTANT RULES:
+1. XX (unknown geo) should NEVER have floor > $0.10 - it indicates bot/invalid traffic
+2. MC (Monaco) volumes > 1000 are suspicious - likely misconfigured geo tag
+3. If a bidder has timeout_count > 30% of bid_count, flag as anomaly
+4. If Glukkon floor is more than 3x the baseline CPM for that geo, recommend reducing
+5. If avg_cpm is consistently 5x+ above floor, floor can be raised safely
+
+Respond ONLY with valid JSON, no markdown:
+{
+  "floor_updates": [
+    {
+      "publisher_id": ${publisherId},
+      "geo": "string",
+      "device": "all",
+      "hour_slot": 0,
+      "current_floor": 0.0,
+      "recommended_floor": 0.0,
+      "confidence": 0.0,
+      "reason": "brief explanation"
+    }
+  ],
+y
+
+  "anomalies": [
+    {
+      "type": "bidder_dropout|cpm_spike|suspicious_traffic|fill_drop|high_timeout",
+      "publisher_id": ${publisherId},
+      "bidder": "string",
+      "geo": "string",
+      "severity": "low|medium|high",
+      "description": "string"
+    }
+  ],
+  "summary": "2-3 sentence executive summary"
+}`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2000,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  const data: any = await res.json();
+  const text = data?.content?.[0]?.text || "{}";
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.error("Claude parse error:", text);
+    return { floor_updates: [], anomalies: [], summary: "Parse error" };
+  }
+}
+
+// ─── Save results to ClickHouse ────────────────────────────────────────────
+async function saveResults(env: Env, analysis: ClaudeResponse, glukkonPredictions: Record<string, number>): Promise<void> {
+  // Save floor price audit
+  for (const update of analysis.floor_updates) {
+yy    if (update.confidence < 0.5) continue; // skip low confidence
+
+    const sql = `INSERT INTO lupon.floor_price_audit
+      (ts, publisher_id, geo, device_type, hour_slot, glukkon_floor, claude_floor, overridden, confidence, reason, anomaly_type)
+      VALUES
+      (now(), ${update.publisher_id}, '${update.geo}', '${update.device}', ${update.hour_slot},
+       ${update.current_floor}, ${update.recommended_floor},
+       ${update.recommended_floor !== update.current_floor ? 1 : 0},
+       ${update.confidence}, '${update.reason.replace(/'/g, "''")}', '')`;
+
+    await clickhouseInsert(env, sql);
+  }
+
+  // Save anomalies
+  for (const anomaly of analysis.anomalies) {
+    const sql = `INSERT INTO lupon.anomalies
+      (ts, publisher_id, anomaly_type, bidder, geo, severity, description, current_value, baseline_value)
+      VALUES
+      (now(), ${anomaly.publisher_id}, '${anomaly.type}', '${anomaly.bidder}',
+       '${anomaly.geo}', '${anomaly.severity}',
+       '${anomaly.description.replace(/'/g, "''")}', 0, 0)`;
+
+    await clickhouseInsert(env, sql);
+  }
+}
+
+// ─── Main scheduled handler ────────────────────────────────────────────────
+const GLUKKON_API_URL = "https://4u7och96q0.execute-api.us-west-2.amazonaws.com/Prod/get_predicts";
+
+export default {
+  async fetch(req: Request, env: Env): Promise<Response> {
+    // Manual trigger za testiranje
+    const url = new URL(req.url);
+    if (url.pathname === "/run") {
+      await runAnalysis(env);
+      return new Response("Analysis complete", { status: 200 });
+    }
+    return new Response("Lupon Intelligence Worker. POST /run to trigger manually.", { status: 200 });
+  },
+
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runAnalysis(env));
+  },
+};
+
+async function runAnalysis(env: Env): Promise<void> {
+  console.log("🚀 Lupon Intelligence — starting analysis");
+
+  for (const publisherId of PUBLISHER_IDS) {
+    try {
+      console.log(`📊 Analyzing publisher ${publisherId}...`);
+
+      // 1. Fetch Glukkon predictions
+      const glukkonPredictions = await fetchGlukkon(publisherId, "geo");
+      console.log(`✅ Glukkon predictions: ${Object.keys(glukkonPredictions).length} geos`);
+
+      // 2. Get recent stats from ClickHouse
+      const recentStats = await getRecentStats(env, publisherId);
+      console.log(`✅ Recent stats: ${recentStats.length} rows`);
+
+      // 3. Get 30-day baseline
+      const baseline = await getBaseline(env, publisherId);
+      console.log(`✅ Baseline: ${Object.keys(baseline).length} geos`);
+
+      // 4. Claude analysis
+      const analysis = await analyzeWithClaude(env, publisherId, glukkonPredictions, recentStats, baseline);
+      console.log(`✅ Claude: ${analysis.floor_updates.length} floor updates, ${analysis.anomalies.length} anomalies`);
+      console.log(`📝 Summary: ${analysis.summary}`);
+
+      // 5. Save to ClickHouse
+      await saveResults(env, analysis, glukkonPredictions);
+      console.log(`✅ Saved to ClickHouse`);
+
+    } catch (err) {
+      console.error(`❌ Error for publisher ${publisherId}:`, err);
+    }
+  }
+
+  console.log("✅ Lupon Intelligence — analysis complete");
+}
+

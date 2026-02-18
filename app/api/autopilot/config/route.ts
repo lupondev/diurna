@@ -68,7 +68,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const body = await req.json()
+  const body = await req.json() as Record<string, unknown>
   const orgId = session.user.organizationId
 
   // Remove relation fields and non-updatable fields

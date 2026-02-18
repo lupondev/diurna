@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { articleId } = await req.json()
+    const { articleId } = await req.json() as { articleId?: string }
     if (!articleId) {
       return NextResponse.json({ error: 'articleId required' }, { status: 400 })
     }

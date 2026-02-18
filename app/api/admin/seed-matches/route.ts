@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
           `https://v3.football.api-sports.io/fixtures?league=${league}&date=${date}&season=2024`,
           { headers: { 'x-apisports-key': process.env.API_FOOTBALL_KEY! } }
         )
-        const data = await res.json()
+        const data = await res.json() as { response?: Array<{ fixture: { id: number; date: string; status: { short: string } }; teams: { home: { name: string }; away: { name: string } }; goals: { home: number | null; away: number | null }; league: { name: string; season: number }; events?: Record<string, unknown>[] }> }
 
         for (const fixture of (data.response || [])) {
           await prisma.matchResult.upsert({
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
               homeScore: fixture.goals.home,
               awayScore: fixture.goals.away,
               status: fixture.fixture.status.short,
-              events: fixture.events || [],
+              events: (fixture.events || []) as Prisma.InputJsonValue,
               lastUpdated: new Date(),
             },
             create: {
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
               season: `${fixture.league.season}`,
               matchDate: new Date(fixture.fixture.date),
               status: fixture.fixture.status.short,
-              events: fixture.events || [],
+              events: (fixture.events || []) as Prisma.InputJsonValue,
             },
           })
           total++

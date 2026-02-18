@@ -8,7 +8,7 @@ async function callInternal(path: string) {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${AUTH}` },
   })
-  return res.json()
+  return res.json() as Promise<Record<string, unknown>>
 }
 
 export async function GET(req: NextRequest) {

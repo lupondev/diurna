@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unsplash search failed' }, { status: 502 })
     }
 
-    const data = await res.json()
+    const data = await res.json() as { results: Record<string, any>[]; total: number; total_pages: number }
 
     const results = data.results.map((photo: any) => ({
       id: photo.id,

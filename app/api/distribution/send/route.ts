@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { articleId, channelId } = await req.json()
+    const { articleId, channelId } = await req.json() as { articleId?: string; channelId?: string }
     if (!articleId || !channelId) {
       return NextResponse.json({ error: 'articleId and channelId required' }, { status: 400 })
     }

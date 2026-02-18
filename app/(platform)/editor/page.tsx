@@ -44,6 +44,7 @@ export default function EditorPage() {
   const [showSchedule, setShowSchedule] = useState(false)
   const [smartNotice, setSmartNotice] = useState<string | null>(null)
   const [prefilledPrompt, setPrefilledPrompt] = useState('')
+  const [autoGenerate, setAutoGenerate] = useState(false)
   const editorRef = useRef<unknown>(null)
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const articleIdRef = useRef<string | null>(null)
@@ -55,7 +56,7 @@ export default function EditorPage() {
 
   // Load site & categories
   useEffect(() => {
-    fetch('/api/site').then((r) => r.json()).then((data) => {
+    fetch('/api/site').then((r) => r.json() as Promise<{ id?: string; categories?: Array<{ id: string; name: string; slug?: string; icon?: string }> }>).then((data) => {
       if (data.id) {
         setSiteId(data.id)
         const cats = data.categories || []
@@ -148,6 +149,7 @@ export default function EditorPage() {
     if (promptParam && !searchParams.get('smartGenerate') && searchParams.get('mode') !== 'combined') {
       setPrefilledPrompt(promptParam)
       setShowAI(true)
+      setAutoGenerate(true)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -167,7 +169,7 @@ export default function EditorPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const result = await res.json()
+      const result = await res.json() as { title?: string; tiptapContent?: Record<string, unknown>; model?: string; tokensIn?: number; tokensOut?: number }
       if (result.title) setTitle(result.title)
       if (result.tiptapContent) { setContent(result.tiptapContent); setInitialContent(result.tiptapContent) }
       setAiResult({ model: result.model, tokensIn: result.tokensIn, tokensOut: result.tokensOut })
@@ -188,7 +190,7 @@ export default function EditorPage() {
           articleType: 'report', mode: 'combined', sources,
         }),
       })
-      const data = await res.json()
+      const data = await res.json() as { title?: string; tiptapContent?: Record<string, unknown>; model?: string; tokensIn?: number; tokensOut?: number }
       if (data.title) setTitle(data.title)
       if (data.tiptapContent) { setContent(data.tiptapContent); setInitialContent(data.tiptapContent) }
       setAiResult({ model: data.model, tokensIn: data.tokensIn, tokensOut: data.tokensOut })
@@ -307,8 +309,8 @@ export default function EditorPage() {
           body: JSON.stringify(body),
         })
         if (res.ok) {
-          const article = await res.json()
-          articleIdRef.current = article.id
+          const article = await res.json() as { id?: string }
+          articleIdRef.current = article.id ?? null
           if (sendNewsletter && status === 'PUBLISHED' && article.id) {
             fetch('/api/newsletter/send', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -424,6 +426,7 @@ export default function EditorPage() {
               editor={editorRef.current as import('@tiptap/react').Editor | null}
               onGenerate={handleAIGenerate}
               prefilledPrompt={prefilledPrompt}
+              autoGenerate={autoGenerate}
             />
           </div>
         )}
