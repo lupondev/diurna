@@ -176,13 +176,15 @@ function renderNode(node: TiptapNode): string {
     }
 
     case 'codeBlock': {
-      const lang = node.attrs?.language ? ` class="language-${escapeHtml(String(node.attrs.language))}"` : ''
-      return `<pre><code${lang}>${renderChildren(node)}</code></pre>`
+      // Render codeBlock as paragraphs (AI often puts article text in codeBlocks)
+      const text = getNodeText(node).trim()
+      if (!text) return ''
+      return text.split('\n\n').map(p => `<p>${escapeHtml(p)}</p>`).join('')
     }
 
     case 'youtube': {
       const src = escapeHtml(String(node.attrs?.src || ''))
-      return `<div class="video-embed"><iframe src="${src}" frameborder="0" allowfullscreen></iframe></div>`
+      return `<div data-widget="video" data-url="${src}" data-caption=""></div>`
     }
 
     case 'table':
@@ -200,11 +202,62 @@ function renderNode(node: TiptapNode): string {
     case 'hardBreak':
       return '<br />'
 
+    // ── Custom Tiptap widget node types ──
+
+    case 'poll': {
+      const question = escapeHtml(String(node.attrs?.question || ''))
+      const options = escapeHtml(JSON.stringify(node.attrs?.options || []))
+      return `<div data-widget="poll" data-question="${question}" data-options="${options}"></div>`
+    }
+
+    case 'quiz': {
+      const questions = escapeHtml(JSON.stringify(node.attrs?.questions || []))
+      return `<div data-widget="quiz" data-questions="${questions}"></div>`
+    }
+
+    case 'matchWidget': {
+      const a = node.attrs || {}
+      const score = `${a.homeScore || '0'}-${a.awayScore || '0'}`
+      return `<div data-widget="match" data-home="${escapeHtml(String(a.homeTeam || ''))}" data-away="${escapeHtml(String(a.awayTeam || ''))}" data-score="${escapeHtml(score)}" data-league="${escapeHtml(String(a.league || ''))}" data-date="${escapeHtml(String(a.matchTime || ''))}" data-status="FT"></div>`
+    }
+
+    case 'statsTable': {
+      const a = node.attrs || {}
+      const title = escapeHtml(String(a.title || ''))
+      const rows = a.rows as Array<{ label: string; home: string; away: string }> | undefined
+      const headers = JSON.stringify(['', String(a.homeLabel || 'Home'), String(a.awayLabel || 'Away')])
+      const tableRows = (rows || []).map(r => [r.label, r.home, r.away])
+      return `<div data-widget="stats-table" data-title="${title}" data-headers="${escapeHtml(headers)}" data-rows="${escapeHtml(JSON.stringify(tableRows))}"></div>`
+    }
+
+    case 'playerCard': {
+      const a = node.attrs || {}
+      return `<div data-widget="player-card" data-name="${escapeHtml(String(a.playerName || ''))}" data-team="" data-position="" data-number="" data-nationality="" data-image=""></div>`
+    }
+
+    case 'video':
+    case 'videoEmbed': {
+      const url = escapeHtml(String(node.attrs?.url || node.attrs?.src || ''))
+      const caption = escapeHtml(String(node.attrs?.caption || ''))
+      return `<div data-widget="video" data-url="${url}" data-caption="${caption}"></div>`
+    }
+
+    case 'gallery':
+    case 'imageGallery': {
+      const images = node.attrs?.images || []
+      return `<div data-widget="gallery" data-images="${escapeHtml(JSON.stringify(images))}"></div>`
+    }
+
+    case 'socialEmbed': {
+      const a = node.attrs || {}
+      return `<div data-widget="social-embed" data-platform="${escapeHtml(String(a.platform || ''))}" data-text="" data-author="" data-timestamp="" data-url="${escapeHtml(String(a.url || ''))}"></div>`
+    }
+
     case 'widget': {
       const widgetType = escapeHtml(String(node.attrs?.widget || ''))
       const dataAttrs = Object.entries(node.attrs || {})
         .filter(([k]) => k !== 'widget')
-        .map(([k, v]) => ` data-${escapeHtml(k)}="${escapeHtml(String(v))}"`)
+        .map(([k, v]) => ` data-${escapeHtml(k)}="${escapeHtml(typeof v === 'object' ? JSON.stringify(v) : String(v))}"`)
         .join('')
       return `<div data-widget="${widgetType}"${dataAttrs}></div>`
     }

@@ -6,6 +6,7 @@ import { ArticleRenderer } from '@/components/public/article-renderer'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import '@/app/site/public.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,6 +114,14 @@ export default async function PublicArticlePage({ params }: Props) {
           {category.name}
         </Link>
       </nav>
+
+      {/* Featured Image */}
+      {article.featuredImage && (
+        <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={article.featuredImage} alt={article.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
+        </div>
+      )}
 
       {/* Article Header */}
       <header style={{ marginBottom: 32 }}>

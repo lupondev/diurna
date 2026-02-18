@@ -178,6 +178,7 @@ model Article {
   publishedAt  DateTime?
   scheduledAt  DateTime?
 
+  featuredImage      String?
   metaTitle          String?
   metaDescription    String?
   distributionStatus Json?
