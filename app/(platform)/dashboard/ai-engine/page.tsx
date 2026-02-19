@@ -9,6 +9,13 @@ interface TimingEntry {
   detail?: string;
 }
 
+interface ValidationErrorDetail {
+  type: string;
+  message: string;
+  severity: string;
+  context?: string;
+}
+
 interface PipelineResult {
   article?: {
     title: string;
@@ -28,6 +35,29 @@ interface PipelineResult {
       coverage: { passed: boolean; score: number; missing: string[] };
       tone: { passed: boolean; violations: number };
       entity: { passed: boolean; unmatched: string[] };
+    };
+    validation_details?: {
+      numeric: { passed: boolean; errors: ValidationErrorDetail[] };
+      coverage: { passed: boolean; score: number; missing_critical: string[]; errors: ValidationErrorDetail[] };
+      tone: { passed: boolean; violations: { word: string; cdi_range: string; allowed_range: string }[]; errors: ValidationErrorDetail[] };
+      entity: { passed: boolean; unmatched_entities: string[]; errors: ValidationErrorDetail[] };
+    };
+    quality_analysis?: {
+      frcl: {
+        fri: number;
+        status: string;
+        subjectivity_score: number;
+        subjectivity_flagged: { word: string; weight: number; context: string }[];
+        omission_risk: number;
+        omission_missing: string[];
+      };
+      perspective: {
+        home_mentions: number;
+        away_mentions: number;
+        ratio: number;
+        first_sentence_neutral: boolean;
+        status: string;
+      };
     };
     widgets: { placements: number; decisions: string[] } | null;
     assembly: { widgets_inserted: number; log: string[] } | null;
@@ -91,7 +121,7 @@ const MOCK_MATCH_DATA = {
 export default function AIEngineDashboard() {
   const [result, setResult] = useState<PipelineResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'article' | 'pipeline' | 'timing' | 'widgets' | 'raw'>('article');
+  const [activeTab, setActiveTab] = useState<'article' | 'pipeline' | 'quality' | 'timing' | 'widgets' | 'raw'>('article');
 
   async function runEngine() {
     setLoading(true);
@@ -110,7 +140,6 @@ export default function AIEngineDashboard() {
         }),
       });
 
-      // Detect redirect (auth issue)
       if (res.redirected) {
         setResult({ error: `Auth redirect to: ${res.url}. Please log in first.` });
         setLoading(false);
@@ -140,7 +169,6 @@ export default function AIEngineDashboard() {
         data = JSON.parse(rawText) as PipelineResult;
       } catch (parseErr) {
         console.error('[AI Engine Dashboard] JSON parse failed:', parseErr);
-        console.error('[AI Engine Dashboard] Raw text:', rawText.substring(0, 1000));
         setResult({ error: `JSON parse failed: ${parseErr instanceof Error ? parseErr.message : 'unknown'}`, detail: rawText.substring(0, 300) });
         setLoading(false);
         return;
@@ -155,17 +183,17 @@ export default function AIEngineDashboard() {
     setLoading(false);
   }
 
+  const qa = result?.pipeline?.quality_analysis;
+
   return (
     <div style={{ padding: '32px', maxWidth: 1200, margin: '0 auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>AI Engine V2 — Test Dashboard</h1>
         <p style={{ color: '#6b7280', fontSize: 14 }}>
-          Full pipeline: Ingestion → CDI → Staleness → Prompt → LLM → Validation → Widgets → Assembly
+          Pipeline: Ingestion → CDI → Prompt → LLM → Validation → FRCL → Perspective → Widgets → Assembly
         </p>
       </div>
 
-      {/* Controls */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 24, padding: 16, background: '#f9fafb', borderRadius: 12, border: '1px solid #e5e7eb' }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, fontSize: 14 }}>Test Match</div>
@@ -177,19 +205,14 @@ export default function AIEngineDashboard() {
           style={{
             padding: '10px 24px',
             background: loading ? '#9ca3af' : '#2563eb',
-            color: 'white',
-            border: 'none',
-            borderRadius: 8,
-            fontWeight: 600,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: 14,
+            color: 'white', border: 'none', borderRadius: 8,
+            fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontSize: 14,
           }}
         >
           {loading ? 'Running Pipeline...' : 'Run AI Engine'}
         </button>
       </div>
 
-      {/* Error */}
       {result?.error && (
         <div style={{ padding: 16, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, marginBottom: 24 }}>
           <div style={{ fontWeight: 600, color: '#991b1b', marginBottom: 4 }}>Error</div>
@@ -198,24 +221,23 @@ export default function AIEngineDashboard() {
         </div>
       )}
 
-      {/* Results */}
       {result?.article && result?.pipeline && (
         <>
           {/* Quick Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 24 }}>
             <StatCard label="Total Time" value={`${result.pipeline?.timing?.total_ms ?? '?'}ms`} color={(result.pipeline?.timing?.total_ms ?? 99999) < 15000 ? '#059669' : '#dc2626'} />
             <StatCard label="Validation" value={result.pipeline?.validation?.passed ? 'PASSED' : 'FAILED'} color={result.pipeline?.validation?.passed ? '#059669' : '#dc2626'} />
-            <StatCard label="CDI Home" value={`${result.pipeline?.cdi?.home ?? '?'} (${result.pipeline?.cdi?.home_tone ?? '?'})`} color="#2563eb" />
-            <StatCard label="CDI Away" value={`${result.pipeline?.cdi?.away ?? '?'} (${result.pipeline?.cdi?.away_tone ?? '?'})`} color="#7c3aed" />
-            <StatCard label="Widgets" value={`${result.pipeline?.assembly?.widgets_inserted ?? 0} inserted`} color="#d97706" />
+            <StatCard label="FRCL" value={qa?.frcl?.status ?? 'N/A'} color={qa?.frcl?.status === 'SAFE' ? '#059669' : qa?.frcl?.status === 'WARNING' ? '#d97706' : '#dc2626'} />
+            <StatCard label="FRI Score" value={`${qa?.frcl?.fri ?? 'N/A'}`} color={((qa?.frcl?.fri ?? 1) < 0.15) ? '#059669' : '#d97706'} />
+            <StatCard label="Perspective" value={qa?.perspective?.status ?? 'N/A'} color={qa?.perspective?.status === 'PASS' ? '#059669' : qa?.perspective?.status === 'REVIEW' ? '#d97706' : '#dc2626'} />
+            <StatCard label="Balance" value={`${qa?.perspective?.ratio ?? '?'}`} color={((qa?.perspective?.ratio ?? 0) >= 0.4) ? '#059669' : '#dc2626'} />
             <StatCard label="LLM Retries" value={`${result.pipeline?.llm?.retries ?? '?'}`} color={(result.pipeline?.llm?.retries ?? 1) === 0 ? '#059669' : '#d97706'} />
-            <StatCard label="Tokens" value={`${(result.pipeline?.llm?.tokens_in ?? 0) + (result.pipeline?.llm?.tokens_out ?? 0)}`} color="#6b7280" />
             <StatCard label="Coverage" value={`${result.pipeline?.validation?.coverage?.score ?? '?'}%`} color={result.pipeline?.validation?.coverage?.passed ? '#059669' : '#dc2626'} />
           </div>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #e5e7eb', paddingBottom: 0 }}>
-            {(['article', 'pipeline', 'timing', 'widgets', 'raw'] as const).map(tab => (
+          <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #e5e7eb' }}>
+            {(['article', 'pipeline', 'quality', 'timing', 'widgets', 'raw'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -223,12 +245,8 @@ export default function AIEngineDashboard() {
                   padding: '8px 16px',
                   background: activeTab === tab ? '#2563eb' : 'transparent',
                   color: activeTab === tab ? 'white' : '#6b7280',
-                  border: 'none',
-                  borderRadius: '8px 8px 0 0',
-                  fontWeight: 600,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  textTransform: 'capitalize',
+                  border: 'none', borderRadius: '8px 8px 0 0',
+                  fontWeight: 600, fontSize: 13, cursor: 'pointer', textTransform: 'capitalize',
                 }}
               >
                 {tab}
@@ -236,10 +254,10 @@ export default function AIEngineDashboard() {
             ))}
           </div>
 
-          {/* Tab Content */}
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24 }}>
             {activeTab === 'article' && <ArticleTab article={result.article} />}
             {activeTab === 'pipeline' && result.pipeline && <PipelineTab pipeline={result.pipeline} />}
+            {activeTab === 'quality' && result.pipeline && <QualityTab pipeline={result.pipeline} />}
             {activeTab === 'timing' && result.pipeline?.timing && <TimingTab timing={result.pipeline.timing} />}
             {activeTab === 'widgets' && <WidgetsTab widgets={result.pipeline?.widgets ?? null} assembly={result.pipeline?.assembly ?? null} video={result.pipeline?.video ?? null} />}
             {activeTab === 'raw' && <RawTab data={result} />}
@@ -269,19 +287,11 @@ function ArticleTab({ article }: { article: PipelineResult['article'] }) {
     <div>
       <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{article.title}</h2>
       <p style={{ color: '#6b7280', marginBottom: 16, fontStyle: 'italic' }}>{article.excerpt}</p>
-      <div
-        dangerouslySetInnerHTML={{ __html: article.content_html }}
-        style={{ lineHeight: 1.7, fontSize: 15 }}
-      />
+      <div dangerouslySetInnerHTML={{ __html: article.content_html }} style={{ lineHeight: 1.7, fontSize: 15 }} />
       <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {(article.tags ?? []).map(tag => (
-          <span key={tag} style={{ padding: '4px 10px', background: '#eff6ff', color: '#2563eb', borderRadius: 6, fontSize: 12, fontWeight: 500 }}>
-            {tag}
-          </span>
+          <span key={tag} style={{ padding: '4px 10px', background: '#eff6ff', color: '#2563eb', borderRadius: 6, fontSize: 12, fontWeight: 500 }}>{tag}</span>
         ))}
-      </div>
-      <div style={{ marginTop: 16, fontSize: 13, color: '#6b7280' }}>
-        Validation extracts entities and events from content_html directly.
       </div>
     </div>
   );
@@ -290,43 +300,135 @@ function ArticleTab({ article }: { article: PipelineResult['article'] }) {
 // ═══ Pipeline Tab ═══
 
 function PipelineTab({ pipeline }: { pipeline: NonNullable<PipelineResult['pipeline']> }) {
+  const vd = pipeline.validation_details;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Snapshot */}
       <Section title="Data Snapshot">
         <Row label="Snapshot ID" value={pipeline.snapshot_id ?? 'N/A'} />
         <Row label="Confidence" value={`${((pipeline.confidence ?? 0) * 100).toFixed(0)}%`} />
       </Section>
 
-      {/* Staleness */}
       <Section title="Staleness Guard">
         <Row label="Status" value={pipeline.staleness?.status ?? 'N/A'} color={pipeline.staleness?.status === 'OK' ? '#059669' : '#dc2626'} />
         <Row label="Age" value={`${pipeline.staleness?.age_seconds?.toFixed?.(0) ?? 'N/A'}s`} />
         <Row label="Window" value={`${pipeline.staleness?.window_seconds ?? 'N/A'}s`} />
       </Section>
 
-      {/* CDI */}
       <Section title="CDI (Contextual Dominance Index)">
         <Row label="Home" value={`${pipeline.cdi?.home ?? '?'} — ${pipeline.cdi?.home_tone ?? '?'}`} />
         <Row label="Away" value={`${pipeline.cdi?.away ?? '?'} — ${pipeline.cdi?.away_tone ?? '?'}`} />
       </Section>
 
-      {/* Validation */}
       <Section title="Validation Pipeline">
         <Row label="Overall" value={pipeline.validation?.passed ? 'PASSED' : 'FAILED'} color={pipeline.validation?.passed ? '#059669' : '#dc2626'} />
         <Row label="Retries" value={`${pipeline.validation?.retries ?? '?'}`} />
-        <Row label="Numeric" value={pipeline.validation?.numeric?.passed ? `PASS` : `FAIL (${pipeline.validation?.numeric?.errors ?? '?'} errors)`} color={pipeline.validation?.numeric?.passed ? '#059669' : '#dc2626'} />
+        <Row label="Numeric" value={pipeline.validation?.numeric?.passed ? 'PASS' : `FAIL (${pipeline.validation?.numeric?.errors ?? '?'} errors)`} color={pipeline.validation?.numeric?.passed ? '#059669' : '#dc2626'} />
         <Row label="Coverage" value={`${pipeline.validation?.coverage?.passed ? 'PASS' : 'FAIL'} — ${pipeline.validation?.coverage?.score ?? '?'}%`} color={pipeline.validation?.coverage?.passed ? '#059669' : '#dc2626'} />
-        <Row label="Tone" value={pipeline.validation?.tone?.passed ? `PASS` : `FAIL (${pipeline.validation?.tone?.violations ?? '?'} violations)`} color={pipeline.validation?.tone?.passed ? '#059669' : '#dc2626'} />
-        <Row label="Entity" value={pipeline.validation?.entity?.passed ? `PASS` : `FAIL (${pipeline.validation?.entity?.unmatched?.join(', ') ?? 'N/A'})`} color={pipeline.validation?.entity?.passed ? '#059669' : '#dc2626'} />
+        <Row label="Tone" value={pipeline.validation?.tone?.passed ? 'PASS' : `FAIL (${pipeline.validation?.tone?.violations ?? '?'} violations)`} color={pipeline.validation?.tone?.passed ? '#059669' : '#dc2626'} />
+        <Row label="Entity" value={pipeline.validation?.entity?.passed ? 'PASS' : `FAIL (${pipeline.validation?.entity?.unmatched?.join(', ') ?? 'N/A'})`} color={pipeline.validation?.entity?.passed ? '#059669' : '#dc2626'} />
       </Section>
 
-      {/* LLM */}
+      {/* Detailed Validation Errors */}
+      {vd && (
+        <Section title="Validation Details (all errors)">
+          {[
+            ...(vd.numeric?.errors ?? []),
+            ...(vd.coverage?.errors ?? []),
+            ...(vd.tone?.errors ?? []),
+            ...(vd.entity?.errors ?? []),
+          ].length === 0 ? (
+            <div style={{ fontSize: 13, color: '#059669' }}>No validation errors</div>
+          ) : (
+            [...(vd.numeric?.errors ?? []), ...(vd.coverage?.errors ?? []), ...(vd.tone?.errors ?? []), ...(vd.entity?.errors ?? [])].map((err, i) => (
+              <div key={i} style={{ padding: '6px 0', fontSize: 13, borderBottom: '1px solid #f3f4f6', color: err.severity === 'critical' ? '#dc2626' : '#d97706' }}>
+                <span style={{ fontWeight: 600 }}>[{err.type}]</span> {err.message}
+                {err.context && <span style={{ color: '#6b7280' }}> — {err.context}</span>}
+              </div>
+            ))
+          )}
+        </Section>
+      )}
+
       <Section title="LLM">
         <Row label="Model" value={pipeline.llm?.model ?? 'N/A'} />
         <Row label="Tokens In" value={`${pipeline.llm?.tokens_in ?? '?'}`} />
         <Row label="Tokens Out" value={`${pipeline.llm?.tokens_out ?? '?'}`} />
         <Row label="Retries" value={`${pipeline.llm?.retries ?? '?'}`} />
+      </Section>
+    </div>
+  );
+}
+
+// ═══ Quality Tab (FRCL + Perspective) ═══
+
+function QualityTab({ pipeline }: { pipeline: NonNullable<PipelineResult['pipeline']> }) {
+  const qa = pipeline.quality_analysis;
+  if (!qa) return <div style={{ color: '#6b7280', fontSize: 13 }}>Quality analysis not available</div>;
+
+  const frcl = qa.frcl;
+  const persp = qa.perspective;
+  const friColor = frcl.status === 'SAFE' ? '#059669' : frcl.status === 'WARNING' ? '#d97706' : '#dc2626';
+  const perspColor = persp.status === 'PASS' ? '#059669' : persp.status === 'REVIEW' ? '#d97706' : '#dc2626';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* FRCL Overview */}
+      <Section title={`FRCL — Framing Risk (FRI: ${frcl.fri})`}>
+        <Row label="Status" value={frcl.status} color={friColor} />
+        <Row label="FRI Score" value={`${frcl.fri}`} color={friColor} />
+        <Row label="Subjectivity" value={`${frcl.subjectivity_score}`} color={frcl.subjectivity_score > 0.018 ? '#d97706' : '#059669'} />
+        <Row label="Omission Risk" value={`${frcl.omission_risk}`} color={frcl.omission_risk > 0 ? '#dc2626' : '#059669'} />
+      </Section>
+
+      {/* Subjectivity Flagged Words */}
+      {frcl.subjectivity_flagged.length > 0 && (
+        <Section title={`Subjectivity — ${frcl.subjectivity_flagged.length} flagged words`}>
+          {frcl.subjectivity_flagged.map((f, i) => (
+            <div key={i} style={{ padding: '6px 0', fontSize: 13, borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{
+                padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700,
+                background: f.weight >= 3 ? '#fef2f2' : f.weight >= 2 ? '#fffbeb' : '#f0fdf4',
+                color: f.weight >= 3 ? '#dc2626' : f.weight >= 2 ? '#d97706' : '#059669',
+              }}>
+                W{f.weight}
+              </span>
+              <span style={{ fontWeight: 600 }}>{f.word}</span>
+              <span style={{ color: '#6b7280', fontFamily: 'monospace', fontSize: 12 }}>...{f.context}...</span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Omission Missing */}
+      {frcl.omission_missing.length > 0 && (
+        <Section title={`Omission — ${frcl.omission_missing.length} missing events`}>
+          {frcl.omission_missing.map((m, i) => (
+            <div key={i} style={{ padding: '4px 0', fontSize: 13, color: '#dc2626' }}>{m}</div>
+          ))}
+        </Section>
+      )}
+
+      {/* Perspective Balance */}
+      <Section title="Perspective Balance">
+        <Row label="Status" value={persp.status} color={perspColor} />
+        <Row label="Home Mentions" value={`${persp.home_mentions}`} />
+        <Row label="Away Mentions" value={`${persp.away_mentions}`} />
+        <Row label="Balance Ratio" value={`${persp.ratio}`} color={persp.ratio >= 0.4 ? '#059669' : '#dc2626'} />
+        <Row label="First Sentence Neutral" value={persp.first_sentence_neutral ? 'Yes' : 'No'} color={persp.first_sentence_neutral ? '#059669' : '#d97706'} />
+        {/* Visual balance bar */}
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: '#6b7280', width: 50, textAlign: 'right' }}>Home</span>
+          <div style={{ flex: 1, height: 20, background: '#f3f4f6', borderRadius: 10, overflow: 'hidden', display: 'flex' }}>
+            <div style={{
+              width: `${persp.home_mentions + persp.away_mentions > 0 ? (persp.home_mentions / (persp.home_mentions + persp.away_mentions)) * 100 : 50}%`,
+              background: '#2563eb', height: '100%', borderRadius: '10px 0 0 10px',
+            }} />
+            <div style={{
+              flex: 1, background: '#7c3aed', height: '100%', borderRadius: '0 10px 10px 0',
+            }} />
+          </div>
+          <span style={{ fontSize: 12, color: '#6b7280', width: 50 }}>Away</span>
+        </div>
       </Section>
     </div>
   );
@@ -350,8 +452,7 @@ function TimingTab({ timing }: { timing: { steps: TimingEntry[]; total_ms: numbe
                 height: '100%',
                 width: `${Math.max((step.duration_ms / maxMs) * 100, 2)}%`,
                 background: step.status === 'ok' ? '#2563eb' : step.status === 'error' ? '#dc2626' : '#9ca3af',
-                borderRadius: 6,
-                transition: 'width 0.3s',
+                borderRadius: 6, transition: 'width 0.3s',
               }} />
             </div>
             <div style={{ width: 70, textAlign: 'right', fontSize: 13, fontFamily: 'monospace', color: step.status === 'error' ? '#dc2626' : '#374151' }}>
@@ -380,29 +481,20 @@ function WidgetsTab({ widgets, assembly, video }: {
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Widget Decisions */}
       {widgets && (
         <Section title={`Widget Placement (${widgets.placements} widgets)`}>
           {widgets.decisions.map((d, i) => (
-            <div key={i} style={{ padding: '6px 0', fontSize: 13, fontFamily: 'monospace', borderBottom: '1px solid #f3f4f6' }}>
-              {d}
-            </div>
+            <div key={i} style={{ padding: '6px 0', fontSize: 13, fontFamily: 'monospace', borderBottom: '1px solid #f3f4f6' }}>{d}</div>
           ))}
         </Section>
       )}
-
-      {/* Assembly Log */}
       {assembly && (
         <Section title={`Assembly (${assembly.widgets_inserted} inserted)`}>
           {assembly.log.map((l, i) => (
-            <div key={i} style={{ padding: '4px 0', fontSize: 13, fontFamily: 'monospace', color: l.includes('WARNING') ? '#dc2626' : '#374151' }}>
-              {l}
-            </div>
+            <div key={i} style={{ padding: '4px 0', fontSize: 13, fontFamily: 'monospace', color: l.includes('WARNING') ? '#dc2626' : '#374151' }}>{l}</div>
           ))}
         </Section>
       )}
-
-      {/* Video */}
       <Section title="Video Finder">
         {video ? (
           <>
@@ -441,9 +533,7 @@ function RawTab({ data }: { data: PipelineResult }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
-      <div style={{ padding: '10px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontWeight: 600, fontSize: 14 }}>
-        {title}
-      </div>
+      <div style={{ padding: '10px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontWeight: 600, fontSize: 14 }}>{title}</div>
       <div style={{ padding: 16 }}>{children}</div>
     </div>
   );

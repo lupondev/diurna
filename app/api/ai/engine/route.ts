@@ -13,12 +13,16 @@ import { validateArticle } from '@/lib/ai-engine/validators';
 import { placeWidgets } from '@/lib/ai-engine/widget-placer';
 import { assembleWidgets } from '@/lib/ai-engine/widget-assembler';
 import { findMatchVideo } from '@/lib/ai-engine/video-finder';
+import { runFRCL } from '@/lib/ai-engine/frcl';
+import { checkPerspectiveBalance } from '@/lib/ai-engine/validators/perspective';
 import type { NormalizedSnapshot, GeneratedArticle, MasterValidationResult, ArticleType, MatchData } from '@/lib/ai-engine/types';
 import type { WidgetPlacementResult } from '@/lib/ai-engine/widget-placer';
 import type { VideoFinderResult } from '@/lib/ai-engine/video-finder';
 import type { AssemblyResult } from '@/lib/ai-engine/widget-assembler';
 import type { StalenessResult } from '@/lib/ai-engine/staleness';
 import type { CDIResult } from '@/lib/ai-engine/types';
+import type { FRCLResult } from '@/lib/ai-engine/frcl';
+import type { PerspectiveResult } from '@/lib/ai-engine/validators/perspective';
 
 const client = new Anthropic();
 
@@ -257,7 +261,16 @@ export async function POST(req: NextRequest) {
     // Wait for video search to complete
     videoResult = await videoPromise;
 
-    // ─── Step 8: Widget Placement ───
+    // ─── Step 8: Quality Analysis (FRCL + Perspective) — informational only ───
+    const frcl: FRCLResult = t.measureSync('frcl', () =>
+      runFRCL(article!.content_html, snapshot.data.events)
+    );
+
+    const perspective: PerspectiveResult = t.measureSync('perspective', () =>
+      checkPerspectiveBalance(article!.content_html, snapshot)
+    );
+
+    // ─── Step 9: Widget Placement ───
     let widgetResult: WidgetPlacementResult | null = null;
     let assemblyResult: AssemblyResult | null = null;
 
@@ -300,6 +313,29 @@ export async function POST(req: NextRequest) {
           coverage: { passed: validation.coverage.passed, score: validation.coverage.score, missing: validation.coverage.missing_critical },
           tone: { passed: validation.tone.passed, violations: validation.tone.violations.length },
           entity: { passed: validation.entity.passed, unmatched: validation.entity.unmatched_entities },
+        },
+        validation_details: {
+          numeric: { passed: validation.numeric.passed, errors: validation.numeric.errors },
+          coverage: { passed: validation.coverage.passed, score: validation.coverage.score, missing_critical: validation.coverage.missing_critical, errors: validation.coverage.errors },
+          tone: { passed: validation.tone.passed, violations: validation.tone.violations, errors: validation.tone.errors },
+          entity: { passed: validation.entity.passed, unmatched_entities: validation.entity.unmatched_entities, errors: validation.entity.errors },
+        },
+        quality_analysis: {
+          frcl: {
+            fri: frcl.fri,
+            status: frcl.status,
+            subjectivity_score: frcl.subjectivity.score,
+            subjectivity_flagged: frcl.subjectivity.flagged_words,
+            omission_risk: frcl.omission.omission_risk,
+            omission_missing: frcl.omission.missing_events,
+          },
+          perspective: {
+            home_mentions: perspective.home_mentions,
+            away_mentions: perspective.away_mentions,
+            ratio: perspective.ratio,
+            first_sentence_neutral: perspective.first_sentence_neutral,
+            status: perspective.recommendation,
+          },
         },
         widgets: widgetResult ? {
           placements: widgetResult.placements.length,
