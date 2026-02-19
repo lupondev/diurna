@@ -1,21 +1,22 @@
-export const SUPPORTED_LANGUAGES = [
-  { code: 'en', label: 'English', flag: '🇬🇧' },
+import type { LanguageCode } from '@/lib/ai-engine/language-config'
+
+export type LangCode = LanguageCode
+
+export const SUPPORTED_LANGUAGES: { code: LangCode; label: string; flag: string }[] = [
   { code: 'bs', label: 'Bosanski', flag: '🇧🇦' },
   { code: 'hr', label: 'Hrvatski', flag: '🇭🇷' },
-  { code: 'sr', label: 'Srpski (Ćir)', flag: '🇷🇸' },
-  { code: 'sr-Latn', label: 'Srpski (Lat)', flag: '🇷🇸' },
-  { code: 'cnr', label: 'Crnogorski', flag: '🇲🇪' },
-  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
-  { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
+  { code: 'sr-cyrl', label: 'Srpski (Ćir)', flag: '🇷🇸' },
+  { code: 'sr-latn', label: 'Srpski (Lat)', flag: '🇷🇸' },
+  { code: 'cnj', label: 'Crnogorski', flag: '🇲🇪' },
+  { code: 'en', label: 'English', flag: '🇬🇧' },
   { code: 'ar', label: 'العربية', flag: '🇸🇦' },
-] as const
+  { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
+]
 
-export type LangCode = typeof SUPPORTED_LANGUAGES[number]['code']
-
-export const DEFAULT_LANGUAGE: LangCode = 'en'
+export const DEFAULT_LANGUAGE: LangCode = 'bs'
 
 /** Single storage key — ALL language selectors must use this */
-const STORAGE_KEY = 'diurna-lang'
+const STORAGE_KEY = 'diurna_language'
 
 /** Custom event name dispatched on language change */
 export const LANG_CHANGE_EVENT = 'diurna-language-change'
@@ -42,8 +43,6 @@ export function getClientLanguage(): LangCode {
 export function setClientLanguage(code: LangCode) {
   localStorage.setItem(STORAGE_KEY, code)
   document.cookie = `diurna-lang=${code};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`
-  // Update HTML lang attribute
   document.documentElement.lang = code
-  // Dispatch custom event for cross-component sync
   window.dispatchEvent(new CustomEvent(LANG_CHANGE_EVENT, { detail: code }))
 }

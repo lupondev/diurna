@@ -46,18 +46,17 @@ export function useLanguage() {
 
 /**
  * Map LangCode to the i18n Locale type (which has fewer variants).
- * sr-Latn and cnr fall back to closest translation set.
+ * sr-latn, sr-cyrl, cnj fall back to closest translation set.
  */
 function mapToI18nLocale(code: LangCode): 'en' | 'bs' | 'hr' | 'sr' | 'de' | 'ar' | 'fr' | 'es' {
   switch (code) {
-    case 'sr-Latn': return 'sr'
-    case 'cnr': return 'bs'  // Montenegrin UI closest to Bosnian
-    case 'tr': return 'en'   // Turkish fallback to English
+    case 'sr-latn': return 'sr'
+    case 'sr-cyrl': return 'sr'
+    case 'cnj': return 'bs'   // Montenegrin UI closest to Bosnian
+    case 'tr': return 'en'    // Turkish fallback to English
     case 'bs':
     case 'hr':
-    case 'sr':
     case 'en':
-    case 'de':
     case 'ar':
       return code
     default:

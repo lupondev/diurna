@@ -138,9 +138,9 @@ const MOCK_MATCH_DATA = {
 const AI_LANGUAGE_OPTIONS = [
   { code: 'bs', label: 'Bosanski', flag: '🇧🇦' },
   { code: 'hr', label: 'Hrvatski', flag: '🇭🇷' },
-  { code: 'sr-Latn', label: 'Srpski (Lat)', flag: '🇷🇸' },
-  { code: 'sr', label: 'Srpski (Ćir)', flag: '🇷🇸' },
-  { code: 'cnr', label: 'Crnogorski', flag: '🇲🇪' },
+  { code: 'sr-cyrl', label: 'Srpski (Ćir)', flag: '🇷🇸' },
+  { code: 'sr-latn', label: 'Srpski (Lat)', flag: '🇷🇸' },
+  { code: 'cnj', label: 'Crnogorski', flag: '🇲🇪' },
   { code: 'en', label: 'English', flag: '🇬🇧' },
   { code: 'ar', label: 'العربية', flag: '🇸🇦' },
   { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },

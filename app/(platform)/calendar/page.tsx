@@ -89,8 +89,10 @@ const TONES = ['Neutralno', 'Senzacija', 'Analitički', 'Casual']
 const TONE_MAP: Record<string, string> = { 'Neutralno': 'neutral', 'Senzacija': 'sensational', 'Analitički': 'analytical', 'Casual': 'casual' }
 const TONE_REV: Record<string, string> = { 'neutral': 'Neutralno', 'sensational': 'Senzacija', 'analytical': 'Analitički', 'casual': 'Casual' }
 const LANGS = [
-  { code: 'bs', label: 'Bosanski' }, { code: 'hr', label: 'Hrvatski' }, { code: 'sr', label: 'Srpski' },
-  { code: 'en', label: 'English' }, { code: 'de', label: 'Deutsch' }, { code: 'tr', label: 'Türkçe' },
+  { code: 'bs', label: 'Bosanski' }, { code: 'hr', label: 'Hrvatski' },
+  { code: 'sr-cyrl', label: 'Srpski (Ćir)' }, { code: 'sr-latn', label: 'Srpski (Lat)' },
+  { code: 'cnj', label: 'Crnogorski' }, { code: 'en', label: 'English' },
+  { code: 'ar', label: 'العربية' }, { code: 'tr', label: 'Türkçe' },
 ]
 
 const DIST_PLATFORMS = [

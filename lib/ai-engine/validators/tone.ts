@@ -88,14 +88,14 @@ export function validateTone(contentHtml: string, cdi: CDIResult, languageCode: 
 
   // 4. Check language variant forbidden terms
   const langConfig = getLanguageConfig(languageCode);
-  for (const term of langConfig.forbiddenTerms) {
+  for (const term of langConfig.forbidden_terms) {
     const lowerTerm = term.toLowerCase();
     if (text.includes(lowerTerm)) {
       errors.push({
         type: 'language_variant_violation',
-        message: `Termin "${term}" pripada pogrešnoj jezičkoj varijanti. Jezik: ${langConfig.nativeName} (${langConfig.code})`,
+        message: `Termin "${term}" pripada pogrešnoj jezičkoj varijanti. Jezik: ${langConfig.name} (${langConfig.code})`,
         severity: 'critical',
-        context: `Zabranjeno u ${langConfig.nativeName} — koristiti odgovarajući termin iz ove varijante`,
+        context: `Zabranjeno u ${langConfig.name} — koristiti odgovarajući termin iz ove varijante`,
       });
     }
   }

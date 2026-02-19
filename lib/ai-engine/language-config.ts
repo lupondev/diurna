@@ -1,461 +1,303 @@
 /**
  * Language Configuration for AI Engine — BCMS + International
  *
- * Provides language-specific vocabulary, grammar rules, and forbidden terms
- * for generating sports journalism in the correct national standard variant.
+ * Provides language-specific vocabulary, grammar rules, forbidden terms,
+ * and cliches for generating sports journalism in the correct variant.
  *
  * BCMS = Bosnian, Croatian, Montenegrin, Serbian — four national standard
  * varieties of one pluricentric language with real lexical, phonological,
  * and morphological differences that MUST be respected.
  */
 
-export type LanguageCode = 'bs' | 'hr' | 'sr' | 'sr-Latn' | 'sr-Cyrl' | 'cnr' | 'en' | 'ar' | 'tr' | 'de' | 'fr';
+export type LanguageCode = 'bs' | 'hr' | 'sr-cyrl' | 'sr-latn' | 'cnj' | 'en' | 'ar' | 'tr';
+
+export interface SportsTerm {
+  sport_football: string;
+  goalkeeper: string;
+  referee: string;
+  match: string;
+  coach: string;
+  penalty: string;
+  corner: string;
+  yellow_card: string;
+  red_card: string;
+  offside: string;
+  league: string;
+  championship: string;
+  transfer: string;
+  injury: string;
+}
 
 export interface LanguageConfig {
   code: LanguageCode;
+  locale: string;
   name: string;
-  nativeName: string;
-  script: 'latin' | 'cyrillic' | 'arabic';
-  dialect: 'ijekavica' | 'ekavica' | 'none';
-  sportTerms: Record<string, string>;
-  lexicon: Record<string, string>;
-  grammarRules: string[];
-  forbiddenTerms: string[];
+  direction: 'ltr' | 'rtl';
+  phonology: 'ijekavica' | 'ekavica' | null;
+  infinitive_style: 'infinitive' | 'da_prezent';
+  future_tense: 'ću_infinitive' | 'ću_da_prezent';
+  sports_terms: SportsTerm;
+  forbidden_terms: string[];
+  cliche_list: string[];
 }
 
-export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
+export const LANGUAGE_CONFIGS: Record<LanguageCode, LanguageConfig> = {
   bs: {
     code: 'bs',
-    name: 'Bosnian',
-    nativeName: 'Bosanski',
-    script: 'latin',
-    dialect: 'ijekavica',
-    sportTerms: {
-      football: 'fudbal',
-      team: 'tim',
-      match: 'utakmica',
-      goal: 'gol',
+    locale: 'bs-BA',
+    name: 'Bosanski',
+    direction: 'ltr',
+    phonology: 'ijekavica',
+    infinitive_style: 'da_prezent',
+    future_tense: 'ću_da_prezent',
+    sports_terms: {
+      sport_football: 'fudbal',
       goalkeeper: 'golman',
       referee: 'sudija',
+      match: 'utakmica',
+      coach: 'trener',
       penalty: 'penal',
-      offside: 'ofsajd',
       corner: 'korner',
-      halftime: 'poluvrijeme',
-      victory: 'pobjeda',
-      defeat: 'poraz',
-      draw: 'nerješeno',
-      shot: 'udarac',
-      shots_on_target: 'udarci u okvir',
-      possession: 'posjed lopte',
-      foul: 'prekršaj',
       yellow_card: 'žuti karton',
       red_card: 'crveni karton',
-      substitution: 'izmjena',
-      assist: 'asistencija',
-      standings: 'tabela',
-      matchday: 'kolo',
+      offside: 'ofsajd',
+      league: 'liga',
+      championship: 'prvak',
+      transfer: 'transfer',
+      injury: 'povreda',
     },
-    lexicon: {
-      history: 'historija',
-      thousand: 'hiljada',
-      week: 'sedmica',
-      coffee: 'kahva',
-      air: 'zrak',
-      what_interrogative: 'šta',
-    },
-    grammarRules: [
-      'Koristi IJEKAVICU: mlijeko, lijep, dijete, svijet, rijeka',
-      'Koristi LATINICU',
-      'Svi dijakritici obavezni: š, đ, č, ć, ž',
-      'Čuvaj glas H: lahko, kahva, mehko (ne: lako, kafa, meko)',
-      'Turski/arapski pozajmljenice su dozvoljene i kulturno značajne: čaršija, mahala, komšija, sokak',
-      'Upitna zamjenica: šta (ne: što)',
-      'Koristiti i infinitiv i da+prezent formu',
+    forbidden_terms: [
+      'nogomet', 'vratar', 'sudac', 'zaleđe', 'ozljeda',
+      'momčad', 'tisuća', 'povijest', 'glazba', 'jedanaesterac',
     ],
-    forbiddenTerms: [
-      'nogomet',
-      'pogodak',
-      'vratar',
-      'sudac',
-      'momčad',
-      'tisuća',
-      'povijest',
-      'glazba',
-      'zaleđe',
-      'pobeda',
-      'nedelja',
-      'mleko',
-      'lep',
+    cliche_list: [
+      'zatresao mrežu', 'pokazao zube', 'stavio tačku na utakmicu',
+      'pružio ruku spasa', 'maestralna predstava', 'borba do posljednjeg daha',
+      'dominirao od prve minute', 'preslišao protivnika', 'ispustio pobjedu iz ruku',
+      'proigrao šansu', 'zlatna generacija', 'sjajni meč',
     ],
   },
   hr: {
     code: 'hr',
-    name: 'Croatian',
-    nativeName: 'Hrvatski',
-    script: 'latin',
-    dialect: 'ijekavica',
-    sportTerms: {
-      football: 'nogomet',
-      team: 'momčad',
-      match: 'utakmica',
-      goal: 'pogodak',
+    locale: 'hr-HR',
+    name: 'Hrvatski',
+    direction: 'ltr',
+    phonology: 'ijekavica',
+    infinitive_style: 'infinitive',
+    future_tense: 'ću_infinitive',
+    sports_terms: {
+      sport_football: 'nogomet',
       goalkeeper: 'vratar',
       referee: 'sudac',
+      match: 'utakmica',
+      coach: 'trener',
       penalty: 'jedanaesterac',
+      corner: 'korner',
+      yellow_card: 'žuti karton',
+      red_card: 'crveni karton',
       offside: 'zaleđe',
-      corner: 'udarac iz kuta',
-      halftime: 'poluvrijeme',
-      victory: 'pobjeda',
-      defeat: 'poraz',
-      draw: 'neodlučeno',
-      shot: 'udarac',
-      shots_on_target: 'udarci u okvir',
-      possession: 'posjed lopte',
-      foul: 'prekršaj',
-      yellow_card: 'žuti karton',
-      red_card: 'crveni karton',
-      substitution: 'izmjena',
-      assist: 'asistencija',
-      standings: 'ljestvica',
-      matchday: 'kolo',
+      league: 'liga',
+      championship: 'prvak',
+      transfer: 'transfer',
+      injury: 'ozljeda',
     },
-    lexicon: {
-      history: 'povijest',
-      thousand: 'tisuća',
-      week: 'tjedan',
-      coffee: 'kava',
-      air: 'zrak',
-      what_interrogative: 'što',
-    },
-    grammarRules: [
-      'Koristi IJEKAVICU: mlijeko, lijep, dijete, svijet, rijeka',
-      'Koristi LATINICU',
-      'Svi dijakritici obavezni: š, đ, č, ć, ž',
-      'Upitna zamjenica: što (ne: šta)',
-      'Preferirati infinitiv: želim ići (ne: želim da idem)',
-      'Hrvatski purizam: koristiti domaće riječi umjesto internacionalizama gdje postoje',
-      'Budućnost: imat ću (odvojeno), ne imaću',
+    forbidden_terms: [
+      'fudbal', 'golman', 'sudija', 'penal', 'ofsajd', 'povreda',
+      'hiljada', 'historija', 'muzika', 'kahva',
     ],
-    forbiddenTerms: [
-      'fudbal',
-      'golman',
-      'sudija',
-      'ofsajd',
-      'korner',
-      'hiljada',
-      'historija',
-      'muzika',
-      'kahva',
+    cliche_list: [
+      'zatresao mrežu', 'pokazao zube', 'stavio točku na utakmicu',
+      'pružio ruku spasa', 'maestralna predstava', 'borba do posljednjeg daha',
+      'dominirao od prve minute', 'preslišao protivnika', 'ispustio pobjedu iz ruku',
+      'proigrao priliku', 'zlatna generacija', 'sjajni dvoboj',
     ],
   },
-  sr: {
-    code: 'sr',
-    name: 'Serbian (Cyrillic)',
-    nativeName: 'Српски',
-    script: 'cyrillic',
-    dialect: 'ekavica',
-    sportTerms: {
-      football: 'fudbal',
-      team: 'tim',
-      match: 'utakmica',
-      goal: 'gol',
-      goalkeeper: 'golman',
-      referee: 'sudija',
-      penalty: 'penal',
-      offside: 'ofsajd',
-      corner: 'korner',
-      halftime: 'poluvreme',
-      victory: 'pobeda',
-      defeat: 'poraz',
-      draw: 'nerešeno',
-      shot: 'udarac',
-      shots_on_target: 'udarci u okvir',
-      possession: 'posed lopte',
-      foul: 'prekršaj',
-      yellow_card: 'žuti karton',
-      red_card: 'crveni karton',
-      substitution: 'izmena',
-      assist: 'asistencija',
-      standings: 'tabela',
-      matchday: 'kolo',
+  'sr-cyrl': {
+    code: 'sr-cyrl',
+    locale: 'sr-Cyrl-RS',
+    name: 'Српски (Ћирилица)',
+    direction: 'ltr',
+    phonology: 'ekavica',
+    infinitive_style: 'da_prezent',
+    future_tense: 'ću_da_prezent',
+    sports_terms: {
+      sport_football: 'фудбал',
+      goalkeeper: 'голман',
+      referee: 'судија',
+      match: 'утакмица',
+      coach: 'тренер',
+      penalty: 'пенал',
+      corner: 'корнер',
+      yellow_card: 'жути картон',
+      red_card: 'црвени картон',
+      offside: 'офсајд',
+      league: 'лига',
+      championship: 'првак',
+      transfer: 'трансфер',
+      injury: 'повреда',
     },
-    lexicon: {
-      history: 'istorija',
-      thousand: 'hiljada',
-      week: 'nedelja',
-      coffee: 'kafa',
-      air: 'vazduh',
-      what_interrogative: 'šta',
-    },
-    grammarRules: [
-      'Koristi EKAVICU: mleko, lep, dete, svet, reka',
-      'Koristi ĆIRILICU za output',
-      'Preferirati da+prezent: želim da idem (ne: želim ići)',
-      'Budućnost: imaću (spojeno)',
-      'Upitna zamjenica: šta',
-    ],
-    forbiddenTerms: [
+    forbidden_terms: [
       'nogomet', 'vratar', 'sudac', 'momčad', 'tisuća',
-      'povijest', 'glazba', 'zaleđe', 'tjedan',
+      'povijest', 'glazba', 'zaleđe', 'tjedan', 'ozljeda',
+    ],
+    cliche_list: [
+      'затресао мрежу', 'показао зубе', 'ставио тачку на утакмицу',
+      'пружио руку спаса', 'маестрална представа', 'борба до последњег даха',
+      'доминирао од прве минуте', 'преслишао противника',
     ],
   },
-  'sr-Latn': {
-    code: 'sr-Latn',
-    name: 'Serbian (Latin)',
-    nativeName: 'Srpski',
-    script: 'latin',
-    dialect: 'ekavica',
-    sportTerms: {
-      football: 'fudbal',
-      team: 'tim',
-      match: 'utakmica',
-      goal: 'gol',
+  'sr-latn': {
+    code: 'sr-latn',
+    locale: 'sr-Latn-RS',
+    name: 'Srpski (Latinica)',
+    direction: 'ltr',
+    phonology: 'ekavica',
+    infinitive_style: 'da_prezent',
+    future_tense: 'ću_da_prezent',
+    sports_terms: {
+      sport_football: 'fudbal',
       goalkeeper: 'golman',
       referee: 'sudija',
+      match: 'utakmica',
+      coach: 'trener',
       penalty: 'penal',
-      offside: 'ofsajd',
       corner: 'korner',
-      halftime: 'poluvreme',
-      victory: 'pobeda',
-      defeat: 'poraz',
-      draw: 'nerešeno',
-      shot: 'udarac',
-      shots_on_target: 'udarci u okvir',
-      possession: 'posed lopte',
-      foul: 'prekršaj',
       yellow_card: 'žuti karton',
       red_card: 'crveni karton',
-      substitution: 'izmena',
-      assist: 'asistencija',
-      standings: 'tabela',
-      matchday: 'kolo',
+      offside: 'ofsajd',
+      league: 'liga',
+      championship: 'prvak',
+      transfer: 'transfer',
+      injury: 'povreda',
     },
-    lexicon: {
-      history: 'istorija',
-      thousand: 'hiljada',
-      week: 'nedelja',
-      coffee: 'kafa',
-      air: 'vazduh',
-      what_interrogative: 'šta',
-    },
-    grammarRules: [
-      'Koristi EKAVICU: mleko, lep, dete, svet, reka',
-      'Koristi LATINICU',
-      'Preferirati da+prezent: želim da idem',
-      'Budućnost: imaću (spojeno)',
-    ],
-    forbiddenTerms: [
+    forbidden_terms: [
       'nogomet', 'vratar', 'sudac', 'momčad', 'tisuća',
-      'povijest', 'glazba', 'zaleđe', 'tjedan',
+      'povijest', 'glazba', 'zaleđe', 'tjedan', 'ozljeda',
+    ],
+    cliche_list: [
+      'zatresao mrežu', 'pokazao zube', 'stavio tačku na utakmicu',
+      'pružio ruku spasa', 'maestralna predstava', 'borba do poslednjeg daha',
+      'dominirao od prve minute', 'preslišao protivnika',
     ],
   },
-  'sr-Cyrl': {
-    code: 'sr-Cyrl',
-    name: 'Serbian (Cyrillic)',
-    nativeName: 'Српски',
-    script: 'cyrillic',
-    dialect: 'ekavica',
-    sportTerms: {
-      football: 'fudbal',
-      team: 'tim',
-      match: 'utakmica',
-      goal: 'gol',
+  cnj: {
+    code: 'cnj',
+    locale: 'cnr-ME',
+    name: 'Crnogorski',
+    direction: 'ltr',
+    phonology: 'ijekavica',
+    infinitive_style: 'da_prezent',
+    future_tense: 'ću_da_prezent',
+    sports_terms: {
+      sport_football: 'fudbal',
       goalkeeper: 'golman',
       referee: 'sudija',
-      penalty: 'penal',
-      offside: 'ofsajd',
-      corner: 'korner',
-      halftime: 'poluvreme',
-      victory: 'pobeda',
-      defeat: 'poraz',
-      draw: 'nerešeno',
-      shot: 'udarac',
-      shots_on_target: 'udarci u okvir',
-      possession: 'posed lopte',
-      foul: 'prekršaj',
-      yellow_card: 'žuti karton',
-      red_card: 'crveni karton',
-      substitution: 'izmena',
-      assist: 'asistencija',
-      standings: 'tabela',
-      matchday: 'kolo',
-    },
-    lexicon: {
-      history: 'istorija',
-      thousand: 'hiljada',
-      week: 'nedelja',
-      coffee: 'kafa',
-      air: 'vazduh',
-      what_interrogative: 'šta',
-    },
-    grammarRules: [
-      'Koristi EKAVICU: mleko, lep, dete, svet, reka',
-      'Koristi ĆIRILICU za output',
-      'Preferirati da+prezent: želim da idem (ne: želim ići)',
-      'Budućnost: imaću (spojeno)',
-      'Upitna zamjenica: šta',
-    ],
-    forbiddenTerms: [
-      'nogomet', 'vratar', 'sudac', 'momčad', 'tisuća',
-      'povijest', 'glazba', 'zaleđe', 'tjedan',
-    ],
-  },
-  cnr: {
-    code: 'cnr',
-    name: 'Montenegrin',
-    nativeName: 'Crnogorski',
-    script: 'latin',
-    dialect: 'ijekavica',
-    sportTerms: {
-      football: 'fudbal',
-      team: 'tim',
       match: 'utakmica',
-      goal: 'gol',
-      goalkeeper: 'golman',
-      referee: 'sudija',
+      coach: 'trener',
       penalty: 'penal',
-      offside: 'ofsajd',
       corner: 'korner',
-      halftime: 'poluvrijeme',
-      victory: 'pobjeda',
-      defeat: 'poraz',
-      draw: 'nerješeno',
-      shot: 'udarac',
-      shots_on_target: 'udarci u okvir',
-      possession: 'posjed lopte',
-      foul: 'prekršaj',
       yellow_card: 'žuti karton',
       red_card: 'crveni karton',
-      substitution: 'izmjena',
-      assist: 'asistencija',
-      standings: 'tabela',
-      matchday: 'kolo',
+      offside: 'ofsajd',
+      league: 'liga',
+      championship: 'prvak',
+      transfer: 'transfer',
+      injury: 'povreda',
     },
-    lexicon: {
-      history: 'istorija',
-      thousand: 'hiljada',
-      week: 'neđelja',
-      coffee: 'kafa',
-      air: 'vazduh',
-      what_interrogative: 'šta',
-    },
-    grammarRules: [
-      'Koristi IJEKAVICU: mlijeko, lijep, dijete, svijet, rijeka',
-      'Koristi LATINICU',
-      'Specifične crnogorske forme: nijesmo (ne: nismo), đe (ne: gdje)',
-      'Opciono: slova ś i ź (sjekira → śekira)',
-      'Budućnost: imaću (spojeno)',
-    ],
-    forbiddenTerms: [
+    forbidden_terms: [
       'nogomet', 'vratar', 'sudac', 'momčad', 'tisuća',
-      'povijest', 'glazba', 'zaleđe', 'tjedan',
+      'povijest', 'glazba', 'zaleđe', 'tjedan', 'ozljeda',
       'mleko', 'lep', 'pobeda',
+    ],
+    cliche_list: [
+      'zatresao mrežu', 'pokazao zube', 'stavio tačku na utakmicu',
+      'pružio ruku spasa', 'maestralna predstava', 'borba do posljednjeg daha',
+      'dominirao od prve minute', 'preslišao protivnika',
     ],
   },
   en: {
     code: 'en',
+    locale: 'en-GB',
     name: 'English',
-    nativeName: 'English',
-    script: 'latin',
-    dialect: 'none',
-    sportTerms: {
-      football: 'football',
-      team: 'team',
-      match: 'match',
-      goal: 'goal',
+    direction: 'ltr',
+    phonology: null,
+    infinitive_style: 'infinitive',
+    future_tense: 'ću_infinitive',
+    sports_terms: {
+      sport_football: 'football',
       goalkeeper: 'goalkeeper',
       referee: 'referee',
+      match: 'match',
+      coach: 'coach',
       penalty: 'penalty',
-      offside: 'offside',
       corner: 'corner',
-      halftime: 'half-time',
-      victory: 'victory',
-      defeat: 'defeat',
-      draw: 'draw',
-      shot: 'shot',
-      shots_on_target: 'shots on target',
-      possession: 'possession',
-      foul: 'foul',
       yellow_card: 'yellow card',
       red_card: 'red card',
-      substitution: 'substitution',
-      assist: 'assist',
-      standings: 'standings',
-      matchday: 'matchday',
+      offside: 'offside',
+      league: 'league',
+      championship: 'champion',
+      transfer: 'transfer',
+      injury: 'injury',
     },
-    lexicon: {},
-    grammarRules: ['British English spelling preferred', 'AP Style for sports reporting'],
-    forbiddenTerms: [],
+    forbidden_terms: [],
+    cliche_list: [
+      'a game of two halves', 'sick as a parrot', 'over the moon',
+      'at the end of the day', 'the beautiful game',
+    ],
   },
   ar: {
     code: 'ar',
-    name: 'Arabic',
-    nativeName: 'العربية',
-    script: 'arabic',
-    dialect: 'none',
-    sportTerms: {
-      football: 'كرة القدم',
-      team: 'فريق',
-      match: 'مباراة',
-      goal: 'هدف',
+    locale: 'ar-SA',
+    name: 'العربية',
+    direction: 'rtl',
+    phonology: null,
+    infinitive_style: 'infinitive',
+    future_tense: 'ću_infinitive',
+    sports_terms: {
+      sport_football: 'كرة القدم',
       goalkeeper: 'حارس المرمى',
       referee: 'حكم',
+      match: 'مباراة',
+      coach: 'مدرب',
       penalty: 'ركلة جزاء',
-      offside: 'تسلل',
       corner: 'ركلة ركنية',
-      halftime: 'الشوط الأول',
-      victory: 'فوز',
-      defeat: 'هزيمة',
-      draw: 'تعادل',
-      shot: 'تسديدة',
-      shots_on_target: 'تسديدات على المرمى',
-      possession: 'استحواذ',
-      foul: 'مخالفة',
       yellow_card: 'بطاقة صفراء',
       red_card: 'بطاقة حمراء',
-      substitution: 'تبديل',
-      assist: 'تمريرة حاسمة',
-      standings: 'الترتيب',
-      matchday: 'الجولة',
+      offside: 'تسلل',
+      league: 'دوري',
+      championship: 'بطل',
+      transfer: 'انتقال',
+      injury: 'إصابة',
     },
-    lexicon: {},
-    grammarRules: ['Modern Standard Arabic (MSA)', 'Right-to-left text direction'],
-    forbiddenTerms: [],
+    forbidden_terms: [],
+    cliche_list: [],
   },
   tr: {
     code: 'tr',
-    name: 'Turkish',
-    nativeName: 'Türkçe',
-    script: 'latin',
-    dialect: 'none',
-    sportTerms: {
-      football: 'futbol',
-      team: 'takım',
-      match: 'maç',
-      goal: 'gol',
+    locale: 'tr-TR',
+    name: 'Türkçe',
+    direction: 'ltr',
+    phonology: null,
+    infinitive_style: 'infinitive',
+    future_tense: 'ću_infinitive',
+    sports_terms: {
+      sport_football: 'futbol',
       goalkeeper: 'kaleci',
       referee: 'hakem',
+      match: 'maç',
+      coach: 'teknik direktör',
       penalty: 'penaltı',
-      offside: 'ofsayt',
       corner: 'köşe vuruşu',
-      halftime: 'devre arası',
-      victory: 'galibiyet',
-      defeat: 'mağlubiyet',
-      draw: 'beraberlik',
-      shot: 'şut',
-      shots_on_target: 'isabetli şut',
-      possession: 'top hakimiyeti',
-      foul: 'faul',
       yellow_card: 'sarı kart',
       red_card: 'kırmızı kart',
-      substitution: 'oyuncu değişikliği',
-      assist: 'asist',
-      standings: 'puan durumu',
-      matchday: 'hafta',
+      offside: 'ofsayt',
+      league: 'lig',
+      championship: 'şampiyon',
+      transfer: 'transfer',
+      injury: 'sakatlık',
     },
-    lexicon: {},
-    grammarRules: ['Turkish Latin alphabet with special chars: ç, ğ, ı, ö, ş, ü'],
-    forbiddenTerms: [],
+    forbidden_terms: [],
+    cliche_list: [],
   },
 };
 
@@ -463,32 +305,74 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
  * Get language config, with fallback to Bosnian.
  */
 export function getLanguageConfig(code: string): LanguageConfig {
-  // Handle sr mapping — bare 'sr' defaults to Cyrillic
-  if (code === 'sr') return LANGUAGE_CONFIGS['sr'];
-  return LANGUAGE_CONFIGS[code] || LANGUAGE_CONFIGS['bs'];
+  if (code in LANGUAGE_CONFIGS) return LANGUAGE_CONFIGS[code as LanguageCode];
+  return LANGUAGE_CONFIGS.bs;
 }
 
 /**
  * Generate language-specific prompt section for the AI engine.
  */
 export function getLanguagePromptSection(config: LanguageConfig): string {
-  let prompt = `\nJEZIK: ${config.nativeName} (${config.code})\nDIJALEKT: ${config.dialect === 'none' ? 'N/A' : config.dialect}\nPISMO: ${config.script}\n`;
+  const parts: string[] = [];
 
-  prompt += `\nGRAMATIČKA PRAVILA:\n`;
-  for (const rule of config.grammarRules) {
-    prompt += `- ${rule}\n`;
+  parts.push(`\nJEZIK: ${config.name} (${config.locale})`);
+  parts.push(`SMJER TEKSTA: ${config.direction}`);
+
+  // Phonology
+  if (config.phonology) {
+    const phonologyExamples = config.phonology === 'ijekavica'
+      ? 'mlijeko, lijep, dijete, svijet, rijeka'
+      : 'mleko, lep, dete, svet, reka';
+    parts.push(`FONOLOGIJA: ${config.phonology.toUpperCase()} — ${phonologyExamples}`);
   }
 
-  if (config.forbiddenTerms.length > 0) {
-    prompt += `\n★★★ ZABRANJENE RIJEČI (iz pogrešne jezičke varijante — NE KORISTI) ★★★\n`;
-    prompt += config.forbiddenTerms.join(', ') + '\n';
-    prompt += `★★★ KRAJ ZABRANJENIH RIJEČI ★★★\n`;
+  // Script for Serbian Cyrillic
+  if (config.code === 'sr-cyrl') {
+    parts.push('PISMO: ĆIRILICA — sav tekst MORA biti na ćirilici');
   }
 
-  prompt += `\nSPORTSKA TERMINOLOGIJA (OBAVEZNO KORISTITI OVE TERMINE):\n`;
-  for (const [key, value] of Object.entries(config.sportTerms)) {
-    prompt += `- ${key}: ${value}\n`;
+  // Grammar style
+  if (config.infinitive_style === 'da_prezent') {
+    parts.push('GLAGOLSKI STIL: da+prezent (želim da idem, ne: želim ići)');
+  } else if (['bs', 'hr', 'cnj', 'sr-latn', 'sr-cyrl'].includes(config.code)) {
+    parts.push('GLAGOLSKI STIL: infinitiv (želim ići, ne: želim da idem)');
   }
 
-  return prompt;
+  // Future tense
+  if (config.future_tense === 'ću_da_prezent') {
+    parts.push('FUTUR: ću da + prezent (imaću — spojeno)');
+  } else if (config.code === 'hr') {
+    parts.push('FUTUR: ću + infinitiv (imat ću — odvojeno)');
+  }
+
+  // Direction for AR
+  if (config.direction === 'rtl') {
+    parts.push('NAPOMENA: RTL tekst — desno na lijevo');
+  }
+
+  // Forbidden terms
+  if (config.forbidden_terms.length > 0) {
+    parts.push(`\n★★★ ZABRANJENE RIJEČI (iz pogrešne jezičke varijante — NE KORISTI) ★★★`);
+    parts.push(config.forbidden_terms.join(', '));
+    parts.push(`★★★ KRAJ ZABRANJENIH RIJEČI ★★★`);
+  }
+
+  // Sports terminology
+  parts.push(`\nSPORTSKA TERMINOLOGIJA (OBAVEZNO KORISTITI OVE TERMINE):`);
+  const st = config.sports_terms;
+  parts.push(`- ${config.code === 'sr-cyrl' ? 'фудбал' : 'Football'}: ${st.sport_football}`);
+  parts.push(`- ${config.code === 'sr-cyrl' ? 'голман' : 'Goalkeeper'}: ${st.goalkeeper}`);
+  parts.push(`- ${config.code === 'sr-cyrl' ? 'судија' : 'Referee'}: ${st.referee}`);
+  parts.push(`- ${config.code === 'sr-cyrl' ? 'утакмица' : 'Match'}: ${st.match}`);
+  parts.push(`- ${config.code === 'sr-cyrl' ? 'пенал' : 'Penalty'}: ${st.penalty}`);
+  parts.push(`- ${config.code === 'sr-cyrl' ? 'офсајд' : 'Offside'}: ${st.offside}`);
+  parts.push(`- ${config.code === 'sr-cyrl' ? 'повреда' : 'Injury'}: ${st.injury}`);
+
+  // Cliches
+  if (config.cliche_list.length > 0) {
+    parts.push(`\nZABRANJENI KLIŠEJI (NE KORISTI):`);
+    parts.push(config.cliche_list.join(', '));
+  }
+
+  return parts.join('\n');
 }
