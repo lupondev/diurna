@@ -1,12 +1,15 @@
 /**
  * AI Engine V2 — Test Script
  *
- * Tests the complete data foundation + validation pipeline:
+ * Tests the complete pipeline:
  * 1. Creates a mock NormalizedSnapshot (Benfica 0-1 Real Madrid)
  * 2. Calculates CDI
  * 3. Checks staleness
  * 4. Runs all 4 validators on a GOOD article (should PASS)
  * 5. Runs all 4 validators on a BAD article (should FAIL)
+ * 6. Tests prompt builder
+ * 7. Tests widget placement engine
+ * 8. Tests widget assembler
  *
  * Run: npx tsx scripts/test-ai-engine.ts
  */
@@ -15,6 +18,9 @@ import { createSnapshotFromData } from '../lib/ai-engine/ingestion';
 import { calculateCDI } from '../lib/ai-engine/cdi';
 import { checkStaleness } from '../lib/ai-engine/staleness';
 import { validateArticle } from '../lib/ai-engine/validators';
+import { buildPrompt } from '../lib/ai-engine/prompt-builder';
+import { placeWidgets } from '../lib/ai-engine/widget-placer';
+import { assembleWidgets } from '../lib/ai-engine/widget-assembler';
 import type { MatchData, GeneratedArticle } from '../lib/ai-engine/types';
 
 // ══════════════════════════════════════════════
@@ -210,13 +216,12 @@ const mockMatchData: MatchData = {
 const goodArticle: GeneratedArticle = {
   title: 'Vinícius Júnior donio pobjedu Real Madridu na Estádio da Luz',
   excerpt: 'Real Madrid ostvario pobjedu 1:0 nad Benficom u prvoj utakmici play-offa Lige Prvaka.',
-  content_html: `
-    <p>Real Madrid je ostvario važnu pobjedu 1:0 nad Benficom na Estádio da Luz u prvoj utakmici play-off runde Lige Prvaka.</p>
-    <p>Gol odluke postigao je Vinícius Júnior u 67. minuti, nakon asistencije Judea Bellinghama. Brazilski napadač, koji je ocijenjen ocjenom 8.2, bio je ključni igrač utakmice.</p>
-    <p>Real Madrid je imao nešto bolji posjed lopte sa 55% naspram 45% za Benficu. Gosti su uputili 18 udaraca, od čega 7 u okvir gola, dok je Benfica imala 12 udaraca sa 4 u okvir.</p>
-    <p>Utakmica je bila obilježena sa 4 žuta kartona — Otamendi u 34., Prestianni u 58. i Aursnes u 73. minuti za domaćine, te Valverde u 81. za Real Madrid.</p>
-    <p>Benfica je imala 5 kornera naspram 8 za Real Madrid, a domaćin je napravio 14 prekršaja prema 11 za goste.</p>
-  `,
+  content_html: `<p>Real Madrid je ostvario važnu pobjedu 1:0 nad Benficom na Estádio da Luz u prvoj utakmici play-off runde Lige Prvaka.</p>
+<p>Gol odluke postigao je Vinícius Júnior u 67. minuti, nakon asistencije Judea Bellinghama. Brazilski napadač, koji je ocijenjen ocjenom 8.2, bio je ključni igrač utakmice.</p>
+<p>Real Madrid je imao nešto bolji posjed lopte sa 55% naspram 45% za Benficu. Gosti su uputili 18 udaraca, od čega 7 u okvir gola, dok je Benfica imala 12 udaraca sa 4 u okvir.</p>
+<p>Utakmica je bila obilježena sa 4 žuta kartona — Otamendi u 34., Prestianni u 58. i Aursnes u 73. minuti za domaćine, te Valverde u 81. za Real Madrid.</p>
+<p>Benfica je imala 5 kornera naspram 8 za Real Madrid, a domaćin je napravio 14 prekršaja prema 11 za goste.</p>
+<p>TLDR: Real Madrid pobijedio Benficu 1:0 golom Viníciusa Júniora u 67. minuti.</p>`,
   entities_used: [
     { name: 'Vinícius Júnior', id: '1100', mentions: 2 },
     { name: 'Jude Bellingham', id: '1101', mentions: 1 },
@@ -258,18 +263,16 @@ const goodArticle: GeneratedArticle = {
 const badArticle: GeneratedArticle = {
   title: 'Real Madrid demolirao Benficu na gostovanju',
   excerpt: 'Real Madrid je dominantan u Lisabonu.',
-  content_html: `
-    <p>Real Madrid je demolirao Benficu rezultatom 3:0 na Estádio da Luz, jer je tim bio frustriran prethodnim rezultatima.</p>
-    <p>Kylian Mbappé je postigao hat-trick sa golovima u 23., 56. i 89. minuti. Francuski napadač je bio superioran i pokazao potpunu kontrolu nad odbranom Benfice.</p>
-    <p>Real Madrid je dominantan u Lisabonu sa čak 72% posjeda lopte i 25 udaraca. Benfica je ponižena na vlastitom terenu.</p>
-    <p>Očekuje se da Real Madrid lako prođe u sljedeću rundu nakon ovog rezultata.</p>
-  `,
+  content_html: `<p>Real Madrid je demolirao Benficu rezultatom 3:0 na Estádio da Luz, jer je tim bio frustriran prethodnim rezultatima.</p>
+<p>Kylian Mbappé je postigao hat-trick sa golovima u 23., 56. i 89. minuti. Francuski napadač je bio superioran i pokazao potpunu kontrolu nad odbranom Benfice.</p>
+<p>Real Madrid je dominantan u Lisabonu sa čak 72% posjeda lopte i 25 udaraca. Benfica je ponižena na vlastitom terenu.</p>
+<p>Očekuje se da Real Madrid lako prođe u sljedeću rundu nakon ovog rezultata.</p>`,
   entities_used: [
-    { name: 'Kylian Mbappé', id: '9999', mentions: 2 },  // NOT in snapshot
+    { name: 'Kylian Mbappé', id: '9999', mentions: 2 },
     { name: 'Real Madrid', id: 'team', mentions: 3 },
     { name: 'Benfica', id: 'team', mentions: 2 },
   ],
-  events_covered: [],  // NO events covered — missing the goal
+  events_covered: [],
   numbers_used: [
     { value: '3', source_field: 'hallucinated' },
     { value: '0', source_field: 'match.score_home' },
@@ -298,10 +301,12 @@ function printResult(label: string, passed: boolean) {
 }
 
 function main() {
-  printHeader('AI ENGINE V2 — TEST SUITE');
+  printHeader('AI ENGINE V2 — FULL TEST SUITE');
   console.log('  Match: Benfica 0-1 Real Madrid');
   console.log('  Competition: Liga Prvaka — Play-off, 1. utakmica');
   console.log('  Date: 2026-02-18');
+
+  let allPassed = true;
 
   // Step 1: Create snapshot
   printHeader('STEP 1: Create Normalized Snapshot');
@@ -326,8 +331,22 @@ function main() {
   console.log(`  Age: ${staleness.age_seconds.toFixed(0)}s / Window: ${staleness.window_seconds}s`);
   printResult('Staleness check', staleness.status !== 'REJECT');
 
-  // Step 4: Validate GOOD article
-  printHeader('STEP 4: Validate GOOD Article');
+  // Step 4: Prompt Builder
+  printHeader('STEP 4: Prompt Builder');
+  const prompt = buildPrompt(snapshot, cdi);
+  console.log(`  System prompt length: ${prompt.system.length} chars`);
+  console.log(`  User prompt length: ${prompt.user.length} chars`);
+  console.log(`  Max tokens: ${prompt.max_tokens}`);
+  const hasTeamNames = prompt.user.includes('Benfica') && prompt.user.includes('Real Madrid');
+  const hasCdiInfo = prompt.system.includes('CDI=');
+  const hasToneRules = prompt.system.includes('ZABRANJENE');
+  printResult('Prompt contains team names', hasTeamNames);
+  printResult('Prompt contains CDI info', hasCdiInfo);
+  printResult('Prompt contains tone rules', hasToneRules);
+  if (!hasTeamNames || !hasCdiInfo || !hasToneRules) allPassed = false;
+
+  // Step 5: Validate GOOD article
+  printHeader('STEP 5: Validate GOOD Article');
   const goodResult = validateArticle(goodArticle, snapshot, cdi);
   console.log(`  Overall: ${goodResult.passed ? 'PASSED' : 'FAILED'}`);
   printResult('Numeric validator', goodResult.numeric.passed);
@@ -347,9 +366,10 @@ function main() {
   if (!goodResult.entity.passed) {
     for (const e of goodResult.entity.errors) console.log(`    → ${e.message}`);
   }
+  if (!goodResult.passed) allPassed = false;
 
-  // Step 5: Validate BAD article
-  printHeader('STEP 5: Validate BAD Article (expect failures)');
+  // Step 6: Validate BAD article
+  printHeader('STEP 6: Validate BAD Article (expect failures)');
   const badResult = validateArticle(badArticle, snapshot, cdi);
   console.log(`  Overall: ${badResult.passed ? 'PASSED' : 'FAILED'} (expected: FAILED)`);
   printResult('Numeric validator', badResult.numeric.passed);
@@ -362,23 +382,65 @@ function main() {
   for (const e of badResult.tone.errors) console.log(`    → ${e.message}`);
   printResult('Entity validator', badResult.entity.passed);
   for (const e of badResult.entity.errors) console.log(`    → ${e.message}`);
+  if (badResult.passed) allPassed = false; // Bad article should FAIL
 
-  // Print retry instructions
-  if (badResult.retry_instructions) {
-    printHeader('RETRY INSTRUCTIONS (sent back to LLM)');
-    console.log(badResult.retry_instructions);
+  // Step 7: Widget Placement
+  printHeader('STEP 7: Widget Placement Engine');
+  const widgetResult = placeWidgets(snapshot, cdi, 'dQw4w9WgXcQ', goodArticle.tags);
+  console.log(`  Total placements: ${widgetResult.placements.length}`);
+  console.log(`  Decisions:`);
+  for (const d of widgetResult.decisions) {
+    console.log(`    → ${d}`);
   }
 
+  // Check expected widgets
+  const hasMatch = widgetResult.placements.some(p => p.widget_type === 'match');
+  const hasPlayer = widgetResult.placements.some(p => p.widget_type === 'player-card');
+  const hasStats = widgetResult.placements.some(p => p.widget_type === 'stats');
+  const hasVideo = widgetResult.placements.some(p => p.widget_type === 'video');
+  const hasPoll = widgetResult.placements.some(p => p.widget_type === 'poll');
+  const hasTags = widgetResult.placements.some(p => p.widget_type === 'tags');
+  printResult('Match widget placed', hasMatch);
+  printResult('Player card placed (Vinícius — scorer, rating 8.2)', hasPlayer);
+  printResult('Stats table placed (CDI diff > 0.15)', hasStats);
+  printResult('Video placed (YouTube ID provided)', hasVideo);
+  printResult('Poll placed', hasPoll);
+  printResult('Tags placed', hasTags);
+  if (!hasMatch || !hasPlayer || !hasPoll || !hasTags) allPassed = false;
+
+  // Step 8: Widget Assembly
+  printHeader('STEP 8: Widget Assembly');
+  const assemblyResult = assembleWidgets(goodArticle.content_html, widgetResult.placements);
+  console.log(`  Widgets inserted: ${assemblyResult.widgets_inserted}`);
+  console.log(`  Assembly log:`);
+  for (const l of assemblyResult.assembly_log) {
+    console.log(`    → ${l}`);
+  }
+
+  // Check that widget markers were inserted
+  const hasWidgetMarkers = assemblyResult.html.includes('data-widget="match"');
+  const hasPlayerMarker = assemblyResult.html.includes('data-widget="player-card"');
+  const htmlLonger = assemblyResult.html.length > goodArticle.content_html.length;
+  printResult('Match widget marker in HTML', hasWidgetMarkers);
+  printResult('Player card marker in HTML', hasPlayerMarker);
+  printResult('Assembled HTML is longer than original', htmlLonger);
+  printResult(`${assemblyResult.widgets_inserted} widgets inserted`, assemblyResult.widgets_inserted >= 5);
+  if (!hasWidgetMarkers || !htmlLonger || assemblyResult.widgets_inserted < 5) allPassed = false;
+
+  // ══════════════════════════════════════════════
   // Summary
+  // ══════════════════════════════════════════════
+
   printHeader('SUMMARY');
-  const goodPassed = goodResult.passed;
-  const badFailed = !badResult.passed;
-  printResult('Good article passed all validators', goodPassed);
-  printResult('Bad article failed validation (expected)', badFailed);
+  printResult('Good article passed all validators', goodResult.passed);
+  printResult('Bad article failed validation (expected)', !badResult.passed);
+  printResult('Prompt builder works correctly', hasTeamNames && hasCdiInfo && hasToneRules);
+  printResult('Widget placement engine works', hasMatch && hasPlayer && hasPoll);
+  printResult('Widget assembly works', assemblyResult.widgets_inserted >= 5);
   console.log('');
 
-  if (goodPassed && badFailed) {
-    console.log('  🎉 All tests passed! AI Engine V2 validation pipeline is working.');
+  if (allPassed) {
+    console.log('  🎉 All tests passed! AI Engine V2 full pipeline is working.');
   } else {
     console.log('  ⚠️  Some tests did not produce expected results.');
     process.exit(1);
