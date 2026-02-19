@@ -200,6 +200,8 @@ export async function POST(req: NextRequest) {
         llmTokensOut += response.usage.output_tokens;
 
         const text = response.content[0].type === 'text' ? response.content[0].text : '';
+        console.log('[AI Engine] RAW RESPONSE LENGTH:', text?.length);
+        console.log('[AI Engine] RAW RESPONSE LAST 200 CHARS:', text?.slice(-200));
         let cleaned = text.trim();
         if (cleaned.startsWith('```')) {
           cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
