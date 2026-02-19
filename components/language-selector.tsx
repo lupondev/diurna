@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { LOCALES, type Locale } from '@/lib/i18n'
+import { SUPPORTED_LANGUAGES, type LangCode } from '@/lib/languages'
 
 interface LanguageSelectorProps {
-  locale: Locale
-  onChange: (locale: Locale) => void
+  locale: LangCode
+  onChange: (locale: LangCode) => void
   compact?: boolean
 }
 
@@ -23,7 +23,7 @@ export function LanguageSelector({ locale, onChange, compact }: LanguageSelector
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const current = LOCALES.find((l) => l.code === locale) || LOCALES[0]
+  const current = SUPPORTED_LANGUAGES.find((l) => l.code === locale) || SUPPORTED_LANGUAGES[0]
 
   return (
     <div ref={ref} className="lang-selector" style={{ position: 'relative', display: 'inline-block' }}>
@@ -67,11 +67,11 @@ export function LanguageSelector({ locale, onChange, compact }: LanguageSelector
             overflow: 'hidden',
           }}
         >
-          {LOCALES.map((l) => (
+          {SUPPORTED_LANGUAGES.map((l) => (
             <button
               key={l.code}
               type="button"
-              onClick={() => { onChange(l.code); setOpen(false) }}
+              onClick={() => { onChange(l.code as LangCode); setOpen(false) }}
               style={{
                 display: 'flex',
                 alignItems: 'center',

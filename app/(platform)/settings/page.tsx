@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { SUPPORTED_LANGUAGES } from '@/lib/languages'
+import { SUPPORTED_LANGUAGES, setClientLanguage, LANG_CHANGE_EVENT, type LangCode } from '@/lib/languages'
 import './settings.css'
 
 interface FbPage {
@@ -52,6 +52,15 @@ export default function SettingsPage() {
         if (data.competitorFeeds) setCompetitorFeeds(data.competitorFeeds)
       })
       .catch(() => {})
+  }, [])
+
+  // Sync language when changed from topbar or sidebar
+  useEffect(() => {
+    function handleLangChange(e: Event) {
+      setLanguage((e as CustomEvent).detail as string)
+    }
+    window.addEventListener(LANG_CHANGE_EVENT, handleLangChange)
+    return () => window.removeEventListener(LANG_CHANGE_EVENT, handleLangChange)
   }, [])
 
   function loadFbStatus() {
@@ -215,7 +224,11 @@ export default function SettingsPage() {
           <div className="st-card-desc">Defaults for content creation and display.</div>
           <div className="st-row">
             <span className="st-label">Primary Language</span>
-            <select className="st-select" value={language} onChange={(e) => change(setLanguage)(e.target.value)}>
+            <select className="st-select" value={language} onChange={(e) => {
+              const code = e.target.value;
+              change(setLanguage)(code);
+              setClientLanguage(code as LangCode);
+            }}>
               {SUPPORTED_LANGUAGES.map((l) => (
                 <option key={l.code} value={l.code}>{l.flag} {l.label} ({l.code})</option>
               ))}

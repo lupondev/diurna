@@ -1,10 +1,14 @@
 import type { NormalizedSnapshot, CDIResult, ArticleType } from './types';
 import { TONE_ALLOWED, TONE_FORBIDDEN } from './cdi';
+import { getLanguageConfig, getLanguagePromptSection } from './language-config';
 
 /**
  * Prompt Builder — constructs structured LLM prompts from snapshot + CDI.
  * Ensures the AI has all source data in a compact, clear format
  * and understands the tone constraints from CDI.
+ *
+ * Now language-aware: accepts a language code to generate articles
+ * in the correct BCMS variant or international language.
  */
 
 export interface BuiltPrompt {
@@ -21,6 +25,15 @@ const ARTICLE_TYPE_INSTRUCTIONS: Record<ArticleType, string> = {
   historical_recap: `Napiši historijski pregled baziran na podacima.`,
 };
 
+// English instructions for non-BCMS languages
+const ARTICLE_TYPE_INSTRUCTIONS_EN: Record<ArticleType, string> = {
+  match_report: `Write a match report. Include the score, key events (goals, cards, substitutions), stats and brief analysis. Start with the result.`,
+  preview: `Write a match preview. Include both teams' form, key players, tactical expectations. Do not speculate about the result.`,
+  tactical_analysis: `Write a tactical analysis. Focus on formations, possession, chances, stats and key duels.`,
+  transfer: `Write a transfer article based on the available data.`,
+  historical_recap: `Write a historical recap based on the data.`,
+};
+
 const WORD_TARGETS: Record<ArticleType, number> = {
   match_report: 400,
   preview: 350,
@@ -29,23 +42,37 @@ const WORD_TARGETS: Record<ArticleType, number> = {
   historical_recap: 400,
 };
 
-export function buildPrompt(snapshot: NormalizedSnapshot, cdi: CDIResult): BuiltPrompt {
+/**
+ * Build prompt with language awareness.
+ * @param snapshot - normalized match data
+ * @param cdi - contextual dominance index result
+ * @param languageCode - language code (default: 'bs' for Bosnian)
+ */
+export function buildPrompt(snapshot: NormalizedSnapshot, cdi: CDIResult, languageCode: string = 'bs'): BuiltPrompt {
   const d = snapshot.data;
   const articleType = snapshot.article_type;
   const wordTarget = WORD_TARGETS[articleType];
+  const langConfig = getLanguageConfig(languageCode);
+  const isBCMS = ['bs', 'hr', 'sr', 'sr-Latn', 'sr-Cyrl', 'cnr'].includes(languageCode);
 
   // Build list of all allowed numbers from snapshot
-  const allowedNumbers = listAllNumbers(snapshot);
+  const allowedNumbers = listAllNumbers(snapshot, langConfig.sportTerms);
 
-  // Collect all forbidden words across both teams
+  // Collect all forbidden words across both teams (CDI tone)
   const homeForbidden = TONE_FORBIDDEN[cdi.home_tone];
   const awayForbidden = TONE_FORBIDDEN[cdi.away_tone];
-  const allForbidden = Array.from(new Set([...homeForbidden, ...awayForbidden]));
+  const allToneForbidden = Array.from(new Set([...homeForbidden, ...awayForbidden]));
+
+  // Combine tone forbidden + language variant forbidden
+  const allForbidden = Array.from(new Set([...allToneForbidden, ...langConfig.forbiddenTerms]));
+
+  // Language-specific prompt section
+  const languageSection = getLanguagePromptSection(langConfig);
 
   // ─── System Prompt ───
-  const system = `Ti si AI sportski novinar za Diurna CMS. Pišeš na bosanskom jeziku.
+  const system = `Ti si AI sportski novinar za Diurna CMS. Pišeš na jeziku: ${langConfig.nativeName} (${langConfig.code}).
 Output SAMO validan JSON, bez markdown wrappinga.
-
+${languageSection}
 APSOLUTNA PRAVILA — kršenje ovih pravila proizvodi LAŽNE VIJESTI:
 1. KORISTI ISKLJUČIVO podatke iz sekcije IZVORNI PODACI ispod. NE dodaji činjenice iz svog znanja.
 2. NE izmišljaj minutu gola, strijelca, asistenta, ili statistiku koja nije u podacima.
@@ -68,12 +95,12 @@ DOZVOLJENI BROJEVI (SAMO OVI, NIKAKVI DRUGI):
 ${allowedNumbers}
 
 STILSKI STANDARDI (AP/Reuters/BBC nivo):
-- AKTIVAN GLAS: "Vinícius je postigao pogodak" NE "pogodak je postignut"
+- AKTIVAN GLAS: "${langConfig.sportTerms.team || 'Tim'} je ${langConfig.sportTerms.victory === 'pobeda' ? 'pobedio' : langConfig.sportTerms.victory === 'pobjeda' ? 'pobijedio' : 'won'}" NE pasivna konstrukcija
 - RITAM: Izmjenjuj kratke (8-12 riječi) i duge (15-25 riječi) rečenice
 - RAZNOLIKOST: Ne počinji 2+ uzastopne rečenice istom riječju
-- LEKSIKA: Izbjegavaj ponavljanje istog glagola. Rotiraj: postigao/zatresao mrežu/pogodio/pronašao put do mreže
-- BEZ KLIŠEJA: Ne koristi "pokazao zube", "sjajni meč", "pravo lice", "pravi spektakl", "briljantna igra"
-- TRANZICIJE: Koristi raznolike veznike (no, ipak, potom, u nastavku, uz to)
+- LEKSIKA: Izbjegavaj ponavljanje istog glagola. Rotiraj sinonime.
+- BEZ KLIŠEJA: Ne koristi ustaljene fraze sportskog novinarstva
+- TRANZICIJE: Koristi raznolike veznike
 - LEAD: Prva rečenica = rezultat + ključni podatak. Direktno, bez uvoda.
 - PARAGRAF: Svaki paragraf nosi NOVU informaciju. Nikad ponavljaj.
 
@@ -100,7 +127,13 @@ VAŽNO: content_html mora biti KRATAK. Maksimalno 5 paragrafa, svaki max 2 reče
 NE dodaji entities_used, events_covered, numbers_used u JSON. Samo 4 polja iznad.`;
 
   // ─── User Prompt with Source Data ───
-  const user = `${ARTICLE_TYPE_INSTRUCTIONS[articleType]}
+  const instructions = isBCMS
+    ? ARTICLE_TYPE_INSTRUCTIONS[articleType]
+    : ARTICLE_TYPE_INSTRUCTIONS_EN[articleType];
+
+  const st = langConfig.sportTerms;
+
+  const user = `${instructions}
 
 ═══ IZVORNI PODACI ═══
 
@@ -108,26 +141,26 @@ UTAKMICA:
 ${d.match.home} (${d.match.home_short}) ${d.match.score_home} : ${d.match.score_away} ${d.match.away} (${d.match.away_short})
 Datum: ${d.match.date} | Kickoff: ${d.match.kickoff}
 Takmičenje: ${d.match.competition} — ${d.match.round}
-Stadion: ${d.match.venue} | Sudija: ${d.match.referee}
+Stadion: ${d.match.venue} | ${st.referee || 'Sudija'}: ${d.match.referee}
 ${d.match.attendance ? `Gledaoci: ${d.match.attendance}` : ''}
 
 DOGAĐAJI:
-${d.events.map(e => `[${e.id}] ${e.minute}'${e.added_time ? `+${e.added_time}` : ''} ${e.type.toUpperCase()} — ${e.player_name} (${e.team}) ${e.detail}${e.assist_player_name ? ` | Asist: ${e.assist_player_name}` : ''} [težina: ${e.weight}]`).join('\n')}
+${d.events.map(e => `[${e.id}] ${e.minute}'${e.added_time ? `+${e.added_time}` : ''} ${e.type.toUpperCase()} — ${e.player_name} (${e.team}) ${e.detail}${e.assist_player_name ? ` | ${st.assist || 'Asist'}: ${e.assist_player_name}` : ''} [težina: ${e.weight}]`).join('\n')}
 
 STATISTIKA:
-Posjed: ${d.stats.possession_home}% - ${d.stats.possession_away}%
-Udarci: ${d.stats.shots_home} - ${d.stats.shots_away}
-U okvir: ${d.stats.shots_on_target_home} - ${d.stats.shots_on_target_away}
+${st.possession || 'Posjed'}: ${d.stats.possession_home}% - ${d.stats.possession_away}%
+${st.shot || 'Udarci'}: ${d.stats.shots_home} - ${d.stats.shots_away}
+${st.shots_on_target || 'U okvir'}: ${d.stats.shots_on_target_home} - ${d.stats.shots_on_target_away}
 ${d.stats.xg_home !== null ? `xG: ${d.stats.xg_home} - ${d.stats.xg_away}` : ''}
-Korneri: ${d.stats.corners_home} - ${d.stats.corners_away}
-Prekršaji: ${d.stats.fouls_home} - ${d.stats.fouls_away}
-Žuti kartoni: ${d.stats.yellow_cards_home} - ${d.stats.yellow_cards_away}
-Crveni kartoni: ${d.stats.red_cards_home} - ${d.stats.red_cards_away}
+${st.corner || 'Korneri'}: ${d.stats.corners_home} - ${d.stats.corners_away}
+${st.foul || 'Prekršaji'}: ${d.stats.fouls_home} - ${d.stats.fouls_away}
+${st.yellow_card || 'Žuti kartoni'}: ${d.stats.yellow_cards_home} - ${d.stats.yellow_cards_away}
+${st.red_card || 'Crveni kartoni'}: ${d.stats.red_cards_home} - ${d.stats.red_cards_away}
 
 IGRAČI:
-${d.players.map(p => `[${p.id}] ${p.name} (${p.team}, ${p.position}) — ocjena: ${p.rating ?? 'N/A'}, golovi: ${p.goals}, asisti: ${p.assists}, minute: ${p.minutes_played}, žuti: ${p.yellow_cards}, crveni: ${p.red_cards}`).join('\n')}
+${d.players.map(p => `[${p.id}] ${p.name} (${p.team}, ${p.position}) — ocjena: ${p.rating ?? 'N/A'}, ${st.goal || 'golovi'}: ${p.goals}, ${st.assist || 'asisti'}: ${p.assists}, minute: ${p.minutes_played}, ${st.yellow_card || 'žuti'}: ${p.yellow_cards}, ${st.red_card || 'crveni'}: ${p.red_cards}`).join('\n')}
 
-${d.standings ? `TABELA:
+${d.standings ? `${st.standings || 'TABELA'}:
 Domaćin pozicija: ${d.standings.home_position ?? 'N/A'} | Forma: ${d.standings.home_form ?? 'N/A'}
 Gost pozicija: ${d.standings.away_position ?? 'N/A'} | Forma: ${d.standings.away_form ?? 'N/A'}` : ''}
 
@@ -145,8 +178,9 @@ Generiši JSON sada.`;
 
 /**
  * Build a human-readable list of all allowed numbers from the snapshot.
+ * Uses language-specific sport terms for labels.
  */
-function listAllNumbers(snapshot: NormalizedSnapshot): string {
+function listAllNumbers(snapshot: NormalizedSnapshot, sportTerms: Record<string, string>): string {
   const nums = new Set<string>();
   const d = snapshot.data;
 
@@ -155,12 +189,12 @@ function listAllNumbers(snapshot: NormalizedSnapshot): string {
   if (d.match.attendance) nums.add(`${d.match.attendance} (gledaoci)`);
 
   // Stats
-  nums.add(`${d.stats.possession_home}/${d.stats.possession_away} (posjed %)`);
-  nums.add(`${d.stats.shots_home}/${d.stats.shots_away} (udarci)`);
-  nums.add(`${d.stats.shots_on_target_home}/${d.stats.shots_on_target_away} (u okvir)`);
+  nums.add(`${d.stats.possession_home}/${d.stats.possession_away} (${sportTerms.possession || 'posjed'} %)`);
+  nums.add(`${d.stats.shots_home}/${d.stats.shots_away} (${sportTerms.shot || 'udarci'})`);
+  nums.add(`${d.stats.shots_on_target_home}/${d.stats.shots_on_target_away} (${sportTerms.shots_on_target || 'u okvir'})`);
   if (d.stats.xg_home !== null) nums.add(`${d.stats.xg_home}/${d.stats.xg_away} (xG)`);
-  nums.add(`${d.stats.corners_home}/${d.stats.corners_away} (korneri)`);
-  nums.add(`${d.stats.fouls_home}/${d.stats.fouls_away} (prekršaji)`);
+  nums.add(`${d.stats.corners_home}/${d.stats.corners_away} (${sportTerms.corner || 'korneri'})`);
+  nums.add(`${d.stats.fouls_home}/${d.stats.fouls_away} (${sportTerms.foul || 'prekršaji'})`);
 
   // Event minutes
   for (const e of d.events) {

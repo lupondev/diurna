@@ -13,16 +13,19 @@ import { validateEntities } from './entity';
  * 3. Tone — language must match CDI (no "dominantan" for balanced matches)
  * 4. Entity — every name in text must exist in source data (extracted from text)
  *
+ * Now language-aware: passes language code to tone validator for variant checking.
+ *
  * If any validator fails, retry_instructions are generated for the LLM.
  */
 export function validateArticle(
   article: GeneratedArticle,
   snapshot: NormalizedSnapshot,
-  cdi: CDIResult
+  cdi: CDIResult,
+  languageCode: string = 'bs'
 ): MasterValidationResult {
   const numeric = validateNumbers(article.content_html, snapshot);
   const coverage = validateCoverage(article.content_html, snapshot.data.events);
-  const tone = validateTone(article.content_html, cdi);
+  const tone = validateTone(article.content_html, cdi, languageCode);
   const entity = validateEntities(article.content_html, snapshot);
 
   const passed = numeric.passed && coverage.passed && tone.passed && entity.passed;
@@ -42,6 +45,7 @@ export function validateArticle(
       'ISPRAVI SVE GREŠKE:',
       '- Ne dodaji nove brojeve koji nisu u izvornim podacima.',
       '- Ne koristi zabranjene riječi za ovaj CDI nivo.',
+      '- Ne koristi termine iz pogrešne jezičke varijante.',
       '- Spomeni sve kritične događaje (golovi, crveni kartoni, penali).',
       '- Ne spominji igrače koji nisu u izvornim podacima.',
     ].join('\n');

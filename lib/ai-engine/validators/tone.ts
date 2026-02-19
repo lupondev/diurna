@@ -1,7 +1,8 @@
 import type { CDIResult, ToneResult, ToneViolation, ValidationError } from '../types';
 import { TONE_FORBIDDEN } from '../cdi';
+import { getLanguageConfig } from '../language-config';
 
-// Forbidden causality patterns (Bosnian) — AI must not infer motivation
+// Forbidden causality patterns — AI must not infer motivation
 const FORBIDDEN_CAUSALITY = [
   'jer', 'zato što', 'frustriran', 'reagovao na', 'nakon što je dominirao',
   'motivisan', 'ljut', 'razočaran', 'bijesan', 'ponižen',
@@ -15,14 +16,16 @@ const FORBIDDEN_PREDICTIONS = [
 ];
 
 /**
- * Tone Validator — ensures the article's language matches the CDI.
+ * Tone Validator — ensures the article's language matches the CDI
+ * and respects language variant boundaries.
  *
  * Rules:
  * 1. CDI-forbidden words cannot appear at the team's tone level
  * 2. Causal language (inferring player motivation) is forbidden
  * 3. Predictions about future events are flagged as warnings
+ * 4. Language variant forbidden terms (e.g., Croatian terms in Bosnian article)
  */
-export function validateTone(contentHtml: string, cdi: CDIResult): ToneResult {
+export function validateTone(contentHtml: string, cdi: CDIResult, languageCode: string = 'bs'): ToneResult {
   const text = stripHtml(contentHtml).toLowerCase();
   const errors: ValidationError[] = [];
   const violations: ToneViolation[] = [];
@@ -79,6 +82,20 @@ export function validateTone(contentHtml: string, cdi: CDIResult): ToneResult {
         type: 'prediction_violation',
         message: `Zabranjena predikcija: "${pattern}"`,
         severity: 'warning',
+      });
+    }
+  }
+
+  // 4. Check language variant forbidden terms
+  const langConfig = getLanguageConfig(languageCode);
+  for (const term of langConfig.forbiddenTerms) {
+    const lowerTerm = term.toLowerCase();
+    if (text.includes(lowerTerm)) {
+      errors.push({
+        type: 'language_variant_violation',
+        message: `Termin "${term}" pripada pogrešnoj jezičkoj varijanti. Jezik: ${langConfig.nativeName} (${langConfig.code})`,
+        severity: 'critical',
+        context: `Zabranjeno u ${langConfig.nativeName} — koristiti odgovarajući termin iz ove varijante`,
       });
     }
   }

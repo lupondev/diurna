@@ -26,6 +26,7 @@ interface PipelineResult {
   pipeline?: {
     snapshot_id: string;
     confidence: number;
+    language?: string;
     staleness: { status: string; age_seconds: number; window_seconds: number };
     cdi: { home: number; away: number; home_tone: string; away_tone: string };
     validation: {
@@ -140,9 +141,21 @@ const MOCK_MATCH_DATA = {
   standings: null,
 };
 
+const AI_LANGUAGE_OPTIONS = [
+  { code: 'bs', label: 'Bosanski', flag: '🇧🇦' },
+  { code: 'hr', label: 'Hrvatski', flag: '🇭🇷' },
+  { code: 'sr-Latn', label: 'Srpski (Lat)', flag: '🇷🇸' },
+  { code: 'sr', label: 'Srpski (Ćir)', flag: '🇷🇸' },
+  { code: 'cnr', label: 'Crnogorski', flag: '🇲🇪' },
+  { code: 'en', label: 'English', flag: '🇬🇧' },
+  { code: 'ar', label: 'العربية', flag: '🇸🇦' },
+  { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
+];
+
 export default function AIEngineDashboard() {
   const [result, setResult] = useState<PipelineResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [aiLanguage, setAiLanguage] = useState('bs');
   const [activeTab, setActiveTab] = useState<'article' | 'pipeline' | 'quality' | 'style' | 'timing' | 'widgets' | 'raw'>('article');
 
   async function runEngine() {
@@ -160,6 +173,7 @@ export default function AIEngineDashboard() {
           includeVideo: true,
           includeWidgets: true,
           includeStyleRefinement: true,
+          language: aiLanguage,
         }),
       });
 
@@ -222,6 +236,18 @@ export default function AIEngineDashboard() {
           <div style={{ fontWeight: 600, fontSize: 14 }}>Test Match</div>
           <div style={{ color: '#6b7280', fontSize: 13 }}>Benfica 0-1 Real Madrid — Liga Prvaka Play-off</div>
         </div>
+        <select
+          value={aiLanguage}
+          onChange={(e) => setAiLanguage(e.target.value)}
+          style={{
+            padding: '8px 12px', borderRadius: 8, border: '1px solid #d1d5db',
+            fontSize: 13, fontWeight: 500, background: 'white', cursor: 'pointer',
+          }}
+        >
+          {AI_LANGUAGE_OPTIONS.map((l) => (
+            <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
+          ))}
+        </select>
         <button
           onClick={runEngine}
           disabled={loading}
@@ -256,6 +282,7 @@ export default function AIEngineDashboard() {
             <StatCard label="Balance" value={`${qa?.perspective?.ratio ?? '?'}`} color={((qa?.perspective?.ratio ?? 0) >= 0.4) ? '#059669' : '#dc2626'} />
             <StatCard label="Style" value={result.pipeline?.style_refinement?.applied ? 'REFINED' : 'ORIGINAL'} color={result.pipeline?.style_refinement?.applied ? '#2563eb' : '#6b7280'} />
             <StatCard label="Post-Style" value={result.pipeline?.post_style_validation?.recommendation ?? 'N/A'} color={result.pipeline?.post_style_validation?.recommendation === 'USE_REFINED' ? '#059669' : result.pipeline?.post_style_validation?.recommendation === 'REVIEW' ? '#d97706' : '#dc2626'} />
+            <StatCard label="Language" value={result.pipeline?.language?.toUpperCase() ?? '?'} color="#2563eb" />
             <StatCard label="LLM Retries" value={`${result.pipeline?.llm?.retries ?? '?'}`} color={(result.pipeline?.llm?.retries ?? 1) === 0 ? '#059669' : '#d97706'} />
             <StatCard label="Coverage" value={`${result.pipeline?.validation?.coverage?.score ?? '?'}%`} color={result.pipeline?.validation?.coverage?.passed ? '#059669' : '#dc2626'} />
           </div>

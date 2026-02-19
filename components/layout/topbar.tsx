@@ -3,7 +3,14 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { SUPPORTED_LANGUAGES, getClientLanguage, setClientLanguage, getLangFlag, type LangCode } from '@/lib/languages'
+import {
+  SUPPORTED_LANGUAGES,
+  getClientLanguage,
+  setClientLanguage,
+  getLangFlag,
+  LANG_CHANGE_EVENT,
+  type LangCode,
+} from '@/lib/languages'
 
 const pageMeta: Record<string, { icon: string; title: string }> = {
   '/': { icon: '📊', title: 'Dashboard' },
@@ -44,6 +51,14 @@ export function Topbar() {
 
   useEffect(() => {
     setLang(getClientLanguage())
+
+    // Listen for language changes from other components (sidebar, settings)
+    function handleLangChange(e: Event) {
+      const code = (e as CustomEvent).detail as LangCode
+      setLang(code)
+    }
+    window.addEventListener(LANG_CHANGE_EVENT, handleLangChange)
+    return () => window.removeEventListener(LANG_CHANGE_EVENT, handleLangChange)
   }, [])
 
   useEffect(() => {

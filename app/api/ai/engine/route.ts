@@ -41,6 +41,7 @@ const EngineInputSchema = z.object({
   includeVideo: z.boolean().default(true),
   includeWidgets: z.boolean().default(true),
   includeStyleRefinement: z.boolean().default(true),
+  language: z.string().default('bs'),
 });
 
 // ═══ Timing Helper ═══
@@ -161,7 +162,7 @@ export async function POST(req: NextRequest) {
 
     // ─── Step 4: Build Prompt ───
     const prompt = t.measureSync('prompt_build', () =>
-      buildPrompt(snapshot, cdi)
+      buildPrompt(snapshot, cdi, input.language)
     );
 
     // ─── Step 5: Video Search (parallel with LLM) ───
@@ -239,7 +240,7 @@ export async function POST(req: NextRequest) {
 
       // ─── Step 7: Validate ───
       validation = t.measureSync(`validation_${attempt}`, () =>
-        validateArticle(generatedArticle, snapshot, cdi)
+        validateArticle(generatedArticle, snapshot, cdi, input.language)
       );
 
       if (validation.passed) {
@@ -339,6 +340,7 @@ export async function POST(req: NextRequest) {
       pipeline: {
         snapshot_id: snapshot.snapshot_id,
         confidence: snapshot.confidence_score,
+        language: input.language,
         staleness,
         cdi,
         validation: {
