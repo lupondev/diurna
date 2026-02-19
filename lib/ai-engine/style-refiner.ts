@@ -1,209 +1,250 @@
-import Anthropic from '@anthropic-ai/sdk';
-import type { GeneratedArticle, NormalizedSnapshot } from './types';
-import { buildStyleRefinerPrompt, getVocabularyHints, checkStructuralRules } from './style-guide';
+import type { GeneratedArticle, NormalizedSnapshot, CDIResult } from './types';
+import { DIURNA_STYLE_GUIDE } from './style-guide';
 
 /**
  * Style Refiner — Pass 2 of the article generation pipeline.
+ *
  * Takes a validated Pass 1 article and applies editorial polish
  * following AP/Reuters/BBC/Economist/Al Jazeera standards.
  *
+ * Returns refined HTML (not a full article JSON) — the route handler
+ * decides whether to swap content_html based on post-style validation.
+ *
  * CRITICAL: This pass must NOT introduce new facts or hallucinations.
- * The post-style validator (separate module) verifies this.
  */
 
-export interface StyleRefinerResult {
-  /** The style-refined article */
-  refined: GeneratedArticle;
-  /** Original article (for comparison) */
-  original: GeneratedArticle;
-  /** Whether refinement was applied (false if skipped/failed) */
-  applied: boolean;
-  /** Structural rule results */
-  structural_check: {
-    passed: boolean;
-    results: { rule: string; passed: boolean; detail: string }[];
-  };
-  /** LLM token usage for the refinement pass */
+export interface StyleRefinementResult {
+  original_html: string;
+  refined_html: string;
+  changes_made: string[];
+  style_score: number; // 0-10
   tokens_in: number;
   tokens_out: number;
-  /** Refinement model used */
-  model: string;
-  /** Changes detected between original and refined */
-  changes: StyleChange[];
-}
-
-export interface StyleChange {
-  type: 'title' | 'excerpt' | 'content' | 'tags';
-  original_length: number;
-  refined_length: number;
-  diff_percent: number;
 }
 
 /**
  * Refine an article's style using a second LLM pass.
- *
- * @param client - Anthropic client instance
- * @param article - The validated Pass 1 article
- * @param snapshot - The source data snapshot (for context in prompt)
- * @returns StyleRefinerResult with refined article and metadata
  */
-export async function refineStyle(
-  client: Anthropic,
+export async function refineArticleStyle(
   article: GeneratedArticle,
-  snapshot: NormalizedSnapshot
-): Promise<StyleRefinerResult> {
-  const original = { ...article };
+  snapshot: NormalizedSnapshot,
+  cdi: CDIResult
+): Promise<StyleRefinementResult> {
+  const m = snapshot.data.match;
+  const guide = DIURNA_STYLE_GUIDE;
 
-  // Pre-check structural rules on the original
-  const preCheck = checkStructuralRules(article.content_html);
+  const stylePrompt = `Ti si urednik na elitnom sportskom portalu. Tvoj posao je da unaprijediš stil teksta, NE da mijenjaš činjenice.
 
-  // Build style refinement prompt
-  const vocabularyHints = getVocabularyHints(10);
-  const systemPrompt = buildStyleRefinerPrompt(vocabularyHints);
+ORIGINALNI TEKST (VALIDIRAN — SVE ČINJENICE SU TAČNE):
+${article.content_html}
 
-  const userPrompt = `Poliraj ovaj članak. Zadrži SVE činjenice, brojeve i imena.
+KONTEKST UTAKMICE:
+${m.home} ${m.score_home}-${m.score_away} ${m.away}
+Takmičenje: ${m.competition}
+Stadion: ${m.venue}
 
-ORIGINALNI ČLANAK:
-${JSON.stringify({
-    title: article.title,
-    excerpt: article.excerpt,
-    content_html: article.content_html,
-    tags: article.tags,
-  })}
+══════════════════════════════════
+UREDNIČKA PRAVILA (AP + Reuters + BBC + Economist)
+══════════════════════════════════
 
-KONTEKST UTAKMICE (za provjeru — NE dodaji nove podatke):
-- ${snapshot.data.match.home} ${snapshot.data.match.score_home} : ${snapshot.data.match.score_away} ${snapshot.data.match.away}
-- Takmičenje: ${snapshot.data.match.competition}
-- Stadion: ${snapshot.data.match.venue}
+STRUKTURA:
+- Prva rečenica: ${guide.structure.intro.style}
+- Primjer LOŠEG uvoda: "${guide.structure.intro.examples.bad}"
+- Primjer DOBROG uvoda: "${guide.structure.intro.examples.good}"
+- Svaki paragraf max 3 rečenice
+- Prosječna dužina rečenice: 15-20 riječi, nikada preko 30
 
-STRUKTURNE PRIMJEDBE IZ PRE-ANALIZE:
-${preCheck.results.map(r => `- ${r.rule}: ${r.passed ? 'OK' : r.detail}`).join('\n')}
+FAKTIČKA DISCIPLINA (Reuters):
+- NE DODAJI nijedan novi broj, ime ili činjenicu
+- NE BRISI nijedan gol, karton ili ključni događaj
+- "Show, don't assume" — LOŠ: "${guide.factual.show_dont_assume.bad}" → DOBAR: "${guide.factual.show_dont_assume.good}"
+- Kontekst, ne mišljenje — LOŠ: "${guide.factual.context_not_opinion.bad}" → DOBAR: "${guide.factual.context_not_opinion.good}"
 
-Generiši polirani JSON sada.`;
+BALANS (BBC):
+- Obje ekipe moraju biti zastupljene proporcionalno
+- Prva rečenica MORA spomenuti oba tima
+- Alternirati perspektive kroz tekst
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 4000,
-    temperature: 0.2,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: userPrompt }],
-  });
+JASNOĆA (Economist):
+- Svaka riječ mora zaraditi svoje mjesto
+- Aktivna forma uvijek: "Vinícius je zabio" ne "Gol je postignut"
+- Ukloni svaku riječ koja ne dodaje informaciju
 
-  const tokensIn = response.usage.input_tokens;
-  const tokensOut = response.usage.output_tokens;
-  const model = response.model;
+SPORTSKO NOVINARSTVO (Al Jazeera + Phil Andrews):
+- Uvod mora ZAKAČITI čitaoca — ne samo reći rezultat
+- ZABRANJENI KLIŠEJI: ${guide.sports.cliche_ban.join(', ')}
+- Koristiti raznolik vokabular za golove: ${guide.sports.vocabulary_enrichment.goal_verbs.join(', ')}
+- Koristiti raznolik vokabular za utakmicu: ${guide.sports.vocabulary_enrichment.match_nouns.join(', ')}
+- Struktura match reporta: ${guide.sports.match_report_flow.join(' → ')}
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : '';
-  let cleaned = text.trim();
-  if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-  }
+GRAMATIKA:
+- Ijekavica (ne ekavica)
+- Svi dijakritici: š, đ, č, ć, ž
+- Pravilna interpunkcija
 
-  let refined: GeneratedArticle;
-  try {
-    refined = JSON.parse(cleaned) as GeneratedArticle;
-  } catch (parseErr) {
-    // Fallback: try truncated parse
-    const lastBrace = cleaned.lastIndexOf('}');
-    if (lastBrace > 0) {
-      try {
-        refined = JSON.parse(cleaned.substring(0, lastBrace + 1)) as GeneratedArticle;
-      } catch {
-        // Style refinement failed — return original unchanged
-        console.error('[Style Refiner] JSON parse failed, returning original');
-        return {
-          refined: original,
-          original,
-          applied: false,
-          structural_check: preCheck,
-          tokens_in: tokensIn,
-          tokens_out: tokensOut,
-          model,
-          changes: [],
-        };
-      }
-    } else {
-      console.error('[Style Refiner] JSON parse failed, returning original');
-      return {
-        refined: original,
-        original,
-        applied: false,
-        structural_check: preCheck,
-        tokens_in: tokensIn,
-        tokens_out: tokensOut,
-        model,
-        changes: [],
-      };
-    }
-  }
+══════════════════════════════════
+KRITIČNO UPOZORENJE
+══════════════════════════════════
 
-  // Ensure required fields exist
-  if (!refined.title || !refined.content_html) {
-    console.error('[Style Refiner] Missing required fields, returning original');
+JEDINO šta smiješ raditi:
+- Promijeniti redoslijed rečenica za bolji flow
+- Prepisati rečenice za bolji stil (iste činjenice, bolji jezik)
+- Dodati tranzicije između paragrafa
+- Poboljšati vokabular (raznolikost sinonima)
+- Popraviti gramatiku i interpunkciju
+- Učiniti uvod atraktivnijim
+
+ZABRANJENO:
+- Dodavati nove brojeve koji nisu u originalnom tekstu
+- Dodavati nova imena igrača ili timova
+- Brisati golove, kartone ili ključne događaje
+- Dodavati spekulacije, predikcije ili mišljenja
+- Koristiti zabranjene klišeje
+- Mijenjati rezultat, minute golova ili statistiku
+- Dodavati informacije iz svog znanja
+
+Vrati SAMO poboljšani HTML tekst. Bez JSON-a. Bez objašnjenja. Samo čisti HTML (<p>, <h2> tagovi).`;
+
+  const result = await callStyleLLM(stylePrompt);
+
+  if (!result) {
     return {
-      refined: original,
-      original,
-      applied: false,
-      structural_check: preCheck,
-      tokens_in: tokensIn,
-      tokens_out: tokensOut,
-      model,
-      changes: [],
+      original_html: article.content_html,
+      refined_html: article.content_html,
+      changes_made: ['Style refinement failed — using original'],
+      style_score: 5,
+      tokens_in: 0,
+      tokens_out: 0,
     };
   }
 
-  // Preserve tags from original if refiner dropped them
-  if (!refined.tags || refined.tags.length === 0) {
-    refined.tags = original.tags;
-  }
-
-  // Calculate changes
-  const changes: StyleChange[] = [];
-
-  if (refined.title !== original.title) {
-    changes.push({
-      type: 'title',
-      original_length: original.title.length,
-      refined_length: refined.title.length,
-      diff_percent: Math.round(Math.abs(refined.title.length - original.title.length) / Math.max(original.title.length, 1) * 100),
-    });
-  }
-
-  if (refined.excerpt !== original.excerpt) {
-    changes.push({
-      type: 'excerpt',
-      original_length: original.excerpt.length,
-      refined_length: refined.excerpt.length,
-      diff_percent: Math.round(Math.abs(refined.excerpt.length - original.excerpt.length) / Math.max(original.excerpt.length, 1) * 100),
-    });
-  }
-
-  if (refined.content_html !== original.content_html) {
-    changes.push({
-      type: 'content',
-      original_length: original.content_html.length,
-      refined_length: refined.content_html.length,
-      diff_percent: Math.round(Math.abs(refined.content_html.length - original.content_html.length) / Math.max(original.content_html.length, 1) * 100),
-    });
-  }
-
-  if (JSON.stringify(refined.tags) !== JSON.stringify(original.tags)) {
-    changes.push({
-      type: 'tags',
-      original_length: original.tags.length,
-      refined_length: refined.tags.length,
-      diff_percent: 0,
-    });
+  // Detect what changed
+  const changes: string[] = [];
+  if (result.text !== article.content_html) {
+    changes.push('content_html refined');
+    const origWords = stripHtml(article.content_html).split(/\s+/).length;
+    const refinedWords = stripHtml(result.text).split(/\s+/).length;
+    const diff = Math.abs(refinedWords - origWords);
+    if (diff > 0) {
+      changes.push(`Word count: ${origWords} → ${refinedWords} (${refinedWords > origWords ? '+' : '-'}${diff})`);
+    }
   }
 
   return {
-    refined,
-    original,
-    applied: true,
-    structural_check: preCheck,
-    tokens_in: tokensIn,
-    tokens_out: tokensOut,
-    model,
-    changes,
+    original_html: article.content_html,
+    refined_html: result.text,
+    changes_made: changes.length > 0 ? changes : ['No changes detected'],
+    style_score: 8,
+    tokens_in: result.tokens_in,
+    tokens_out: result.tokens_out,
   };
+}
+
+// ═══ LLM Caller with Anthropic + OpenAI fallback ═══
+
+interface LLMResult {
+  text: string;
+  tokens_in: number;
+  tokens_out: number;
+}
+
+// Response shapes for type safety
+interface AnthropicResponse {
+  content?: { text?: string }[];
+  usage?: { input_tokens?: number; output_tokens?: number };
+}
+
+interface OpenAIResponse {
+  choices?: { message?: { content?: string } }[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+}
+
+async function callStyleLLM(prompt: string): Promise<LLMResult | null> {
+  // Try Anthropic first
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (anthropicKey) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          temperature: 0.4,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      const data = await res.json() as AnthropicResponse;
+      let text: string = data.content?.[0]?.text || '';
+
+      // Strip any markdown wrapping
+      text = text.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+
+      // Must contain HTML tags to be valid
+      if (text.includes('<p>') || text.includes('<h2>')) {
+        return {
+          text,
+          tokens_in: data.usage?.input_tokens ?? 0,
+          tokens_out: data.usage?.output_tokens ?? 0,
+        };
+      }
+
+      console.error('[Style Refiner] Anthropic response missing HTML tags');
+      return null;
+    } catch (e) {
+      console.error('[Style Refiner] Anthropic error:', e);
+    }
+  }
+
+  // Fallback to OpenAI
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (openaiKey) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          temperature: 0.4,
+          max_tokens: 4000,
+          messages: [
+            { role: 'system', content: 'You are an elite sports editor. Return ONLY refined HTML. No explanations.' },
+            { role: 'user', content: prompt },
+          ],
+        }),
+      });
+
+      const data = await res.json() as OpenAIResponse;
+      let text: string = data.choices?.[0]?.message?.content || '';
+      text = text.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+
+      if (text.includes('<p>') || text.includes('<h2>')) {
+        return {
+          text,
+          tokens_in: data.usage?.prompt_tokens ?? 0,
+          tokens_out: data.usage?.completion_tokens ?? 0,
+        };
+      }
+
+      console.error('[Style Refiner] OpenAI response missing HTML tags');
+      return null;
+    } catch (e) {
+      console.error('[Style Refiner] OpenAI error:', e);
+    }
+  }
+
+  console.error('[Style Refiner] No API key available');
+  return null;
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }

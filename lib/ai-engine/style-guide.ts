@@ -1,34 +1,142 @@
 /**
- * Style Guide — Editorial standards inspired by AP, Reuters, BBC, Economist, Al Jazeera.
- * Adapted for Bosnian-language sports journalism.
+ * Diurna Editorial Style Guide
  *
- * This module provides:
- * 1. Structural rules (inverted pyramid, paragraph length, lead formula)
- * 2. Vocabulary enrichment maps (common word → richer alternatives)
- * 3. Sentence-level guidelines (active voice, concision, rhythm)
- * 4. Bosnian-specific conventions (number formatting, name formatting)
+ * Combines editorial standards from 5 global institutions:
+ * - AP Stylebook — Inverted pyramid structure, precision
+ * - Reuters Handbook — No speculation, attribution, show don't assume
+ * - BBC Editorial Guidelines — Balance, neutrality, multi-perspective
+ * - The Economist Style Guide — Clarity, short sentences, analytical without pretension
+ * - Al Jazeera Sports Journalism Guidebook — Grab attention, avoid cliches, critical details
+ *
+ * This is a structured config used by the prompt-builder and style-refiner.
  */
 
-// ═══ Structural Rules ═══
+export const DIURNA_STYLE_GUIDE = {
 
-export interface StyleRule {
-  id: string;
-  name: string;
-  description: string;
-  check: (html: string) => StyleRuleResult;
-}
+  // ===== STRUCTURE (AP Stylebook) =====
+  structure: {
+    intro: {
+      rule: 'First sentence answers WHO, WHAT, WHERE, WHEN, HOW MUCH',
+      constraint: 'Maximum 25 words. Both teams mentioned. Result included.',
+      style: 'Start with the STORY, not the score. What made this match significant?',
+      examples: {
+        bad: 'Real Madrid pobijedio je Benficu rezultatom 1-0 u prvoj utakmici play-off runde Lige Prvaka.',
+        good: 'Vinícius Júnior jednim preciznim udarcem osigurao je Real Madridu prednost na Estádio da Luz u play-off dvoboju Lige Prvaka.',
+        why: 'Bad version reads like a scoreboard. Good version tells a story — who was the hero, how it happened, where.',
+      },
+    },
+    second_paragraph: {
+      rule: 'Expand the intro with the KEY context that explains WHY this matters',
+      constraint: 'No new entities. Deepen the intro, do not repeat it.',
+      examples: {
+        bad: 'Jedini gol na utakmici postigao je Vinícius Júnior u 67. minuti.',
+        good: 'Brazilac je u 67. minuti iskoristio asistenciju Jude Bellinghama i matirao domaćeg golmana, donijevši gostima dragocjenu prednost pred revanš.',
+        why: 'Bad version restates the intro. Good version adds HOW (assist), WHAT HAPPENED (matirao golmana), and STAKES (prednost pred revanš).',
+      },
+    },
+    body: {
+      rule: 'Chronological flow OR thematic blocks. Never a flat list of events.',
+      constraint: 'Each paragraph must have a POINT — not just a fact.',
+      technique: 'Group related events. Don\'t write "X happened. Then Y happened." Write paragraphs that MEAN something.',
+    },
+    closing: {
+      rule: 'Final paragraph looks backward (summary) not forward (prediction).',
+      constraint: 'No speculation. No "will", "should", "expected to".',
+      technique: 'End with a resonant factual detail that sticks with the reader.',
+    },
+  },
+
+  // ===== FACTUAL DISCIPLINE (Reuters) =====
+  factual: {
+    attribution: 'Every claim must trace to data. No unsourced assertions.',
+    speculation_ban: 'NEVER: "X wanted to prove...", "Y was frustrated...", "Z will likely..."',
+    show_dont_assume: {
+      bad: 'Benfica je bila frustrirana nedostatkom šansi.',
+      good: 'Benfica je u cijeloj utakmici uputila samo 4 udarca u okvir gola.',
+      why: 'Bad version ASSUMES emotion. Good version SHOWS the fact that implies it.',
+    },
+    numbers: 'Always exact. Never "around", "approximately" unless data says so.',
+    context_not_opinion: {
+      bad: 'To je bio impresivan nastup Real Madrida.',
+      good: 'Real Madrid je kontrolirao 55% posjeda i uputio 18 udaraca, sedam u okvir.',
+      why: 'Let the numbers tell the reader it was impressive. Don\'t tell them what to think.',
+    },
+  },
+
+  // ===== BALANCE (BBC) =====
+  balance: {
+    rule: 'Both teams get proportional coverage. Neither is "hero" or "villain".',
+    first_sentence: 'Must mention both teams.',
+    perspective: 'Alternate between home and away perspectives throughout.',
+    technique: 'After describing what the winning team did, describe what the losing team attempted.',
+  },
+
+  // ===== CLARITY (The Economist) =====
+  clarity: {
+    sentences: 'Average 15-20 words. Never exceed 30 words in a single sentence.',
+    vocabulary: 'Use common words. "postigao gol" not "zatresao mrežu" unless it adds meaning.',
+    paragraphs: 'Maximum 3 sentences per paragraph. White space is your friend.',
+    precision: 'Every word must earn its place. If removing a word doesn\'t change meaning, remove it.',
+    active_voice: 'Always prefer active voice. "Vinícius je postigao gol" not "Gol je postignut od strane Viníciusa".',
+  },
+
+  // ===== SPORTS-SPECIFIC (Al Jazeera + Phil Andrews) =====
+  sports: {
+    intro_grab: 'The intro must make the reader want to continue. Not just state the result.',
+    cliche_ban: [
+      'zatresao mrežu', 'pokazao zube', 'stavio tačku na utakmicu',
+      'pružio ruku spasa', 'proigrao šansu', 'maestralna predstava',
+      'borba do posljednjeg daha', 'ispustio pobjedu iz ruku',
+      'dominirao od prve minute', 'preslišao protivnika',
+    ],
+    detail_over_general: {
+      bad: 'Utakmica je bila zanimljiva s puno prilika.',
+      good: 'Benfica je u prvom poluvremenu uputila samo 3 udarca, dok je Real Madrid u drugom dijelu udvostručio pritisak sa 12 pokušaja.',
+      why: 'Specific numbers tell a better story than vague descriptions.',
+    },
+    match_report_flow: [
+      '1. HOOK — What is the story of this match? (1 sentence)',
+      '2. RESULT — Score, competition, venue (integrated into hook or second sentence)',
+      '3. KEY MOMENT — The goal/incident that defined the match (1-2 paragraphs)',
+      '4. TACTICAL STORY — How the match unfolded (2 paragraphs, chronological)',
+      '5. NUMBERS — Statistical picture woven into narrative (1 paragraph)',
+      '6. DISCIPLINE — Cards, injuries, substitutions (1 paragraph if relevant)',
+      '7. CLOSE — What this result means in context (1 sentence, no prediction)',
+    ],
+    vocabulary_enrichment: {
+      goal_verbs: ['postigao', 'zabio', 'pogodio', 'matirao golmana', 'uputio loptu u mrežu', 'realizovao'],
+      match_nouns: ['utakmica', 'dvoboj', 'susret', 'ogledi', 'duel'],
+      win_nouns: ['pobjeda', 'slavlje', 'trijumf', 'uspjeh'],
+      loss_nouns: ['poraz', 'neuspjeh', 'gubitak'],
+      player_refs: ['igrač', 'napadač', 'veznjak', 'golman', 'defanzivac', 'Brazilac', 'Argentinac'],
+    },
+  },
+
+  // ===== LANGUAGE QUALITY (GRAMMAR) =====
+  grammar: {
+    rule: 'Native-level Bosnian/Croatian/Serbian with proper grammar',
+    diacritics: 'Always use: š, đ, č, ć, ž — never skip diacritics',
+    consistency: 'Pick either ijekavica or ekavica and stick with it. Diurna uses IJEKAVICA.',
+    punctuation: 'Proper use of commas before subordinate clauses. No comma splicing.',
+    sports_terminology: {
+      correct: 'posjed lopte, udarac u okvir, korner, prekršaj, slobodan udarac, jedanaesterac',
+      avoid: 'ball possession (English terms mixed into Bosnian text)',
+    },
+  },
+};
+
+// ═══ Structural Rules (Programmatic Checks) ═══
 
 export interface StyleRuleResult {
   passed: boolean;
   detail: string;
 }
 
-export const STRUCTURAL_RULES: StyleRule[] = [
+export const STRUCTURAL_RULES = [
   {
     id: 'inverted_pyramid',
     name: 'Inverted Pyramid',
-    description: 'Lead paragraph must contain the most important information (result + key event)',
-    check: (html: string) => {
+    check: (html: string): StyleRuleResult => {
       const firstP = html.match(/<p>(.*?)<\/p>/)?.[1] || '';
       const hasNumber = /\d/.test(firstP);
       const wordCount = stripHtml(firstP).split(/\s+/).filter(Boolean).length;
@@ -43,8 +151,7 @@ export const STRUCTURAL_RULES: StyleRule[] = [
   {
     id: 'paragraph_length',
     name: 'Paragraph Discipline',
-    description: 'Each paragraph should be 2-3 sentences, max 60 words',
-    check: (html: string) => {
+    check: (html: string): StyleRuleResult => {
       const paragraphs = html.match(/<p>(.*?)<\/p>/g) || [];
       const violations: string[] = [];
       for (let i = 0; i < paragraphs.length; i++) {
@@ -65,8 +172,7 @@ export const STRUCTURAL_RULES: StyleRule[] = [
   {
     id: 'sentence_variety',
     name: 'Sentence Variety',
-    description: 'No more than 2 consecutive sentences starting with the same word',
-    check: (html: string) => {
+    check: (html: string): StyleRuleResult => {
       const text = stripHtml(html);
       const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
       let maxConsecutive = 1;
@@ -92,10 +198,8 @@ export const STRUCTURAL_RULES: StyleRule[] = [
   {
     id: 'active_voice',
     name: 'Active Voice Preference',
-    description: 'Minimize passive constructions (je bio/bila/bilo + past participle)',
-    check: (html: string) => {
+    check: (html: string): StyleRuleResult => {
       const text = stripHtml(html).toLowerCase();
-      // Bosnian passive patterns
       const passivePatterns = [
         /je\s+bi[oa]\s+\w+[aeiou]n[aoe]?\b/g,
         /su\s+bil[ie]\s+\w+[aeiou]n[ie]?\b/g,
@@ -117,17 +221,9 @@ export const STRUCTURAL_RULES: StyleRule[] = [
   {
     id: 'no_cliches',
     name: 'No Cliches',
-    description: 'Avoid overused sports journalism cliches',
-    check: (html: string) => {
+    check: (html: string): StyleRuleResult => {
       const text = stripHtml(html).toLowerCase();
-      const cliches = [
-        'pokazao zube', 'zlatna generacija', 'sjajni meč',
-        'pravo lice', 'bolji dio igre', 'fantastičan meč',
-        'u stilu', 'pravi spektakl', 'briljantna igra',
-        'maestralni', 'fenomenalan', 'historijska pobjeda',
-        'nerješiv', 'nemoguća misija', 'čudo se desilo',
-      ];
-      const found = cliches.filter(c => text.includes(c));
+      const found = DIURNA_STYLE_GUIDE.sports.cliche_ban.filter(c => text.includes(c));
       return {
         passed: found.length === 0,
         detail: found.length === 0
@@ -138,151 +234,10 @@ export const STRUCTURAL_RULES: StyleRule[] = [
   },
 ];
 
-// ═══ Vocabulary Enrichment ═══
-
-export interface VocabularyMapping {
-  common: string;
-  alternatives: string[];
-  context: string;
-}
-
-/**
- * Maps overused sports terms to richer alternatives.
- * The style refiner should rotate through alternatives to avoid repetition.
- */
-export const VOCABULARY_ENRICHMENT: VocabularyMapping[] = [
-  // Goal-related
-  { common: 'postigao gol', alternatives: ['zatresao mrežu', 'pronašao put do mreže', 'pogodio za', 'upisao se u strijelce'], context: 'goal_scoring' },
-  { common: 'dao gol', alternatives: ['postigao pogodak', 'zatresao mrežu', 'pogodio'], context: 'goal_scoring' },
-  { common: 'zabio', alternatives: ['postigao pogodak', 'pogodio', 'pronašao mrežu'], context: 'goal_scoring' },
-
-  // Match flow
-  { common: 'utakmica je počela', alternatives: ['sudijski zvižduk označio je početak', 'prvi udarac lopte', 'susret je otvoren'], context: 'match_start' },
-  { common: 'završila je', alternatives: ['susret je okončan', 'sudija je označio kraj', 'posljednji zvižduk'], context: 'match_end' },
-  { common: 'dobra igra', alternatives: ['uvjerljiv nastup', 'kvalitetan pristup', 'disciplinirana igra', 'organiziran nastup'], context: 'performance' },
-  { common: 'loša igra', alternatives: ['neuvjerljiv nastup', 'ispod očekivanja', 'nedovoljno angažovano'], context: 'performance' },
-
-  // Possession & control
-  { common: 'imao posjed', alternatives: ['kontrolirao loptu', 'držao igru pod kontrolom', 'diktirao tempo'], context: 'possession' },
-  { common: 'držao loptu', alternatives: ['kontrolirao posjed', 'diktirao ritam', 'upravljao tempom igre'], context: 'possession' },
-
-  // Shots & chances
-  { common: 'šut na gol', alternatives: ['pokušaj ka golu', 'udarac prema okviru', 'udarac u smjeru gola'], context: 'shots' },
-  { common: 'prilika', alternatives: ['šansa', 'prigoda', 'mogućnost za pogodak'], context: 'chances' },
-  { common: 'velika prilika', alternatives: ['izrazita šansa', 'zrela prilika', 'jasna prigoda'], context: 'chances' },
-
-  // Cards & fouls
-  { common: 'dobio žuti karton', alternatives: ['zaradio opomenu', 'kažnjen žutim kartonom', 'opomenut'], context: 'cards' },
-  { common: 'dobio crveni karton', alternatives: ['isključen', 'kažnjen crvenim kartonom', 'morao napustiti teren'], context: 'cards' },
-
-  // Transitions & connectors
-  { common: 'nakon toga', alternatives: ['potom', 'u nastavku', 'nedugo zatim'], context: 'transition' },
-  { common: 'međutim', alternatives: ['no', 'ipak', 'uprkos tome'], context: 'transition' },
-  { common: 'također', alternatives: ['isto tako', 'uz to', 'pored toga'], context: 'transition' },
-
-  // Defensive actions
-  { common: 'odbranio', alternatives: ['sačuvao mrežu', 'intervenirao', 'zaustavio pokušaj'], context: 'defense' },
-  { common: 'blokirao', alternatives: ['zaustavio udarac', 'stao na put', 'presreo'], context: 'defense' },
-
-  // Substitutions
-  { common: 'zamijenjen', alternatives: ['ustupio mjesto', 'napustio teren', 'prepustio poziciju'], context: 'substitution' },
-  { common: 'ušao u igru', alternatives: ['uključen u igru', 'dobio priliku sa klupe', 'pojačao tim'], context: 'substitution' },
-];
-
-// ═══ Sentence Rhythm Guidelines ═══
-
-export const RHYTHM_GUIDELINES = {
-  /** Ideal sentence length range (words) */
-  sentence_length_min: 8,
-  sentence_length_max: 25,
-  /** Target ratio of short sentences (<12 words) to long sentences (>18 words) */
-  short_to_long_ratio: 0.4,
-  /** Max words before requiring a comma or clause break */
-  max_words_without_break: 15,
-};
-
-// ═══ Lead Formula ═══
-
-export const LEAD_FORMULA = {
-  /** First sentence must contain: BOTH teams + result */
-  required_elements: ['both_teams', 'score'],
-  /** Second sentence should provide key context (goal scorer, minute, significance) */
-  context_elements: ['scorer', 'minute', 'competition_context'],
-  /** Max words in lead paragraph */
-  max_lead_words: 35,
-};
-
-// ═══ Number Formatting (Bosnian Convention) ═══
-
-export const NUMBER_FORMATTING = {
-  /** Spell out numbers 1-10 in flowing text, use digits for stats */
-  spell_out_max: 10,
-  /** Always use digits for: scores, minutes, percentages, player numbers */
-  always_digits: ['scores', 'minutes', 'percentages', 'player_numbers', 'attendance'],
-  /** Thousands separator for large numbers (Bosnian uses period) */
-  thousands_separator: '.',
-  /** Decimal separator (Bosnian uses comma) */
-  decimal_separator: ',',
-};
-
-// ═══ Style Refiner Prompt Template ═══
-
-/**
- * Builds the system prompt for Pass 2 (style refinement).
- * This prompt instructs Claude to polish the article while preserving all facts.
- */
-export function buildStyleRefinerPrompt(vocabularyHints: string[]): string {
-  return `Ti si urednik sportske redakcije sa iskustvom AP, Reuters, BBC Sport, Economist i Al Jazeera standarda.
-Tvoj zadatak je STILSKO POLIRANJE postojećeg članka. NE mijenjaj činjenice.
-
-APSOLUTNA PRAVILA:
-1. SAČUVAJ SVE brojeve, imena, rezultate, minute, statistike iz originala. NE dodaji nove.
-2. SAČUVAJ SVE HTML tagove (<p>, <h2>, <ul>, <li>). NE dodaji nove tipove tagova.
-3. NE dodaji nove činjenice, citate, ili informacije.
-4. NE dodaji kauzalne fraze (jer, zato što, frustriran, motivisan).
-5. NE dodaji predikcije ili spekulacije.
-6. NE mijenjaj značenje rečenica.
-
-ŠTA SMJEŠ MIJENJATI:
-- Zamijeniti generične glagole jačim: ${vocabularyHints.slice(0, 8).join(', ')}
-- Poboljšati ritam rečenica (izmjenjivati kratke i duge)
-- Eliminisati ponavljanja istih riječi u uzastopnim rečenicama
-- Poboljšati tranzicije između paragrafa
-- Zamijeniti pasivne konstrukcije aktivnim
-- Eliminisati klišeje sportskog novinarstva
-- Učiniti uvod (lead) jačim i direktnijim
-
-STIL:
-- Obraćaj se čitaocu kao informirani novinar, ne navijač
-- Koristi aktivan glas kad god je moguće
-- Rečenice: 8-25 riječi, izmjenjuj kratke i duge
-- Paragrafi: 2-3 rečenice, svaki nosi novu informaciju
-- Uvod: rezultat + ključni događaj u prvoj rečenici
-
-Output SAMO validan JSON sa istom strukturom kao input:
-{"title":"...","excerpt":"...","content_html":"...","tags":[...]}
-
-KRITIČNO: Svaki broj i ime iz originala MORA ostati u poliranoj verziji.`;
-}
-
 // ═══ Helpers ═══
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-/**
- * Get a random subset of vocabulary hints for the refiner prompt.
- * Rotates through alternatives to keep each refinement fresh.
- */
-export function getVocabularyHints(count: number = 10): string[] {
-  const hints: string[] = [];
-  const shuffled = [...VOCABULARY_ENRICHMENT].sort(() => Math.random() - 0.5);
-  for (const mapping of shuffled.slice(0, count)) {
-    const alt = mapping.alternatives[Math.floor(Math.random() * mapping.alternatives.length)];
-    hints.push(`"${mapping.common}" → "${alt}"`);
-  }
-  return hints;
 }
 
 /**

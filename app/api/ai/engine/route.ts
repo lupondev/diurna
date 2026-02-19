@@ -15,7 +15,7 @@ import { assembleWidgets } from '@/lib/ai-engine/widget-assembler';
 import { findMatchVideo } from '@/lib/ai-engine/video-finder';
 import { runFRCL } from '@/lib/ai-engine/frcl';
 import { checkPerspectiveBalance } from '@/lib/ai-engine/validators/perspective';
-import { refineStyle } from '@/lib/ai-engine/style-refiner';
+import { refineArticleStyle } from '@/lib/ai-engine/style-refiner';
 import { validatePostStyle } from '@/lib/ai-engine/post-style-validator';
 import type { NormalizedSnapshot, GeneratedArticle, MasterValidationResult, ArticleType, MatchData } from '@/lib/ai-engine/types';
 import type { WidgetPlacementResult } from '@/lib/ai-engine/widget-placer';
@@ -25,8 +25,8 @@ import type { StalenessResult } from '@/lib/ai-engine/staleness';
 import type { CDIResult } from '@/lib/ai-engine/types';
 import type { FRCLResult } from '@/lib/ai-engine/frcl';
 import type { PerspectiveResult } from '@/lib/ai-engine/validators/perspective';
-import type { StyleRefinerResult } from '@/lib/ai-engine/style-refiner';
-import type { PostStyleValidationResult } from '@/lib/ai-engine/post-style-validator';
+import type { StyleRefinementResult } from '@/lib/ai-engine/style-refiner';
+import type { PostStyleValidation } from '@/lib/ai-engine/post-style-validator';
 
 const client = new Anthropic();
 
@@ -277,29 +277,31 @@ export async function POST(req: NextRequest) {
     );
 
     // ─── Step 9: Style Refinement (Pass 2) ───
-    let styleResult: StyleRefinerResult | null = null;
-    let postStyleResult: PostStyleValidationResult | null = null;
+    let styleResult: StyleRefinementResult | null = null;
+    let postStyleResult: PostStyleValidation | null = null;
 
     if (input.includeStyleRefinement) {
       styleResult = await t.measure('style_refinement', () =>
-        refineStyle(client, article!, snapshot)
+        refineArticleStyle(article!, snapshot, cdi)
       );
 
-      if (styleResult.applied) {
+      if (styleResult.refined_html !== styleResult.original_html) {
         // Run post-style validation to ensure no hallucinations
         postStyleResult = t.measureSync('post_style_validation', () =>
-          validatePostStyle(styleResult!.original, styleResult!.refined, snapshot)
+          validatePostStyle(styleResult!.original_html, styleResult!.refined_html, snapshot, cdi, input.language)
         );
 
-        // Only use refined version if post-style validation passes
-        if (postStyleResult.recommendation === 'USE_REFINED' || postStyleResult.recommendation === 'REVIEW') {
-          article = styleResult.refined;
+        // Use refined version ONLY if post-style validation passes
+        if (postStyleResult.passed) {
+          article.content_html = styleResult.refined_html;
         }
-        // If USE_ORIGINAL, article stays as-is (Pass 1)
+        // If failed, article.content_html stays as-is (Pass 1)
 
         // Update LLM token tracking
         llmTokensIn += styleResult.tokens_in;
         llmTokensOut += styleResult.tokens_out;
+      } else {
+        t.skip('post_style_validation', 'No changes from style refinement');
       }
     } else {
       t.skip('style_refinement', 'Disabled by input');
@@ -383,17 +385,20 @@ export async function POST(req: NextRequest) {
           log: assemblyResult.assembly_log,
         } : null,
         style_refinement: styleResult ? {
-          applied: styleResult.applied,
-          changes: styleResult.changes,
-          structural_check: styleResult.structural_check,
-          original_content_html: styleResult.original.content_html,
+          applied: styleResult.refined_html !== styleResult.original_html,
+          changes_made: styleResult.changes_made,
+          style_score: styleResult.style_score,
+          original_content_html: styleResult.original_html,
+          fallback_to_original: postStyleResult ? !postStyleResult.passed : false,
           tokens_in: styleResult.tokens_in,
           tokens_out: styleResult.tokens_out,
         } : null,
         post_style_validation: postStyleResult ? {
           passed: postStyleResult.passed,
-          recommendation: postStyleResult.recommendation,
-          checks: postStyleResult.checks,
+          numeric: postStyleResult.numeric.passed,
+          tone: postStyleResult.tone.passed,
+          events_preserved: postStyleResult.events_preserved,
+          numbers_preserved: postStyleResult.numbers_preserved,
         } : null,
         video: videoResult,
         llm: {

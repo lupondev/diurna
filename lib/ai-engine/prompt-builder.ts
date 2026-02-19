@@ -94,15 +94,39 @@ ${allForbidden.join(', ')}
 DOZVOLJENI BROJEVI (SAMO OVI, NIKAKVI DRUGI):
 ${allowedNumbers}
 
-STILSKI STANDARDI (AP/Reuters/BBC nivo):
-- AKTIVAN GLAS: "${langConfig.sportTerms.team || 'Tim'} je ${langConfig.sportTerms.victory === 'pobeda' ? 'pobedio' : langConfig.sportTerms.victory === 'pobjeda' ? 'pobijedio' : 'won'}" NE pasivna konstrukcija
-- RITAM: Izmjenjuj kratke (8-12 riječi) i duge (15-25 riječi) rečenice
-- RAZNOLIKOST: Ne počinji 2+ uzastopne rečenice istom riječju
-- LEKSIKA: Izbjegavaj ponavljanje istog glagola. Rotiraj sinonime.
-- BEZ KLIŠEJA: Ne koristi ustaljene fraze sportskog novinarstva
-- TRANZICIJE: Koristi raznolike veznike
-- LEAD: Prva rečenica = rezultat + ključni podatak. Direktno, bez uvoda.
-- PARAGRAF: Svaki paragraf nosi NOVU informaciju. Nikad ponavljaj.
+══════════════════════════════════
+STIL PISANJA (AP + Reuters + BBC + Economist)
+══════════════════════════════════
+
+UVOD:
+- NE počinji sa golim rezultatom ("Real Madrid pobijedio Benficu 1-0")
+- POČNI sa PRIČOM — ko je bio heroj, šta se desilo, zašto je važno
+- Primjer: "Vinícius Júnior jednim preciznim udarcem osigurao je Real Madridu prednost na Estádio da Luz."
+- Oba tima u prvoj rečenici. Max 25 riječi.
+
+SHOW, DON'T TELL (Reuters):
+- LOŠ: "Benfica je bila frustrirana."
+- DOBAR: "Benfica je uputila samo 4 udarca u okvir gola."
+- Činjenice GOVORE priču. Ti ih samo IZLAŽI.
+
+JASNOĆA (Economist):
+- Prosječna rečenica: 15-20 riječi
+- Max paragraf: 3 rečenice
+- Aktivna forma: "Vinícius je zabio" ne "Gol je postignut"
+- Svaka riječ mora ZARADITI svoje mjesto
+
+RAZNOLIK VOKABULAR:
+- Ne ponavljaj iste riječi. Koristi sinonime:
+  - Gol: postigao, zabio, pogodio, matirao golmana, realizovao
+  - Utakmica: utakmica, dvoboj, susret, duel
+  - Umjesto "igrač": napadač, veznjak, Brazilac, 25-godišnjak
+
+ZABRANJENI KLIŠEJI:
+zatresao mrežu, pokazao zube, stavio tačku na utakmicu, pružio ruku spasa, maestralna predstava, borba do posljednjeg daha, dominirao od prve minute
+
+GRAMATIKA:
+- IJEKAVICA (ne ekavica)
+- Svi dijakritici obavezni: š, đ, č, ć, ž
 
 PISANJE:
 - Ciljana dužina: ~${wordTarget} riječi

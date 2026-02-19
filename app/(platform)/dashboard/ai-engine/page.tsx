@@ -62,25 +62,19 @@ interface PipelineResult {
     };
     style_refinement?: {
       applied: boolean;
-      changes: { type: string; original_length: number; refined_length: number; diff_percent: number }[];
-      structural_check: {
-        passed: boolean;
-        results: { rule: string; passed: boolean; detail: string }[];
-      };
+      changes_made: string[];
+      style_score: number;
       original_content_html: string;
+      fallback_to_original: boolean;
       tokens_in: number;
       tokens_out: number;
     } | null;
     post_style_validation?: {
       passed: boolean;
-      recommendation: string;
-      checks: {
-        numbers_preserved: { passed: boolean; detail: string };
-        entities_preserved: { passed: boolean; detail: string };
-        no_new_numbers: { passed: boolean; detail: string };
-        length_stable: { passed: boolean; detail: string };
-        events_preserved: { passed: boolean; detail: string };
-      };
+      numeric: boolean;
+      tone: boolean;
+      events_preserved: boolean;
+      numbers_preserved: boolean;
     } | null;
     widgets: { placements: number; decisions: string[] } | null;
     assembly: { widgets_inserted: number; log: string[] } | null;
@@ -280,8 +274,8 @@ export default function AIEngineDashboard() {
             <StatCard label="FRI Score" value={`${qa?.frcl?.fri ?? 'N/A'}`} color={((qa?.frcl?.fri ?? 1) < 0.15) ? '#059669' : '#d97706'} />
             <StatCard label="Perspective" value={qa?.perspective?.status ?? 'N/A'} color={qa?.perspective?.status === 'PASS' ? '#059669' : qa?.perspective?.status === 'REVIEW' ? '#d97706' : '#dc2626'} />
             <StatCard label="Balance" value={`${qa?.perspective?.ratio ?? '?'}`} color={((qa?.perspective?.ratio ?? 0) >= 0.4) ? '#059669' : '#dc2626'} />
-            <StatCard label="Style" value={result.pipeline?.style_refinement?.applied ? 'REFINED' : 'ORIGINAL'} color={result.pipeline?.style_refinement?.applied ? '#2563eb' : '#6b7280'} />
-            <StatCard label="Post-Style" value={result.pipeline?.post_style_validation?.recommendation ?? 'N/A'} color={result.pipeline?.post_style_validation?.recommendation === 'USE_REFINED' ? '#059669' : result.pipeline?.post_style_validation?.recommendation === 'REVIEW' ? '#d97706' : '#dc2626'} />
+            <StatCard label="Style" value={result.pipeline?.style_refinement?.applied ? (result.pipeline?.style_refinement?.fallback_to_original ? 'FALLBACK' : 'REFINED') : 'ORIGINAL'} color={result.pipeline?.style_refinement?.applied && !result.pipeline?.style_refinement?.fallback_to_original ? '#2563eb' : '#6b7280'} />
+            <StatCard label="Post-Style" value={result.pipeline?.post_style_validation?.passed ? 'PASSED' : (result.pipeline?.post_style_validation ? 'FAILED' : 'N/A')} color={result.pipeline?.post_style_validation?.passed ? '#059669' : '#dc2626'} />
             <StatCard label="Language" value={result.pipeline?.language?.toUpperCase() ?? '?'} color="#2563eb" />
             <StatCard label="LLM Retries" value={`${result.pipeline?.llm?.retries ?? '?'}`} color={(result.pipeline?.llm?.retries ?? 1) === 0 ? '#059669' : '#d97706'} />
             <StatCard label="Coverage" value={`${result.pipeline?.validation?.coverage?.score ?? '?'}%`} color={result.pipeline?.validation?.coverage?.passed ? '#059669' : '#dc2626'} />
@@ -500,61 +494,47 @@ function StyleTab({ pipeline }: { pipeline: NonNullable<PipelineResult['pipeline
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Overview */}
       <Section title="Style Refinement Overview">
-        <Row label="Applied" value={sr.applied ? 'Yes' : 'No (fallback to original)'} color={sr.applied ? '#059669' : '#d97706'} />
+        <Row label="Applied" value={sr.applied ? (sr.fallback_to_original ? 'Refined but FALLBACK to original' : 'Yes — using refined') : 'No changes'} color={sr.applied && !sr.fallback_to_original ? '#059669' : '#d97706'} />
+        <Row label="Style Score" value={`${sr.style_score}/10`} color={sr.style_score >= 7 ? '#059669' : sr.style_score >= 5 ? '#d97706' : '#dc2626'} />
         <Row label="Tokens In" value={`${sr.tokens_in}`} />
         <Row label="Tokens Out" value={`${sr.tokens_out}`} />
-        <Row label="Changes" value={`${sr.changes.length} sections modified`} />
+        <Row label="Fallback" value={sr.fallback_to_original ? 'YES — post-style validation failed' : 'No'} color={sr.fallback_to_original ? '#dc2626' : '#059669'} />
       </Section>
 
-      {/* Changes Detail */}
-      {sr.changes.length > 0 && (
-        <Section title="Changes Applied">
-          {sr.changes.map((c, i) => (
-            <div key={i} style={{ padding: '6px 0', fontSize: 13, borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{c.type}</span>
-              <span style={{ color: '#6b7280', fontFamily: 'monospace' }}>
-                {c.original_length} → {c.refined_length} chars ({c.diff_percent > 0 ? `${c.diff_percent}%` : 'same'})
-              </span>
+      {/* Changes Made */}
+      {sr.changes_made.length > 0 && (
+        <Section title="Changes Made">
+          {sr.changes_made.map((c, i) => (
+            <div key={i} style={{ padding: '6px 0', fontSize: 13, borderBottom: '1px solid #f3f4f6' }}>
+              {c}
             </div>
           ))}
         </Section>
       )}
 
-      {/* Structural Check */}
-      <Section title={`Structural Rules (${sr.structural_check.passed ? 'ALL PASS' : 'ISSUES FOUND'})`}>
-        {sr.structural_check.results.map((r, i) => (
-          <div key={i} style={{ padding: '6px 0', fontSize: 13, borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{
-              width: 18, height: 18, borderRadius: '50%', fontSize: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              background: r.passed ? '#dcfce7' : '#fef2f2', color: r.passed ? '#059669' : '#dc2626',
-            }}>
-              {r.passed ? '\u2713' : '\u2717'}
-            </span>
-            <span style={{ fontWeight: 600, width: 160 }}>{r.rule}</span>
-            <span style={{ color: r.passed ? '#059669' : '#dc2626' }}>{r.detail}</span>
-          </div>
-        ))}
-      </Section>
-
       {/* Post-Style Validation */}
       {psv && (
-        <Section title={`Post-Style Validation — ${psv.recommendation}`}>
+        <Section title={`Post-Style Validation — ${psv.passed ? 'PASSED' : 'FAILED'}`}>
           <Row label="Overall" value={psv.passed ? 'PASSED' : 'FAILED'} color={psv.passed ? '#059669' : '#dc2626'} />
-          <Row label="Recommendation" value={psv.recommendation} color={psv.recommendation === 'USE_REFINED' ? '#059669' : psv.recommendation === 'REVIEW' ? '#d97706' : '#dc2626'} />
-          <div style={{ marginTop: 8 }}>
-            {Object.entries(psv.checks).map(([key, check]) => (
-              <div key={key} style={{ padding: '4px 0', fontSize: 13, borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{
-                  width: 16, height: 16, borderRadius: '50%', fontSize: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  background: check.passed ? '#dcfce7' : '#fef2f2', color: check.passed ? '#059669' : '#dc2626',
-                }}>
-                  {check.passed ? '\u2713' : '\u2717'}
-                </span>
-                <span style={{ fontWeight: 500, width: 160 }}>{key.replace(/_/g, ' ')}</span>
-                <span style={{ color: check.passed ? '#059669' : '#dc2626', fontSize: 12 }}>{check.detail}</span>
-              </div>
-            ))}
-          </div>
+          {[
+            { key: 'numeric', label: 'Numeric Validation', passed: psv.numeric },
+            { key: 'tone', label: 'Tone Validation', passed: psv.tone },
+            { key: 'events', label: 'Events Preserved', passed: psv.events_preserved },
+            { key: 'numbers', label: 'Numbers Preserved', passed: psv.numbers_preserved },
+          ].map((check) => (
+            <div key={check.key} style={{ padding: '4px 0', fontSize: 13, borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{
+                width: 16, height: 16, borderRadius: '50%', fontSize: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                background: check.passed ? '#dcfce7' : '#fef2f2', color: check.passed ? '#059669' : '#dc2626',
+              }}>
+                {check.passed ? '\u2713' : '\u2717'}
+              </span>
+              <span style={{ fontWeight: 500 }}>{check.label}</span>
+              <span style={{ color: check.passed ? '#059669' : '#dc2626', fontSize: 12, marginLeft: 'auto' }}>
+                {check.passed ? 'PASS' : 'FAIL'}
+              </span>
+            </div>
+          ))}
         </Section>
       )}
 
