@@ -14,6 +14,13 @@ import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import Youtube from '@tiptap/extension-youtube'
 import Highlight from '@tiptap/extension-highlight'
+import TextStyle from '@tiptap/extension-text-style'
+import Color from '@tiptap/extension-color'
+import Subscript from '@tiptap/extension-subscript'
+import Superscript from '@tiptap/extension-superscript'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
+import Typography from '@tiptap/extension-typography'
 import { useState, useCallback, useRef, useEffect } from 'react'
 
 import { Toolbar } from './toolbar'
@@ -177,11 +184,18 @@ export default function TiptapEditor({
       LinkExt.configure({ openOnClick: false }),
       ImageExt,
       Underline,
+      TextStyle,
+      Color,
+      Highlight.configure({ multicolor: true }),
+      Subscript,
+      Superscript,
+      TaskList,
+      TaskItem.configure({ nested: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Table.configure({ resizable: true }),
       TableRow, TableCell, TableHeader,
-      Youtube.configure({ inline: false, ccLanguage: 'en' }),
-      Highlight.configure({ multicolor: true }),
+      Youtube.configure({ width: 640, height: 360 }),
+      Typography,
       PollBlock, QuizBlock, StatsTableBlock, PlayerCardBlock,
       MatchWidgetBlock, VideoBlock, GalleryBlock, SocialEmbedBlock,
     ],
