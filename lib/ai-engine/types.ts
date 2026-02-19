@@ -158,8 +158,9 @@ export interface GeneratedArticle {
   title: string;
   excerpt: string;
   content_html: string;
-  entities_used: { name: string; id: string; mentions: number }[];
-  events_covered: string[];
-  numbers_used: { value: string; source_field: string }[];
   tags: string[];
+  // Optional — extracted from content_html by validators, not from LLM output
+  entities_used?: { name: string; id: string; mentions: number }[];
+  events_covered?: string[];
+  numbers_used?: { value: string; source_field: string }[];
 }

@@ -220,39 +220,7 @@ const goodArticle: GeneratedArticle = {
 <p>Gol odluke postigao je Vinícius Júnior u 67. minuti, nakon asistencije Judea Bellinghama. Brazilski napadač, koji je ocijenjen ocjenom 8.2, bio je ključni igrač utakmice.</p>
 <p>Real Madrid je imao nešto bolji posjed lopte sa 55% naspram 45% za Benficu. Gosti su uputili 18 udaraca, od čega 7 u okvir gola, dok je Benfica imala 12 udaraca sa 4 u okvir.</p>
 <p>Utakmica je bila obilježena sa 4 žuta kartona — Otamendi u 34., Prestianni u 58. i Aursnes u 73. minuti za domaćine, te Valverde u 81. za Real Madrid.</p>
-<p>Benfica je imala 5 kornera naspram 8 za Real Madrid, a domaćin je napravio 14 prekršaja prema 11 za goste.</p>
 <p>TLDR: Real Madrid pobijedio Benficu 1:0 golom Viníciusa Júniora u 67. minuti.</p>`,
-  entities_used: [
-    { name: 'Vinícius Júnior', id: '1100', mentions: 2 },
-    { name: 'Jude Bellingham', id: '1101', mentions: 1 },
-    { name: 'Otamendi', id: '1200', mentions: 1 },
-    { name: 'Prestianni', id: '1201', mentions: 1 },
-    { name: 'Aursnes', id: '1202', mentions: 1 },
-    { name: 'Valverde', id: '1102', mentions: 1 },
-    { name: 'Real Madrid', id: 'team', mentions: 4 },
-    { name: 'Benfica', id: 'team', mentions: 3 },
-  ],
-  events_covered: ['goal_1', 'yellow_card_1', 'yellow_card_2', 'yellow_card_3', 'yellow_card_4'],
-  numbers_used: [
-    { value: '1', source_field: 'match.score_away' },
-    { value: '0', source_field: 'match.score_home' },
-    { value: '67', source_field: 'events[0].minute' },
-    { value: '8.2', source_field: 'players[0].rating' },
-    { value: '55', source_field: 'stats.possession_away' },
-    { value: '45', source_field: 'stats.possession_home' },
-    { value: '18', source_field: 'stats.shots_away' },
-    { value: '7', source_field: 'stats.shots_on_target_away' },
-    { value: '12', source_field: 'stats.shots_home' },
-    { value: '4', source_field: 'stats.shots_on_target_home' },
-    { value: '34', source_field: 'events[1].minute' },
-    { value: '58', source_field: 'events[2].minute' },
-    { value: '73', source_field: 'events[3].minute' },
-    { value: '81', source_field: 'events[4].minute' },
-    { value: '5', source_field: 'stats.corners_home' },
-    { value: '8', source_field: 'stats.corners_away' },
-    { value: '14', source_field: 'stats.fouls_home' },
-    { value: '11', source_field: 'stats.fouls_away' },
-  ],
   tags: ['Liga Prvaka', 'Real Madrid', 'Benfica', 'Vinícius Júnior'],
 };
 
@@ -267,21 +235,6 @@ const badArticle: GeneratedArticle = {
 <p>Kylian Mbappé je postigao hat-trick sa golovima u 23., 56. i 89. minuti. Francuski napadač je bio superioran i pokazao potpunu kontrolu nad odbranom Benfice.</p>
 <p>Real Madrid je dominantan u Lisabonu sa čak 72% posjeda lopte i 25 udaraca. Benfica je ponižena na vlastitom terenu.</p>
 <p>Očekuje se da Real Madrid lako prođe u sljedeću rundu nakon ovog rezultata.</p>`,
-  entities_used: [
-    { name: 'Kylian Mbappé', id: '9999', mentions: 2 },
-    { name: 'Real Madrid', id: 'team', mentions: 3 },
-    { name: 'Benfica', id: 'team', mentions: 2 },
-  ],
-  events_covered: [],
-  numbers_used: [
-    { value: '3', source_field: 'hallucinated' },
-    { value: '0', source_field: 'match.score_home' },
-    { value: '23', source_field: 'hallucinated' },
-    { value: '56', source_field: 'hallucinated' },
-    { value: '89', source_field: 'hallucinated' },
-    { value: '72', source_field: 'hallucinated' },
-    { value: '25', source_field: 'hallucinated' },
-  ],
   tags: ['Liga Prvaka', 'Real Madrid', 'Benfica'],
 };
 

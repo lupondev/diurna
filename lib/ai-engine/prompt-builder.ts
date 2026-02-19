@@ -60,16 +60,16 @@ PISANJE:
 - Počni sa viješću (rezultat/događaj), ne sa pozadinom.
 - Završi sa TLDR linijom.
 
-JSON STRUKTURA (tačno ovako):
+JSON STRUKTURA (tačno ovako, NIŠTA VIŠE):
 {
   "title": "Naslov do 70 znakova",
   "excerpt": "1-2 rečenice sažetak",
-  "content_html": "Članak u HTML-u (<h2>, <p>, <ul>, <li>). Završi sa TLDR.",
-  "entities_used": [{"name": "Ime Igrača", "id": "player_id", "mentions": 1}],
-  "events_covered": ["event_id_1", "event_id_2"],
-  "numbers_used": [{"value": "67", "source_field": "events[0].minute"}],
+  "content_html": "<p>kratki HTML paragraf</p>",
   "tags": ["tag1", "tag2"]
-}`;
+}
+
+VAŽNO: content_html mora biti KRATAK. Maksimalno 5 paragrafa, svaki max 2 rečenice. Ne piši dugačke članke. Ukupno max 400 riječi.
+NE dodaji entities_used, events_covered, numbers_used u JSON. Samo 4 polja iznad.`;
 
   // ─── User Prompt with Source Data ───
   const user = `${ARTICLE_TYPE_INSTRUCTIONS[articleType]}

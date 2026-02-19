@@ -7,11 +7,11 @@ import { validateEntities } from './entity';
 /**
  * Master Validation Pipeline — runs all 4 validators on a generated article.
  *
- * Validators:
+ * Validators extract data from content_html directly:
  * 1. Numeric — every number must trace to source data
- * 2. Coverage — all critical events (goals, red cards) must be mentioned
+ * 2. Coverage — all critical events must be mentioned (extracted from text)
  * 3. Tone — language must match CDI (no "dominantan" for balanced matches)
- * 4. Entity — every player/team name must exist in source data
+ * 4. Entity — every name in text must exist in source data (extracted from text)
  *
  * If any validator fails, retry_instructions are generated for the LLM.
  */
@@ -21,9 +21,9 @@ export function validateArticle(
   cdi: CDIResult
 ): MasterValidationResult {
   const numeric = validateNumbers(article.content_html, snapshot);
-  const coverage = validateCoverage(article.events_covered, snapshot.data.events);
+  const coverage = validateCoverage(article.content_html, snapshot.data.events);
   const tone = validateTone(article.content_html, cdi);
-  const entity = validateEntities(article.entities_used, snapshot);
+  const entity = validateEntities(article.content_html, snapshot);
 
   const passed = numeric.passed && coverage.passed && tone.passed && entity.passed;
 
