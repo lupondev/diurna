@@ -14,8 +14,6 @@ interface PipelineResult {
     title: string;
     excerpt: string;
     content_html: string;
-    entities_used: { name: string; id: string; mentions: number }[];
-    events_covered: string[];
     tags: string[];
   };
   pipeline?: {
@@ -244,8 +242,7 @@ function ArticleTab({ article }: { article: PipelineResult['article'] }) {
         ))}
       </div>
       <div style={{ marginTop: 16, fontSize: 13, color: '#6b7280' }}>
-        Entities: {article.entities_used.map(e => e.name).join(', ')} |
-        Events covered: {article.events_covered.join(', ')}
+        Validation extracts entities and events from content_html directly.
       </div>
     </div>
   );
