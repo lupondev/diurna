@@ -67,6 +67,16 @@ ${allForbidden.join(', ')}
 DOZVOLJENI BROJEVI (SAMO OVI, NIKAKVI DRUGI):
 ${allowedNumbers}
 
+STILSKI STANDARDI (AP/Reuters/BBC nivo):
+- AKTIVAN GLAS: "Vinícius je postigao pogodak" NE "pogodak je postignut"
+- RITAM: Izmjenjuj kratke (8-12 riječi) i duge (15-25 riječi) rečenice
+- RAZNOLIKOST: Ne počinji 2+ uzastopne rečenice istom riječju
+- LEKSIKA: Izbjegavaj ponavljanje istog glagola. Rotiraj: postigao/zatresao mrežu/pogodio/pronašao put do mreže
+- BEZ KLIŠEJA: Ne koristi "pokazao zube", "sjajni meč", "pravo lice", "pravi spektakl", "briljantna igra"
+- TRANZICIJE: Koristi raznolike veznike (no, ipak, potom, u nastavku, uz to)
+- LEAD: Prva rečenica = rezultat + ključni podatak. Direktno, bez uvoda.
+- PARAGRAF: Svaki paragraf nosi NOVU informaciju. Nikad ponavljaj.
+
 PISANJE:
 - Ciljana dužina: ~${wordTarget} riječi
 - HTML tagovi: <h2>, <p>, <ul>, <li>. Bez <blockquote> ili <h3>.

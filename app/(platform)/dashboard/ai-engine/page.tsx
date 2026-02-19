@@ -59,6 +59,28 @@ interface PipelineResult {
         status: string;
       };
     };
+    style_refinement?: {
+      applied: boolean;
+      changes: { type: string; original_length: number; refined_length: number; diff_percent: number }[];
+      structural_check: {
+        passed: boolean;
+        results: { rule: string; passed: boolean; detail: string }[];
+      };
+      original_content_html: string;
+      tokens_in: number;
+      tokens_out: number;
+    } | null;
+    post_style_validation?: {
+      passed: boolean;
+      recommendation: string;
+      checks: {
+        numbers_preserved: { passed: boolean; detail: string };
+        entities_preserved: { passed: boolean; detail: string };
+        no_new_numbers: { passed: boolean; detail: string };
+        length_stable: { passed: boolean; detail: string };
+        events_preserved: { passed: boolean; detail: string };
+      };
+    } | null;
     widgets: { placements: number; decisions: string[] } | null;
     assembly: { widgets_inserted: number; log: string[] } | null;
     video: {
@@ -121,7 +143,7 @@ const MOCK_MATCH_DATA = {
 export default function AIEngineDashboard() {
   const [result, setResult] = useState<PipelineResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'article' | 'pipeline' | 'quality' | 'timing' | 'widgets' | 'raw'>('article');
+  const [activeTab, setActiveTab] = useState<'article' | 'pipeline' | 'quality' | 'style' | 'timing' | 'widgets' | 'raw'>('article');
 
   async function runEngine() {
     setLoading(true);
@@ -137,6 +159,7 @@ export default function AIEngineDashboard() {
           maxRetries: 2,
           includeVideo: true,
           includeWidgets: true,
+          includeStyleRefinement: true,
         }),
       });
 
@@ -190,7 +213,7 @@ export default function AIEngineDashboard() {
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>AI Engine V2 — Test Dashboard</h1>
         <p style={{ color: '#6b7280', fontSize: 14 }}>
-          Pipeline: Ingestion → CDI → Prompt → LLM → Validation → FRCL → Perspective → Widgets → Assembly
+          Pipeline: Ingestion → CDI → Prompt → LLM → Validation → FRCL → Perspective → Style Refinement → Post-Style Validation → Widgets → Assembly
         </p>
       </div>
 
@@ -231,13 +254,15 @@ export default function AIEngineDashboard() {
             <StatCard label="FRI Score" value={`${qa?.frcl?.fri ?? 'N/A'}`} color={((qa?.frcl?.fri ?? 1) < 0.15) ? '#059669' : '#d97706'} />
             <StatCard label="Perspective" value={qa?.perspective?.status ?? 'N/A'} color={qa?.perspective?.status === 'PASS' ? '#059669' : qa?.perspective?.status === 'REVIEW' ? '#d97706' : '#dc2626'} />
             <StatCard label="Balance" value={`${qa?.perspective?.ratio ?? '?'}`} color={((qa?.perspective?.ratio ?? 0) >= 0.4) ? '#059669' : '#dc2626'} />
+            <StatCard label="Style" value={result.pipeline?.style_refinement?.applied ? 'REFINED' : 'ORIGINAL'} color={result.pipeline?.style_refinement?.applied ? '#2563eb' : '#6b7280'} />
+            <StatCard label="Post-Style" value={result.pipeline?.post_style_validation?.recommendation ?? 'N/A'} color={result.pipeline?.post_style_validation?.recommendation === 'USE_REFINED' ? '#059669' : result.pipeline?.post_style_validation?.recommendation === 'REVIEW' ? '#d97706' : '#dc2626'} />
             <StatCard label="LLM Retries" value={`${result.pipeline?.llm?.retries ?? '?'}`} color={(result.pipeline?.llm?.retries ?? 1) === 0 ? '#059669' : '#d97706'} />
             <StatCard label="Coverage" value={`${result.pipeline?.validation?.coverage?.score ?? '?'}%`} color={result.pipeline?.validation?.coverage?.passed ? '#059669' : '#dc2626'} />
           </div>
 
           {/* Tabs */}
           <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #e5e7eb' }}>
-            {(['article', 'pipeline', 'quality', 'timing', 'widgets', 'raw'] as const).map(tab => (
+            {(['article', 'pipeline', 'quality', 'style', 'timing', 'widgets', 'raw'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -258,6 +283,7 @@ export default function AIEngineDashboard() {
             {activeTab === 'article' && <ArticleTab article={result.article} />}
             {activeTab === 'pipeline' && result.pipeline && <PipelineTab pipeline={result.pipeline} />}
             {activeTab === 'quality' && result.pipeline && <QualityTab pipeline={result.pipeline} />}
+            {activeTab === 'style' && result.pipeline && <StyleTab pipeline={result.pipeline} />}
             {activeTab === 'timing' && result.pipeline?.timing && <TimingTab timing={result.pipeline.timing} />}
             {activeTab === 'widgets' && <WidgetsTab widgets={result.pipeline?.widgets ?? null} assembly={result.pipeline?.assembly ?? null} video={result.pipeline?.video ?? null} />}
             {activeTab === 'raw' && <RawTab data={result} />}
@@ -430,6 +456,101 @@ function QualityTab({ pipeline }: { pipeline: NonNullable<PipelineResult['pipeli
           <span style={{ fontSize: 12, color: '#6b7280', width: 50 }}>Away</span>
         </div>
       </Section>
+    </div>
+  );
+}
+
+// ═══ Style Tab (Style Refinement + Post-Style Validation) ═══
+
+function StyleTab({ pipeline }: { pipeline: NonNullable<PipelineResult['pipeline']> }) {
+  const sr = pipeline.style_refinement;
+  const psv = pipeline.post_style_validation;
+  const [showOriginal, setShowOriginal] = useState(false);
+
+  if (!sr) return <div style={{ color: '#6b7280', fontSize: 13 }}>Style refinement not available</div>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Overview */}
+      <Section title="Style Refinement Overview">
+        <Row label="Applied" value={sr.applied ? 'Yes' : 'No (fallback to original)'} color={sr.applied ? '#059669' : '#d97706'} />
+        <Row label="Tokens In" value={`${sr.tokens_in}`} />
+        <Row label="Tokens Out" value={`${sr.tokens_out}`} />
+        <Row label="Changes" value={`${sr.changes.length} sections modified`} />
+      </Section>
+
+      {/* Changes Detail */}
+      {sr.changes.length > 0 && (
+        <Section title="Changes Applied">
+          {sr.changes.map((c, i) => (
+            <div key={i} style={{ padding: '6px 0', fontSize: 13, borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{c.type}</span>
+              <span style={{ color: '#6b7280', fontFamily: 'monospace' }}>
+                {c.original_length} → {c.refined_length} chars ({c.diff_percent > 0 ? `${c.diff_percent}%` : 'same'})
+              </span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Structural Check */}
+      <Section title={`Structural Rules (${sr.structural_check.passed ? 'ALL PASS' : 'ISSUES FOUND'})`}>
+        {sr.structural_check.results.map((r, i) => (
+          <div key={i} style={{ padding: '6px 0', fontSize: 13, borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{
+              width: 18, height: 18, borderRadius: '50%', fontSize: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: r.passed ? '#dcfce7' : '#fef2f2', color: r.passed ? '#059669' : '#dc2626',
+            }}>
+              {r.passed ? '\u2713' : '\u2717'}
+            </span>
+            <span style={{ fontWeight: 600, width: 160 }}>{r.rule}</span>
+            <span style={{ color: r.passed ? '#059669' : '#dc2626' }}>{r.detail}</span>
+          </div>
+        ))}
+      </Section>
+
+      {/* Post-Style Validation */}
+      {psv && (
+        <Section title={`Post-Style Validation — ${psv.recommendation}`}>
+          <Row label="Overall" value={psv.passed ? 'PASSED' : 'FAILED'} color={psv.passed ? '#059669' : '#dc2626'} />
+          <Row label="Recommendation" value={psv.recommendation} color={psv.recommendation === 'USE_REFINED' ? '#059669' : psv.recommendation === 'REVIEW' ? '#d97706' : '#dc2626'} />
+          <div style={{ marginTop: 8 }}>
+            {Object.entries(psv.checks).map(([key, check]) => (
+              <div key={key} style={{ padding: '4px 0', fontSize: 13, borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{
+                  width: 16, height: 16, borderRadius: '50%', fontSize: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  background: check.passed ? '#dcfce7' : '#fef2f2', color: check.passed ? '#059669' : '#dc2626',
+                }}>
+                  {check.passed ? '\u2713' : '\u2717'}
+                </span>
+                <span style={{ fontWeight: 500, width: 160 }}>{key.replace(/_/g, ' ')}</span>
+                <span style={{ color: check.passed ? '#059669' : '#dc2626', fontSize: 12 }}>{check.detail}</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Original Content (Pass 1) Preview */}
+      {sr.applied && sr.original_content_html && (
+        <Section title="Original Content (Pass 1 — before refinement)">
+          <div style={{ marginBottom: 8 }}>
+            <button
+              onClick={() => setShowOriginal(!showOriginal)}
+              style={{
+                padding: '6px 16px', background: showOriginal ? '#6b7280' : '#2563eb',
+                color: 'white', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              {showOriginal ? 'Hide Original' : 'Show Original (Pass 1)'}
+            </button>
+            <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8 }}>Compare with the Article tab to see refinement changes</span>
+          </div>
+          {showOriginal && (
+            <div dangerouslySetInnerHTML={{ __html: sr.original_content_html }} style={{ lineHeight: 1.7, fontSize: 14, padding: 12, background: '#fefce8', borderRadius: 8, border: '1px solid #fde047', marginTop: 8 }} />
+          )}
+        </Section>
+      )}
     </div>
   );
 }

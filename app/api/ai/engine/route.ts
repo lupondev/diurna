@@ -15,6 +15,8 @@ import { assembleWidgets } from '@/lib/ai-engine/widget-assembler';
 import { findMatchVideo } from '@/lib/ai-engine/video-finder';
 import { runFRCL } from '@/lib/ai-engine/frcl';
 import { checkPerspectiveBalance } from '@/lib/ai-engine/validators/perspective';
+import { refineStyle } from '@/lib/ai-engine/style-refiner';
+import { validatePostStyle } from '@/lib/ai-engine/post-style-validator';
 import type { NormalizedSnapshot, GeneratedArticle, MasterValidationResult, ArticleType, MatchData } from '@/lib/ai-engine/types';
 import type { WidgetPlacementResult } from '@/lib/ai-engine/widget-placer';
 import type { VideoFinderResult } from '@/lib/ai-engine/video-finder';
@@ -23,6 +25,8 @@ import type { StalenessResult } from '@/lib/ai-engine/staleness';
 import type { CDIResult } from '@/lib/ai-engine/types';
 import type { FRCLResult } from '@/lib/ai-engine/frcl';
 import type { PerspectiveResult } from '@/lib/ai-engine/validators/perspective';
+import type { StyleRefinerResult } from '@/lib/ai-engine/style-refiner';
+import type { PostStyleValidationResult } from '@/lib/ai-engine/post-style-validator';
 
 const client = new Anthropic();
 
@@ -36,6 +40,7 @@ const EngineInputSchema = z.object({
   maxRetries: z.number().min(0).max(3).default(2),
   includeVideo: z.boolean().default(true),
   includeWidgets: z.boolean().default(true),
+  includeStyleRefinement: z.boolean().default(true),
 });
 
 // ═══ Timing Helper ═══
@@ -270,7 +275,37 @@ export async function POST(req: NextRequest) {
       checkPerspectiveBalance(article!.content_html, snapshot)
     );
 
-    // ─── Step 9: Widget Placement ───
+    // ─── Step 9: Style Refinement (Pass 2) ───
+    let styleResult: StyleRefinerResult | null = null;
+    let postStyleResult: PostStyleValidationResult | null = null;
+
+    if (input.includeStyleRefinement) {
+      styleResult = await t.measure('style_refinement', () =>
+        refineStyle(client, article!, snapshot)
+      );
+
+      if (styleResult.applied) {
+        // Run post-style validation to ensure no hallucinations
+        postStyleResult = t.measureSync('post_style_validation', () =>
+          validatePostStyle(styleResult!.original, styleResult!.refined, snapshot)
+        );
+
+        // Only use refined version if post-style validation passes
+        if (postStyleResult.recommendation === 'USE_REFINED' || postStyleResult.recommendation === 'REVIEW') {
+          article = styleResult.refined;
+        }
+        // If USE_ORIGINAL, article stays as-is (Pass 1)
+
+        // Update LLM token tracking
+        llmTokensIn += styleResult.tokens_in;
+        llmTokensOut += styleResult.tokens_out;
+      }
+    } else {
+      t.skip('style_refinement', 'Disabled by input');
+      t.skip('post_style_validation', 'Disabled by input');
+    }
+
+    // ─── Step 10: Widget Placement ───
     let widgetResult: WidgetPlacementResult | null = null;
     let assemblyResult: AssemblyResult | null = null;
 
@@ -344,6 +379,19 @@ export async function POST(req: NextRequest) {
         assembly: assemblyResult ? {
           widgets_inserted: assemblyResult.widgets_inserted,
           log: assemblyResult.assembly_log,
+        } : null,
+        style_refinement: styleResult ? {
+          applied: styleResult.applied,
+          changes: styleResult.changes,
+          structural_check: styleResult.structural_check,
+          original_content_html: styleResult.original.content_html,
+          tokens_in: styleResult.tokens_in,
+          tokens_out: styleResult.tokens_out,
+        } : null,
+        post_style_validation: postStyleResult ? {
+          passed: postStyleResult.passed,
+          recommendation: postStyleResult.recommendation,
+          checks: postStyleResult.checks,
         } : null,
         video: videoResult,
         llm: {
