@@ -99,6 +99,7 @@ export default function AIEngineDashboard() {
     try {
       const res = await fetch('/api/ai/engine', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           matchData: MOCK_MATCH_DATA,
@@ -108,10 +109,48 @@ export default function AIEngineDashboard() {
           includeWidgets: true,
         }),
       });
-      const data = (await res.json()) as PipelineResult;
+
+      // Detect redirect (auth issue)
+      if (res.redirected) {
+        setResult({ error: `Auth redirect to: ${res.url}. Please log in first.` });
+        setLoading(false);
+        return;
+      }
+
+      const rawText = await res.text();
+      console.log('[AI Engine Dashboard] Status:', res.status, '| Content-Type:', res.headers.get('content-type'));
+      console.log('[AI Engine Dashboard] Raw response length:', rawText.length);
+      console.log('[AI Engine Dashboard] Raw response (first 500):', rawText.substring(0, 500));
+
+      if (!res.ok) {
+        let errorMsg = `HTTP ${res.status}: `;
+        try {
+          const errData = JSON.parse(rawText);
+          errorMsg += errData?.error || errData?.message || rawText.substring(0, 200);
+        } catch {
+          errorMsg += rawText.substring(0, 200) || res.statusText;
+        }
+        setResult({ error: errorMsg });
+        setLoading(false);
+        return;
+      }
+
+      let data: PipelineResult;
+      try {
+        data = JSON.parse(rawText) as PipelineResult;
+      } catch (parseErr) {
+        console.error('[AI Engine Dashboard] JSON parse failed:', parseErr);
+        console.error('[AI Engine Dashboard] Raw text:', rawText.substring(0, 1000));
+        setResult({ error: `JSON parse failed: ${parseErr instanceof Error ? parseErr.message : 'unknown'}`, detail: rawText.substring(0, 300) });
+        setLoading(false);
+        return;
+      }
+
+      console.log('[AI Engine Dashboard] Parsed result:', data);
       setResult(data);
     } catch (err) {
-      setResult({ error: err instanceof Error ? err.message : 'Unknown error' });
+      console.error('[AI Engine Dashboard] Fetch error:', err);
+      setResult({ error: err instanceof Error ? err.message : 'Unknown network error' });
     }
     setLoading(false);
   }
@@ -164,14 +203,14 @@ export default function AIEngineDashboard() {
         <>
           {/* Quick Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
-            <StatCard label="Total Time" value={`${result.pipeline.timing.total_ms}ms`} color={result.pipeline.timing.total_ms < 15000 ? '#059669' : '#dc2626'} />
-            <StatCard label="Validation" value={result.pipeline.validation.passed ? 'PASSED' : 'FAILED'} color={result.pipeline.validation.passed ? '#059669' : '#dc2626'} />
-            <StatCard label="CDI Home" value={`${result.pipeline.cdi.home} (${result.pipeline.cdi.home_tone})`} color="#2563eb" />
-            <StatCard label="CDI Away" value={`${result.pipeline.cdi.away} (${result.pipeline.cdi.away_tone})`} color="#7c3aed" />
-            <StatCard label="Widgets" value={`${result.pipeline.assembly?.widgets_inserted ?? 0} inserted`} color="#d97706" />
-            <StatCard label="LLM Retries" value={`${result.pipeline.llm.retries}`} color={result.pipeline.llm.retries === 0 ? '#059669' : '#d97706'} />
-            <StatCard label="Tokens" value={`${result.pipeline.llm.tokens_in + result.pipeline.llm.tokens_out}`} color="#6b7280" />
-            <StatCard label="Coverage" value={`${result.pipeline.validation.coverage.score}%`} color={result.pipeline.validation.coverage.passed ? '#059669' : '#dc2626'} />
+            <StatCard label="Total Time" value={`${result.pipeline?.timing?.total_ms ?? '?'}ms`} color={(result.pipeline?.timing?.total_ms ?? 99999) < 15000 ? '#059669' : '#dc2626'} />
+            <StatCard label="Validation" value={result.pipeline?.validation?.passed ? 'PASSED' : 'FAILED'} color={result.pipeline?.validation?.passed ? '#059669' : '#dc2626'} />
+            <StatCard label="CDI Home" value={`${result.pipeline?.cdi?.home ?? '?'} (${result.pipeline?.cdi?.home_tone ?? '?'})`} color="#2563eb" />
+            <StatCard label="CDI Away" value={`${result.pipeline?.cdi?.away ?? '?'} (${result.pipeline?.cdi?.away_tone ?? '?'})`} color="#7c3aed" />
+            <StatCard label="Widgets" value={`${result.pipeline?.assembly?.widgets_inserted ?? 0} inserted`} color="#d97706" />
+            <StatCard label="LLM Retries" value={`${result.pipeline?.llm?.retries ?? '?'}`} color={(result.pipeline?.llm?.retries ?? 1) === 0 ? '#059669' : '#d97706'} />
+            <StatCard label="Tokens" value={`${(result.pipeline?.llm?.tokens_in ?? 0) + (result.pipeline?.llm?.tokens_out ?? 0)}`} color="#6b7280" />
+            <StatCard label="Coverage" value={`${result.pipeline?.validation?.coverage?.score ?? '?'}%`} color={result.pipeline?.validation?.coverage?.passed ? '#059669' : '#dc2626'} />
           </div>
 
           {/* Tabs */}
@@ -200,9 +239,9 @@ export default function AIEngineDashboard() {
           {/* Tab Content */}
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24 }}>
             {activeTab === 'article' && <ArticleTab article={result.article} />}
-            {activeTab === 'pipeline' && <PipelineTab pipeline={result.pipeline} />}
-            {activeTab === 'timing' && <TimingTab timing={result.pipeline.timing} />}
-            {activeTab === 'widgets' && <WidgetsTab widgets={result.pipeline.widgets} assembly={result.pipeline.assembly} video={result.pipeline.video} />}
+            {activeTab === 'pipeline' && result.pipeline && <PipelineTab pipeline={result.pipeline} />}
+            {activeTab === 'timing' && result.pipeline?.timing && <TimingTab timing={result.pipeline.timing} />}
+            {activeTab === 'widgets' && <WidgetsTab widgets={result.pipeline?.widgets ?? null} assembly={result.pipeline?.assembly ?? null} video={result.pipeline?.video ?? null} />}
             {activeTab === 'raw' && <RawTab data={result} />}
           </div>
         </>
@@ -235,7 +274,7 @@ function ArticleTab({ article }: { article: PipelineResult['article'] }) {
         style={{ lineHeight: 1.7, fontSize: 15 }}
       />
       <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {article.tags.map(tag => (
+        {(article.tags ?? []).map(tag => (
           <span key={tag} style={{ padding: '4px 10px', background: '#eff6ff', color: '#2563eb', borderRadius: 6, fontSize: 12, fontWeight: 500 }}>
             {tag}
           </span>
@@ -255,39 +294,39 @@ function PipelineTab({ pipeline }: { pipeline: NonNullable<PipelineResult['pipel
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Snapshot */}
       <Section title="Data Snapshot">
-        <Row label="Snapshot ID" value={pipeline.snapshot_id} />
-        <Row label="Confidence" value={`${(pipeline.confidence * 100).toFixed(0)}%`} />
+        <Row label="Snapshot ID" value={pipeline.snapshot_id ?? 'N/A'} />
+        <Row label="Confidence" value={`${((pipeline.confidence ?? 0) * 100).toFixed(0)}%`} />
       </Section>
 
       {/* Staleness */}
       <Section title="Staleness Guard">
-        <Row label="Status" value={pipeline.staleness.status} color={pipeline.staleness.status === 'OK' ? '#059669' : '#dc2626'} />
-        <Row label="Age" value={`${pipeline.staleness.age_seconds.toFixed(0)}s`} />
-        <Row label="Window" value={`${pipeline.staleness.window_seconds}s`} />
+        <Row label="Status" value={pipeline.staleness?.status ?? 'N/A'} color={pipeline.staleness?.status === 'OK' ? '#059669' : '#dc2626'} />
+        <Row label="Age" value={`${pipeline.staleness?.age_seconds?.toFixed?.(0) ?? 'N/A'}s`} />
+        <Row label="Window" value={`${pipeline.staleness?.window_seconds ?? 'N/A'}s`} />
       </Section>
 
       {/* CDI */}
       <Section title="CDI (Contextual Dominance Index)">
-        <Row label="Home" value={`${pipeline.cdi.home} — ${pipeline.cdi.home_tone}`} />
-        <Row label="Away" value={`${pipeline.cdi.away} — ${pipeline.cdi.away_tone}`} />
+        <Row label="Home" value={`${pipeline.cdi?.home ?? '?'} — ${pipeline.cdi?.home_tone ?? '?'}`} />
+        <Row label="Away" value={`${pipeline.cdi?.away ?? '?'} — ${pipeline.cdi?.away_tone ?? '?'}`} />
       </Section>
 
       {/* Validation */}
       <Section title="Validation Pipeline">
-        <Row label="Overall" value={pipeline.validation.passed ? 'PASSED' : 'FAILED'} color={pipeline.validation.passed ? '#059669' : '#dc2626'} />
-        <Row label="Retries" value={`${pipeline.validation.retries}`} />
-        <Row label="Numeric" value={pipeline.validation.numeric.passed ? `PASS` : `FAIL (${pipeline.validation.numeric.errors} errors)`} color={pipeline.validation.numeric.passed ? '#059669' : '#dc2626'} />
-        <Row label="Coverage" value={`${pipeline.validation.coverage.passed ? 'PASS' : 'FAIL'} — ${pipeline.validation.coverage.score}%`} color={pipeline.validation.coverage.passed ? '#059669' : '#dc2626'} />
-        <Row label="Tone" value={pipeline.validation.tone.passed ? `PASS` : `FAIL (${pipeline.validation.tone.violations} violations)`} color={pipeline.validation.tone.passed ? '#059669' : '#dc2626'} />
-        <Row label="Entity" value={pipeline.validation.entity.passed ? `PASS` : `FAIL (${pipeline.validation.entity.unmatched.join(', ')})`} color={pipeline.validation.entity.passed ? '#059669' : '#dc2626'} />
+        <Row label="Overall" value={pipeline.validation?.passed ? 'PASSED' : 'FAILED'} color={pipeline.validation?.passed ? '#059669' : '#dc2626'} />
+        <Row label="Retries" value={`${pipeline.validation?.retries ?? '?'}`} />
+        <Row label="Numeric" value={pipeline.validation?.numeric?.passed ? `PASS` : `FAIL (${pipeline.validation?.numeric?.errors ?? '?'} errors)`} color={pipeline.validation?.numeric?.passed ? '#059669' : '#dc2626'} />
+        <Row label="Coverage" value={`${pipeline.validation?.coverage?.passed ? 'PASS' : 'FAIL'} — ${pipeline.validation?.coverage?.score ?? '?'}%`} color={pipeline.validation?.coverage?.passed ? '#059669' : '#dc2626'} />
+        <Row label="Tone" value={pipeline.validation?.tone?.passed ? `PASS` : `FAIL (${pipeline.validation?.tone?.violations ?? '?'} violations)`} color={pipeline.validation?.tone?.passed ? '#059669' : '#dc2626'} />
+        <Row label="Entity" value={pipeline.validation?.entity?.passed ? `PASS` : `FAIL (${pipeline.validation?.entity?.unmatched?.join(', ') ?? 'N/A'})`} color={pipeline.validation?.entity?.passed ? '#059669' : '#dc2626'} />
       </Section>
 
       {/* LLM */}
       <Section title="LLM">
-        <Row label="Model" value={pipeline.llm.model} />
-        <Row label="Tokens In" value={`${pipeline.llm.tokens_in}`} />
-        <Row label="Tokens Out" value={`${pipeline.llm.tokens_out}`} />
-        <Row label="Retries" value={`${pipeline.llm.retries}`} />
+        <Row label="Model" value={pipeline.llm?.model ?? 'N/A'} />
+        <Row label="Tokens In" value={`${pipeline.llm?.tokens_in ?? '?'}`} />
+        <Row label="Tokens Out" value={`${pipeline.llm?.tokens_out ?? '?'}`} />
+        <Row label="Retries" value={`${pipeline.llm?.retries ?? '?'}`} />
       </Section>
     </div>
   );
