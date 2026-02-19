@@ -111,6 +111,6 @@ Generiši JSON sada.`;
   return {
     system,
     user,
-    max_tokens: Math.min(4000, Math.max(800, Math.round(wordTarget * 3))),
+    max_tokens: Math.min(8000, Math.max(800, Math.round(wordTarget * 3))),
   };
 }

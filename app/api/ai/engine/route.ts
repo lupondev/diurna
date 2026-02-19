@@ -205,7 +205,23 @@ export async function POST(req: NextRequest) {
           cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
         }
 
-        return JSON.parse(cleaned) as GeneratedArticle;
+        try {
+          return JSON.parse(cleaned) as GeneratedArticle;
+        } catch (parseErr) {
+          console.error('[AI Engine] JSON parse failed. Raw response:', cleaned.substring(0, 500));
+          // Fallback: find last complete "}" and try parsing up to there
+          const lastBrace = cleaned.lastIndexOf('}');
+          if (lastBrace > 0) {
+            const truncated = cleaned.substring(0, lastBrace + 1);
+            console.log('[AI Engine] Trying truncated JSON parse (up to last "}")');
+            try {
+              return JSON.parse(truncated) as GeneratedArticle;
+            } catch {
+              console.error('[AI Engine] Truncated parse also failed. Full raw:', cleaned);
+            }
+          }
+          throw parseErr;
+        }
       });
 
       article = generatedArticle;
