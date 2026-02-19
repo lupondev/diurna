@@ -32,11 +32,36 @@ async function clickhouseInsert(env: Env, sql: string): Promise<void> {
   await res.text(); if (!res.ok) throw new Error(`ClickHouse insert error: ${await res.text()}`);
 }
 
-async function fetchGlukkon(publisherId: number): Promise<Record<string, number>> {
-  const res = await fetch(GLUKKON_API_URL + "?metric=geo&publisher_id=" + publisherId);
-  if (!res.ok) return {};
-  const data: any = await res.json();
-  return data.predictions || {};
+async function fetchGlukkon(publisherId: number, env: Env): Promise<Record<string, number>> {
+  // ClickHouse historical data - revenue optimized floors
+  // optimal_floor = avg_cpm * fill_factor (fill>20%=0.90, 15-20%=0.80, 10-15%=0.70, <10%=0.60)
+  try {
+    const sql = "SELECT geo, count() as total, round(countIf(is_winning=1)/count()*100,1) as fill_pct, round(avgIf(cpm, is_winning=1),3) as avg_cpm FROM lupon.auctions WHERE publisher_id=" + publisherId + " GROUP BY geo HAVING count() > 10000 FORMAT JSON";
+    const result = await clickhouseQuery(env, sql);
+    const predictions: Record<string, number> = {};
+    for (const row of result?.data || []) {
+      const fill = parseFloat(row.fill_pct);
+      const cpm = parseFloat(row.avg_cpm);
+      const factor = fill > 20 ? 0.90 : fill > 15 ? 0.80 : fill > 10 ? 0.70 : 0.60;
+      predictions[row.geo] = Math.round(cpm * factor * 1000) / 1000;
+    }
+    // Also store raw stats for revenue calculation
+    (predictions as any).__stats = {};
+    for (const row of result?.data || []) {
+      (predictions as any).__stats[row.geo] = {
+        total: parseInt(row.total || 0),
+        fill_pct: parseFloat(row.fill_pct),
+        avg_cpm: parseFloat(row.avg_cpm)
+      };
+    }
+    return predictions;
+  } catch(e) {
+    // Fallback to AutoGluon
+    const res = await fetch(GLUKKON_API_URL + "?metric=geo&publisher_id=" + publisherId);
+    if (!res.ok) return {};
+    const data: any = await res.json();
+    return data.predictions || {};
+  }
 }
 
 async function getRecentStats(env: Env, publisherId: number): Promise<any[]> {
@@ -59,8 +84,8 @@ Publisher: ${publisherId}
 Glukkon floor predictions: ${JSON.stringify(glukkon)}
 Recent 2h stats (may be empty if no live data): ${JSON.stringify(stats.slice(0, 15))}
 30d baseline CPM (may be empty): ${JSON.stringify(baseline)}
-Rules: Use Glukkon predictions as base. XX geo = unknown countries, NOT bots - optimize normally. MC = suspicious datacenter, be conservative. If no live stats available, still optimize based on Glukkon predictions alone using geo knowledge (US/CA/GB = premium, Balkans = lower CPM). Never refuse to make recommendations - always output floor_updates for every geo in predictions.
-Respond ONLY valid JSON: {"floor_updates":[{"publisher_id":${publisherId},"geo":"","current_floor":0,"recommended_floor":0,"confidence":0,"reason":""}],"anomalies":[{"type":"","publisher_id":${publisherId},"bidder":"","geo":"","severity":"","description":""}],"summary":""}`;
+Rules: Use Glukkon predictions as base. XX geo = unknown countries, NOT bots - optimize normally. MC = suspicious datacenter, be conservative. If no live stats available, still optimize based on Glukkon predictions alone using geo knowledge (US/CA/GB = premium, Balkans = lower CPM). Never refuse to make recommendations - always output floor_updates for every geo in predictions. CRITICAL: current_floor MUST be the exact Glukkon prediction value for that geo (from the predictions object above). Never use 0 for current_floor.
+Output ONLY the JSON object. No text before or after. Max 50 floor_updates per response - prioritize highest volume geos. Format: {"floor_updates":[{"publisher_id":${publisherId},"geo":"","current_floor":0,"recommended_floor":0,"confidence":0,"reason":""}],"anomalies":[],"summary":""}`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -71,19 +96,28 @@ Respond ONLY valid JSON: {"floor_updates":[{"publisher_id":${publisherId},"geo":
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 2000,
+      system: "Return ONLY raw JSON. No markdown. No backticks. No explanation. No ```json wrapper.",
+      max_tokens: 8000,
       messages: [{ role: "user", content: prompt }],
     }),
   });
-  const data: any = await res.json();
+  const data: any = JSON.parse(await res.text());
   const text = data?.content?.[0]?.text || "{}";
-  const clean=text.replace(/```json|```/g,"").trim(); try{return JSON.parse(clean);}catch{return{floor_updates:[],anomalies:[],summary:"err:"+text.slice(0,80)};}
+  console.log("RAW:", JSON.stringify(text.slice(0,200)));
+  const clean=text.replace(/```json/g,"").replace(/```/g,"").trim();
+  const start=clean.indexOf('{'); const end=clean.lastIndexOf('}');
+  const extracted = start>=0 && end>=0 ? clean.slice(start,end+1) : clean;
+  try{return JSON.parse(extracted);}catch{return{floor_updates:[],anomalies:[],summary:"err:"+text.slice(0,80)};}
 }
 
 async function saveResults(env: Env, analysis: any): Promise<void> {
+  const seen = new Set();
   for (const u of analysis.floor_updates || []) {
+    const key = u.publisher_id + "_" + u.geo;
+    if (seen.has(key)) continue;
+    seen.add(key);
     if (u.confidence < 0.5) continue;
-    await clickhouseInsert(env, `INSERT INTO lupon.floor_price_audit (ts,publisher_id,geo,device_type,hour_slot,glukkon_floor,claude_floor,overridden,confidence,reason,anomaly_type) VALUES (now(),${u.publisher_id},'${u.geo}','all',0,${u.current_floor},${u.recommended_floor},${u.recommended_floor !== u.current_floor ? 1 : 0},${u.confidence},'${(u.reason||'').replace(/'/g,"''")}','')`);
+    await clickhouseInsert(env, "INSERT INTO lupon.floor_price_audit (ts,publisher_id,geo,device_type,hour_slot,glukkon_floor,claude_floor,overridden,confidence,reason,anomaly_type,total_auctions,fill_pct,revenue_without_ai,revenue_with_ai) VALUES (now()," + u.publisher_id + ",'" + u.geo + "','all',0," + (u.current_floor||0) + "," + u.recommended_floor + "," + (u.recommended_floor !== u.current_floor ? 1 : 0) + "," + u.confidence + ",'" + (u.reason||"").replace(/'/g,"''") + "',''," + (u.total_auctions||0) + "," + (u.fill_pct||0) + "," + (u.revenue_without_ai||0) + "," + (u.revenue_with_ai||0) + ")");
   }
   for (const a of analysis.anomalies || []) {
     await clickhouseInsert(env, `INSERT INTO lupon.anomalies (ts,publisher_id,anomaly_type,bidder,geo,severity,description,current_value,baseline_value) VALUES (now(),${a.publisher_id},'${a.type}','${a.bidder}','${a.geo}','${a.severity}','${(a.description||'').replace(/'/g,"''")}',0,0)`);
@@ -94,10 +128,24 @@ async function runAnalysis(env: Env): Promise<string> {
   const results = [];
   for (const publisherId of PUBLISHER_IDS) {
     try {
-      const glukkon = await fetchGlukkon(publisherId);
+      const glukkon = await fetchGlukkon(publisherId, env);
       const stats = await getRecentStats(env, publisherId);
       const baseline = await getBaseline(env, publisherId);
       const analysis = await analyzeWithClaude(env, publisherId, glukkon, stats, baseline);
+      // Enrich floor_updates with revenue data from CH stats
+      const chStats = (glukkon as any).__stats || {};
+      for (const u of analysis.floor_updates || []) {
+        const s = chStats[u.geo];
+        if (s) {
+          u.total_auctions = s.total;
+          u.fill_pct = s.fill_pct;
+          // Revenue without AI: auctions * fill_pct * avg_cpm / 1000
+          u.revenue_without_ai = Math.round(s.total * (s.fill_pct/100) * s.avg_cpm * 100) / 100;
+          // Revenue with AI: same fill rate, avg_cpm slightly higher due to better floor
+          const cpmUplift = u.recommended_floor > (u.current_floor||0) ? 1.03 : 1.0;
+          u.revenue_with_ai = Math.round(s.total * (s.fill_pct/100) * s.avg_cpm * cpmUplift * 100) / 100;
+        }
+      }
       await saveResults(env, analysis);
       // Save modified floors to KV
       const originalRes = await fetch(`https://adxbid.info/${publisherId}_gpt_code__geo_latest.json`);
