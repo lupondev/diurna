@@ -214,4 +214,8 @@ export async function getPlayer(id: number): Promise<ApiPlayer | null> {
   return data[0] ?? null
 }
 
+export async function getTeamFixtures(teamId: number, last = 5): Promise<ApiFixture[]> {
+  return apiFootball<ApiFixture>(`/fixtures?team=${teamId}&last=${last}&season=${CURRENT_SEASON}`, 300)
+}
+
 export { formatTime, todayStr, dateOffsetStr, mapStatus }
