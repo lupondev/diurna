@@ -638,21 +638,6 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <div className="st-card">
-          <div className="st-card-head">
-            <div className="st-card-title">Embed Subscribe Widget</div>
-          </div>
-          <div className="st-card-desc">Copy this code to add a subscribe form to your website.</div>
-          <div className="st-row">
-            <span className="st-label">Embed Code</span>
-            <input
-              className="st-input mono"
-              readOnly
-              value={`<script src="https://cdn.diurna.io/subscribe-widget.js" data-site="sportnews-pro"></script>`}
-              onClick={(e) => { (e.target as HTMLInputElement).select(); navigator.clipboard.writeText((e.target as HTMLInputElement).value) }}
-            />
-          </div>
-        </div>
       </div>
 
       <div className="st-section">

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
+import { getArticleUrl } from '@/lib/article-url'
 import { AdSlot } from '@/components/public/sportba'
 import { MatchOfDay } from '@/components/public/sportba/match-of-day'
 import { StandingsTable } from '@/components/public/sportba/standings-table'
@@ -140,7 +141,7 @@ export default async function HomePage() {
       dbHero = heroArticles.map((a, i) => ({
         title: a.title,
         cat: a.category?.name || 'Vijesti',
-        href: `/${a.category?.slug || 'vijesti'}/${a.slug}`,
+        href: getArticleUrl(a),
         meta: `${a.publishedAt ? timeAgo(a.publishedAt) : 'Novo'} \u00b7 ${a.category?.name || 'Vijesti'}`,
         bg: a.featuredImage
           ? `url(${a.featuredImage}) center/cover no-repeat`
@@ -153,7 +154,7 @@ export default async function HomePage() {
         cat: (a.category?.name || 'Vijesti').toUpperCase(),
         title: a.title,
         time: a.publishedAt ? timeAgo(a.publishedAt) : 'Novo',
-        href: `/${a.category?.slug || 'vijesti'}/${a.slug}`,
+        href: getArticleUrl(a),
         bg: GRADIENTS[(i + 4) % GRADIENTS.length],
       }))
 
@@ -161,7 +162,7 @@ export default async function HomePage() {
       dbTrending = articles.slice(0, 5).map((a) => ({
         title: a.title,
         meta: `${a.category?.name || 'Vijesti'} \u00b7 ${a.publishedAt ? timeAgo(a.publishedAt) : 'Novo'}`,
-        href: `/${a.category?.slug || 'vijesti'}/${a.slug}`,
+        href: getArticleUrl(a),
       }))
     }
   }

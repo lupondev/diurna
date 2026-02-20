@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
 import { tiptapToHtml } from '@/lib/tiptap-html'
 import { WidgetHydrator } from '@/components/public/widget-hydrator'
+import { getArticleUrl } from '@/lib/article-url'
 import { AdSlot } from '@/components/public/sportba'
 import {
   ReadingProgress,
@@ -249,7 +250,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
               </div>
               <div className="sba-related-grid">
                 {related.map((r) => (
-                  <Link key={r.slug} href={`/${r.category?.slug || 'vijesti'}/${r.slug}`} className="sba-related-card">
+                  <Link key={r.slug} href={getArticleUrl(r)} className="sba-related-card">
                     <div className="sba-related-card-img">
                       <div
                         className="sba-related-card-img-bg"
@@ -284,7 +285,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
                 <div className="sba-rail-head">U trendu</div>
                 <div className="sba-trending-list">
                   {trending.map((t, i) => (
-                    <Link key={t.slug} href={`/${t.category?.slug || 'vijesti'}/${t.slug}`} className="sba-trending-item">
+                    <Link key={t.slug} href={getArticleUrl(t)} className="sba-trending-item">
                       <span className="sba-trending-rank">{i + 1}</span>
                       <div className="sba-trending-body">
                         <span className="sba-trending-title">{t.title}</span>

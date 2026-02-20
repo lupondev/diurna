@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
+import { getArticleUrl } from '@/lib/article-url'
 import { AdSlot } from '@/components/public/sportba'
 import '../category.css'
 
@@ -69,7 +70,7 @@ export default async function VijestiPage() {
       time: a.publishedAt ? timeAgo(a.publishedAt) : 'Novo',
       league: a.category?.name || 'Vijesti',
       bg: GRADIENTS[i % GRADIENTS.length],
-      href: `/${a.category?.slug || 'vijesti'}/${a.slug}`,
+      href: getArticleUrl(a),
     }))
   }
 
