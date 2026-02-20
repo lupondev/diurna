@@ -1,10 +1,7 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
-import { getDefaultSite } from '@/lib/db'
-import { tiptapToHtml } from '@/lib/tiptap-html'
-import { WidgetHydrator } from '@/components/public/widget-hydrator'
+import { fetchArticle, buildArticleMetadata, ArticlePage as SharedArticlePage } from '@/lib/public-article'
 import { AdSlot } from '@/components/public/sportba'
 import {
   ReadingProgress,
@@ -22,78 +19,6 @@ export const dynamic = 'force-dynamic'
 
 type Props = {
   params: { slug: string }
-}
-
-/* ═══════════════════════════════════════════════════
-   DB Article Fetch
-   ═══════════════════════════════════════════════════ */
-
-async function getArticleFromDb(slug: string) {
-  const site = await getDefaultSite()
-  if (!site) return null
-
-  const article = await prisma.article.findFirst({
-    where: {
-      siteId: site.id,
-      slug,
-      status: 'PUBLISHED',
-      deletedAt: null,
-      isTest: false,
-    },
-    include: {
-      category: { select: { id: true, name: true, slug: true } },
-      tags: { include: { tag: true } },
-    },
-  })
-
-  if (!article) return null
-
-  let authorName = `Redakcija ${site?.name || 'Diurna'}`
-  if (article.authorId) {
-    const author = await prisma.user.findUnique({
-      where: { id: article.authorId },
-      select: { name: true },
-    })
-    if (author?.name) authorName = author.name
-  }
-
-  // Fetch related articles from same category
-  const related = await prisma.article.findMany({
-    where: {
-      siteId: site.id,
-      categoryId: article.categoryId,
-      status: 'PUBLISHED',
-      deletedAt: null,
-      isTest: false,
-      id: { not: article.id },
-    },
-    select: { title: true, slug: true, category: { select: { slug: true, name: true } }, publishedAt: true },
-    orderBy: { publishedAt: 'desc' },
-    take: 3,
-  })
-
-  // Fetch trending (most recent published)
-  const trending = await prisma.article.findMany({
-    where: {
-      siteId: site.id,
-      status: 'PUBLISHED',
-      deletedAt: null,
-      isTest: false,
-      id: { not: article.id },
-    },
-    select: { title: true, slug: true, category: { select: { slug: true, name: true } }, publishedAt: true },
-    orderBy: { publishedAt: 'desc' },
-    take: 5,
-  })
-
-  return { article, authorName, related, trending, site }
-}
-
-function timeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} min`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
-  return `${Math.floor(seconds / 86400)}d`
 }
 
 function formatDate(date: Date): string {
@@ -152,31 +77,11 @@ const DEMO_TRENDING = [
    ═══════════════════════════════════════════════════ */
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const result = await getArticleFromDb(params.slug)
-  if (result) {
-    const { article, site } = result
-    const siteName = site?.name || 'Diurna'
-    const title = article.metaTitle || article.title
-    const description = article.metaDescription || article.excerpt || undefined
-    const imageUrl = article.featuredImage || '/og-default.jpg'
-    return {
-      title: `${title} | ${siteName}`,
-      description,
-      openGraph: {
-        title,
-        description,
-        images: [imageUrl],
-        type: 'article',
-        publishedTime: (article.publishedAt || article.createdAt).toISOString(),
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title,
-        description,
-        images: [imageUrl],
-      },
-    }
-  }
+  const meta = await buildArticleMetadata(params.slug, 'vijesti')
+  if (meta.title !== 'Not Found') return meta
+  // Also try without category filter (legacy slugs)
+  const fallbackMeta = await buildArticleMetadata(params.slug)
+  if (fallbackMeta.title !== 'Not Found') return fallbackMeta
   // Fallback to demo
   return {
     title: `${DEMO_ARTICLE.title} | Diurna`,
@@ -188,219 +93,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
    Page Component
    ═══════════════════════════════════════════════════ */
 
-export default async function ArticlePage({ params }: Props) {
-  const result = await getArticleFromDb(params.slug)
+export default async function VjestiArticlePage({ params }: Props) {
+  const data = await fetchArticle(params.slug, 'vijesti')
+  if (data) return <SharedArticlePage data={data} />
 
-  if (result) {
-    return <DbArticle data={result} />
-  }
+  // Try without category filter (legacy slugs)
+  const fallback = await fetchArticle(params.slug)
+  if (fallback) return <SharedArticlePage data={fallback} />
 
   // Fallback: demo article (only for the known demo slug)
   if (params.slug !== DEMO_ARTICLE.slug) {
     notFound()
   }
   return <DemoArticle />
-}
-
-/* ═══════════════════════════════════════════════════
-   DB Article Renderer (real articles)
-   ═══════════════════════════════════════════════════ */
-
-function getCategoryFallback(slug?: string): string {
-  const map: Record<string, string> = {
-    transferi: '/images/fallback/transfer.svg',
-    utakmice: '/images/fallback/match.svg',
-    povrede: '/images/fallback/injury.svg',
-  }
-  return map[slug || ''] || '/images/fallback/news.svg'
-}
-
-function removeLeadingTitle(html: string, title: string): string {
-  const normalized = title.trim().toLowerCase()
-  const match = html.match(/^\s*<(h[12])[^>]*>(.*?)<\/\1>/i)
-  if (match && match[2].trim().toLowerCase() === normalized) {
-    return html.slice(match[0].length).trim()
-  }
-  return html
-}
-
-function DbArticle({ data }: { data: NonNullable<Awaited<ReturnType<typeof getArticleFromDb>>> }) {
-  const { article, authorName, related, trending, site } = data
-  const siteName = site?.name || 'Diurna'
-  const rawHtml = tiptapToHtml(article.content)
-  const bodyHtml = removeLeadingTitle(rawHtml, article.title)
-  const wordCount = bodyHtml.replace(/<[^>]*>/g, '').split(/\s+/).length
-  const readTime = Math.max(1, Math.round(wordCount / 200))
-  const categoryName = article.category?.name || 'Vijesti'
-  const categorySlug = article.category?.slug || 'vijesti'
-  const pubDate = article.publishedAt || article.createdAt
-
-  return (
-    <main className="sba-article">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'NewsArticle',
-            headline: article.title,
-            description: article.metaDescription || article.excerpt || '',
-            datePublished: pubDate.toISOString(),
-            dateModified: article.updatedAt.toISOString(),
-            author: { '@type': 'Person', name: authorName },
-            publisher: { '@type': 'Organization', name: siteName },
-            articleSection: categoryName,
-          }),
-        }}
-      />
-      <ReadingProgress />
-      <ScrollDepthTracker />
-
-      <div className="sba-article-leaderboard">
-        <AdSlot variant="leaderboard" />
-      </div>
-
-      <div className="sba-article-layout">
-        <article className="sba-article-main">
-          {/* Breadcrumb */}
-          <nav className="sba-breadcrumb" aria-label="Breadcrumb">
-            <Link href="/">Početna</Link>
-            <span className="sba-breadcrumb-sep">/</span>
-            <Link href={`/${categorySlug}`}>{categoryName}</Link>
-            <span className="sba-breadcrumb-sep">/</span>
-            <span className="sba-breadcrumb-current">Članak</span>
-          </nav>
-
-          <span className="sba-article-cat">{categoryName}</span>
-          <h1 className="sba-article-title">{article.title}</h1>
-
-          {article.excerpt && (
-            <p className="sba-article-subtitle">{article.excerpt}</p>
-          )}
-
-          <MetaBar
-            author={authorName}
-            date={formatDate(pubDate)}
-            readTime={readTime}
-            views=""
-          />
-
-          {/* Featured Image */}
-          <div className="sba-featured-img">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={article.featuredImage || getCategoryFallback(categorySlug)}
-              alt={article.title}
-              className="sba-featured-img-real"
-              style={{ width: '100%', height: 'auto', borderRadius: 12, display: 'block' }}
-            />
-          </div>
-
-          {/* Article Body with Widget Rendering */}
-          <div className="sba-article-body">
-            <WidgetHydrator html={bodyHtml} />
-          </div>
-
-          {/* Tags */}
-          {article.tags.length > 0 && (
-            <div className="sba-article-tags">
-              {article.tags.map(({ tag }) => (
-                <Link key={tag.id} href={`/${categorySlug}`} className="sba-tag">
-                  {tag.name}
-                </Link>
-              ))}
-            </div>
-          )}
-
-          <Reactions />
-
-          {/* Related Articles */}
-          {related.length > 0 && (
-            <section className="sba-related">
-              <div className="sba-section-head">
-                <h2 className="sba-section-title">Povezani članci</h2>
-              </div>
-              <div className="sba-related-grid">
-                {related.map((r) => (
-                  <Link key={r.slug} href={`/${r.category?.slug || 'vijesti'}/${r.slug}`} className="sba-related-card">
-                    <div className="sba-related-card-img">
-                      <div
-                        className="sba-related-card-img-bg"
-                        style={{ background: 'linear-gradient(135deg, #1e3a5f, #0d1b2a)' }}
-                      />
-                    </div>
-                    <div className="sba-related-card-body">
-                      <span className="sba-related-card-cat">{r.category?.name?.toUpperCase() || 'VIJESTI'}</span>
-                      <span className="sba-related-card-title">{r.title}</span>
-                      {r.publishedAt && (
-                        <span className="sba-related-card-meta">{timeAgo(r.publishedAt)}</span>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <div className="sba-article-native-ad">
-            <AdSlot variant="native" />
-          </div>
-        </article>
-
-        {/* Sidebar */}
-        <aside className="sba-article-sidebar">
-          <div className="sba-sidebar-sticky">
-            <AdSlot variant="rectangle" />
-
-            {trending.length > 0 && (
-              <div className="sba-rail-card">
-                <div className="sba-rail-head">U trendu</div>
-                <div className="sba-trending-list">
-                  {trending.map((t, i) => (
-                    <Link key={t.slug} href={`/${t.category?.slug || 'vijesti'}/${t.slug}`} className="sba-trending-item">
-                      <span className="sba-trending-rank">{i + 1}</span>
-                      <div className="sba-trending-body">
-                        <span className="sba-trending-title">{t.title}</span>
-                        <span className="sba-trending-meta">
-                          {t.category?.name || 'Vijesti'} {t.publishedAt ? `\u00b7 ${timeAgo(t.publishedAt)}` : ''}
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {trending.length === 0 && (
-              <div className="sba-rail-card">
-                <div className="sba-rail-head">U trendu</div>
-                <div className="sba-trending-list">
-                  {DEMO_TRENDING.map((t, i) => (
-                    <Link key={i} href="/vijesti" className="sba-trending-item">
-                      <span className="sba-trending-rank">{i + 1}</span>
-                      <div className="sba-trending-body">
-                        <span className="sba-trending-title">{t.title}</span>
-                        <span className="sba-trending-meta">{t.meta}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <NewsletterForm />
-          </div>
-        </aside>
-      </div>
-
-      <div className="sba-article-prefooter">
-        <AdSlot variant="leaderboard" />
-      </div>
-
-      <FloatingShareBar />
-      <BackToTop />
-    </main>
-  )
 }
 
 /* ═══════════════════════════════════════════════════
