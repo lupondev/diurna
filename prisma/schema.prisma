@@ -683,7 +683,7 @@ model AutopilotConfig {
   id              String   @id @default(cuid())
   orgId           String   @unique
 
-  dailyTarget     Int      @default(200)
+  dailyTarget     Int      @default(10)
   defaultLength   Int      @default(800)
   scheduleStart   String   @default("08:00")
   scheduleEnd     String   @default("00:00")

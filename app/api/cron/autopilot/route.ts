@@ -148,6 +148,21 @@ export async function GET(req: NextRequest) {
       }
 
       const title = parsed.title || task.title
+
+      // Deduplication: skip if similar title was generated in the last 24h
+      const titlePrefix = title.substring(0, 30)
+      const existingDupe = await prisma.article.findFirst({
+        where: {
+          siteId: site.id,
+          title: { contains: titlePrefix, mode: 'insensitive' },
+          createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        },
+      })
+      if (existingDupe) {
+        results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Duplicate: "${existingDupe.title}"` })
+        continue
+      }
+
       const htmlContent = parsed.content || ''
       let tiptapContent = htmlToTiptap(htmlContent)
 

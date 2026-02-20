@@ -573,7 +573,7 @@ export default function CalendarPage() {
                   <div className="cfg-row">
                     <div><div className="cfg-label">Daily Target</div><div className="cfg-desc">Articles per day</div></div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <input type="range" className="cfg-slider" min={10} max={500} value={config.dailyTarget} onChange={e => updateConfig({ dailyTarget: +e.target.value })} />
+                      <input type="range" className="cfg-slider" min={1} max={50} value={config.dailyTarget} onChange={e => updateConfig({ dailyTarget: +e.target.value })} />
                       <span className="cfg-val">{config.dailyTarget}</span>
                     </div>
                   </div>
