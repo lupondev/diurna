@@ -121,7 +121,13 @@ export default async function HomePage() {
         deletedAt: null,
         isTest: false,
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        featuredImage: true,
+        publishedAt: true,
         category: { select: { name: true, slug: true } },
       },
       orderBy: { publishedAt: 'desc' },
@@ -136,7 +142,9 @@ export default async function HomePage() {
         cat: a.category?.name || 'Vijesti',
         href: `/${a.category?.slug || 'vijesti'}/${a.slug}`,
         meta: `${a.publishedAt ? timeAgo(a.publishedAt) : 'Novo'} \u00b7 ${a.category?.name || 'Vijesti'}`,
-        bg: GRADIENTS[i % GRADIENTS.length],
+        bg: a.featuredImage
+          ? `url(${a.featuredImage}) center/cover no-repeat`
+          : GRADIENTS[i % GRADIENTS.length],
       }))
 
       // Rest → news feed

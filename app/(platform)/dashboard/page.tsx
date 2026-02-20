@@ -194,12 +194,57 @@ export default async function DashboardPage() {
           value={`${data?.aiPercentage ?? 0}%`}
           detail="of total articles"
         />
-        <StatCard
-          icon="📈"
-          label="Total Views"
-          value="—"
-          detail="Coming soon"
-        />
+        <div
+          style={{
+            background: 'var(--wh)',
+            border: '1px solid var(--brd)',
+            borderRadius: 'var(--rl)',
+            padding: '18px 20px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 14,
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 'var(--rm)',
+              background: 'var(--g50)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 18,
+              flexShrink: 0,
+            }}
+          >
+            📈
+          </div>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 700, color: 'var(--mint-d)', lineHeight: 1.3 }}>
+              GA4 Connected
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--g500)', marginTop: 2 }}>Analytics</div>
+            <a
+              href="https://analytics.google.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                marginTop: 6,
+                fontSize: 11,
+                fontWeight: 700,
+                fontFamily: 'var(--mono)',
+                padding: '2px 6px',
+                borderRadius: 4,
+                background: 'var(--elec-l)',
+                color: 'var(--elec)',
+              }}
+            >
+              View in Google Analytics →
+            </a>
+          </div>
+        </div>
       </div>
 
       {/* ── Two-column Layout ── */}

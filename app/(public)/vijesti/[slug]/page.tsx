@@ -267,20 +267,13 @@ function DbArticle({ data }: { data: NonNullable<Awaited<ReturnType<typeof getAr
 
           {/* Featured Image */}
           <div className="sba-featured-img">
-            {article.featuredImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={article.featuredImage}
-                alt={article.title}
-                className="sba-featured-img-real"
-                style={{ width: '100%', height: 'auto', borderRadius: 12, display: 'block' }}
-              />
-            ) : (
-              <div
-                className="sba-featured-img-bg"
-                style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }}
-              />
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={article.featuredImage || '/images/og-default.svg'}
+              alt={article.title}
+              className="sba-featured-img-real"
+              style={{ width: '100%', height: 'auto', borderRadius: 12, display: 'block' }}
+            />
           </div>
 
           {/* Article Body with Widget Rendering */}

@@ -1,3 +1,4 @@
+import Script from 'next/script'
 import { ThemeProvider, Header, Footer, LiveStrip } from '@/components/public/sportba'
 import type { LiveMatch } from '@/components/public/sportba'
 
@@ -10,9 +11,22 @@ const LIVE_MATCHES: LiveMatch[] = [
   { id: '6', home: 'PSG', away: 'Lyon', homeScore: 2, awayScore: 2, status: 'live', minute: 78 },
 ]
 
+const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID
+
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
+      {GA4_ID && (
+        <>
+          <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} strategy="afterInteractive" />
+          <Script id="ga4-init" strategy="afterInteractive">{`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA4_ID}');
+          `}</Script>
+        </>
+      )}
       <Header />
       <LiveStrip matches={LIVE_MATCHES} />
       {children}
