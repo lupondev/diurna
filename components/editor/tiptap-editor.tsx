@@ -210,9 +210,8 @@ export default function TiptapEditor({
     },
   })
 
-  const wordCount = editor?.storage.characterCount?.words() || 0
-  const charCount = editor?.storage.characterCount?.characters() || 0
-  const readingTime = Math.max(1, Math.ceil(wordCount / 238))
+  const wordCount = editor?.storage.characterCount?.words?.() ?? 0
+  const charCount = editor?.storage.characterCount?.characters?.() ?? 0
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -286,15 +285,11 @@ export default function TiptapEditor({
           )}
         </div>
 
-        <div className="te-status">
-          <div className="te-status-left">
-            <span>{wordCount} words</span>
-            <span className="te-status-sep">·</span>
-            <span>{charCount} chars</span>
-            <span className="te-status-sep">·</span>
-            <span>{readingTime} min read</span>
+        {editor && (
+          <div className="text-xs text-gray-400 text-right px-4 py-1 border-t">
+            {wordCount} riječi · {charCount} znakova
           </div>
-        </div>
+        )}
       </div>
 
       {showMediaLibrary && (

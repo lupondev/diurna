@@ -3,44 +3,7 @@
 import { useCallback, useRef } from 'react'
 import type { Editor } from '@tiptap/react'
 
-/* ─── Toolbar Button ─── */
-
-function TBtn({ icon, action, active, disabled, title }: {
-  icon: string; action: () => void; active?: boolean; disabled?: boolean; title: string
-}) {
-  return (
-    <button type="button" onClick={action} disabled={disabled} title={title}
-      className={`te-tb-btn ${active ? 'active' : ''}`}>
-      <span className="te-tb-icon">{icon}</span>
-    </button>
-  )
-}
-
-/* ─── Color Picker Button ─── */
-
-function ColorBtn({ value, onChange, title }: {
-  value: string; onChange: (color: string) => void; title: string
-}) {
-  const ref = useRef<HTMLInputElement>(null)
-  return (
-    <span className="te-tb-color-wrap" title={title}>
-      <button type="button" className="te-tb-btn" onClick={() => ref.current?.click()} title={title}>
-        <span className="te-tb-icon" style={{ borderBottom: `3px solid ${value || '#000'}` }}>A</span>
-      </button>
-      <input ref={ref} type="color" value={value || '#000000'} onChange={(e) => onChange(e.target.value)}
-        className="te-tb-color-input" tabIndex={-1} />
-    </span>
-  )
-}
-
-/* ─── Separator ─── */
-
-function Sep() { return <div className="te-tb-sep" /> }
-
-/* ─── Main Toolbar ─── */
-
 export function Toolbar({ editor, onOpenMediaLibrary }: { editor: Editor; onOpenMediaLibrary: () => void }) {
-
   const fileRef = useRef<HTMLInputElement>(null)
 
   const setLink = useCallback(() => {
@@ -49,16 +12,6 @@ export function Toolbar({ editor, onOpenMediaLibrary }: { editor: Editor; onOpen
     if (url === null) return
     if (url === '') { editor.chain().focus().extendMarkRange('link').unsetLink().run(); return }
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
-  }, [editor])
-
-  const insertYoutube = useCallback(() => {
-    const url = window.prompt('YouTube URL:')
-    if (!url) return
-    editor.commands.setYoutubeVideo({ src: url })
-  }, [editor])
-
-  const insertTable = useCallback(() => {
-    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
   }, [editor])
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,75 +29,72 @@ export function Toolbar({ editor, onOpenMediaLibrary }: { editor: Editor; onOpen
     e.target.value = ''
   }, [editor])
 
+  const tbBtn = (active: boolean | undefined) =>
+    `px-2 py-1 rounded text-sm font-medium flex-shrink-0 transition-colors ${
+      active ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+    } disabled:opacity-30 disabled:cursor-not-allowed`
+
   return (
-    <div className="te-toolbar">
-      <div className="te-tb-row">
+    <div className="te-toolbar sticky top-0 z-10 bg-white border-b border-gray-200">
+      <div className="te-tb-row flex items-center gap-0.5 px-2 py-1 overflow-x-auto flex-nowrap">
 
-        {/* Group 1 — History */}
-        <TBtn icon="↩" action={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo (Cmd+Z)" />
-        <TBtn icon="↪" action={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Redo (Cmd+Shift+Z)" />
+        {/* Group 1: History */}
+        <button onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo" className={tbBtn(false)}>↩</button>
+        <button onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Redo" className={tbBtn(false)}>↪</button>
+        <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
 
-        <Sep />
+        {/* Group 2: Inline format */}
+        <button onClick={() => editor.chain().focus().toggleBold().run()} title="Bold" className={tbBtn(editor.isActive('bold'))}>B</button>
+        <button onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic" className={tbBtn(editor.isActive('italic'))}><i>I</i></button>
+        <button onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline" className={tbBtn(editor.isActive('underline'))}><u>U</u></button>
+        <button onClick={() => editor.chain().focus().toggleStrike().run()} title="Strikethrough" className={tbBtn(editor.isActive('strike'))}><s>S</s></button>
+        <button onClick={() => editor.chain().focus().toggleCode().run()} title="Inline code" className={tbBtn(editor.isActive('code'))}>{'<>'}</button>
+        <button onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} title="Clear formatting" className={tbBtn(false)}>✕</button>
+        <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
 
-        {/* Group 2 — Format */}
-        <TBtn icon="B" action={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold (Cmd+B)" />
-        <TBtn icon="I" action={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic (Cmd+I)" />
-        <TBtn icon="U" action={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Underline (Cmd+U)" />
-        <TBtn icon="S" action={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title="Strikethrough" />
-        <TBtn icon="<>" action={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} title="Inline Code" />
-        <TBtn icon="⊘" action={() => editor.chain().focus().unsetAllMarks().run()} title="Clear Formatting" />
+        {/* Group 3: Color */}
+        <label title="Text color" className="cursor-pointer relative">
+          <span className={tbBtn(false)}>A</span>
+          <input type="color" className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()} />
+        </label>
+        <button onClick={() => editor.chain().focus().toggleHighlight().run()} title="Highlight" className={tbBtn(editor.isActive('highlight'))}>▌</button>
+        <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
 
-        <Sep />
+        {/* Group 4: Script */}
+        <button onClick={() => editor.chain().focus().toggleSubscript().run()} title="Subscript" className={tbBtn(editor.isActive('subscript'))}>x₂</button>
+        <button onClick={() => editor.chain().focus().toggleSuperscript().run()} title="Superscript" className={tbBtn(editor.isActive('superscript'))}>x²</button>
+        <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
 
-        {/* Group 3 — Color */}
-        <ColorBtn
-          value={editor.getAttributes('textStyle').color || '#000000'}
-          onChange={(color) => editor.chain().focus().setColor(color).run()}
-          title="Text Color"
-        />
-        <TBtn icon="🖍" action={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} title="Highlight" />
+        {/* Group 5: Headings */}
+        <button onClick={() => editor.chain().focus().setParagraph().run()} title="Paragraph" className={tbBtn(editor.isActive('paragraph'))}>¶</button>
+        <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1" className={tbBtn(editor.isActive('heading', { level: 1 }))}>H1</button>
+        <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2" className={tbBtn(editor.isActive('heading', { level: 2 }))}>H2</button>
+        <button onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3" className={tbBtn(editor.isActive('heading', { level: 3 }))}>H3</button>
+        <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
 
-        <Sep />
+        {/* Group 6: Align */}
+        <button onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align left" className={tbBtn(editor.isActive({ textAlign: 'left' }))}>≡</button>
+        <button onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Align center" className={tbBtn(editor.isActive({ textAlign: 'center' }))}>≡</button>
+        <button onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Align right" className={tbBtn(editor.isActive({ textAlign: 'right' }))}>≡</button>
+        <button onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="Justify" className={tbBtn(editor.isActive({ textAlign: 'justify' }))}>≡</button>
+        <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
 
-        {/* Group 4 — Script */}
-        <TBtn icon="x₂" action={() => editor.chain().focus().toggleSubscript().run()} active={editor.isActive('subscript')} title="Subscript" />
-        <TBtn icon="x²" action={() => editor.chain().focus().toggleSuperscript().run()} active={editor.isActive('superscript')} title="Superscript" />
+        {/* Group 7: Lists */}
+        <button onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet list" className={tbBtn(editor.isActive('bulletList'))}>•</button>
+        <button onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Ordered list" className={tbBtn(editor.isActive('orderedList'))}>1.</button>
+        <button onClick={() => editor.chain().focus().toggleTaskList().run()} title="Task list" className={tbBtn(editor.isActive('taskList'))}>☑</button>
+        <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
 
-        <Sep />
-
-        {/* Group 5 — Headings */}
-        <TBtn icon="H1" action={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Heading 1" />
-        <TBtn icon="H2" action={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Heading 2" />
-        <TBtn icon="H3" action={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Heading 3" />
-        <TBtn icon="¶" action={() => editor.chain().focus().setParagraph().run()} active={editor.isActive('paragraph') && !editor.isActive('heading')} title="Normal Text" />
-
-        <Sep />
-
-        {/* Group 6 — Align */}
-        <TBtn icon="≡←" action={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="Align Left" />
-        <TBtn icon="≡↔" action={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="Align Center" />
-        <TBtn icon="≡→" action={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="Align Right" />
-        <TBtn icon="≡≡" action={() => editor.chain().focus().setTextAlign('justify').run()} active={editor.isActive({ textAlign: 'justify' })} title="Justify" />
-
-        <Sep />
-
-        {/* Group 7 — Lists */}
-        <TBtn icon="•" action={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Bullet List" />
-        <TBtn icon="1." action={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Numbered List" />
-        <TBtn icon="☑" action={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} title="Task List" />
-
-        <Sep />
-
-        {/* Group 8 — Insert */}
-        <TBtn icon="🔗" action={setLink} active={editor.isActive('link')} title="Insert Link (Cmd+K)" />
-        <TBtn icon="🖼" action={onOpenMediaLibrary} title="Insert Image" />
-        <TBtn icon="📁" action={() => fileRef.current?.click()} title="Upload Image" />
-        <TBtn icon="▶" action={insertYoutube} title="YouTube Video" />
-        <TBtn icon="▦" action={insertTable} title="Insert Table" />
-        <TBtn icon="❝" action={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Blockquote" />
-        <TBtn icon="⟨/⟩" action={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} title="Code Block" />
-        <TBtn icon="—" action={() => editor.chain().focus().setHorizontalRule().run()} title="Divider" />
-        <TBtn icon="⏎" action={() => editor.chain().focus().setHardBreak().run()} title="Hard Break" />
+        {/* Group 8: Insert */}
+        <button onClick={setLink} title="Link" className={tbBtn(editor.isActive('link'))}>🔗</button>
+        <button onClick={onOpenMediaLibrary} title="Insert Image" className={tbBtn(false)}>🖼</button>
+        <button onClick={() => fileRef.current?.click()} title="Upload Image" className={tbBtn(false)}>📁</button>
+        <button onClick={() => { const url = prompt('YouTube URL:'); if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run() }} title="YouTube" className={tbBtn(false)}>▶</button>
+        <button onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Quote" className={tbBtn(editor.isActive('blockquote'))}>❝</button>
+        <button onClick={() => editor.chain().focus().toggleCodeBlock().run()} title="Code block" className={tbBtn(editor.isActive('codeBlock'))}>{'</>'}</button>
+        <button onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Divider" className={tbBtn(false)}>—</button>
+        <button onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Table" className={tbBtn(false)}>▦</button>
+        <button onClick={() => editor.chain().focus().setHardBreak().run()} title="Hard break" className={tbBtn(false)}>↵</button>
 
         {/* Hidden file input for image upload */}
         <input ref={fileRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
