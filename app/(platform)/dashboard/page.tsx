@@ -8,9 +8,9 @@ import { prisma } from '@/lib/prisma'
 
 function getGreeting() {
   const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
-  return 'Good evening'
+  if (h >= 5 && h < 12) return 'Dobro jutro'
+  if (h >= 12 && h < 18) return 'Dobar dan'
+  return 'Dobro veče'
 }
 
 function formatDate() {

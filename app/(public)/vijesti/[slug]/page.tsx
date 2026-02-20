@@ -38,6 +38,7 @@ async function getArticleFromDb(slug: string) {
       slug,
       status: 'PUBLISHED',
       deletedAt: null,
+      isTest: false,
     },
     include: {
       category: { select: { id: true, name: true, slug: true } },
@@ -63,6 +64,7 @@ async function getArticleFromDb(slug: string) {
       categoryId: article.categoryId,
       status: 'PUBLISHED',
       deletedAt: null,
+      isTest: false,
       id: { not: article.id },
     },
     select: { title: true, slug: true, category: { select: { slug: true, name: true } }, publishedAt: true },
@@ -76,6 +78,7 @@ async function getArticleFromDb(slug: string) {
       siteId: site.id,
       status: 'PUBLISHED',
       deletedAt: null,
+      isTest: false,
       id: { not: article.id },
     },
     select: { title: true, slug: true, category: { select: { slug: true, name: true } }, publishedAt: true },
@@ -151,20 +154,32 @@ const DEMO_TRENDING = [
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const result = await getArticleFromDb(params.slug)
   if (result) {
-    const { article } = result
+    const { article, site } = result
+    const siteName = site?.name || 'Diurna'
+    const title = article.metaTitle || article.title
+    const description = article.metaDescription || article.excerpt || undefined
+    const imageUrl = article.featuredImage || '/og-default.jpg'
     return {
-      title: `${article.metaTitle || article.title} \u2014 Sport.ba`,
-      description: article.metaDescription || article.excerpt || undefined,
+      title: `${title} | ${siteName}`,
+      description,
       openGraph: {
-        title: article.metaTitle || article.title,
-        description: article.metaDescription || article.excerpt || undefined,
+        title,
+        description,
+        images: [imageUrl],
         type: 'article',
+        publishedTime: (article.publishedAt || article.createdAt).toISOString(),
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [imageUrl],
       },
     }
   }
   // Fallback to demo
   return {
-    title: `${DEMO_ARTICLE.title} \u2014 Sport.ba`,
+    title: `${DEMO_ARTICLE.title} | Sport.ba`,
     description: DEMO_ARTICLE.subtitle,
   }
 }

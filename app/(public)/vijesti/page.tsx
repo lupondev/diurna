@@ -7,9 +7,13 @@ import '../category.css'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'Vijesti — Sport.ba',
-  description: 'Najnovije sportske vijesti iz svijeta fudbala, košarke i ostalih sportova.',
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getDefaultSite()
+  const siteName = site?.name || 'Diurna'
+  return {
+    title: `Vijesti \u2014 ${siteName}`,
+    description: 'Najnovije sportske vijesti iz svijeta fudbala, košarke i ostalih sportova.',
+  }
 }
 
 const GRADIENTS = [
@@ -50,6 +54,7 @@ export default async function VijestiPage() {
         siteId: site.id,
         status: 'PUBLISHED',
         deletedAt: null,
+        isTest: false,
       },
       include: {
         category: { select: { name: true, slug: true } },

@@ -92,48 +92,12 @@ interface PipelineResult {
   detail?: string;
 }
 
-// ═══ Mock Match Data (Benfica 0-1 Real Madrid) ═══
-const MOCK_MATCH_DATA = {
-  match: {
-    home: 'Benfica', away: 'Real Madrid',
-    home_short: 'BEN', away_short: 'RMA',
-    score_home: 0, score_away: 1,
-    date: '2026-02-18', kickoff: '2026-02-18T21:00:00+01:00',
-    competition: 'Liga Prvaka', round: 'Play-off, 1. utakmica',
-    venue: 'Estádio da Luz', referee: 'Slavko Vinčić', attendance: 64642,
-  },
-  events: [
-    { id: 'goal_1', type: 'goal', minute: 67, added_time: null, player_id: '1100', player_name: 'Vinícius Júnior', team: 'away', detail: 'Normal Goal', assist_player_id: '1101', assist_player_name: 'Jude Bellingham', weight: 5 },
-    { id: 'yellow_card_1', type: 'yellow_card', minute: 34, added_time: null, player_id: '1200', player_name: 'Nicolás Otamendi', team: 'home', detail: 'Yellow Card', assist_player_id: null, assist_player_name: null, weight: 2 },
-    { id: 'yellow_card_2', type: 'yellow_card', minute: 58, added_time: null, player_id: '1201', player_name: 'Gianluca Prestianni', team: 'home', detail: 'Yellow Card', assist_player_id: null, assist_player_name: null, weight: 2 },
-    { id: 'yellow_card_3', type: 'yellow_card', minute: 73, added_time: null, player_id: '1202', player_name: 'Fredrik Aursnes', team: 'home', detail: 'Yellow Card', assist_player_id: null, assist_player_name: null, weight: 2 },
-    { id: 'yellow_card_4', type: 'yellow_card', minute: 81, added_time: null, player_id: '1102', player_name: 'Federico Valverde', team: 'away', detail: 'Yellow Card', assist_player_id: null, assist_player_name: null, weight: 2 },
-    { id: 'substitution_1', type: 'substitution', minute: 70, added_time: null, player_id: '1203', player_name: 'Ángel Di María', team: 'home', detail: 'Substitution', assist_player_id: null, assist_player_name: null, weight: 1 },
-    { id: 'substitution_2', type: 'substitution', minute: 78, added_time: null, player_id: '1103', player_name: 'Rodrygo', team: 'away', detail: 'Substitution', assist_player_id: null, assist_player_name: null, weight: 1 },
-  ],
-  stats: {
-    possession_home: 45, possession_away: 55,
-    shots_home: 12, shots_away: 18,
-    shots_on_target_home: 4, shots_on_target_away: 7,
-    xg_home: null, xg_away: null,
-    corners_home: 5, corners_away: 8,
-    fouls_home: 14, fouls_away: 11,
-    yellow_cards_home: 3, yellow_cards_away: 1,
-    red_cards_home: 0, red_cards_away: 0,
-    dangerous_attacks_home: null, dangerous_attacks_away: null,
-  },
-  players: [
-    { id: '1100', name: 'Vinícius Júnior', team: 'away', position: 'LW', nationality: 'Brazil', age: 25, rating: 8.2, goals: 1, assists: 0, yellow_cards: 0, red_cards: 0, minutes_played: 90, market_value: '€150M', photo_url: null, db_player_id: null },
-    { id: '1101', name: 'Jude Bellingham', team: 'away', position: 'CM', nationality: 'England', age: 22, rating: 7.8, goals: 0, assists: 1, yellow_cards: 0, red_cards: 0, minutes_played: 90, market_value: '€120M', photo_url: null, db_player_id: null },
-    { id: '1102', name: 'Federico Valverde', team: 'away', position: 'CM', nationality: 'Uruguay', age: 27, rating: 7.1, goals: 0, assists: 0, yellow_cards: 1, red_cards: 0, minutes_played: 90, market_value: '€100M', photo_url: null, db_player_id: null },
-    { id: '1103', name: 'Rodrygo', team: 'away', position: 'RW', nationality: 'Brazil', age: 25, rating: 6.8, goals: 0, assists: 0, yellow_cards: 0, red_cards: 0, minutes_played: 78, market_value: '€80M', photo_url: null, db_player_id: null },
-    { id: '1200', name: 'Nicolás Otamendi', team: 'home', position: 'CB', nationality: 'Argentina', age: 37, rating: 6.2, goals: 0, assists: 0, yellow_cards: 1, red_cards: 0, minutes_played: 90, market_value: '€3M', photo_url: null, db_player_id: null },
-    { id: '1201', name: 'Gianluca Prestianni', team: 'home', position: 'RW', nationality: 'Argentina', age: 18, rating: 5.8, goals: 0, assists: 0, yellow_cards: 1, red_cards: 0, minutes_played: 90, market_value: '€15M', photo_url: null, db_player_id: null },
-    { id: '1202', name: 'Fredrik Aursnes', team: 'home', position: 'CM', nationality: 'Norway', age: 26, rating: 6.5, goals: 0, assists: 0, yellow_cards: 1, red_cards: 0, minutes_played: 90, market_value: '€20M', photo_url: null, db_player_id: null },
-    { id: '1203', name: 'Ángel Di María', team: 'home', position: 'RW', nationality: 'Argentina', age: 37, rating: 6.0, goals: 0, assists: 0, yellow_cards: 0, red_cards: 0, minutes_played: 70, market_value: '€5M', photo_url: null, db_player_id: null },
-  ],
-  standings: null,
-};
+const ARTICLE_TYPE_OPTIONS = [
+  { code: 'match_report', label: 'Match Report' },
+  { code: 'preview', label: 'Preview' },
+  { code: 'tactical_analysis', label: 'Analysis' },
+  { code: 'transfer', label: 'Transfer News' },
+];
 
 const AI_LANGUAGE_OPTIONS = [
   { code: 'bs', label: 'Bosanski', flag: '🇧🇦' },
@@ -150,9 +114,12 @@ export default function AIEngineDashboard() {
   const [result, setResult] = useState<PipelineResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiLanguage, setAiLanguage] = useState('bs');
+  const [articleType, setArticleType] = useState('match_report');
+  const [matchDescription, setMatchDescription] = useState('');
   const [activeTab, setActiveTab] = useState<'article' | 'pipeline' | 'quality' | 'style' | 'timing' | 'widgets' | 'raw'>('article');
 
   async function runEngine() {
+    if (!matchDescription.trim()) return;
     setLoading(true);
     setResult(null);
     try {
@@ -161,8 +128,8 @@ export default function AIEngineDashboard() {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          matchData: MOCK_MATCH_DATA,
-          articleType: 'match_report',
+          matchData: { description: matchDescription.trim() },
+          articleType,
           maxRetries: 2,
           includeVideo: true,
           includeWidgets: true,
@@ -225,35 +192,58 @@ export default function AIEngineDashboard() {
         </p>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 24, padding: 16, background: '#f9fafb', borderRadius: 12, border: '1px solid #e5e7eb' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>Test Match</div>
-          <div style={{ color: '#6b7280', fontSize: 13 }}>Benfica 0-1 Real Madrid — Liga Prvaka Play-off</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24, padding: 16, background: '#f9fafb', borderRadius: 12, border: '1px solid #e5e7eb' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <textarea
+            value={matchDescription}
+            onChange={(e) => setMatchDescription(e.target.value)}
+            placeholder="Describe the match or topic... e.g. 'Benfica 0-1 Real Madrid, Liga Prvaka Play-off. Vinícius Júnior scored in the 67th minute, assisted by Bellingham.'"
+            rows={3}
+            style={{
+              flex: 1, padding: '10px 14px', borderRadius: 8, border: '1px solid #d1d5db',
+              fontSize: 13, fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.5,
+            }}
+          />
         </div>
-        <select
-          value={aiLanguage}
-          onChange={(e) => setAiLanguage(e.target.value)}
-          style={{
-            padding: '8px 12px', borderRadius: 8, border: '1px solid #d1d5db',
-            fontSize: 13, fontWeight: 500, background: 'white', cursor: 'pointer',
-          }}
-        >
-          {AI_LANGUAGE_OPTIONS.map((l) => (
-            <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
-          ))}
-        </select>
-        <button
-          onClick={runEngine}
-          disabled={loading}
-          style={{
-            padding: '10px 24px',
-            background: loading ? '#9ca3af' : '#2563eb',
-            color: 'white', border: 'none', borderRadius: 8,
-            fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontSize: 14,
-          }}
-        >
-          {loading ? 'Running Pipeline...' : 'Run AI Engine'}
-        </button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select
+            value={articleType}
+            onChange={(e) => setArticleType(e.target.value)}
+            style={{
+              padding: '8px 12px', borderRadius: 8, border: '1px solid #d1d5db',
+              fontSize: 13, fontWeight: 500, background: 'white', cursor: 'pointer',
+            }}
+          >
+            {ARTICLE_TYPE_OPTIONS.map((t) => (
+              <option key={t.code} value={t.code}>{t.label}</option>
+            ))}
+          </select>
+          <select
+            value={aiLanguage}
+            onChange={(e) => setAiLanguage(e.target.value)}
+            style={{
+              padding: '8px 12px', borderRadius: 8, border: '1px solid #d1d5db',
+              fontSize: 13, fontWeight: 500, background: 'white', cursor: 'pointer',
+            }}
+          >
+            {AI_LANGUAGE_OPTIONS.map((l) => (
+              <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={runEngine}
+            disabled={loading || !matchDescription.trim()}
+            style={{
+              padding: '10px 24px',
+              background: loading || !matchDescription.trim() ? '#9ca3af' : '#2563eb',
+              color: 'white', border: 'none', borderRadius: 8,
+              fontWeight: 600, cursor: loading || !matchDescription.trim() ? 'not-allowed' : 'pointer', fontSize: 14,
+              marginLeft: 'auto',
+            }}
+          >
+            {loading ? 'Running Pipeline...' : 'Run AI Engine'}
+          </button>
+        </div>
       </div>
 
       {result?.error && (

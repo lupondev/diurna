@@ -35,6 +35,7 @@ export default async function PublicHomePage() {
       siteId: site.id,
       status: 'PUBLISHED',
       deletedAt: null,
+      isTest: false,
     },
     include: {
       category: { select: { name: true, slug: true } },

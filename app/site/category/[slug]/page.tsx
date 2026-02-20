@@ -53,6 +53,7 @@ export default async function CategoryPage({
         categoryId: category.id,
         status: 'PUBLISHED',
         deletedAt: null,
+        isTest: false,
       },
       include: { category: { select: { name: true, slug: true } } },
       orderBy: { publishedAt: 'desc' },
@@ -65,6 +66,7 @@ export default async function CategoryPage({
         categoryId: category.id,
         status: 'PUBLISHED',
         deletedAt: null,
+        isTest: false,
       },
     }),
   ])

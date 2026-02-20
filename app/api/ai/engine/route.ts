@@ -30,13 +30,29 @@ import type { PostStyleValidation } from '@/lib/ai-engine/post-style-validator';
 
 const client = new Anthropic();
 
+// ═══ Rate Limiting ═══
+
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const limit = rateLimitMap.get(ip);
+  if (!limit || now > limit.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + 3600000 });
+    return true;
+  }
+  if (limit.count >= 10) return false;
+  limit.count++;
+  return true;
+}
+
 // ═══ Input Schema ═══
 
 const EngineInputSchema = z.object({
   // Data source: either matchId (fetch from API) or matchData (manual/test)
   matchId: z.string().optional(),
   matchData: z.any().optional(),
-  articleType: z.enum(['match_report', 'preview', 'tactical_analysis', 'transfer', 'historical_recap']).default('match_report'),
+  articleType: z.enum(['match_report', 'preview', 'tactical_analysis', 'transfer', 'transfer_news', 'historical_recap']).default('match_report'),
   maxRetries: z.number().min(0).max(3).default(2),
   includeVideo: z.boolean().default(true),
   includeWidgets: z.boolean().default(true),
@@ -112,6 +128,12 @@ export async function POST(req: NextRequest) {
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 });
+    }
+
+    // ─── Rate Limit ───
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json({ error: 'Rate limit exceeded. Try again later.' }, { status: 429 });
     }
 
     const body = await req.json();

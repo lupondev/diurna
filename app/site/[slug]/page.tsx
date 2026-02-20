@@ -16,27 +16,30 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!site) return { title: 'Not Found' }
 
   const article = await prisma.article.findFirst({
-    where: { siteId: site.id, slug: params.slug, status: 'PUBLISHED', deletedAt: null },
-    select: { title: true, excerpt: true },
+    where: { siteId: site.id, slug: params.slug, status: 'PUBLISHED', deletedAt: null, isTest: false },
+    select: { title: true, excerpt: true, featuredImage: true, publishedAt: true },
   })
   if (!article) return { title: 'Not Found' }
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://diurna.vercel.app'
 
+  const description = article.excerpt || undefined
+  const imageUrl = article.featuredImage || `${baseUrl}/api/og?title=${encodeURIComponent(article.title)}`
   return {
-    title: `${article.title} - ${site.name}`,
-    description: article.excerpt || undefined,
+    title: `${article.title} | ${site.name}`,
+    description,
     openGraph: {
       title: article.title,
-      description: article.excerpt || undefined,
+      description,
+      images: [imageUrl],
       type: 'article',
-      images: [`${baseUrl}/api/og?title=${encodeURIComponent(article.title)}`],
+      publishedTime: article.publishedAt?.toISOString(),
     },
     twitter: {
       card: 'summary_large_image',
       title: article.title,
-      description: article.excerpt || undefined,
-      images: [`${baseUrl}/api/og?title=${encodeURIComponent(article.title)}`],
+      description,
+      images: [imageUrl],
     },
   }
 }
@@ -51,6 +54,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
       slug: params.slug,
       status: 'PUBLISHED',
       deletedAt: null,
+      isTest: false,
     },
     include: {
       category: { select: { id: true, name: true, slug: true } },
@@ -78,6 +82,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           categoryId: article.categoryId,
           status: 'PUBLISHED',
           deletedAt: null,
+          isTest: false,
           id: { not: article.id },
         },
         include: { category: { select: { name: true, slug: true } } },

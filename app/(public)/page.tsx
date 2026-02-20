@@ -10,10 +10,13 @@ import './home.css'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'Sport.ba \u2014 Sportske vijesti, transferi i rezultati',
-  description:
-    'Najnovije sportske vijesti, transferi, rezultati uživo i analize iz svijeta fudbala.',
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getDefaultSite()
+  const siteName = site?.name || 'Diurna'
+  return {
+    title: `${siteName} \u2014 Sportske vijesti, transferi i rezultati`,
+    description: 'Najnovije sportske vijesti, transferi, rezultati uživo i analize iz svijeta fudbala.',
+  }
 }
 
 /* ── Demo Data (fallback) ── */
@@ -116,6 +119,7 @@ export default async function HomePage() {
         siteId: site.id,
         status: 'PUBLISHED',
         deletedAt: null,
+        isTest: false,
       },
       include: {
         category: { select: { name: true, slug: true } },

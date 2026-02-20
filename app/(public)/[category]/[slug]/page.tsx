@@ -24,28 +24,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!category) return { title: 'Not Found' }
 
   const article = await prisma.article.findFirst({
-    where: { siteId: site.id, slug: params.slug, categoryId: category.id, status: 'PUBLISHED', deletedAt: null },
-    select: { title: true, excerpt: true, metaTitle: true, metaDescription: true },
+    where: { siteId: site.id, slug: params.slug, categoryId: category.id, status: 'PUBLISHED', deletedAt: null, isTest: false },
+    select: { title: true, excerpt: true, metaTitle: true, metaDescription: true, featuredImage: true, publishedAt: true },
   })
   if (!article) return { title: 'Not Found' }
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://diurna.vercel.app'
   const title = article.metaTitle || article.title
 
+  const description = article.metaDescription || article.excerpt || undefined
+  const imageUrl = article.featuredImage || `${baseUrl}/api/og?title=${encodeURIComponent(article.title)}`
   return {
-    title: `${title} - ${site.name}`,
-    description: article.metaDescription || article.excerpt || undefined,
+    title: `${title} | ${site.name}`,
+    description,
     openGraph: {
       title,
-      description: article.metaDescription || article.excerpt || undefined,
+      description,
+      images: [imageUrl],
       type: 'article',
-      images: [`${baseUrl}/api/og?title=${encodeURIComponent(article.title)}`],
+      publishedTime: article.publishedAt?.toISOString(),
     },
     twitter: {
       card: 'summary_large_image',
       title,
-      description: article.metaDescription || article.excerpt || undefined,
-      images: [`${baseUrl}/api/og?title=${encodeURIComponent(article.title)}`],
+      description,
+      images: [imageUrl],
     },
   }
 }
@@ -66,6 +69,7 @@ export default async function PublicArticlePage({ params }: Props) {
       categoryId: category.id,
       status: 'PUBLISHED',
       deletedAt: null,
+      isTest: false,
     },
     include: {
       category: { select: { id: true, name: true, slug: true } },
