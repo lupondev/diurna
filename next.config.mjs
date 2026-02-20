@@ -7,6 +7,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.diurna.app',
       },
+      {
+        protocol: 'https',
+        hostname: 'media.api-sports.io',
+      },
     ],
   },
   async headers() {

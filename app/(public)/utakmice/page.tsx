@@ -1,6 +1,8 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import type { Metadata } from 'next'
 import { AdSlot } from '@/components/public/sportba'
+import { getFixturesByDate, dateOffsetStr, LEAGUE_META, type ApiFixture, mapStatus, formatTime } from '@/lib/api-football'
 import '../category.css'
 
 export const metadata: Metadata = {
@@ -8,26 +10,50 @@ export const metadata: Metadata = {
   description: 'Najave utakmica, rezultati i analize iz najpopularnijih liga.',
 }
 
-const LIVE_MATCHES = [
-  { id: '1', home: 'Arsenal', away: 'Chelsea', homeScore: 2, awayScore: 1, minute: 67, league: 'Premier League', status: 'live' as const },
-  { id: '2', home: 'Barcelona', away: 'Real Madrid', homeScore: 1, awayScore: 1, minute: 34, league: 'La Liga', status: 'live' as const },
-  { id: '3', home: 'Bayern', away: 'Dortmund', homeScore: 3, awayScore: 0, league: 'Bundesliga', status: 'ft' as const },
-  { id: '4', home: 'Inter', away: 'Milan', league: 'Serie A', time: '20:45', status: 'scheduled' as const },
-  { id: '5', home: 'Liverpool', away: 'Man City', league: 'Premier League', time: '21:00', status: 'scheduled' as const },
-  { id: '6', home: 'PSG', away: 'Lyon', homeScore: 2, awayScore: 2, minute: 78, league: 'Ligue 1', status: 'live' as const },
-]
+export const revalidate = 60
 
-const ARTICLES = [
-  { slug: 'napoli-juventus-conte-osveta', title: 'Napoli-Juventus: Conte traži osvetu protiv bivšeg kluba', time: '5h', league: 'Serie A', bg: 'linear-gradient(135deg,#0d2818,#051208)' },
-  { slug: 'el-clasico-pripreme-bez-mbappea', title: 'El Clásico pripreme bez Mbappéa', time: '4h', league: 'La Liga', bg: 'linear-gradient(135deg,#2d1b69,#11052c)' },
-  { slug: 'derbi-della-madonnina-inter-milan', title: 'Derbi della Madonnina: Inter favorit protiv slabog Milana', time: '14h', league: 'Serie A', bg: 'linear-gradient(135deg,#1a1a2e,#0a0a14)' },
-  { slug: 'ligasko-kolo-42-gola-vikend', title: 'Ligaško kolo u brojkama: 42 gola za vikend', time: '5h', league: 'Pregled kola', bg: 'linear-gradient(135deg,#6b2f00,#2c1203)' },
-  { slug: 'arsenal-inter-najava-lp', title: 'Arsenal – Inter: Najava utakmice osmine finala Lige prvaka', time: '1d', league: 'Liga prvaka', bg: 'linear-gradient(135deg,#1e3a5f,#0d1b2a)' },
-  { slug: 'bayern-psg-liga-prvaka', title: 'Bayern München – PSG: Klasik u nokaut fazi', time: '2d', league: 'Liga prvaka', bg: 'linear-gradient(135deg,#3b0a0a,#1a0404)' },
-  { slug: 'premijer-liga-kolo-25-najava', title: 'Premijer liga 25. kolo — najave svih utakmica', time: '3d', league: 'Premier League', bg: 'linear-gradient(135deg,#1b4332,#081c15)' },
-]
+const TABS = [
+  { key: 'today', label: 'Danas' },
+  { key: 'tomorrow', label: 'Sutra' },
+  { key: 'week', label: 'Ova sedmica' },
+] as const
 
-export default function UtakmicePage() {
+type Tab = (typeof TABS)[number]['key']
+
+function groupByLeague(fixtures: ApiFixture[]): Record<string, ApiFixture[]> {
+  const groups: Record<string, ApiFixture[]> = {}
+  for (const f of fixtures) {
+    const key = f.league.id.toString()
+    if (!groups[key]) groups[key] = []
+    groups[key].push(f)
+  }
+  return groups
+}
+
+export default async function UtakmicePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const params = await searchParams
+  const tab: Tab = (params.tab === 'tomorrow' || params.tab === 'week') ? params.tab : 'today'
+
+  let fixtures: ApiFixture[] = []
+
+  if (tab === 'today') {
+    fixtures = await getFixturesByDate(dateOffsetStr(0))
+  } else if (tab === 'tomorrow') {
+    fixtures = await getFixturesByDate(dateOffsetStr(1))
+  } else {
+    const days = await Promise.all(
+      Array.from({ length: 7 }, (_, i) => getFixturesByDate(dateOffsetStr(i)))
+    )
+    fixtures = days.flat()
+  }
+
+  const liveFixtures = fixtures.filter((f) => mapStatus(f.fixture.status.short) === 'live')
+  const grouped = groupByLeague(fixtures)
+  const leagueIds = Object.keys(grouped).sort((a, b) => {
+    const order = [39, 140, 135, 78, 61, 2]
+    return order.indexOf(Number(a)) - order.indexOf(Number(b))
+  })
+
   return (
     <main className="sba-cat">
       <div className="sba-cat-header">
@@ -35,139 +61,186 @@ export default function UtakmicePage() {
         <p className="sba-cat-desc">Najave, rezultati i analize utakmica</p>
       </div>
 
-      {/* ── Live Today ── */}
       <div className="sba-cat-layout">
         <div className="sba-cat-main">
           <style>{`
-.sba-live-section { margin-bottom: 32px; }
-.sba-live-section-head {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
-  font-family: var(--sba-mono); font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.1em; color: var(--sba-accent);
+.sba-tabs { display: flex; gap: 4px; margin-bottom: 24px; }
+.sba-tab {
+  font-family: var(--sba-mono); font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 8px 16px; border-radius: 6px;
+  text-decoration: none; transition: all 0.15s ease;
+  color: var(--sba-text-2); background: var(--sba-bg-1);
+  border: 1px solid var(--sba-border);
 }
-.sba-live-section-dot {
+.sba-tab:hover { color: var(--sba-text-0); border-color: var(--sba-accent); }
+.sba-tab--active { color: #fff; background: var(--sba-accent); border-color: var(--sba-accent); }
+
+.sba-league-group { margin-bottom: 32px; }
+.sba-league-head {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--sba-border);
+}
+.sba-league-logo { border-radius: 4px; }
+.sba-league-name {
+  font-family: var(--sba-mono); font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--sba-text-0);
+}
+.sba-league-country {
+  font-size: 11px; color: var(--sba-text-3); margin-left: auto;
+}
+
+.sba-fixture-list { display: flex; flex-direction: column; gap: 6px; }
+.sba-fixture {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 12px; padding: 12px 16px; background: var(--sba-bg-1);
+  border: 1px solid var(--sba-border); border-radius: 8px;
+  text-decoration: none; transition: all 0.15s ease;
+}
+.sba-fixture:hover { background: var(--sba-bg-2); border-color: var(--sba-accent); }
+.sba-fixture--live { border-left: 3px solid var(--sba-live); }
+.sba-fixture--ft { border-left: 3px solid var(--sba-text-3); }
+
+.sba-fixture-team {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 500; color: var(--sba-text-0);
+}
+.sba-fixture-team--away { justify-content: flex-end; text-align: right; }
+.sba-fixture-team-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.sba-fixture-center { text-align: center; min-width: 60px; }
+.sba-fixture-score {
+  font-family: var(--sba-mono); font-size: 20px; font-weight: 700; color: var(--sba-text-0);
+}
+.sba-fixture-time {
+  font-family: var(--sba-mono); font-size: 14px; font-weight: 600; color: var(--sba-text-2);
+}
+.sba-fixture-status {
+  font-family: var(--sba-mono); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; margin-top: 2px;
+}
+.sba-fixture-status--live { color: var(--sba-live); }
+.sba-fixture-status--ft { color: var(--sba-text-3); }
+
+.sba-live-count {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--sba-mono); font-size: 12px; font-weight: 600;
+  color: var(--sba-live); margin-bottom: 20px;
+}
+.sba-live-count-dot {
   width: 8px; height: 8px; border-radius: 50%; background: var(--sba-live);
   animation: sba-pulse 2s ease-in-out infinite;
 }
-.sba-live-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
-}
-@media (min-width: 768px) { .sba-live-grid { grid-template-columns: repeat(3, 1fr); } }
 
-.sba-match-card {
-  display: flex; flex-direction: column; align-items: center;
-  background: var(--sba-bg-1); border: 1px solid var(--sba-border);
-  border-radius: 12px; padding: 16px; text-decoration: none;
-  cursor: pointer; transition: all 0.15s ease;
+.sba-empty {
+  text-align: center; padding: 48px 16px; color: var(--sba-text-3);
+  font-size: 14px;
 }
-.sba-match-card:hover {
-  background: var(--sba-bg-2); border-color: var(--sba-accent);
-}
-.sba-match-card--live { border-left: 3px solid var(--sba-live); }
-.sba-match-card--ft { border-left: 3px solid var(--sba-text-3); }
 
-.sba-match-card-league {
-  font-family: var(--sba-mono); font-size: 10px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--sba-text-3); margin-bottom: 10px;
-}
-.sba-match-card-teams {
-  display: flex; align-items: center; justify-content: center;
-  gap: 12px; width: 100%;
-}
-.sba-match-card-team {
-  font-size: 14px; font-weight: 600; color: var(--sba-text-0);
-  text-align: center; flex: 1; min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.sba-match-card-score {
-  font-family: var(--sba-mono); font-size: 24px; font-weight: 700;
-  color: var(--sba-text-0); flex-shrink: 0;
-}
-.sba-match-card-time {
-  font-family: var(--sba-mono); font-size: 16px; font-weight: 600;
-  color: var(--sba-text-2); flex-shrink: 0;
-}
-.sba-match-card-status {
-  display: flex; align-items: center; gap: 4px;
-  font-family: var(--sba-mono); font-size: 12px; font-weight: 600;
-  margin-top: 8px;
-}
-.sba-match-card-status--live { color: var(--sba-live); }
-.sba-match-card-status--ft { color: var(--sba-text-3); }
-.sba-match-card-status--sched { color: var(--sba-text-3); }
-.sba-match-card-status-dot {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--sba-live);
-  animation: sba-pulse 2s ease-in-out infinite;
+.sba-fixture-date {
+  font-family: var(--sba-mono); font-size: 10px; color: var(--sba-text-3);
+  text-transform: uppercase; letter-spacing: 0.05em;
 }
           `}</style>
 
-          <section className="sba-live-section">
-            <div className="sba-live-section-head">
-              <span className="sba-live-section-dot" />
-              Danas uživo
-            </div>
-            <div className="sba-live-grid">
-              {LIVE_MATCHES.map((m) => (
-                <Link
-                  key={m.id}
-                  href={`/utakmica/${m.id}`}
-                  className={`sba-match-card${m.status === 'live' ? ' sba-match-card--live' : ''}${m.status === 'ft' ? ' sba-match-card--ft' : ''}`}
-                >
-                  <div className="sba-match-card-league">{m.league}</div>
-                  <div className="sba-match-card-teams">
-                    <span className="sba-match-card-team">{m.home}</span>
-                    {m.status === 'live' || m.status === 'ft' ? (
-                      <span className="sba-match-card-score">{m.homeScore} &ndash; {m.awayScore}</span>
-                    ) : (
-                      <span className="sba-match-card-time">{m.time}</span>
-                    )}
-                    <span className="sba-match-card-team">{m.away}</span>
-                  </div>
-                  <div className={`sba-match-card-status sba-match-card-status--${m.status === 'scheduled' ? 'sched' : m.status}`}>
-                    {m.status === 'live' && (
-                      <>
-                        <span className="sba-match-card-status-dot" />
-                        UŽIVO &middot; {m.minute}&apos;
-                      </>
-                    )}
-                    {m.status === 'ft' && 'Završeno'}
-                    {m.status === 'scheduled' && m.time}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-
-          {/* ── Article Feed ── */}
-          <div className="sba-section-head" style={{ marginBottom: 16 }}>
-            <h2 className="sba-section-title" style={{ fontFamily: 'var(--sba-mono)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--sba-text-3)' }}>
-              Vijesti o utakmicama
-            </h2>
-          </div>
-
-          <Link href={`/utakmice/${ARTICLES[0].slug}`} className="sba-cat-featured">
-            <div className="sba-cat-featured-bg" style={{ background: ARTICLES[0].bg }} />
-            <div className="sba-cat-featured-content">
-              <span className="sba-cat-badge">Utakmice</span>
-              <h2 className="sba-cat-featured-title">{ARTICLES[0].title}</h2>
-              <span className="sba-cat-featured-meta">{ARTICLES[0].time} · {ARTICLES[0].league}</span>
-            </div>
-          </Link>
-
-          <div className="sba-cat-grid">
-            {ARTICLES.slice(1).map((a) => (
-              <Link key={a.slug} href={`/utakmice/${a.slug}`} className="sba-cat-card">
-                <div className="sba-cat-card-thumb">
-                  <div className="sba-cat-card-thumb-bg" style={{ background: a.bg }} />
-                </div>
-                <div className="sba-cat-card-body">
-                  <span className="sba-cat-card-title">{a.title}</span>
-                  <span className="sba-cat-card-meta">{a.time} · {a.league}</span>
-                </div>
+          {/* Tabs */}
+          <div className="sba-tabs">
+            {TABS.map((t) => (
+              <Link
+                key={t.key}
+                href={t.key === 'today' ? '/utakmice' : `/utakmice?tab=${t.key}`}
+                className={`sba-tab${tab === t.key ? ' sba-tab--active' : ''}`}
+              >
+                {t.label}
               </Link>
             ))}
           </div>
+
+          {/* Live count */}
+          {liveFixtures.length > 0 && (
+            <div className="sba-live-count">
+              <span className="sba-live-count-dot" />
+              {liveFixtures.length} {liveFixtures.length === 1 ? 'utakmica' : 'utakmica'} uživo
+            </div>
+          )}
+
+          {/* Fixtures grouped by league */}
+          {leagueIds.length === 0 && (
+            <div className="sba-empty">Nema utakmica za odabrani period.</div>
+          )}
+
+          {leagueIds.map((lid) => {
+            const meta = LEAGUE_META[Number(lid)]
+            const items = grouped[lid].sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)
+            return (
+              <section key={lid} className="sba-league-group">
+                <div className="sba-league-head">
+                  {items[0]?.league.logo && (
+                    <Image
+                      src={items[0].league.logo}
+                      alt=""
+                      width={24}
+                      height={24}
+                      className="sba-league-logo"
+                      unoptimized
+                    />
+                  )}
+                  <span className="sba-league-name">{meta?.name || items[0]?.league.name}</span>
+                  <span className="sba-league-country">{meta?.country}</span>
+                </div>
+                <div className="sba-fixture-list">
+                  {items.map((f) => {
+                    const status = mapStatus(f.fixture.status.short)
+                    const showDate = tab === 'week'
+                    return (
+                      <div
+                        key={f.fixture.id}
+                        className={`sba-fixture${status === 'live' ? ' sba-fixture--live' : ''}${status === 'ft' ? ' sba-fixture--ft' : ''}`}
+                      >
+                        <div className="sba-fixture-team">
+                          {f.teams.home.logo && (
+                            <Image src={f.teams.home.logo} alt="" width={20} height={20} unoptimized />
+                          )}
+                          <span className="sba-fixture-team-name">{f.teams.home.name}</span>
+                        </div>
+                        <div className="sba-fixture-center">
+                          {status === 'scheduled' ? (
+                            <>
+                              <div className="sba-fixture-time">{formatTime(f.fixture.date)}</div>
+                              {showDate && (
+                                <div className="sba-fixture-date">
+                                  {new Date(f.fixture.date).toLocaleDateString('bs-BA', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <div className="sba-fixture-score">
+                                {f.goals.home ?? 0} &ndash; {f.goals.away ?? 0}
+                              </div>
+                              <div className={`sba-fixture-status sba-fixture-status--${status}`}>
+                                {status === 'live' && f.fixture.status.elapsed
+                                  ? `${f.fixture.status.elapsed}'`
+                                  : status === 'live'
+                                    ? f.fixture.status.short
+                                    : 'FT'}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <div className="sba-fixture-team sba-fixture-team--away">
+                          <span className="sba-fixture-team-name">{f.teams.away.name}</span>
+                          {f.teams.away.logo && (
+                            <Image src={f.teams.away.logo} alt="" width={20} height={20} unoptimized />
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )
+          })}
 
           <AdSlot variant="rectangle" />
         </div>
