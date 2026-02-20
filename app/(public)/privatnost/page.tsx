@@ -3,8 +3,8 @@ import { StaticNav } from '@/components/public/sportba/static-nav'
 import '../static.css'
 
 export const metadata: Metadata = {
-  title: 'Politika privatnosti \u2014 Sport.ba',
-  description: 'Kako Sport.ba prikuplja, koristi i \u0161titi va\u0161e podatke.',
+  title: 'Politika privatnosti \u2014 Diurna',
+  description: 'Kako Diurna prikuplja, koristi i \u0161titi va\u0161e podatke.',
 }
 
 export default function PrivacyPage() {
@@ -15,7 +15,7 @@ export default function PrivacyPage() {
         <h1 className="sba-sp-title">Politika privatnosti</h1>
         <div className="sba-sp-prose">
           <p>
-            Va\u0161a privatnost nam je va\u017ena. Ova politika obja\u0161njava kako Sport.ba (u vlasni\u0161tvu Lupon Media d.o.o.)
+            Va\u0161a privatnost nam je va\u017ena. Ova politika obja\u0161njava kako Diurna (u vlasni\u0161tvu Lupon Media d.o.o.)
             prikuplja, koristi i \u0161titi va\u0161e li\u010dne podatke u skladu sa GDPR regulativom i zakonima
             Bosne i Hercegovine.
           </p>

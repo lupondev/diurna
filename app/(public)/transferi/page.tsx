@@ -4,7 +4,7 @@ import { AdSlot } from '@/components/public/sportba'
 import '../category.css'
 
 export const metadata: Metadata = {
-  title: 'Transferi — Sport.ba',
+  title: 'Transferi — Diurna',
   description: 'Najnoviji transferi, glasine i potpisi iz svijeta fudbala.',
 }
 

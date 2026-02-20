@@ -48,7 +48,7 @@ async function getArticleFromDb(slug: string) {
 
   if (!article) return null
 
-  let authorName = 'Redakcija Sport.ba'
+  let authorName = `Redakcija ${site?.name || 'Diurna'}`
   if (article.authorId) {
     const author = await prisma.user.findUnique({
       where: { id: article.authorId },
@@ -179,7 +179,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
   // Fallback to demo
   return {
-    title: `${DEMO_ARTICLE.title} | Sport.ba`,
+    title: `${DEMO_ARTICLE.title} | Diurna`,
     description: DEMO_ARTICLE.subtitle,
   }
 }
@@ -206,9 +206,29 @@ export default async function ArticlePage({ params }: Props) {
    DB Article Renderer (real articles)
    ═══════════════════════════════════════════════════ */
 
+function getCategoryFallback(slug?: string): string {
+  const map: Record<string, string> = {
+    transferi: '/images/fallback/transfer.svg',
+    utakmice: '/images/fallback/match.svg',
+    povrede: '/images/fallback/injury.svg',
+  }
+  return map[slug || ''] || '/images/fallback/news.svg'
+}
+
+function removeLeadingTitle(html: string, title: string): string {
+  const normalized = title.trim().toLowerCase()
+  const match = html.match(/^\s*<(h[12])[^>]*>(.*?)<\/\1>/i)
+  if (match && match[2].trim().toLowerCase() === normalized) {
+    return html.slice(match[0].length).trim()
+  }
+  return html
+}
+
 function DbArticle({ data }: { data: NonNullable<Awaited<ReturnType<typeof getArticleFromDb>>> }) {
-  const { article, authorName, related, trending } = data
-  const bodyHtml = tiptapToHtml(article.content)
+  const { article, authorName, related, trending, site } = data
+  const siteName = site?.name || 'Diurna'
+  const rawHtml = tiptapToHtml(article.content)
+  const bodyHtml = removeLeadingTitle(rawHtml, article.title)
   const wordCount = bodyHtml.replace(/<[^>]*>/g, '').split(/\s+/).length
   const readTime = Math.max(1, Math.round(wordCount / 200))
   const categoryName = article.category?.name || 'Vijesti'
@@ -228,7 +248,7 @@ function DbArticle({ data }: { data: NonNullable<Awaited<ReturnType<typeof getAr
             datePublished: pubDate.toISOString(),
             dateModified: article.updatedAt.toISOString(),
             author: { '@type': 'Person', name: authorName },
-            publisher: { '@type': 'Organization', name: 'Sport.ba' },
+            publisher: { '@type': 'Organization', name: siteName },
             articleSection: categoryName,
           }),
         }}
@@ -269,7 +289,7 @@ function DbArticle({ data }: { data: NonNullable<Awaited<ReturnType<typeof getAr
           <div className="sba-featured-img">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={article.featuredImage || '/images/og-default.svg'}
+              src={article.featuredImage || getCategoryFallback(categorySlug)}
               alt={article.title}
               className="sba-featured-img-real"
               style={{ width: '100%', height: 'auto', borderRadius: 12, display: 'block' }}
@@ -404,7 +424,7 @@ function DemoArticle() {
             description: DEMO_ARTICLE.subtitle,
             datePublished: DEMO_ARTICLE.isoDate,
             author: { '@type': 'Person', name: DEMO_ARTICLE.author },
-            publisher: { '@type': 'Organization', name: 'Sport.ba' },
+            publisher: { '@type': 'Organization', name: 'Diurna' },
             articleSection: DEMO_ARTICLE.category,
             keywords: DEMO_ARTICLE.tags.join(', '),
           }),

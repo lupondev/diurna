@@ -4,7 +4,7 @@ import { AdSlot } from '@/components/public/sportba'
 import '../category.css'
 
 export const metadata: Metadata = {
-  title: 'Povrede — Sport.ba',
+  title: 'Povrede — Diurna',
   description: 'Najnovije informacije o povredama igrača i očekivanim povratcima.',
 }
 

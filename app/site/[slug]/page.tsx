@@ -44,6 +44,24 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
+function getCategoryFallback(slug?: string): string {
+  const map: Record<string, string> = {
+    transferi: '/images/fallback/transfer.svg',
+    utakmice: '/images/fallback/match.svg',
+    povrede: '/images/fallback/injury.svg',
+  }
+  return map[slug || ''] || '/images/fallback/news.svg'
+}
+
+function removeLeadingTitle(html: string, title: string): string {
+  const normalized = title.trim().toLowerCase()
+  const match = html.match(/^\s*<(h[12])[^>]*>(.*?)<\/\1>/i)
+  if (match && match[2].trim().toLowerCase() === normalized) {
+    return html.slice(match[0].length).trim()
+  }
+  return html
+}
+
 export default async function ArticlePage({ params }: { params: { slug: string } }) {
   const site = await getDefaultSite()
   if (!site) notFound()
@@ -64,7 +82,8 @@ export default async function ArticlePage({ params }: { params: { slug: string }
 
   if (!article) notFound()
 
-  const bodyHtml = tiptapToHtml(article.content)
+  const rawHtml = tiptapToHtml(article.content)
+  const bodyHtml = removeLeadingTitle(rawHtml, article.title)
 
   let authorName = 'Editorial Team'
   if (article.authorId) {
@@ -114,7 +133,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         <article className="pub-article">
           <header className="pub-article-header">
             {article.category && (
-              <Link href={`/site/category/${article.category.slug}`} className="pub-hero-label">
+              <Link href={`/${article.category.slug}`} className="pub-hero-label">
                 {article.category.name}
               </Link>
             )}
@@ -128,13 +147,23 @@ export default async function ArticlePage({ params }: { params: { slug: string }
               {article.category && (
                 <>
                   <span className="pub-article-meta-sep">|</span>
-                  <Link href={`/site/category/${article.category.slug}`}>
+                  <Link href={`/${article.category.slug}`}>
                     {article.category.name}
                   </Link>
                 </>
               )}
             </div>
           </header>
+
+          {/* Featured Image */}
+          <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={article.featuredImage || getCategoryFallback(article.category?.slug)}
+              alt={article.title}
+              style={{ width: '100%', height: 'auto', display: 'block' }}
+            />
+          </div>
 
           <WidgetHydrator html={bodyHtml} />
 

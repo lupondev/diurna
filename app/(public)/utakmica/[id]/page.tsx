@@ -559,7 +559,7 @@ export default function MatchPage() {
 
           {/* Breadcrumb */}
           <nav className="mc-bc">
-            <a href="/">Sport.ba</a>
+            <a href="/">Početna</a>
             <span className="mc-bc-sep">/</span>
             <a href="/utakmice">Utakmice</a>
             <span className="mc-bc-sep">/</span>

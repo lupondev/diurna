@@ -1,19 +1,45 @@
 import Script from 'next/script'
 import { ThemeProvider, Header, Footer, LiveStrip } from '@/components/public/sportba'
 import type { LiveMatch } from '@/components/public/sportba'
-
-const LIVE_MATCHES: LiveMatch[] = [
-  { id: '1', home: 'Arsenal', away: 'Chelsea', homeScore: 2, awayScore: 1, status: 'live', minute: 67 },
-  { id: '2', home: 'Barcelona', away: 'Real Madrid', homeScore: 1, awayScore: 1, status: 'live', minute: 34 },
-  { id: '3', home: 'Bayern', away: 'Dortmund', homeScore: 3, awayScore: 0, status: 'ft' },
-  { id: '4', home: 'Inter', away: 'Milan', status: 'scheduled', time: '20:45' },
-  { id: '5', home: 'Liverpool', away: 'Man City', status: 'scheduled', time: '21:00' },
-  { id: '6', home: 'PSG', away: 'Lyon', homeScore: 2, awayScore: 2, status: 'live', minute: 78 },
-]
+import { getDefaultSite } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 
 const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID
 
-export default function PublicLayout({ children }: { children: React.ReactNode }) {
+function mapMatchStatus(status: string | null): 'live' | 'ft' | 'scheduled' {
+  if (!status) return 'scheduled'
+  const s = status.toUpperCase()
+  if (['1H', '2H', 'HT', 'ET', 'P', 'LIVE'].includes(s)) return 'live'
+  if (['FT', 'AET', 'PEN'].includes(s)) return 'ft'
+  return 'scheduled'
+}
+
+export default async function PublicLayout({ children }: { children: React.ReactNode }) {
+  const site = await getDefaultSite()
+  const siteName = site?.name || 'Diurna'
+
+  // Fetch live/recent matches from DB (populated by football API cron)
+  let matches: LiveMatch[] = []
+  try {
+    const dbMatches = await prisma.matchResult.findMany({
+      where: {
+        matchDate: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) },
+      },
+      orderBy: { matchDate: 'desc' },
+      take: 10,
+    })
+    matches = dbMatches.map((m) => ({
+      id: m.apiFootballId?.toString() || m.id,
+      home: m.homeTeam,
+      away: m.awayTeam,
+      homeScore: m.homeScore ?? undefined,
+      awayScore: m.awayScore ?? undefined,
+      status: mapMatchStatus(m.status),
+    }))
+  } catch {
+    // DB query failed silently — show empty strip
+  }
+
   return (
     <ThemeProvider>
       {GA4_ID && (
@@ -27,10 +53,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           `}</Script>
         </>
       )}
-      <Header />
-      <LiveStrip matches={LIVE_MATCHES} />
+      <Header siteName={siteName} />
+      <LiveStrip matches={matches} />
       {children}
-      <Footer />
+      <Footer siteName={siteName} />
     </ThemeProvider>
   )
 }

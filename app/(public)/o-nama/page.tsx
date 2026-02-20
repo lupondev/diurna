@@ -3,8 +3,8 @@ import { StaticNav } from '@/components/public/sportba/static-nav'
 import '../static.css'
 
 export const metadata: Metadata = {
-  title: 'O nama \u2014 Sport.ba',
-  description: 'Upoznajte redakciju Sport.ba \u2014 najnovije sportske vijesti iz BiH i svijeta.',
+  title: 'O nama \u2014 Diurna',
+  description: 'Upoznajte redakciju Diurna \u2014 najnovije sportske vijesti iz BiH i svijeta.',
 }
 
 const TEAM = [
@@ -21,7 +21,7 @@ const TEAM = [
   {
     name: 'Damir Begovi\u0107',
     role: 'Tech Lead',
-    desc: 'Full-stack developer koji gradi platformu Sport.ba. Koristi Next.js, Prisma i Vercel infrastrukturu.',
+    desc: 'Full-stack developer koji gradi platformu Diurna. Koristi Next.js, Prisma i Vercel infrastrukturu.',
   },
 ]
 
@@ -33,12 +33,12 @@ export default function AboutPage() {
         <h1 className="sba-sp-title">O nama</h1>
         <div className="sba-sp-prose">
           <p>
-            Sport.ba je bosansko-hercegova\u010dki sportski portal posvje\u0107en pravovremenoj, ta\u010dnoj i kvalitetnoj sportskoj
+            Diurna je bosansko-hercegova\u010dki sportski portal posvje\u0107en pravovremenoj, ta\u010dnoj i kvalitetnoj sportskoj
             informaciji. Na\u0161a misija je da navija\u010dima pru\u017eimo sve \u0161to im treba na jednom mjestu \u2014 od vijesti
             i transfera, do rezultata u\u017eivo i dubinskih analiza.
           </p>
           <p>
-            Pokrenuti 2026. godine kao dio Diurna platforme, Sport.ba koristi najmodernije tehnologije
+            Pokrenuti 2026. godine kao dio Diurna platforme, Diurna koristi najmodernije tehnologije
             za isporuku sadr\u017eaja. Na\u0161a redakcija kombinuje novinarski integritet sa inovativnim alatima
             kako bi prona\u0161la, verificirala i prezentirala sportske vijesti brzo i pouzdano.
           </p>
@@ -63,7 +63,7 @@ export default function AboutPage() {
         <div className="sba-sp-prose">
           <h2>Tehnolo\u0161ka pozadina</h2>
           <p>
-            Sport.ba je izgra\u0111en na <strong>Next.js 14</strong> App Routeru sa <strong>Prisma ORM</strong> i{' '}
+            Diurna je izgra\u0111en na <strong>Next.js 14</strong> App Routeru sa <strong>Prisma ORM</strong> i{' '}
             <strong>PostgreSQL</strong> bazom. Hosting je na <strong>Vercel</strong> platformi sa
             edge runtime za minimalne latencije. Koristimo <strong>NextAuth</strong> za autentikaciju,{' '}
             <strong>Tailwind CSS</strong> i custom design sistem za UI, te <strong>AI asistente</strong> za

@@ -3,8 +3,8 @@ import { StaticNav } from '@/components/public/sportba/static-nav'
 import '../static.css'
 
 export const metadata: Metadata = {
-  title: 'Marketing i ogla\u0161avanje \u2014 Sport.ba',
-  description: 'Ogla\u0161avajte se na Sport.ba \u2014 Lupon SSP, programmatic, premium formati.',
+  title: 'Marketing i ogla\u0161avanje \u2014 Diurna',
+  description: 'Ogla\u0161avajte se na Diurna \u2014 Lupon SSP, programmatic, premium formati.',
 }
 
 const AD_FORMATS = [
@@ -33,7 +33,7 @@ export default function MarketingPage() {
         <div className="sba-sp-highlight">
           <div className="sba-sp-highlight-title">Powered by Lupon SSP</div>
           <div className="sba-sp-highlight-text">
-            Sport.ba koristi Lupon SSP \u2014 na\u0161u in-house Supply-Side Platform za isporuku oglasa.
+            Diurna koristi Lupon SSP \u2014 na\u0161u in-house Supply-Side Platform za isporuku oglasa.
             Lupon SSP podr\u017eava header bidding, server-side aukcije i direktne kampanje,
             osiguravaju\u0107i optimalne CPM-ove i korisni\u010dko iskustvo u skladu sa Better Ads standardima.
           </div>
@@ -42,7 +42,7 @@ export default function MarketingPage() {
         <div className="sba-sp-prose">
           <h2>Na\u0161a publika</h2>
           <p>
-            Sport.ba privla\u010di sportske entuzijaste iz Bosne i Hercegovine i regije.
+            Diurna privla\u010di sportske entuzijaste iz Bosne i Hercegovine i regije.
             Na\u0161a publika je anga\u017eovana, lojalna i digitalno pismena.
           </p>
         </div>
@@ -84,7 +84,7 @@ export default function MarketingPage() {
 
           <h2>Better Ads standardi</h2>
           <p>
-            Sport.ba je u potpunosti uskla\u0111en sa <strong>Coalition for Better Ads</strong> standardima.
+            Diurna je u potpunosti uskla\u0111en sa <strong>Coalition for Better Ads</strong> standardima.
             Ne koristimo pop-up oglase, auto-play video sa zvukom, prestitial ads sa odbrojavanjem
             ili sticky ads koji zauzimaju vi\u0161e od 30% ekrana. Na\u0161 cilj je ogla\u0161avanje koje
             po\u0161tuje korisni\u010dko iskustvo.

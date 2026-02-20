@@ -53,6 +53,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
+function getCategoryFallback(slug?: string): string {
+  const map: Record<string, string> = {
+    transferi: '/images/fallback/transfer.svg',
+    utakmice: '/images/fallback/match.svg',
+    povrede: '/images/fallback/injury.svg',
+  }
+  return map[slug || ''] || '/images/fallback/news.svg'
+}
+
+function removeLeadingTitle(html: string, title: string): string {
+  const normalized = title.trim().toLowerCase()
+  const match = html.match(/^\s*<(h[12])[^>]*>(.*?)<\/\1>/i)
+  if (match && match[2].trim().toLowerCase() === normalized) {
+    return html.slice(match[0].length).trim()
+  }
+  return html
+}
+
 export default async function PublicArticlePage({ params }: Props) {
   const site = await getDefaultSite()
   if (!site) notFound()
@@ -79,7 +97,8 @@ export default async function PublicArticlePage({ params }: Props) {
 
   if (!article) notFound()
 
-  const bodyHtml = tiptapToHtml(article.content)
+  const rawHtml = tiptapToHtml(article.content)
+  const bodyHtml = removeLeadingTitle(rawHtml, article.title)
 
   let authorName = 'Editorial Team'
   if (article.authorId) {
@@ -112,20 +131,18 @@ export default async function PublicArticlePage({ params }: Props) {
 
       {/* Breadcrumb */}
       <nav style={{ fontSize: 12, color: '#94a3b8', marginBottom: 20, display: 'flex', gap: 6, alignItems: 'center' }}>
-        <Link href="/site" style={{ color: '#64748b', textDecoration: 'none' }}>Home</Link>
+        <Link href="/" style={{ color: '#64748b', textDecoration: 'none' }}>Početna</Link>
         <span>/</span>
-        <Link href={`/site/category/${category.slug}`} style={{ color: '#f97316', textDecoration: 'none', fontWeight: 600 }}>
+        <Link href={`/${category.slug}`} style={{ color: '#f97316', textDecoration: 'none', fontWeight: 600 }}>
           {category.name}
         </Link>
       </nav>
 
       {/* Featured Image */}
-      {article.featuredImage && (
-        <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={article.featuredImage} alt={article.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
-        </div>
-      )}
+      <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={article.featuredImage || getCategoryFallback(category.slug)} alt={article.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
+      </div>
 
       {/* Article Header */}
       <header style={{ marginBottom: 32 }}>

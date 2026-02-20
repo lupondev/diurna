@@ -4,7 +4,7 @@ import { AdSlot } from '@/components/public/sportba'
 import '../category.css'
 
 export const metadata: Metadata = {
-  title: 'Utakmice — Sport.ba',
+  title: 'Utakmice — Diurna',
   description: 'Najave utakmica, rezultati i analize iz najpopularnijih liga.',
 }
 

@@ -4,7 +4,7 @@ import { AdSlot } from '@/components/public/sportba'
 import '../category.css'
 
 export const metadata: Metadata = {
-  title: 'Video — Sport.ba',
+  title: 'Video — Diurna',
   description: 'Video sadržaj — golovi, highlighti, analize i intervjui.',
 }
 

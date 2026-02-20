@@ -23,14 +23,22 @@ const OTHER = [
   { href: '/privatnost', label: 'Privatnost' },
 ]
 
-export function Footer() {
+function parseLogo(name: string) {
+  const dot = name.indexOf('.')
+  if (dot > 0) return { main: name.slice(0, dot).toUpperCase(), suffix: name.slice(dot).toUpperCase() }
+  return { main: name.toUpperCase(), suffix: '' }
+}
+
+export function Footer({ siteName = 'Sport.ba' }: { siteName?: string }) {
+  const logo = parseLogo(siteName)
+
   return (
     <footer className="sba-footer" role="contentinfo">
       <div className="sba-footer-grid">
         <div>
           <div className="sba-logo" aria-hidden="true">
-            <span className="sba-logo-sport">SPORT</span>
-            <span className="sba-logo-ba">.BA</span>
+            <span className="sba-logo-sport">{logo.main}</span>
+            {logo.suffix && <span className="sba-logo-ba">{logo.suffix}</span>}
           </div>
           <p className="sba-footer-brand-desc">
             Najnovije sportske vijesti, transferi, rezultati i analize iz
@@ -85,7 +93,7 @@ export function Footer() {
       </div>
 
       <div className="sba-footer-bottom">
-        &copy; 2026 Sport.ba &middot; Powered by Diurna &middot; Lupon Media
+        &copy; {new Date().getFullYear()} {siteName} &middot; Powered by Diurna &middot; Lupon Media
       </div>
     </footer>
   )

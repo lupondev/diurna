@@ -4,8 +4,8 @@ import { ContactForm } from '@/components/public/sportba/contact-form'
 import '../static.css'
 
 export const metadata: Metadata = {
-  title: 'Kontakt \u2014 Sport.ba',
-  description: 'Kontaktirajte redakciju Sport.ba.',
+  title: 'Kontakt \u2014 Diurna',
+  description: 'Kontaktirajte redakciju Diurna.',
 }
 
 const EMAILS = [

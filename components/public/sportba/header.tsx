@@ -11,14 +11,21 @@ const NAV_ITEMS = [
   { href: '/video', label: 'Video' },
 ]
 
-export function Header() {
+function parseLogo(name: string) {
+  const dot = name.indexOf('.')
+  if (dot > 0) return { main: name.slice(0, dot).toUpperCase(), suffix: name.slice(dot).toUpperCase() }
+  return { main: name.toUpperCase(), suffix: '' }
+}
+
+export function Header({ siteName = 'Sport.ba' }: { siteName?: string }) {
   const { toggle } = useTheme()
+  const logo = parseLogo(siteName)
 
   return (
     <header className="sba-header" role="banner">
-      <Link href="/" className="sba-logo" aria-label="Sport.ba početna">
-        <span className="sba-logo-sport">SPORT</span>
-        <span className="sba-logo-ba">.BA</span>
+      <Link href="/" className="sba-logo" aria-label={`${siteName} početna`}>
+        <span className="sba-logo-sport">{logo.main}</span>
+        {logo.suffix && <span className="sba-logo-ba">{logo.suffix}</span>}
       </Link>
 
       <nav className="sba-header-nav" aria-label="Glavna navigacija">
