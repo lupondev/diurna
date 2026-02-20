@@ -106,7 +106,13 @@ function timeAgo(dateStr: string): string {
 function filterByTime(clusters: Cluster[], hours: number | null): Cluster[] {
   if (!hours) return clusters
   const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000)
-  return clusters.filter(c => new Date(c.latestItem) >= cutoff)
+  const filtered = clusters.filter(c => new Date(c.latestItem) >= cutoff)
+  // If a narrow window returns too few results, show at least 20 stories by DIS
+  if (filtered.length < 20 && hours <= 6) {
+    const sorted = [...clusters].sort((a, b) => b.dis - a.dis)
+    return sorted.slice(0, 20)
+  }
+  return filtered
 }
 
 function filterBySection(clusters: Cluster[], sectionKey: SectionKey): Cluster[] {

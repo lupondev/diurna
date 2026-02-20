@@ -86,15 +86,204 @@ export async function GET(req: NextRequest) {
         },
       })
 
-      const task = await getNextTask(config, site.id, todayCount, force)
+      // ── Force mode: fetch top 5 unprocessed stories and generate for each ──
+      if (force) {
+        // Get cluster IDs already covered today
+        const coveredToday = await prisma.article.findMany({
+          where: {
+            siteId: site.id,
+            aiGenerated: true,
+            createdAt: { gte: startOfDay },
+            aiPrompt: { not: null },
+          },
+          select: { aiPrompt: true },
+        })
+        const coveredClusterIds = new Set<string>()
+        for (const a of coveredToday) {
+          if (typeof a.aiPrompt === 'string') {
+            try {
+              const p = JSON.parse(a.aiPrompt)
+              if (p.clusterId) coveredClusterIds.add(p.clusterId)
+            } catch {
+              if (a.aiPrompt.length < 100) coveredClusterIds.add(a.aiPrompt)
+            }
+          }
+        }
+
+        // Fetch top 5 clusters by DIS, exclude already covered
+        const topClusters = await prisma.storyCluster.findMany({
+          where: {
+            latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+            dis: { gte: 15 },
+            ...(coveredClusterIds.size > 0
+              ? { id: { notIn: Array.from(coveredClusterIds) } }
+              : {}),
+          },
+          orderBy: { dis: 'desc' },
+          take: 5,
+        })
+
+        if (topClusters.length === 0) {
+          results.push({
+            orgId: config.orgId,
+            action: 'skipped',
+            reason: 'No news items or clusters available — run Feed Fetch first',
+          })
+          continue
+        }
+
+        for (const topCluster of topClusters) {
+          const newsItems = await prisma.newsItem.findMany({
+            where: { clusterId: topCluster.id },
+            orderBy: { pubDate: 'desc' },
+            take: 5,
+          })
+
+          const catConfig = config.categories[0]
+          const taskCategorySlug = catConfig?.slug || 'vijesti'
+          const taskCategory = catConfig?.name || 'Vijesti'
+
+          const promptData = buildPromptContext(
+            {
+              title: topCluster.title,
+              eventType: topCluster.eventType,
+              entities: topCluster.entities as string[],
+              dis: topCluster.dis,
+            },
+            newsItems.map((n) => ({
+              title: n.title,
+              source: n.source,
+              content: n.content || undefined,
+            })),
+            config
+          )
+
+          const maxTokens = Math.min(4000, Math.max(500, Math.round(config.defaultLength * 2.5)))
+          let ai
+          try {
+            ai = await generateContent({
+              system: promptData.system,
+              prompt: promptData.prompt,
+              maxTokens,
+              temperature: 0.3,
+            })
+          } catch (aiErr) {
+            results.push({ orgId: config.orgId, action: 'error', reason: `AI call failed: ${aiErr instanceof Error ? aiErr.message : 'unknown'}` })
+            continue
+          }
+
+          let parsed: {
+            title?: string; content?: string; excerpt?: string
+            seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }
+            tags?: string[]
+          }
+          try {
+            let cleaned = ai.text.trim()
+            if (cleaned.startsWith('```')) {
+              cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+            }
+            parsed = JSON.parse(cleaned)
+          } catch {
+            results.push({ orgId: config.orgId, action: 'error', reason: `Failed to parse AI response for: ${topCluster.title}` })
+            continue
+          }
+
+          const title = parsed.title || topCluster.title
+
+          // Deduplication: skip only if exact slug already exists
+          const candidateSlug = parsed.seo?.slug || slugify(title)
+          const existingDupe = await prisma.article.findFirst({
+            where: { siteId: site.id, slug: candidateSlug },
+          })
+          if (existingDupe) {
+            results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Duplicate slug: "${candidateSlug}"` })
+            continue
+          }
+
+          const htmlContent = parsed.content || ''
+          let tiptapContent = htmlToTiptap(htmlContent)
+
+          if (catConfig) {
+            tiptapContent = injectWidgets(tiptapContent, catConfig)
+          }
+
+          let category = await prisma.category.findFirst({
+            where: { siteId: site.id, slug: taskCategorySlug },
+          })
+          if (!category) {
+            category = await prisma.category.create({
+              data: { siteId: site.id, name: taskCategory, slug: taskCategorySlug },
+            })
+          }
+
+          const baseSlug = parsed.seo?.slug || slugify(title)
+          let slug = baseSlug
+          let slugSuffix = 1
+          while (await prisma.article.findFirst({ where: { siteId: site.id, slug } })) {
+            slug = `${baseSlug}-${slugSuffix++}`
+          }
+
+          const article = await prisma.article.create({
+            data: {
+              siteId: site.id,
+              title,
+              slug,
+              content: tiptapContent as unknown as Prisma.InputJsonValue,
+              excerpt: parsed.excerpt || '',
+              status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
+              publishedAt: config.autoPublish ? new Date() : null,
+              categoryId: category.id,
+              aiGenerated: true,
+              aiModel: ai.model,
+              aiPrompt: JSON.stringify({
+                priority: 'top_story',
+                clusterId: topCluster.id,
+                sources: newsItems.map((n) => n.title),
+              }),
+              metaTitle: parsed.seo?.metaTitle || title,
+              metaDescription: parsed.seo?.metaDescription || parsed.excerpt || '',
+            },
+          })
+
+          if (parsed.tags && parsed.tags.length > 0) {
+            for (const tagName of parsed.tags.slice(0, 5)) {
+              const tagSlug = slugify(tagName)
+              if (!tagSlug) continue
+              let tag = await prisma.tag.findFirst({
+                where: { siteId: site.id, slug: tagSlug },
+              })
+              if (!tag) {
+                tag = await prisma.tag.create({
+                  data: { siteId: site.id, name: tagName, slug: tagSlug },
+                })
+              }
+              await prisma.articleTag
+                .create({ data: { articleId: article.id, tagId: tag.id } })
+                .catch(() => {})
+            }
+          }
+
+          results.push({
+            orgId: config.orgId,
+            action: 'generated',
+            articleId: article.id,
+            title,
+            category: taskCategory,
+            status: config.autoPublish ? 'published' : 'draft',
+            reason: `top_story: DIS ${topCluster.dis} — ${topCluster.title}`,
+          })
+        }
+        continue
+      }
+
+      // ── Normal mode: single task via priority system ──
+      const task = await getNextTask(config, site.id, todayCount, false)
 
       if (!task) {
         results.push({
           orgId: config.orgId,
           action: 'skipped',
-          reason: force
-            ? 'No news items or clusters available — run Feed Fetch first'
-            : 'All quotas met for current hour',
+          reason: 'All quotas met for current hour',
         })
         continue
       }
@@ -149,17 +338,16 @@ export async function GET(req: NextRequest) {
 
       const title = parsed.title || task.title
 
-      // Deduplication: skip if similar title was generated in the last 24h
-      const titlePrefix = title.substring(0, 30)
+      // Deduplication: skip only if exact slug already exists
+      const candidateSlug = parsed.seo?.slug || slugify(title)
       const existingDupe = await prisma.article.findFirst({
         where: {
           siteId: site.id,
-          title: { contains: titlePrefix, mode: 'insensitive' },
-          createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          slug: candidateSlug,
         },
       })
       if (existingDupe) {
-        results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Duplicate: "${existingDupe.title}"` })
+        results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Duplicate slug: "${candidateSlug}"` })
         continue
       }
 
