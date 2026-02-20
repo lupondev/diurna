@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
 import Anthropic from '@anthropic-ai/sdk';
+import { generateWithGemini } from '@/lib/ai/client';
 
 // AI Engine V2 modules
 import { ingestMatchData, createSnapshotFromData } from '@/lib/ai-engine/ingestion';
@@ -126,8 +127,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 });
+    if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {
+      return NextResponse.json({ error: 'No AI provider configured (ANTHROPIC_API_KEY or GEMINI_API_KEY)' }, { status: 500 });
     }
 
     // ─── Rate Limit ───
@@ -219,19 +220,37 @@ export async function POST(req: NextRequest) {
           ? `${prompt.user}\n\n═══ ISPRAVKE ═══\n${retryInstructions}`
           : prompt.user;
 
-        const response = await client.messages.create({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: prompt.max_tokens,
-          temperature: 0.3,
-          system: prompt.system,
-          messages: [{ role: 'user', content: userPrompt }],
-        });
+        let text = '';
 
-        llmModel = response.model;
-        llmTokensIn += response.usage.input_tokens;
-        llmTokensOut += response.usage.output_tokens;
+        // Try Anthropic first, fallback to Gemini
+        try {
+          if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not set');
+          const response = await client.messages.create({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: prompt.max_tokens,
+            temperature: 0.3,
+            system: prompt.system,
+            messages: [{ role: 'user', content: userPrompt }],
+          });
 
-        const text = response.content[0].type === 'text' ? response.content[0].text : '';
+          llmModel = response.model;
+          llmTokensIn += response.usage.input_tokens;
+          llmTokensOut += response.usage.output_tokens;
+          text = response.content[0].type === 'text' ? response.content[0].text : '';
+        } catch (anthropicErr) {
+          console.error('[AI Engine] Anthropic failed, trying Gemini:', anthropicErr instanceof Error ? anthropicErr.message : anthropicErr);
+          const geminiResult = await generateWithGemini({
+            system: prompt.system,
+            prompt: userPrompt,
+            maxTokens: prompt.max_tokens,
+            temperature: 0.3,
+          });
+          llmModel = geminiResult.model;
+          llmTokensIn += geminiResult.tokensIn;
+          llmTokensOut += geminiResult.tokensOut;
+          text = geminiResult.text;
+        }
+
         console.log('[AI Engine] RAW RESPONSE LENGTH:', text?.length);
         console.log('[AI Engine] RAW RESPONSE LAST 200 CHARS:', text?.slice(-200));
         let cleaned = text.trim();

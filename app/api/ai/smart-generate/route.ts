@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
+import { generateWithGemini } from '@/lib/ai/client'
 import { z } from 'zod'
 
 const client = new Anthropic()
@@ -197,15 +198,39 @@ STRICT RULES FOR HEADLINE-ONLY GENERATION:
     }
 
     const maxTokens = Math.min(4000, Math.max(500, Math.round(wordTarget * 2.5)))
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: maxTokens,
-      temperature: 0.3,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    })
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+    let text = ''
+    let llmModel = ''
+    let tokensIn = 0
+    let tokensOut = 0
+
+    // Try Anthropic first, fallback to Gemini
+    try {
+      if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not set')
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: maxTokens,
+        temperature: 0.3,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      })
+      text = response.content[0].type === 'text' ? response.content[0].text : ''
+      llmModel = response.model
+      tokensIn = response.usage.input_tokens
+      tokensOut = response.usage.output_tokens
+    } catch (anthropicErr) {
+      console.error('[Smart Generate] Anthropic failed, trying Gemini:', anthropicErr instanceof Error ? anthropicErr.message : anthropicErr)
+      const geminiResult = await generateWithGemini({
+        system: systemPrompt,
+        prompt: userPrompt,
+        maxTokens,
+        temperature: 0.3,
+      })
+      text = geminiResult.text
+      llmModel = geminiResult.model
+      tokensIn = geminiResult.tokensIn
+      tokensOut = geminiResult.tokensOut
+    }
 
     let cleaned = text.trim()
     if (cleaned.startsWith('```')) {
@@ -230,9 +255,9 @@ STRICT RULES FOR HEADLINE-ONLY GENERATION:
         status: warnings.length === 0 ? 'CLEAN' :
                 warnings.some(w => w.severity === 'HIGH') ? 'REVIEW_REQUIRED' : 'CAUTION',
       },
-      model: response.model,
-      tokensIn: response.usage.input_tokens,
-      tokensOut: response.usage.output_tokens,
+      model: llmModel,
+      tokensIn,
+      tokensOut,
     })
   } catch (error) {
     console.error('Smart generate error:', error)

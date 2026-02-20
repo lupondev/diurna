@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {
       return NextResponse.json(
         { error: 'AI service not configured' },
         { status: 500 }

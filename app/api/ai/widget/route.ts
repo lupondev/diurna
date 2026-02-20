@@ -37,7 +37,7 @@ function buildPrompt(data: z.infer<typeof WidgetGenerateSchema>): { system: stri
 
 export async function POST(req: NextRequest) {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 })
     }
 

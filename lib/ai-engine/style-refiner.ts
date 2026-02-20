@@ -159,6 +159,11 @@ interface OpenAIResponse {
   usage?: { prompt_tokens?: number; completion_tokens?: number };
 }
 
+interface GeminiResponse {
+  candidates?: { content?: { parts?: { text?: string }[] } }[];
+  usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+}
+
 async function callStyleLLM(prompt: string): Promise<LLMResult | null> {
   // Try Anthropic first
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -238,6 +243,40 @@ async function callStyleLLM(prompt: string): Promise<LLMResult | null> {
       return null;
     } catch (e) {
       console.error('[Style Refiner] OpenAI error:', e);
+    }
+  }
+
+  // Fallback to Google Gemini
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) {
+    try {
+      console.log('[Style Refiner] Using Gemini fallback');
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: 'You are an elite sports editor. Return ONLY refined HTML. No explanations.' }] },
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 4000 },
+        }),
+      });
+
+      const data = await res.json() as GeminiResponse;
+      let text: string = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      text = text.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+
+      if (text.includes('<p>') || text.includes('<h2>')) {
+        return {
+          text,
+          tokens_in: data.usageMetadata?.promptTokenCount ?? 0,
+          tokens_out: data.usageMetadata?.candidatesTokenCount ?? 0,
+        };
+      }
+
+      console.error('[Style Refiner] Gemini response missing HTML tags');
+      return null;
+    } catch (e) {
+      console.error('[Style Refiner] Gemini error:', e);
     }
   }
 
