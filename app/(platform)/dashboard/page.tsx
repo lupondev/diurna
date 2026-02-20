@@ -70,7 +70,7 @@ async function getDashboardData(orgId: string) {
       where: { ...orgFilter, createdAt: { gte: prevMonthStart, lt: monthAgo } },
     }),
     prisma.article.findMany({
-      where: orgFilter,
+      where: { ...orgFilter, isTest: false },
       orderBy: { updatedAt: 'desc' },
       take: 5,
       select: {
