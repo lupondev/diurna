@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateContent } from '@/lib/ai/client'
 import { Prisma } from '@prisma/client'
-import { buildPromptContext, htmlToTiptap, injectWidgets, slugify } from '@/lib/autopilot'
+import { buildPromptContext, htmlToTiptap, injectWidgets, slugify, fetchUnsplashImage } from '@/lib/autopilot'
 
 export const maxDuration = 60
 
@@ -136,6 +136,8 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    const featuredImage = await fetchUnsplashImage(title)
+
     const article = await prisma.article.create({
       data: {
         siteId: site.id,
@@ -143,6 +145,7 @@ export async function POST(req: NextRequest) {
         slug,
         content: tiptapContent as unknown as Prisma.InputJsonValue,
         excerpt: parsed.excerpt || '',
+        featuredImage,
         status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
         publishedAt: config.autoPublish ? new Date() : null,
         categoryId: category.id,

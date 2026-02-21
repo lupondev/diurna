@@ -1,32 +1,73 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-const TABS = ['Statistika', 'Postave', 'Utjecaj'] as const
-
-const STATS = [
-  { label: 'Posjed', home: 58, away: 42 },
-  { label: 'Udarci', home: 14, away: 9 },
-  { label: 'Na gol', home: 6, away: 3 },
-  { label: 'Korneri', home: 7, away: 4 },
-  { label: 'Prekršaji', home: 11, away: 14 },
-]
-
-const LINEUPS = {
-  home: ['Raya', 'White', 'Saliba', 'Gabriel', 'Zinchenko', 'Rice', 'Ødegaard', 'Havertz', 'Saka', 'Martinelli', 'Trossard'],
-  away: ['Sánchez', 'James', 'Silva', 'Colwill', 'Cucurella', 'Caicedo', 'Enzo', 'Palmer', 'Sterling', 'Jackson', 'Mudryk'],
+type MatchData = {
+  id: number
+  home: string
+  away: string
+  homeScore: number | null
+  awayScore: number | null
+  minute: string
+  status: string
+  league: string
 }
 
-const TABLE_IMPACT = [
-  { pos: 1, team: 'Arsenal', pts: 58, change: 3 },
-  { pos: 2, team: 'Man City', pts: 55, change: 0 },
-  { pos: 3, team: 'Liverpool', pts: 54, change: 0 },
-  { pos: 4, team: 'Chelsea', pts: 48, change: -3 },
-]
-
 export function MatchOfDay() {
-  const [tab, setTab] = useState(0)
+  const [match, setMatch] = useState<MatchData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/newsroom/fixtures')
+      .then(r => r.json() as Promise<{ live?: { id: number; homeTeam: string; awayTeam: string; homeGoals: number | null; awayGoals: number | null; elapsed: number | null; status: string; league: string }[]; fixtures?: { id: number; homeTeam: string; awayTeam: string; homeGoals: number | null; awayGoals: number | null; elapsed: number | null; status: string; league: string }[] }>)
+      .then((data) => {
+        const live = data.live?.[0]
+        if (live) {
+          setMatch({
+            id: live.id,
+            home: live.homeTeam,
+            away: live.awayTeam,
+            homeScore: live.homeGoals,
+            awayScore: live.awayGoals,
+            minute: live.elapsed ? `${live.elapsed}'` : '',
+            status: 'LIVE',
+            league: live.league,
+          })
+        } else if (data.fixtures && data.fixtures.length > 0) {
+          const f = data.fixtures[0]
+          setMatch({
+            id: f.id,
+            home: f.homeTeam,
+            away: f.awayTeam,
+            homeScore: f.homeGoals,
+            awayScore: f.awayGoals,
+            minute: f.elapsed ? `${f.elapsed}'` : '',
+            status: f.status === 'FT' ? 'FT' : 'Scheduled',
+            league: f.league,
+          })
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <section>
+        <div className="sba-section-head">
+          <h2 className="sba-section-title">Utakmica dana</h2>
+        </div>
+        <div className="sba-motd" style={{ minHeight: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ color: 'var(--sba-text-3)', fontSize: 13, fontFamily: 'var(--sba-mono)' }}>Ucitavanje...</span>
+        </div>
+      </section>
+    )
+  }
+
+  if (!match) return null
+
+  const hasScore = match.homeScore != null && match.awayScore != null
 
   return (
     <section>
@@ -34,115 +75,32 @@ export function MatchOfDay() {
         <h2 className="sba-section-title">Utakmica dana</h2>
       </div>
       <div className="sba-motd">
-        <Link href="/utakmica/1" className="sba-motd-scoreboard">
+        <Link href={`/utakmica/${match.id}`} className="sba-motd-scoreboard">
           <div className="sba-motd-team">
-            <span className="sba-motd-team-name">Arsenal</span>
+            <span className="sba-motd-team-name">{match.home}</span>
           </div>
           <div className="sba-motd-score-block">
-            <span className="sba-motd-score">{`2 \u2013 1`}</span>
-            <span className="sba-motd-minute">{`67'`}</span>
+            {hasScore ? (
+              <>
+                <span className="sba-motd-score">{`${match.homeScore} \u2013 ${match.awayScore}`}</span>
+                {match.status === 'LIVE' && match.minute && (
+                  <span className="sba-motd-minute">{match.minute}</span>
+                )}
+                {match.status === 'FT' && (
+                  <span className="sba-motd-minute">FT</span>
+                )}
+              </>
+            ) : (
+              <span className="sba-motd-score" style={{ fontSize: 14 }}>vs</span>
+            )}
           </div>
           <div className="sba-motd-team">
-            <span className="sba-motd-team-name">Chelsea</span>
+            <span className="sba-motd-team-name">{match.away}</span>
           </div>
         </Link>
-
-        <div className="sba-motd-tabs" role="tablist">
-          {TABS.map((label, i) => (
-            <button
-              key={label}
-              className="sba-motd-tab"
-              role="tab"
-              aria-selected={tab === i}
-              onClick={() => setTab(i)}
-            >
-              {label}
-            </button>
-          ))}
+        <div style={{ textAlign: 'center', padding: '8px 0', fontSize: 11, color: 'var(--sba-text-3)', fontFamily: 'var(--sba-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {match.league}
         </div>
-
-        {tab === 0 && (
-          <div className="sba-motd-panel" role="tabpanel">
-            <div className="sba-motd-stats">
-              {STATS.map((s) => {
-                const total = s.home + s.away
-                const homePct = Math.round((s.home / total) * 100)
-                const awayPct = 100 - homePct
-                return (
-                  <div key={s.label} className="sba-motd-stat-row">
-                    <span className="sba-motd-stat-val">{s.home}</span>
-                    <div className="sba-motd-stat-bar">
-                      <div
-                        className="sba-motd-stat-fill sba-motd-stat-fill--home"
-                        style={{ width: `${homePct}%` }}
-                      />
-                    </div>
-                    <span className="sba-motd-stat-label">{s.label}</span>
-                    <div className="sba-motd-stat-bar">
-                      <div
-                        className="sba-motd-stat-fill sba-motd-stat-fill--away"
-                        style={{ width: `${awayPct}%` }}
-                      />
-                    </div>
-                    <span className="sba-motd-stat-val">{s.away}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {tab === 1 && (
-          <div className="sba-motd-panel" role="tabpanel">
-            <div className="sba-motd-lineups">
-              <div>
-                <div className="sba-motd-lineup-head">Arsenal</div>
-                <div className="sba-motd-lineup-list">
-                  {LINEUPS.home.map((p, i) => (
-                    <div key={p} className="sba-motd-lineup-player">
-                      <span className="sba-motd-lineup-num">{i + 1}</span>
-                      {p}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="sba-motd-lineup-head">Chelsea</div>
-                <div className="sba-motd-lineup-list">
-                  {LINEUPS.away.map((p, i) => (
-                    <div key={p} className="sba-motd-lineup-player">
-                      <span className="sba-motd-lineup-num">{i + 1}</span>
-                      {p}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {tab === 2 && (
-          <div className="sba-motd-panel" role="tabpanel">
-            <div className="sba-motd-impact">
-              {TABLE_IMPACT.map((row) => (
-                <div key={row.team} className="sba-motd-impact-row">
-                  <span className="sba-motd-impact-pos">{row.pos}</span>
-                  <span className="sba-motd-impact-team">{row.team}</span>
-                  <span className="sba-motd-impact-pts">{row.pts}</span>
-                  <span
-                    className={`sba-motd-impact-change sba-motd-impact-change--${row.change > 0 ? 'up' : row.change < 0 ? 'down' : 'same'}`}
-                  >
-                    {row.change > 0
-                      ? `+${row.change} \u2191`
-                      : row.change < 0
-                        ? `${row.change} \u2193`
-                        : '\u2013'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </section>
   )

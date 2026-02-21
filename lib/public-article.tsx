@@ -50,7 +50,7 @@ export async function fetchArticle(slug: string, categorySlug?: string) {
   if (!article) return null
 
   let authorName = `Redakcija ${site?.name || 'Diurna'}`
-  if (article.authorId) {
+  if (article.authorId && !article.aiGenerated) {
     const author = await prisma.user.findUnique({
       where: { id: article.authorId },
       select: { name: true },

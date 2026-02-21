@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { href: '/transferi', label: 'Transferi' },
   { href: '/utakmice', label: 'Utakmice' },
   { href: '/igraci', label: 'Igrači' },
-  { href: '/tabela', label: 'Statistike' },
+  { href: '/tabela', label: 'Tabela' },
   { href: '/povrede', label: 'Povrede' },
   { href: '/video', label: 'Video' },
 ]

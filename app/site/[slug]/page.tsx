@@ -85,8 +85,8 @@ export default async function ArticlePage({ params }: { params: { slug: string }
   const rawHtml = tiptapToHtml(article.content)
   const bodyHtml = removeLeadingTitle(rawHtml, article.title)
 
-  let authorName = 'Editorial Team'
-  if (article.authorId) {
+  let authorName = `Redakcija ${site?.name || 'Diurna'}`
+  if (article.authorId && !article.aiGenerated) {
     const author = await prisma.user.findUnique({
       where: { id: article.authorId },
       select: { name: true },

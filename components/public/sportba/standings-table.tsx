@@ -1,33 +1,75 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-const ALL_STANDINGS = [
-  { pos: 1, team: 'Arsenal', p: 24, w: 18, d: 4, l: 2, gd: '+38', pts: 58, zone: 'cl' },
-  { pos: 2, team: 'Man City', p: 24, w: 17, d: 4, l: 3, gd: '+32', pts: 55, zone: 'cl' },
-  { pos: 3, team: 'Liverpool', p: 24, w: 16, d: 6, l: 2, gd: '+30', pts: 54, zone: 'cl' },
-  { pos: 4, team: 'Aston Villa', p: 24, w: 15, d: 5, l: 4, gd: '+18', pts: 50, zone: 'cl' },
-  { pos: 5, team: 'Tottenham', p: 24, w: 13, d: 6, l: 5, gd: '+10', pts: 45, zone: 'el' },
-  { pos: 6, team: 'Newcastle', p: 24, w: 12, d: 5, l: 7, gd: '+8', pts: 41, zone: 'conf' },
-  { pos: 7, team: 'Man United', p: 24, w: 11, d: 4, l: 9, gd: '-2', pts: 37, zone: '' },
-  { pos: 8, team: 'Brighton', p: 24, w: 10, d: 6, l: 8, gd: '+2', pts: 36, zone: '' },
-  { pos: 9, team: 'West Ham', p: 24, w: 10, d: 5, l: 9, gd: '-4', pts: 35, zone: '' },
-  { pos: 10, team: 'Bournemouth', p: 24, w: 9, d: 6, l: 9, gd: '-3', pts: 33, zone: '' },
-  { pos: 11, team: 'Wolves', p: 24, w: 9, d: 5, l: 10, gd: '-6', pts: 32, zone: '' },
-  { pos: 12, team: 'Crystal Palace', p: 24, w: 8, d: 7, l: 9, gd: '-5', pts: 31, zone: '' },
-  { pos: 13, team: 'Fulham', p: 24, w: 8, d: 6, l: 10, gd: '-8', pts: 30, zone: '' },
-  { pos: 14, team: 'Everton', p: 24, w: 7, d: 7, l: 10, gd: '-10', pts: 28, zone: '' },
-  { pos: 15, team: 'Brentford', p: 24, w: 7, d: 6, l: 11, gd: '-9', pts: 27, zone: '' },
-  { pos: 16, team: 'Nott. Forest', p: 24, w: 6, d: 7, l: 11, gd: '-12', pts: 25, zone: '' },
-  { pos: 17, team: 'Burnley', p: 24, w: 5, d: 6, l: 13, gd: '-18', pts: 21, zone: '' },
-  { pos: 18, team: 'Luton Town', p: 24, w: 4, d: 5, l: 15, gd: '-24', pts: 17, zone: 'rel' },
-  { pos: 19, team: 'Sheffield Utd', p: 24, w: 3, d: 4, l: 17, gd: '-30', pts: 13, zone: 'rel' },
-  { pos: 20, team: 'Ipswich', p: 24, w: 2, d: 3, l: 19, gd: '-36', pts: 9, zone: 'rel' },
-]
+type StandingRow = {
+  pos: number
+  team: string
+  p: number
+  w: number
+  d: number
+  l: number
+  gd: string
+  pts: number
+  zone: string
+}
+
+function zoneForRank(rank: number, total: number): string {
+  if (rank <= 4) return 'cl'
+  if (rank === 5) return 'el'
+  if (rank === 6) return 'conf'
+  if (rank > total - 3) return 'rel'
+  return ''
+}
 
 export function StandingsTable() {
+  const [standings, setStandings] = useState<StandingRow[]>([])
   const [expanded, setExpanded] = useState(false)
-  const rows = expanded ? ALL_STANDINGS : ALL_STANDINGS.slice(0, 8)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/newsroom/stats')
+      .then(r => r.json() as Promise<{ standings?: { rank: number; team: { name: string }; points: number; all: { played: number; win: number; draw: number; lose: number; goals: { for: number; against: number } } }[] }>)
+      .then((data) => {
+        if (data.standings && data.standings.length > 0) {
+          const total = data.standings.length
+          const rows: StandingRow[] = data.standings.map(s => {
+            const gd = s.all.goals.for - s.all.goals.against
+            return {
+              pos: s.rank,
+              team: s.team.name,
+              p: s.all.played,
+              w: s.all.win,
+              d: s.all.draw,
+              l: s.all.lose,
+              gd: gd >= 0 ? `+${gd}` : `${gd}`,
+              pts: s.points,
+              zone: zoneForRank(s.rank, total),
+            }
+          })
+          setStandings(rows)
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <section>
+        <div className="sba-section-head">
+          <h2 className="sba-section-title">Tabela &mdash; Premier League</h2>
+        </div>
+        <div className="sba-standings" style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ color: 'var(--sba-text-3)', fontSize: 13, fontFamily: 'var(--sba-mono)' }}>Ucitavanje...</span>
+        </div>
+      </section>
+    )
+  }
+
+  if (standings.length === 0) return null
+
+  const rows = expanded ? standings : standings.slice(0, 8)
 
   return (
     <section>
@@ -75,14 +117,16 @@ export function StandingsTable() {
             </tbody>
           </table>
         </div>
-        <div className="sba-standings-expand">
-          <button
-            className="sba-standings-expand-btn"
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? 'Prikaži manje \u2191' : 'Prikaži sve \u2193'}
-          </button>
-        </div>
+        {standings.length > 8 && (
+          <div className="sba-standings-expand">
+            <button
+              className="sba-standings-expand-btn"
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? 'Prikazi manje \u2191' : 'Prikazi sve \u2193'}
+            </button>
+          </div>
+        )}
       </div>
     </section>
   )

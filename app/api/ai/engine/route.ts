@@ -251,8 +251,6 @@ export async function POST(req: NextRequest) {
           text = geminiResult.text;
         }
 
-        console.log('[AI Engine] RAW RESPONSE LENGTH:', text?.length);
-        console.log('[AI Engine] RAW RESPONSE LAST 200 CHARS:', text?.slice(-200));
         let cleaned = text.trim();
         if (cleaned.startsWith('```')) {
           cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
@@ -266,7 +264,6 @@ export async function POST(req: NextRequest) {
           const lastBrace = cleaned.lastIndexOf('}');
           if (lastBrace > 0) {
             const truncated = cleaned.substring(0, lastBrace + 1);
-            console.log('[AI Engine] Trying truncated JSON parse (up to last "}")');
             try {
               return JSON.parse(truncated) as GeneratedArticle;
             } catch {

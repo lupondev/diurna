@@ -145,9 +145,6 @@ export default function AIEngineDashboard() {
       }
 
       const rawText = await res.text();
-      console.log('[AI Engine Dashboard] Status:', res.status, '| Content-Type:', res.headers.get('content-type'));
-      console.log('[AI Engine Dashboard] Raw response length:', rawText.length);
-      console.log('[AI Engine Dashboard] Raw response (first 500):', rawText.substring(0, 500));
 
       if (!res.ok) {
         let errorMsg = `HTTP ${res.status}: `;
@@ -172,7 +169,6 @@ export default function AIEngineDashboard() {
         return;
       }
 
-      console.log('[AI Engine Dashboard] Parsed result:', data);
       setResult(data);
     } catch (err) {
       console.error('[AI Engine Dashboard] Fetch error:', err);

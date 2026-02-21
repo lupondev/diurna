@@ -11,6 +11,7 @@ import {
   htmlToTiptap,
   injectWidgets,
   slugify,
+  fetchUnsplashImage,
 } from '@/lib/autopilot'
 
 export const maxDuration = 60
@@ -222,6 +223,8 @@ export async function GET(req: NextRequest) {
             slug = `${baseSlug}-${slugSuffix++}`
           }
 
+          const featuredImage = await fetchUnsplashImage(title)
+
           const article = await prisma.article.create({
             data: {
               siteId: site.id,
@@ -229,6 +232,7 @@ export async function GET(req: NextRequest) {
               slug,
               content: tiptapContent as unknown as Prisma.InputJsonValue,
               excerpt: parsed.excerpt || '',
+              featuredImage,
               status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
               publishedAt: config.autoPublish ? new Date() : null,
               categoryId: category.id,
@@ -381,6 +385,8 @@ export async function GET(req: NextRequest) {
         slug = `${baseSlug}-${slugSuffix++}`
       }
 
+      const featuredImage = await fetchUnsplashImage(title)
+
       const article = await prisma.article.create({
         data: {
           siteId: site.id,
@@ -388,6 +394,7 @@ export async function GET(req: NextRequest) {
           slug,
           content: tiptapContent as unknown as Prisma.InputJsonValue,
           excerpt: parsed.excerpt || '',
+          featuredImage,
           status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
           publishedAt: config.autoPublish ? new Date() : null,
           categoryId: category.id,
