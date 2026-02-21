@@ -12,19 +12,19 @@ type LogEntry = {
 }
 
 const ACTION_ICONS: Record<string, { icon: string; bg: string }> = {
-  'user.joined': { icon: '👋', bg: 'var(--mint-l)' },
-  'user.role_changed': { icon: '🔄', bg: 'var(--elec-l)' },
-  'user.removed': { icon: '🚫', bg: 'var(--coral-l)' },
-  'invite.created': { icon: '✉️', bg: 'var(--gold-l)' },
-  'invite.accepted': { icon: '✅', bg: 'var(--suc-l)' },
-  'article.published': { icon: '📰', bg: 'var(--mint-l)' },
-  'article.created': { icon: '📝', bg: 'var(--g100)' },
-  'article.deleted': { icon: '🗑️', bg: 'var(--coral-l)' },
-  'settings.updated': { icon: '⚙️', bg: 'var(--g100)' },
+  'user.joined': { icon: '\u{1F44B}', bg: 'var(--mint-l)' },
+  'user.role_changed': { icon: '\u{1F504}', bg: 'var(--elec-l)' },
+  'user.removed': { icon: '\u{1F6AB}', bg: 'var(--coral-l)' },
+  'invite.created': { icon: '\u2709\uFE0F', bg: 'var(--gold-l)' },
+  'invite.accepted': { icon: '\u2705', bg: 'var(--suc-l)' },
+  'article.published': { icon: '\u{1F4F0}', bg: 'var(--mint-l)' },
+  'article.created': { icon: '\u{1F4DD}', bg: 'var(--g100)' },
+  'article.deleted': { icon: '\u{1F5D1}\uFE0F', bg: 'var(--coral-l)' },
+  'settings.updated': { icon: '\u2699\uFE0F', bg: 'var(--g100)' },
 }
 
 function getIcon(action: string) {
-  return ACTION_ICONS[action] || { icon: '📋', bg: 'var(--g100)' }
+  return ACTION_ICONS[action] || { icon: '\u{1F4CB}', bg: 'var(--g100)' }
 }
 
 function formatAction(entry: LogEntry): string {
@@ -52,17 +52,17 @@ export default function AdminAuditLogPage() {
   return (
     <>
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>Audit Log</div>
-        <div style={{ fontSize: 12, color: 'var(--g500)' }}>Track all team activity and changes</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>Zapisnik aktivnosti</div>
+        <div style={{ fontSize: 12, color: 'var(--g500)' }}>Pratite sve aktivnosti i promjene u timu</div>
       </div>
 
       {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--g400)' }}>Loading activity...</div>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--g400)' }}>Učitavanje aktivnosti...</div>
       ) : logs.length === 0 ? (
         <div className="adm-card" style={{ textAlign: 'center', padding: 40 }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g900)', marginBottom: 4 }}>No activity yet</div>
-          <div style={{ fontSize: 12, color: 'var(--g400)' }}>Actions will appear here as your team uses the platform</div>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>{'\u{1F4CB}'}</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g900)', marginBottom: 4 }}>Nema aktivnosti</div>
+          <div style={{ fontSize: 12, color: 'var(--g400)' }}>Akcije će se pojaviti ovdje dok vaš tim koristi platformu</div>
         </div>
       ) : (
         <div className="adm-card" style={{ padding: '8px 24px' }}>
@@ -73,14 +73,14 @@ export default function AdminAuditLogPage() {
                 <div className="adm-log-icon" style={{ background: bg }}>{icon}</div>
                 <div style={{ flex: 1 }}>
                   <div className="adm-log-text">
-                    <strong>{entry.userName || 'System'}</strong>{' '}
+                    <strong>{entry.userName || 'Sistem'}</strong>{' '}
                     {formatAction(entry)}
                   </div>
                   {entry.detail && (
                     <div style={{ fontSize: 11, color: 'var(--g400)', marginTop: 2 }}>{entry.detail}</div>
                   )}
                   <div className="adm-log-time">
-                    {new Date(entry.createdAt).toLocaleString()}
+                    {new Date(entry.createdAt).toLocaleString('bs-BA')}
                   </div>
                 </div>
               </div>

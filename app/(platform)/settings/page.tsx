@@ -20,9 +20,9 @@ const TABS = [
   { id: 'api-keys', label: 'API Ključevi' },
   { id: 'team', label: 'Tim' },
   { id: 'invites', label: 'Pozivnice' },
-  { id: 'audit', label: 'Audit Log' },
-  { id: 'sync', label: 'Data Sync' },
-  { id: 'health', label: 'System Health' },
+  { id: 'audit', label: 'Zapisnik' },
+  { id: 'sync', label: 'Sinhronizacija' },
+  { id: 'health', label: 'Zdravlje sistema' },
 ]
 
 function SettingsInner() {

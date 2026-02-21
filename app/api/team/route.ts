@@ -36,7 +36,17 @@ export async function GET() {
         { joinedAt: 'asc' },
       ],
     })
-    return NextResponse.json(members)
+
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const site = await prisma.site.findFirst({ where: { organizationId: orgId }, select: { id: true } })
+    const articlesThisMonth = site
+      ? await prisma.article.count({
+          where: { siteId: site.id, deletedAt: null, createdAt: { gte: startOfMonth } },
+        })
+      : 0
+
+    return NextResponse.json({ members, articlesThisMonth })
   } catch (error) {
     console.error('Get team error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

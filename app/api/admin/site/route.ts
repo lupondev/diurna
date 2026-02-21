@@ -14,7 +14,7 @@ export async function GET() {
 
   const site = await prisma.site.findFirst({
     where: { organizationId: orgId },
-    select: { language: true, timezone: true },
+    select: { language: true, timezone: true, gaId: true },
   })
 
   if (!org) {
@@ -26,6 +26,7 @@ export async function GET() {
     slug: org.slug,
     language: site?.language || 'en',
     timezone: site?.timezone || 'UTC',
+    gaId: site?.gaId || '',
     apiKeys: {
       anthropic: !!process.env.ANTHROPIC_API_KEY,
       gemini: !!process.env.GEMINI_API_KEY,
@@ -40,6 +41,7 @@ const UpdateSchema = z.object({
   name: z.string().min(1).optional(),
   language: z.string().optional(),
   timezone: z.string().optional(),
+  gaId: z.string().optional(),
 })
 
 export async function PATCH(req: NextRequest) {
@@ -56,7 +58,7 @@ export async function PATCH(req: NextRequest) {
     })
   }
 
-  if (data.language || data.timezone) {
+  if (data.language || data.timezone || data.gaId !== undefined) {
     const site = await prisma.site.findFirst({ where: { organizationId: orgId } })
     if (site) {
       await prisma.site.update({
@@ -64,6 +66,7 @@ export async function PATCH(req: NextRequest) {
         data: {
           ...(data.language && { language: data.language }),
           ...(data.timezone && { timezone: data.timezone }),
+          ...(data.gaId !== undefined && { gaId: data.gaId || null }),
         },
       })
     }

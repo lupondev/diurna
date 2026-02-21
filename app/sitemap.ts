@@ -34,8 +34,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }))
 
+  const staticPages: MetadataRoute.Sitemap = [
+    '/o-nama', '/impressum', '/privatnost', '/uslovi', '/kontakt', '/marketing',
+    '/igraci', '/tabela',
+  ].map((path) => ({
+    url: `${baseUrl}${path}`,
+    lastModified: new Date(),
+    changeFrequency: 'monthly' as const,
+    priority: 0.5,
+  }))
+
   return [
     { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
+    ...staticPages,
     ...categoryEntries,
     ...articleEntries,
   ]

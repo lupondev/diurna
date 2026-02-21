@@ -60,10 +60,10 @@ const LEVEL_STYLE: Record<string, { bg: string; color: string }> = {
 
 function timeAgo(dateStr: string) {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
-  if (seconds < 60) return 'just now'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-  return `${Math.floor(seconds / 86400)}d ago`
+  if (seconds < 60) return 'upravo'
+  if (seconds < 3600) return `prije ${Math.floor(seconds / 60)}m`
+  if (seconds < 86400) return `prije ${Math.floor(seconds / 3600)}h`
+  return `prije ${Math.floor(seconds / 86400)}d`
 }
 
 export default function HealthPage() {
@@ -101,7 +101,7 @@ export default function HealthPage() {
       setActionResult(`${label}: ${JSON.stringify(result.result || result.error)}`)
       fetchData()
     } catch (e) {
-      setActionResult(`${label} failed: ${e instanceof Error ? e.message : 'Unknown error'}`)
+      setActionResult(`${label} greška: ${e instanceof Error ? e.message : 'Nepoznata greška'}`)
     }
     setActionLoading(null)
   }
@@ -109,8 +109,8 @@ export default function HealthPage() {
   if (loading && !data) {
     return (
       <div style={s.container}>
-        <h1 style={s.h1}>System Health</h1>
-        <div style={s.loadingBox}>Loading health data...</div>
+        <h1 style={s.h1}>Zdravlje sistema</h1>
+        <div style={s.loadingBox}>Učitavanje podataka...</div>
       </div>
     )
   }
@@ -118,8 +118,8 @@ export default function HealthPage() {
   if (!data) {
     return (
       <div style={s.container}>
-        <h1 style={s.h1}>System Health</h1>
-        <div style={s.errorBox}>Failed to load health data</div>
+        <h1 style={s.h1}>Zdravlje sistema</h1>
+        <div style={s.errorBox}>Greška pri učitavanju podataka</div>
       </div>
     )
   }
@@ -127,15 +127,15 @@ export default function HealthPage() {
   return (
     <div style={s.container}>
       <div style={s.header}>
-        <h1 style={s.h1}>System Health</h1>
+        <h1 style={s.h1}>Zdravlje sistema</h1>
         <button onClick={fetchData} style={s.refreshBtn} disabled={loading}>
-          {loading ? 'Refreshing...' : 'Refresh'}
+          {loading ? 'Osvježavanje...' : 'Osvježi'}
         </button>
       </div>
 
-      {/* SECTION 1: Service Status */}
+      {/* SECTION 1: Status servisa */}
       <section style={s.section}>
-        <h2 style={s.h2}>Service Status</h2>
+        <h2 style={s.h2}>Status servisa</h2>
         <div style={s.grid}>
           {data.checks.map((check) => (
             <div key={check.name} style={s.card}>
@@ -155,40 +155,40 @@ export default function HealthPage() {
         </div>
       </section>
 
-      {/* SECTION 2: Autopilot Stats */}
+      {/* SECTION 2: Autopilot statistika */}
       <section style={s.section}>
-        <h2 style={s.h2}>Autopilot Stats</h2>
+        <h2 style={s.h2}>Autopilot statistika</h2>
         <div style={s.grid}>
           <div style={s.statCard}>
             <div style={s.statValue}>{data.autopilot.today}</div>
-            <div style={s.statLabel}>Articles Today</div>
+            <div style={s.statLabel}>Članaka danas</div>
           </div>
           <div style={s.statCard}>
             <div style={s.statValue}>{data.autopilot.week}</div>
-            <div style={s.statLabel}>This Week</div>
+            <div style={s.statLabel}>Ove sedmice</div>
           </div>
           <div style={s.statCard}>
             <div style={s.statValue}>{data.autopilot.month}</div>
-            <div style={s.statLabel}>This Month</div>
+            <div style={s.statLabel}>Ovog mjeseca</div>
           </div>
           <div style={s.statCard}>
             <div style={s.statValue}>{data.autopilot.successRate}%</div>
-            <div style={s.statLabel}>Publish Rate</div>
+            <div style={s.statLabel}>Stopa objave</div>
           </div>
         </div>
         <div style={s.metaRow}>
-          <span>Last model: <b>{data.autopilot.lastModel || 'N/A'}</b></span>
-          <span>Gemini fallbacks today: <b>{data.autopilot.geminiFallbacks}</b></span>
-          <span>Last run: <b>{data.autopilot.lastRun ? timeAgo(data.autopilot.lastRun) : 'Never'}</b></span>
+          <span>Posljednji model: <b>{data.autopilot.lastModel || 'N/A'}</b></span>
+          <span>Gemini zamjena danas: <b>{data.autopilot.geminiFallbacks}</b></span>
+          <span>Posljednje pokretanje: <b>{data.autopilot.lastRun ? timeAgo(data.autopilot.lastRun) : 'Nikad'}</b></span>
         </div>
         {data.autopilot.lastTitle && (
           <div style={s.lastArticle}>
-            Last article: {data.autopilot.lastTitle}
+            Posljednji članak: {data.autopilot.lastTitle}
           </div>
         )}
         <div style={{ ...s.metaRow, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--g200, #e5e7eb)' }}>
-          <span>Webhook triggers today: <b>{data.webhook.triggeredToday}</b></span>
-          <span>Last webhook: <b>{data.webhook.lastTrigger ? timeAgo(data.webhook.lastTrigger) : 'Never'}</b></span>
+          <span>Webhook okidanja danas: <b>{data.webhook.triggeredToday}</b></span>
+          <span>Posljednji webhook: <b>{data.webhook.lastTrigger ? timeAgo(data.webhook.lastTrigger) : 'Nikad'}</b></span>
         </div>
         {data.webhook.lastMessage && (
           <div style={s.lastArticle}>
@@ -197,21 +197,21 @@ export default function HealthPage() {
         )}
       </section>
 
-      {/* SECTION 3: API Usage & Cache */}
+      {/* SECTION 3: API korištenje i keš */}
       <section style={s.section}>
-        <h2 style={s.h2}>API Usage & Cache</h2>
+        <h2 style={s.h2}>API korištenje i keš</h2>
         <div style={s.grid}>
           <div style={s.statCard}>
             <div style={s.statValue}>{data.cache.entries}</div>
-            <div style={s.statLabel}>Cached Entries</div>
+            <div style={s.statLabel}>Keširani zapisi</div>
           </div>
           <div style={s.statCard}>
             <div style={s.statValue}>{data.cache.apiCallsToday}</div>
-            <div style={s.statLabel}>API Calls Today</div>
+            <div style={s.statLabel}>API pozivi danas</div>
           </div>
           <div style={s.statCard}>
             <div style={s.statValue}>{data.cache.quotaUsed} / {data.cache.quotaLimit}</div>
-            <div style={s.statLabel}>API-Football Quota</div>
+            <div style={s.statLabel}>API-Football kvota</div>
           </div>
           <div style={s.statCard}>
             <div style={s.statValue}>
@@ -219,14 +219,14 @@ export default function HealthPage() {
                 ? `${Math.round(((data.cache.quotaUsed - data.cache.apiCallsToday) / Math.max(1, data.cache.quotaUsed)) * 100)}%`
                 : 'N/A'}
             </div>
-            <div style={s.statLabel}>Cache Hit Rate</div>
+            <div style={s.statLabel}>Stopa keš pogodaka</div>
           </div>
         </div>
         <div style={s.card}>
           <div style={s.cardHeader}>
-            <span style={s.cardTitle}>API-Football Quota</span>
+            <span style={s.cardTitle}>API-Football kvota</span>
             <span style={s.quotaText}>
-              {data.cache.quotaUsed} / {data.cache.quotaLimit} requests today
+              {data.cache.quotaUsed} / {data.cache.quotaLimit} zahtjeva danas
             </span>
           </div>
           <div style={s.progressBar}>
@@ -242,7 +242,7 @@ export default function HealthPage() {
 
         <div style={{ ...s.card, marginTop: 12 }}>
           <div style={s.cardHeader}>
-            <span style={s.cardTitle}>Environment Variables</span>
+            <span style={s.cardTitle}>Env varijable</span>
           </div>
           <div style={s.envGrid}>
             {Object.entries(data.envVars).map(([key, set]) => (
@@ -257,15 +257,15 @@ export default function HealthPage() {
         </div>
       </section>
 
-      {/* SECTION 4: Quick Actions */}
+      {/* SECTION 4: Brze akcije */}
       <section style={s.section}>
-        <h2 style={s.h2}>Quick Actions</h2>
+        <h2 style={s.h2}>Brze akcije</h2>
         <div style={s.actionsRow}>
           {[
-            { action: 'run-autopilot', label: 'Run Autopilot Now', icon: '▶' },
-            { action: 'backfill-images', label: 'Backfill Images', icon: '🖼' },
-            { action: 'clear-duplicates', label: 'Clear Duplicates', icon: '🧹' },
-            { action: 'purge-logs', label: 'Purge Old Logs', icon: '🗑' },
+            { action: 'run-autopilot', label: 'Pokreni Autopilot', icon: '\u25B6' },
+            { action: 'backfill-images', label: 'Dopuni slike', icon: '\u{1F5BC}' },
+            { action: 'clear-duplicates', label: 'Obriši duplikate', icon: '\u{1F9F9}' },
+            { action: 'purge-logs', label: 'Obriši stare logove', icon: '\u{1F5D1}' },
           ].map(({ action, label, icon }) => (
             <button
               key={action}
@@ -274,7 +274,7 @@ export default function HealthPage() {
               style={s.actionBtn}
             >
               <span>{icon}</span>
-              {actionLoading === action ? 'Running...' : label}
+              {actionLoading === action ? 'U toku...' : label}
             </button>
           ))}
         </div>
@@ -283,12 +283,12 @@ export default function HealthPage() {
         )}
       </section>
 
-      {/* SECTION 5: Recent Logs */}
+      {/* SECTION 5: Nedavni logovi */}
       <section style={s.section}>
-        <h2 style={s.h2}>Recent Logs ({data.logs.length})</h2>
+        <h2 style={s.h2}>Nedavni logovi ({data.logs.length})</h2>
         <div style={s.logsTable}>
           {data.logs.length === 0 ? (
-            <div style={s.emptyLogs}>No logs yet</div>
+            <div style={s.emptyLogs}>Nema logova</div>
           ) : (
             data.logs.map((log) => (
               <div
@@ -322,7 +322,7 @@ export default function HealthPage() {
   )
 }
 
-/* ── Inline styles ── */
+/* Inline styles */
 
 function badgeStyle(status: string): React.CSSProperties {
   return {

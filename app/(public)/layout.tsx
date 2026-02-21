@@ -4,11 +4,10 @@ import type { LiveMatch } from '@/components/public/sportba'
 import { getDefaultSite } from '@/lib/db'
 import { getLiveMatches } from '@/lib/api-football'
 
-const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID
-
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const site = await getDefaultSite()
   const siteName = site?.name || 'Diurna'
+  const gaId = site?.gaId || process.env.NEXT_PUBLIC_GA4_ID
 
   let matches: LiveMatch[] = []
   try {
@@ -19,14 +18,14 @@ export default async function PublicLayout({ children }: { children: React.React
 
   return (
     <ThemeProvider>
-      {GA4_ID && (
+      {gaId && (
         <>
-          <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} strategy="afterInteractive" />
+          <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="afterInteractive" />
           <Script id="ga4-init" strategy="afterInteractive">{`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', '${GA4_ID}');
+            gtag('config', '${gaId}');
           `}</Script>
         </>
       )}

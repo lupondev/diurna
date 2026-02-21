@@ -9,13 +9,13 @@ type SyncResult = {
 }
 
 const SYNC_JOBS = [
-  { label: 'Sync PL Players', path: '/api/admin/sync-players?league=39&page=1' },
-  { label: 'Sync La Liga Players', path: '/api/admin/sync-players?league=140&page=1' },
-  { label: 'Sync Serie A Players', path: '/api/admin/sync-players?league=135&page=1' },
-  { label: 'Sync Bundesliga Players', path: '/api/admin/sync-players?league=78&page=1' },
-  { label: 'Sync Ligue 1 Players', path: '/api/admin/sync-players?league=61&page=1' },
-  { label: 'Scrape PL Salaries', path: '/api/admin/scrape-salaries?league=premier-league&offset=0' },
-  { label: 'Scrape La Liga Salaries', path: '/api/admin/scrape-salaries?league=la-liga&offset=0' },
+  { label: 'Sinhronizuj PL igrače', path: '/api/admin/sync-players?league=39&page=1' },
+  { label: 'Sinhronizuj La Liga igrače', path: '/api/admin/sync-players?league=140&page=1' },
+  { label: 'Sinhronizuj Serie A igrače', path: '/api/admin/sync-players?league=135&page=1' },
+  { label: 'Sinhronizuj Bundesliga igrače', path: '/api/admin/sync-players?league=78&page=1' },
+  { label: 'Sinhronizuj Ligue 1 igrače', path: '/api/admin/sync-players?league=61&page=1' },
+  { label: 'Prikupi PL plate', path: '/api/admin/scrape-salaries?league=premier-league&offset=0' },
+  { label: 'Prikupi La Liga plate', path: '/api/admin/scrape-salaries?league=la-liga&offset=0' },
 ]
 
 export default function SyncPage() {
@@ -31,7 +31,7 @@ export default function SyncPage() {
       const data = await res.json() as Record<string, unknown>
       setResults(prev => prev.map((r, i) => i === index ? { ...r, status: 'done', data } : r))
     } catch {
-      setResults(prev => prev.map((r, i) => i === index ? { ...r, status: 'error', data: { error: 'Request failed' } } : r))
+      setResults(prev => prev.map((r, i) => i === index ? { ...r, status: 'error', data: { error: 'Zahtjev nije uspio' } } : r))
     }
   }
 
@@ -57,9 +57,9 @@ export default function SyncPage() {
     <div style={{ maxWidth: 800 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: 0 }}>Data Sync</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: 0 }}>Sinhronizacija podataka</h2>
           <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 0' }}>
-            API-Football players + Capology salaries
+            API-Football igrači + Capology plate
           </p>
         </div>
         <button
@@ -76,7 +76,7 @@ export default function SyncPage() {
             cursor: allRunning ? 'not-allowed' : 'pointer',
           }}
         >
-          {allRunning ? 'Running...' : 'Sync All'}
+          {allRunning ? 'U toku...' : 'Sinhronizuj sve'}
         </button>
       </div>
 
@@ -126,19 +126,19 @@ export default function SyncPage() {
                 flexShrink: 0,
               }}
             >
-              {r.status === 'running' ? '...' : 'Run'}
+              {r.status === 'running' ? '...' : 'Pokreni'}
             </button>
           </div>
         ))}
       </div>
 
       <div style={{ marginTop: 24, padding: 16, background: '#f8fafc', borderRadius: 10, border: '1px solid #e5e7eb' }}>
-        <h3 style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>Notes</h3>
+        <h3 style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>Napomene</h3>
         <ul style={{ fontSize: 12, color: '#64748b', margin: 0, paddingLeft: 16, lineHeight: 1.8 }}>
-          <li>API-Football syncs 10 players per page. Run multiple pages for full roster.</li>
-          <li>Capology scraper processes 3 clubs per batch with 3s delays.</li>
-          <li>Player name matching between sources is fuzzy — some mismatches expected.</li>
-          <li>Daily cron runs at 04:00 UTC (PL page 1 + first 3 PL clubs).</li>
+          <li>API-Football sinhronizuje 10 igrača po stranici. Pokrenite više stranica za potpuni roster.</li>
+          <li>Capology scraper obrađuje 3 kluba po seriji sa 3s pauzama.</li>
+          <li>Podudaranje imena igrača između izvora je neprecizno — moguća su odstupanja.</li>
+          <li>Dnevni cron se pokreće u 04:00 UTC (PL stranica 1 + prva 3 PL kluba).</li>
         </ul>
       </div>
     </div>
