@@ -27,7 +27,7 @@ interface Cluster {
 }
 
 interface SiteInfo {
-  id: string; name: string; slug: string; domain: string | null
+  id: string; name: string; slug: string; domain: string | null; articleCount?: number
 }
 
 interface TrendItem {
@@ -138,11 +138,13 @@ export default function NewsroomPage() {
   // Load all sites
   useEffect(() => {
     fetch('/api/site?all=true')
-      .then(r => r.json() as Promise<{ sites?: { id: string; name: string; slug: string; domain: string | null }[] }>)
+      .then(r => r.json() as Promise<{ sites?: SiteInfo[] }>)
       .then(data => {
-        const list = (data.sites || []).map(s => ({ id: s.id, name: s.name, slug: s.slug, domain: s.domain }))
-        setSites(list)
-        if (list.length > 0) setSelectedSiteId(list[0].id)
+        const usableSites = ((data.sites || []) as SiteInfo[]).filter(
+          (s: SiteInfo) => s.domain || (s.articleCount ?? 0) > 5
+        )
+        setSites(usableSites)
+        setSelectedSiteId(usableSites[0]?.id ?? null)
       })
       .catch(() => {})
   }, [])
