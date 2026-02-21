@@ -36,16 +36,16 @@ type SectionKey = 'NEWS' | 'TRANSFERS' | 'MATCHES_TABLE' | 'STATISTICS' | 'INJUR
 
 // ─── Constants ───────────────────────────────────────────
 
-const SECTIONS: { key: SectionKey; label: string; icon: string; hasData: boolean | string; eventTypes?: string[] }[] = [
-  { key: 'NEWS', label: 'News', icon: '📰', hasData: true, eventTypes: ['BREAKING', 'SCANDAL', 'DISCIPLINE', 'RECORD', 'MANAGERIAL', 'TACTICAL', 'POST_MATCH_REACTION', 'MATCH_PREVIEW', 'MATCH_RESULT'] },
-  { key: 'TRANSFERS', label: 'Transfers', icon: '🔄', hasData: true, eventTypes: ['TRANSFER', 'CONTRACT'] },
-  { key: 'MATCHES_TABLE', label: 'Matches Table', icon: '📊', hasData: false },
-  { key: 'STATISTICS', label: 'Statistics', icon: '📈', hasData: false },
-  { key: 'INJURIES', label: 'Injuries', icon: '🏥', hasData: true, eventTypes: ['INJURY'] },
-  { key: 'PLAYERS', label: 'Players', icon: '👤', hasData: false },
-  { key: 'CLUBS', label: 'Clubs', icon: '🏟️', hasData: false },
+const SECTIONS: { key: SectionKey; label: string; icon: string; hasData: boolean | string; eventTypes?: string[]; entityFilter?: string }[] = [
+  { key: 'NEWS', label: 'Vijesti', icon: '📰', hasData: true, eventTypes: ['BREAKING', 'SCANDAL', 'DISCIPLINE', 'RECORD', 'MANAGERIAL', 'TACTICAL', 'POST_MATCH_REACTION', 'MATCH_PREVIEW', 'MATCH_RESULT'] },
+  { key: 'TRANSFERS', label: 'Transferi', icon: '🔄', hasData: true, eventTypes: ['TRANSFER', 'CONTRACT'] },
+  { key: 'MATCHES_TABLE', label: 'Utakmice', icon: '📊', hasData: 'matches' },
+  { key: 'STATISTICS', label: 'Statistika', icon: '📈', hasData: true, eventTypes: ['RECORD', 'TACTICAL', 'MATCH_RESULT', 'POST_MATCH_REACTION'] },
+  { key: 'INJURIES', label: 'Povrede', icon: '🏥', hasData: true, eventTypes: ['INJURY'] },
+  { key: 'PLAYERS', label: 'Igrači', icon: '👤', hasData: true, entityFilter: 'player' },
+  { key: 'CLUBS', label: 'Klubovi', icon: '🏟️', hasData: true, entityFilter: 'club' },
   { key: 'VIDEO', label: 'Video', icon: '📹', hasData: 'scorebat' },
-  { key: 'WATCH_LIVE', label: 'Watch Live', icon: '📺', hasData: false },
+  { key: 'WATCH_LIVE', label: 'Uživo', icon: '📺', hasData: false },
 ]
 
 const TIME_FILTERS: { key: string; label: string; hours: number | null }[] = [
@@ -117,8 +117,26 @@ function filterByTime(clusters: Cluster[], hours: number | null): Cluster[] {
 
 function filterBySection(clusters: Cluster[], sectionKey: SectionKey): Cluster[] {
   const section = SECTIONS.find(s => s.key === sectionKey)
-  if (!section || !section.eventTypes) return clusters
-  return clusters.filter(c => section.eventTypes!.includes(c.eventType))
+  if (!section) return clusters
+  if (section.eventTypes) {
+    return clusters.filter(c => section.eventTypes!.includes(c.eventType))
+  }
+  if (section.entityFilter === 'player') {
+    return clusters.filter(c =>
+      c.primaryEntityType.toLowerCase().includes('player') ||
+      c.primaryEntityType.toLowerCase().includes('person')
+    )
+  }
+  if (section.entityFilter === 'club') {
+    const allClubs = Object.values(LEAGUE_CLUB_MAP).flat()
+    return clusters.filter(c =>
+      c.primaryEntityType.toLowerCase().includes('club') ||
+      c.primaryEntityType.toLowerCase().includes('team') ||
+      c.primaryEntityType.toLowerCase().includes('organization') ||
+      allClubs.some(club => c.primaryEntity.toLowerCase().includes(club.toLowerCase()))
+    )
+  }
+  return clusters
 }
 
 function filterByLeague(clusters: Cluster[], leagueFilter: string | null): Cluster[] {
@@ -140,7 +158,7 @@ function filterByLeague(clusters: Cluster[], leagueFilter: string | null): Clust
 function getSectionCount(sectionKey: SectionKey, clusters: Cluster[], timeHours: number | null): number | null {
   const section = SECTIONS.find(s => s.key === sectionKey)
   if (!section || section.hasData !== true) return null
-  let filtered = clusters.filter(c => section.eventTypes!.includes(c.eventType))
+  let filtered = filterBySection(clusters, sectionKey)
   filtered = filterByTime(filtered, timeHours)
   return filtered.length
 }
@@ -316,6 +334,14 @@ function MatchesStrip({ fixtures, live, onWriteMatch }: {
   )
 }
 
+// ─── Gambling/Betting Blocklist ──────────────────────────
+
+const BLOCKED_TRENDS = ['bet365', 'kladionica', 'betting', 'odds', 'casino', 'poker', 'kladi', 'unibet', 'betway', 'pinnacle', 'mozzart', 'meridian', '1xbet', 'tipico', 'bwin', 'stake', 'fanduel', 'draftkings', 'sportsbook', 'parlay', 'handicap', 'spread', 'wager']
+
+function filterBlockedTrends(trends: TrendItem[]): TrendItem[] {
+  return trends.filter(t => !BLOCKED_TRENDS.some(b => t.title.toLowerCase().includes(b.toLowerCase())))
+}
+
 // ─── Google Trends Sidebar ───────────────────────────────
 
 function TrendsPanel({ onWriteTrend }: { onWriteTrend: (title: string) => void }) {
@@ -328,7 +354,7 @@ function TrendsPanel({ onWriteTrend }: { onWriteTrend: (title: string) => void }
     setLoading(true)
     fetch(`/api/trends?geo=${geo}`)
       .then(r => r.json() as Promise<{ trends?: TrendItem[] }>)
-      .then(data => { setTrends(data.trends || []); setLoading(false) })
+      .then(data => { setTrends(filterBlockedTrends(data.trends || [])); setLoading(false) })
       .catch(() => setLoading(false))
   }, [geo])
 
@@ -488,7 +514,7 @@ export default function NewsroomPage() {
   const currentSection = SECTIONS.find(s => s.key === activeSection)
 
   const filtered = useMemo(() => {
-    if (!currentSection || currentSection.hasData !== true) return []
+    if (!currentSection || (currentSection.hasData !== true)) return []
     let result = filterBySection(clusters, activeSection)
     result = filterByTime(result, activeTimeHours)
     result = filterByLeague(result, activeLeague)
@@ -497,6 +523,18 @@ export default function NewsroomPage() {
     }
     return result.sort((a, b) => b.dis - a.dis)
   }, [clusters, activeSection, activeTimeHours, activeLeague, search, searchLower, currentSection])
+
+  const matchesFiltered = useMemo(() => {
+    if (activeSection !== 'MATCHES_TABLE') return []
+    let all = [...liveMatches, ...fixtures]
+    if (activeLeague) {
+      all = all.filter(f => f.league?.toLowerCase().includes(activeLeague.toLowerCase()))
+    }
+    if (search) {
+      all = all.filter(f => f.homeTeam.toLowerCase().includes(searchLower) || f.awayTeam.toLowerCase().includes(searchLower) || f.league?.toLowerCase().includes(searchLower))
+    }
+    return all
+  }, [activeSection, fixtures, liveMatches, activeLeague, search, searchLower])
 
   // Breaking news: DIS > 70 in last 10 minutes
   const breakingCluster = useMemo(() => {
@@ -540,7 +578,8 @@ export default function NewsroomPage() {
 
   const isDataSection = currentSection?.hasData === true
   const isVideoSection = currentSection?.hasData === 'scorebat'
-  const isComingSoon = !isDataSection && !isVideoSection
+  const isMatchesSection = currentSection?.hasData === 'matches'
+  const isComingSoon = !isDataSection && !isVideoSection && !isMatchesSection
 
   return (
     <div style={{ background: '#f5f6f8', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -612,24 +651,14 @@ export default function NewsroomPage() {
         {/* LEFT COLUMN */}
         <div>
           {/* COMING SOON */}
-          {isComingSoon && (() => {
-            const info: Record<string, { title: string; description: string; icon: string }> = {
-              MATCHES_TABLE: { title: 'Matches & Fixtures', description: 'Live scores, upcoming fixtures, and match results will appear here.', icon: '📊' },
-              STATISTICS: { title: 'Statistics', description: 'Player and team statistics, league tables, and performance data coming soon.', icon: '📈' },
-              PLAYERS: { title: 'Players', description: 'Player profiles, stats, transfer history, and performance tracking.', icon: '👤' },
-              CLUBS: { title: 'Clubs', description: 'Club profiles, squad lists, fixtures, and historical data.', icon: '🏟️' },
-              WATCH_LIVE: { title: 'Watch Live', description: 'Live match streams and real-time coverage will be available here.', icon: '📺' },
-            }
-            const data = info[activeSection] || { title: currentSection?.label || '', description: 'This section is coming soon.', icon: currentSection?.icon || '' }
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '96px 0', textAlign: 'center' }}>
-                <span style={{ fontSize: 48, marginBottom: 16 }}>{data.icon}</span>
-                <h3 style={{ fontSize: 20, fontWeight: 700, color: '#374151', margin: '0 0 8px' }}>{data.title}</h3>
-                <p style={{ fontSize: 13, color: '#9ca3af', maxWidth: 400, margin: '0 0 16px', lineHeight: 1.5 }}>{data.description}</p>
-                <span style={{ padding: '6px 16px', background: '#f3f4f6', color: '#6b7280', fontSize: 11, fontFamily: 'monospace', borderRadius: 9999, fontWeight: 600 }}>Coming Soon</span>
-              </div>
-            )
-          })()}
+          {isComingSoon && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '96px 0', textAlign: 'center' }}>
+              <span style={{ fontSize: 48, marginBottom: 16 }}>📺</span>
+              <h3 style={{ fontSize: 20, fontWeight: 700, color: '#374151', margin: '0 0 8px' }}>Gledaj uživo</h3>
+              <p style={{ fontSize: 13, color: '#9ca3af', maxWidth: 400, margin: '0 0 16px', lineHeight: 1.5 }}>Prijenosi utakmica uživo i praćenje u realnom vremenu uskoro dostupno.</p>
+              <span style={{ padding: '6px 16px', background: '#f3f4f6', color: '#6b7280', fontSize: 11, fontFamily: 'monospace', borderRadius: 9999, fontWeight: 600 }}>Uskoro</span>
+            </div>
+          )}
 
           {/* VIDEO / SCOREBAT */}
           {isVideoSection && (
@@ -646,12 +675,67 @@ export default function NewsroomPage() {
             </div>
           )}
 
+          {/* MATCHES TABLE */}
+          {isMatchesSection && (
+            <div>
+              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>📊 Utakmice</span>
+                <span style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'monospace' }}>{matchesFiltered.length}</span>
+                {activeLeague && (
+                  <span style={{ fontSize: 11, background: '#dbeafe', color: '#1d4ed8', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>
+                    {activeLeague}
+                    <button onClick={() => setActiveLeague(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1d4ed8', marginLeft: 4, fontSize: 11 }}>✕</button>
+                  </span>
+                )}
+              </div>
+              {matchesFiltered.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>⚽</div>
+                  <div style={{ fontSize: 14 }}>Nema utakmica za prikaz</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {matchesFiltered.map(f => {
+                    const isLive = LIVE_STATUSES.includes(f.status)
+                    const isFT = f.status === 'FT' || f.status === 'AET' || f.status === 'PEN'
+                    return (
+                      <div key={f.id} style={{
+                        background: '#fff', border: `1px solid ${isLive ? '#fecaca' : '#e5e7eb'}`,
+                        borderLeft: `3px solid ${isLive ? '#dc2626' : isFT ? '#22c55e' : '#e5e7eb'}`,
+                        borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12,
+                      }}>
+                        {isLive && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#dc2626', animation: 'pulse-dot 1.5s infinite', flexShrink: 0 }} />}
+                        <span style={{ fontSize: 10, color: '#6b7280', fontFamily: 'monospace', width: 50, flexShrink: 0 }}>
+                          {isLive ? `${f.elapsed}'` : isFT ? 'FT' : formatMatchTime(f.date)}
+                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#111827', flex: 1, textAlign: 'right' }}>{f.homeTeam}</span>
+                        <span style={{
+                          fontSize: 16, fontWeight: 800, fontFamily: 'monospace', padding: '2px 10px', borderRadius: 6,
+                          color: isLive ? '#dc2626' : isFT ? '#22c55e' : '#6b7280',
+                          background: isLive ? '#fef2f2' : isFT ? '#f0fdf4' : '#f9fafb',
+                        }}>
+                          {f.homeGoals !== null ? `${f.homeGoals} : ${f.awayGoals}` : 'vs'}
+                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#111827', flex: 1 }}>{f.awayTeam}</span>
+                        <span style={{ fontSize: 10, color: '#9ca3af', width: 80, textAlign: 'right', flexShrink: 0 }}>{f.league}</span>
+                        <button onClick={() => writeFromMatch(f)} style={{
+                          background: '#f97316', color: '#fff', border: 'none', borderRadius: 6,
+                          padding: '4px 10px', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+                        }}>✨</button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* DATA SECTIONS */}
           {isDataSection && (
             <>
               <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>{currentSection?.icon} {currentSection?.label}</span>
-                <span style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'monospace' }}>{filtered.length} {filtered.length === 1 ? 'story' : 'stories'}</span>
+                <span style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'monospace' }}>{filtered.length} {filtered.length === 1 ? 'vijest' : 'vijesti'}</span>
                 {activeLeague && (
                   <span style={{ fontSize: 11, background: '#dbeafe', color: '#1d4ed8', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>
                     {activeLeague}
@@ -679,15 +763,15 @@ export default function NewsroomPage() {
               {!loading && clusters.length === 0 && (
                 <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>
                   <div style={{ fontSize: 32, marginBottom: 12 }}>📰</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>No stories available.</div>
-                  <div style={{ fontSize: 12 }}>Run the cluster engine to generate stories.</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Nema dostupnih vijesti.</div>
+                  <div style={{ fontSize: 12 }}>Pokrenite cluster engine za generisanje vijesti.</div>
                 </div>
               )}
 
               {!loading && clusters.length > 0 && filtered.length === 0 && (
                 <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>
-                  {search ? <div style={{ fontSize: 14 }}>No stories matching &apos;{search}&apos;</div>
-                    : <div style={{ fontSize: 14 }}>No stories in {currentSection?.label}</div>}
+                  {search ? <div style={{ fontSize: 14 }}>Nema rezultata za &apos;{search}&apos;</div>
+                    : <div style={{ fontSize: 14 }}>Nema vijesti u ovoj kategoriji</div>}
                 </div>
               )}
 
