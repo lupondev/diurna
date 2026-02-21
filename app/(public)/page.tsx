@@ -9,6 +9,7 @@ import { StandingsTable } from '@/components/public/sportba/standings-table'
 import { ForYou } from '@/components/public/sportba/for-you'
 import { ClubLogoStrip } from '@/components/public/ClubLogoStrip'
 import { FixturesTicker } from '@/components/public/FixturesTicker'
+import { VideoSection } from '@/components/public/VideoSection'
 import './home.css'
 
 export const dynamic = 'force-dynamic'
@@ -239,6 +240,9 @@ export default async function HomePage() {
               </div>
             </section>
           )}
+
+          {/* Video Section */}
+          <VideoSection />
 
           <ForYou />
         </div>

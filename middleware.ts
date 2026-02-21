@@ -20,7 +20,7 @@ export async function middleware(req: NextRequest) {
   const isWebhookRoute = pathname.startsWith('/api/webhooks')
   const isCronRoute = pathname.startsWith('/api/cron')
   const isSeedRoute = pathname.startsWith('/api/admin/seed-feeds') || pathname.startsWith('/api/admin/seed-entities') || pathname.startsWith('/api/admin/seed-players') || pathname.startsWith('/api/admin/enrich-players') || pathname.startsWith('/api/admin/seed-matches') || pathname.startsWith('/api/admin/sync-players') || pathname.startsWith('/api/admin/scrape-salaries')
-  const isNewsroomPublic = pathname.startsWith('/api/newsroom/clusters') || pathname.startsWith('/api/newsroom/fixtures') || pathname.startsWith('/api/newsroom/stats') || pathname.startsWith('/api/newsroom/for-you') || pathname.startsWith('/api/entities/search') || pathname.startsWith('/api/clubs') || pathname.startsWith('/api/fixtures/ticker')
+  const isNewsroomPublic = pathname.startsWith('/api/newsroom/clusters') || pathname.startsWith('/api/newsroom/fixtures') || pathname.startsWith('/api/newsroom/stats') || pathname.startsWith('/api/newsroom/for-you') || pathname.startsWith('/api/entities/search') || pathname.startsWith('/api/clubs') || pathname.startsWith('/api/fixtures/ticker') || pathname.startsWith('/api/videos')
   const isAdminApiWithBearer = (pathname.startsWith('/api/admin/backfill-images') || pathname.startsWith('/api/admin/seed') || pathname.startsWith('/api/admin/sync') || pathname.startsWith('/api/admin/enrich') || pathname.startsWith('/api/admin/revalidate') || pathname.startsWith('/api/debug/')) && req.headers.get('authorization')?.startsWith('Bearer ')
   const isSetupRoute = pathname.startsWith('/api/setup/')
   const isDashboardStats = pathname.startsWith('/api/dashboard/stats')
