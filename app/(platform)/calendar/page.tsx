@@ -41,7 +41,7 @@ type LeagueConfig = { id: string; name: string; apiFootballId: number | null; fl
 type TopicConfig = { id: string; name: string; icon: string | null; keywords: string[]; isActive: boolean }
 type ChannelConfig = { id: string; platform: string; accountName: string; accountId: string | null; followers: string | null; filter: string; isActive: boolean }
 type Stats = { today: number; published: number; scheduled: number; live: number; drafts: number }
-type TlArticle = { id: string; title: string; category: string; categorySlug: string; status: string; time: string; hour: number; aiGenerated: boolean }
+type TlArticle = { id: string; title: string; category: string; categorySlug: string; status: string; time: string; hour: number; aiGenerated: boolean; isWebhook?: boolean }
 type TlMatch = { id: string; homeTeam: string; awayTeam: string; homeScore: number | null; awayScore: number | null; league: string | null; status: string | null; time: string; hour: number }
 type FeedSource = { id: string; name: string; tier: number; active: boolean; category: string }
 
@@ -104,7 +104,7 @@ const DIST_PLATFORMS = [
 
 /* ── Slot generation (seeded) ── */
 function seededRandom(seed: number) { let s = seed; return () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff } }
-type GenSlot = { id: string; time: string; hour: number; title: string; catSlug: string; status: string; ai: boolean; isMatch: boolean; isLive: boolean; isGap: boolean }
+type GenSlot = { id: string; time: string; hour: number; title: string; catSlug: string; status: string; ai: boolean; isMatch: boolean; isLive: boolean; isGap: boolean; isWebhook?: boolean }
 
 function generateSlots(date: Date, isToday: boolean, target: number): GenSlot[] {
   const seed = date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate()
@@ -455,7 +455,7 @@ export default function CalendarPage() {
   // Merge real articles into timeline
   const slotsByHour: Record<number, GenSlot[]> = {}
   for (const s of genSlots) { (slotsByHour[s.hour] ||= []).push(s) }
-  for (const a of tlArticles) { (slotsByHour[a.hour] ||= []).push({ id: a.id, time: new Date(a.time).toTimeString().slice(0, 5), hour: a.hour, title: a.title, catSlug: a.categorySlug, status: a.status, ai: a.aiGenerated, isMatch: false, isLive: false, isGap: false }) }
+  for (const a of tlArticles) { (slotsByHour[a.hour] ||= []).push({ id: a.id, time: new Date(a.time).toTimeString().slice(0, 5), hour: a.hour, title: a.title, catSlug: a.categorySlug, status: a.status, ai: a.aiGenerated, isMatch: false, isLive: false, isGap: false, isWebhook: a.isWebhook }) }
   for (const m of tlMatches) { (slotsByHour[m.hour] ||= []).push({ id: m.id, time: new Date(m.time).toTimeString().slice(0, 5), hour: m.hour, title: `⚽ ${m.homeTeam} vs ${m.awayTeam}`, catSlug: 'utakmice', status: m.status === 'LIVE' ? 'LIVE' : m.status === 'FT' ? 'PUBLISHED' : 'SCHEDULED', ai: false, isMatch: true, isLive: m.status === 'LIVE' || m.status === '1H' || m.status === '2H', isGap: false }) }
 
   // Week data
@@ -929,6 +929,7 @@ export default function CalendarPage() {
                               {slot.status === 'LIVE' ? '● Live' : slot.status}
                             </span>
                             {slot.ai && <span className="cal-tl-badge ai">AI</span>}
+                            {slot.isWebhook && <span className="cal-tl-badge" style={{ background: '#fef3c7', color: '#92400e', fontWeight: 700 }}>⚡ Breaking</span>}
                             {slot.catSlug && <span className="cal-tl-badge cat">{slot.catSlug}</span>}
                             {slot.isMatch && <span className="cal-tl-badge cat">⚽ Match</span>}
                           </div>

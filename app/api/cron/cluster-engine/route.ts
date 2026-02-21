@@ -421,6 +421,48 @@ export async function GET(req: Request) {
       }
     }
 
+    // ── Breaking news webhook: auto-generate articles for DIS > 70 ──
+    let breakingTriggered = 0
+    if (process.env.CRON_SECRET) {
+      const breakingClusters = await prisma.storyCluster.findMany({
+        where: {
+          dis: { gte: 70 },
+          latestItem: { gte: new Date(Date.now() - 10 * 60 * 1000) },
+        },
+      })
+
+      const startOfDay = new Date()
+      startOfDay.setHours(0, 0, 0, 0)
+
+      for (const bc of breakingClusters) {
+        // Check if already covered today
+        const alreadyCovered = await prisma.article.findFirst({
+          where: {
+            aiPrompt: { contains: bc.id },
+            createdAt: { gte: startOfDay },
+          },
+        })
+        if (alreadyCovered) continue
+
+        // Fire-and-forget webhook call
+        const baseUrl = process.env.NEXTAUTH_URL || 'https://diurna.vercel.app'
+        fetch(`${baseUrl}/api/webhooks/breaking-news`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.CRON_SECRET}`,
+          },
+          body: JSON.stringify({
+            clusterId: bc.id,
+            title: bc.title,
+            dis: bc.dis,
+          }),
+        }).catch(err => console.error('[Cluster Engine] Breaking webhook failed:', err))
+
+        breakingTriggered++
+      }
+    }
+
     const staleDate = new Date(Date.now() - 48 * 60 * 60 * 1000)
     const deleted = await prisma.storyCluster.deleteMany({
       where: { latestItem: { lt: staleDate } },
@@ -439,6 +481,7 @@ export async function GET(req: Request) {
       errors,
       staleDeleted: deleted.count,
       entityCount: entities.length,
+      breakingTriggered,
     })
   } catch (e) {
     console.error('[Cluster Engine] Fatal error:', e)

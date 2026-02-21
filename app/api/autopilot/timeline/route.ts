@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
       scheduledAt: true,
       createdAt: true,
       aiGenerated: true,
+      aiPrompt: true,
       category: { select: { name: true, slug: true } },
     },
     orderBy: [
@@ -61,6 +62,10 @@ export async function GET(req: NextRequest) {
 
   const timelineArticles = articles.map((a) => {
     const time = a.publishedAt || a.scheduledAt || a.createdAt
+    let isWebhook = false
+    if (typeof a.aiPrompt === 'string') {
+      try { isWebhook = JSON.parse(a.aiPrompt).priority === 'webhook_breaking' } catch {}
+    }
     return {
       id: a.id,
       title: a.title,
@@ -70,6 +75,7 @@ export async function GET(req: NextRequest) {
       time: time.toISOString(),
       hour: time.getHours(),
       aiGenerated: a.aiGenerated,
+      isWebhook,
     }
   })
 

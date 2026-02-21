@@ -498,10 +498,10 @@ export default function NewsroomPage() {
     return result.sort((a, b) => b.dis - a.dis)
   }, [clusters, activeSection, activeTimeHours, activeLeague, search, searchLower, currentSection])
 
-  // Breaking news: DIS > 70 in last 30 minutes
+  // Breaking news: DIS > 70 in last 10 minutes
   const breakingCluster = useMemo(() => {
-    const cutoff30m = new Date(Date.now() - 30 * 60 * 1000)
-    return clusters.find(c => c.dis > 70 && new Date(c.latestItem) >= cutoff30m && !dismissedBreaking.has(c.id)) || null
+    const cutoff10m = new Date(Date.now() - 10 * 60 * 1000)
+    return clusters.find(c => c.dis > 70 && new Date(c.latestItem) >= cutoff10m && !dismissedBreaking.has(c.id)) || null
   }, [clusters, dismissedBreaking])
 
   const topStory = filtered[0] || null

@@ -60,6 +60,25 @@ prisma/
 middleware.ts      → Tenant slug extraction (Edge-safe)
 ```
 
+## Cron Jobs (External)
+
+Vercel Hobby plan only supports daily cron jobs. For production use, set up
+[cron-job.org](https://cron-job.org) (free tier) as a backup scheduler:
+
+| Endpoint | Method | Interval | Description |
+|---|---|---|---|
+| `/api/cron/fetch-feeds` | GET | Every 10 min | Fetch RSS feeds + compute DIS scores |
+| `/api/cron/cluster-engine` | GET | Every 10 min | Cluster news items + trigger breaking news webhook |
+| `/api/cron/autopilot` | GET | Every 15 min | Generate AI articles for top stories |
+
+All endpoints require the header:
+
+```
+Authorization: Bearer {CRON_SECRET}
+```
+
+Set `CRON_SECRET` in your Vercel environment variables and use the same value in cron-job.org.
+
 ## Documentation
 
 See [DIURNA-SPEC-V2-FINAL.md](./DIURNA-SPEC-V2-FINAL.md) for the complete technical specification.
