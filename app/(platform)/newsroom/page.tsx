@@ -123,7 +123,9 @@ export default function NewsroomPage() {
   const searchRef = useRef<HTMLInputElement>(null)
   const mode = searchParams.get('mode')
 
-  const [site, setSite] = useState<SiteInfo | null>(null)
+  const [sites, setSites] = useState<SiteInfo[]>([])
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null)
+  const site = useMemo(() => sites.find(s => s.id === selectedSiteId) ?? sites[0] ?? null, [sites, selectedSiteId])
   const [clusters, setClusters] = useState<Cluster[]>([])
   const [loading, setLoading] = useState(true)
   const [clusterCount, setClusterCount] = useState(0)
@@ -133,12 +135,14 @@ export default function NewsroomPage() {
   const [fetching, setFetching] = useState(false)
   const [lastFetch, setLastFetch] = useState<string | null>(null)
 
-  // Load site info
+  // Load all sites
   useEffect(() => {
-    fetch('/api/site')
-      .then(r => r.json() as Promise<{ id?: string; name?: string; slug?: string; domain?: string | null }>)
+    fetch('/api/site?all=true')
+      .then(r => r.json() as Promise<{ sites?: { id: string; name: string; slug: string; domain: string | null }[] }>)
       .then(data => {
-        if (data.id) setSite({ id: data.id, name: data.name || '', slug: data.slug || '', domain: data.domain || null })
+        const list = (data.sites || []).map(s => ({ id: s.id, name: s.name, slug: s.slug, domain: s.domain }))
+        setSites(list)
+        if (list.length > 0) setSelectedSiteId(list[0].id)
       })
       .catch(() => {})
   }, [])
@@ -282,6 +286,17 @@ export default function NewsroomPage() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Top controls bar */}
       <div className="h-11 shrink-0 border-b border-border flex items-center gap-2 px-4 bg-background">
+        {sites.length > 1 && (
+          <select
+            value={selectedSiteId || ''}
+            onChange={e => setSelectedSiteId(e.target.value)}
+            className="text-xs px-2 py-1 border border-border rounded bg-muted text-foreground font-medium mr-1"
+          >
+            {sites.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        )}
         {TIME_FILTERS.map(tf => (
           <button
             key={tf.key}
