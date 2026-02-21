@@ -137,7 +137,6 @@ const SIDEBAR_NEWS = [
   { cat:'POVREDE', title:'Saka napustio teren — status neizvjestan', grad:'linear-gradient(135deg,#ef4444,#f87171)', href:'/povrede/saka-napustio-teren-status-neizvjestan' },
 ]
 
-const ODDS = { home:'1.85', draw:'3.40', away:'4.20' }
 
 const TABS = ['Pregled','Statistika','Postave','Tabela','H2H'] as const
 
@@ -521,20 +520,6 @@ export default function MatchPage() {
 .mc-cap-bar { height: 4px; background: var(--sba-border); border-radius: 2px; overflow: hidden; margin-bottom: 4px; }
 .mc-cap-fill { height: 100%; background: var(--sba-green); border-radius: 2px; transition: width 0.6s ease; }
 .mc-cap-lbl { font-family: var(--sba-mono); font-size: 10px; color: var(--sba-green); text-align: right; }
-
-/* Odds */
-.mc-odds-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
-.mc-odds-cell {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 12px 8px; border-right: 1px solid var(--sba-border-subtle);
-  cursor: pointer; transition: background 0.15s, border-color 0.15s;
-  border: 1px solid transparent; margin: -1px;
-}
-.mc-odds-cell:last-child { border-right-color: transparent; }
-.mc-odds-cell:hover { background: var(--sba-bg-2); border-color: var(--sba-accent); border-radius: 6px; z-index: 1; }
-.mc-odds-lbl { font-family: var(--sba-mono); font-size: 11px; color: var(--sba-text-3); }
-.mc-odds-val { font-family: var(--sba-mono); font-size: 18px; font-weight: 700; color: var(--sba-text-0); }
-.mc-odds-foot { font-family: var(--sba-mono); font-size: 9px; color: var(--sba-text-3); text-align: center; padding: 8px; }
 
 /* Ad placeholder */
 .mc-ad { height: 250px; background: var(--sba-bg-1); border: 1px dashed var(--sba-border); border-radius: var(--sba-radius); display: flex; align-items: center; justify-content: center; font-family: var(--sba-mono); font-size: 12px; color: var(--sba-text-3); }
@@ -1028,26 +1013,6 @@ function Sidebar() {
           </div>
           <div className="mc-cap-lbl">99.3%</div>
         </div>
-      </div>
-
-      {/* Odds */}
-      <div className="mc-card">
-        <div className="mc-card-title">Kvote</div>
-        <div className="mc-odds-grid">
-          <div className="mc-odds-cell">
-            <span className="mc-odds-lbl">1</span>
-            <span className="mc-odds-val">{ODDS.home}</span>
-          </div>
-          <div className="mc-odds-cell">
-            <span className="mc-odds-lbl">X</span>
-            <span className="mc-odds-val">{ODDS.draw}</span>
-          </div>
-          <div className="mc-odds-cell">
-            <span className="mc-odds-lbl">2</span>
-            <span className="mc-odds-val">{ODDS.away}</span>
-          </div>
-        </div>
-        <div className="mc-odds-foot">Powered by Lupon Media SSP</div>
       </div>
 
       {/* Ad */}

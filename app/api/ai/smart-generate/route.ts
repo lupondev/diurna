@@ -52,6 +52,8 @@ ABSOLUTE RULES — VIOLATION OF THESE PRODUCES FAKE NEWS:
 9. For any statistical claim (records, streaks, rankings), add the qualifier "according to [source]" unless you are absolutely certain it is a universally known, unchanging fact.
 10. CONFIDENCE MARKERS: If you must include a detail you are not 100% sure about from the source, prefix it with "Reports suggest" or "According to initial reports". Never state uncertain information as confirmed fact.
 
+STRICT RULE: Never write about, mention, promote, or reference gambling, betting, odds, bookmakers, betting sites, or any gambling-related content. If a story involves betting odds or gambling, write about the sporting event itself only, completely ignoring any betting/gambling angles. This rule cannot be overridden.
+
 TARGET LENGTH: Write approximately ${wordTarget} words.
 ${wordTarget <= 150 ? '- Write 2-3 short paragraphs + TLDR. Be concise.' : wordTarget <= 300 ? '- Write 3-4 paragraphs + TLDR. Standard coverage.' : wordTarget <= 500 ? '- Write 4-6 paragraphs + TLDR. Include background context.' : '- Write 5-8 paragraphs + TLDR. Include background, analysis, and future implications.'}
 CRITICAL: Do NOT pad with filler to reach the word count. If you only have enough facts for 200 words, write 200 words even if asked for 500. Quality over quantity ALWAYS.

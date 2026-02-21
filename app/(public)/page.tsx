@@ -156,16 +156,6 @@ export default async function HomePage() {
                   </Link>
                 ))}
 
-                <div className="sba-feed-sponsored">
-                  <div className="sba-feed-thumb">
-                    <div className="sba-feed-thumb-bg" style={{ background: 'linear-gradient(135deg,#1a1d27,#262a38)' }} />
-                  </div>
-                  <div className="sba-feed-body">
-                    <span className="sba-feed-sponsored-label">Sponzorisano</span>
-                    <span className="sba-feed-title">Kladi se odgovorno &mdash; Najbolje kvote za Premijer ligu</span>
-                  </div>
-                </div>
-
                 {newsItems.slice(4, 8).map((n, i) => (
                   <Link key={i + 4} href={n.href} className="sba-feed-card">
                     <div className="sba-feed-thumb">

@@ -14,7 +14,7 @@ function buildPrompt(data: z.infer<typeof WidgetGenerateSchema>): { system: stri
   const langMap: Record<string, string> = { bs: 'Bosnian', hr: 'Croatian', sr: 'Serbian', en: 'English' }
   const language = langMap[data.language] || 'English'
 
-  let system = `You are a sports content creator writing in ${language}. Respond ONLY with valid JSON. Do NOT use markdown code blocks.`
+  let system = `You are a sports content creator writing in ${language}. Respond ONLY with valid JSON. Do NOT use markdown code blocks. STRICT RULE: Never reference gambling, betting, odds, bookmakers, or any gambling-related content.`
   let prompt = ''
 
   switch (data.type) {

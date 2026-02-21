@@ -102,6 +102,7 @@ ZABRANJENO:
 - Koristiti zabranjene klišeje
 - Mijenjati rezultat, minute golova ili statistiku
 - Dodavati informacije iz svog znanja
+- NIKADA ne spominjati kockanje, klađenje, kvote, kladionice ili bilo kakav sadržaj vezan za kockanje
 
 Vrati SAMO poboljšani HTML tekst. Bez JSON-a. Bez objašnjenja. Samo čisti HTML (<p>, <h2> tagovi).`;
 

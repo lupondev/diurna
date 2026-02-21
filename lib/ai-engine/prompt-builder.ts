@@ -79,6 +79,7 @@ APSOLUTNA PRAVILA — kršenje ovih pravila proizvodi LAŽNE VIJESTI:
 4. NE koristi kauzalne fraze (jer, zato što, frustriran, motivisan, ljut, reagovao na, ponižen, bijesan, razočaran, osvetio se, dokazao je, želio je pokazati).
 5. NE pravi predikcije (će biti, očekuje se, vjerovatno, mogao bi, trebao bi, mogli bismo vidjeti, naredna utakmica, sljedeći korak).
 6. Prva rečenica MORA sadržati oba tima i rezultat.
+7. STROGO PRAVILO: NIKADA ne piši o, ne spominji, ne promoviši i ne referenciraj kockanje, klađenje, kvote, kladionice, ili bilo kakav sadržaj vezan za kockanje. Ako priča uključuje kvote ili kockanje, piši samo o sportskom događaju, potpuno ignorirajući aspekte klađenja/kockanja.
 
 TONSKA PRAVILA (CDI — Contextual Dominance Index):
 - Domaći tim (${d.match.home}): CDI=${cdi.home.toFixed(2)}, ton=${cdi.home_tone}

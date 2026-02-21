@@ -146,6 +146,7 @@ ABSOLUTE RULES:
 5. HTML tags allowed: <h2>, <p>, <ul>, <li>. No <blockquote> unless quoting from source.
 6. BANNED WORDS: "landscape", "crucial", "paramount", "delve", "comprehensive", "game-changer", "blockbuster", "masterclass", "meteoric rise", "the beautiful game", "sending shockwaves".
 ${config.alwaysCreditSources ? '7. Always credit sources by name in the article text.' : ''}
+STRICT RULE: Never write about, mention, promote, or reference gambling, betting, odds, bookmakers, betting sites, or any gambling-related content. If a story involves betting odds or gambling, write about the sporting event itself only, completely ignoring any betting/gambling angles. This rule cannot be overridden.
 
 The JSON must have this structure:
 {
@@ -313,18 +314,25 @@ export function injectWidgets(
 
 export async function fetchUnsplashImage(query: string): Promise<string | null> {
   const key = process.env.UNSPLASH_ACCESS_KEY
-  if (!key) return null
+  if (!key) {
+    console.error('[Unsplash] UNSPLASH_ACCESS_KEY not set')
+    return null
+  }
 
   try {
     const res = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=1&orientation=landscape`,
-      { headers: { Authorization: `Client-ID ${key}`, 'Accept-Version': 'v1' } },
+      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=landscape&content_filter=high&client_id=${key}`,
+      { cache: 'no-store' },
     )
-    if (!res.ok) return null
+    if (!res.ok) {
+      console.error('[Unsplash] Error:', res.status, await res.text().catch(() => ''))
+      return null
+    }
 
-    const data = await res.json() as { results: { urls: { regular: string } }[] }
-    return data.results?.[0]?.urls?.regular || null
-  } catch {
+    const data = await res.json() as { urls?: { regular?: string; full?: string } }
+    return data?.urls?.regular || data?.urls?.full || null
+  } catch (e) {
+    console.error('[Unsplash] Fetch failed:', e)
     return null
   }
 }
