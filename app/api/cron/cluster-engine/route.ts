@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
+import { systemLog } from '@/lib/system-log'
 
 export const dynamic = 'force-dynamic'
 
@@ -457,8 +458,12 @@ export async function GET(req: Request) {
             title: bc.title,
             dis: bc.dis,
           }),
-        }).catch(err => console.error('[Cluster Engine] Breaking webhook failed:', err))
+        }).catch(err => {
+          console.error('[Cluster Engine] Breaking webhook failed:', err)
+          systemLog('error', 'webhook', `Breaking webhook call failed: ${err instanceof Error ? err.message : 'Unknown'}`, { clusterId: bc.id, dis: bc.dis }).catch(() => {})
+        })
 
+        systemLog('info', 'webhook', `Breaking news triggered: ${bc.title}`, { clusterId: bc.id, dis: bc.dis, title: bc.title }).catch(() => {})
         breakingTriggered++
       }
     }

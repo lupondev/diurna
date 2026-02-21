@@ -124,6 +124,18 @@ export async function GET() {
   const publishedCount = dailyStats.find(s => s.status === 'PUBLISHED')?._count || 0
   const totalAttempted = dailyStats.reduce((sum, s) => sum + s._count, 0)
 
+  // Webhook stats
+  const [webhookTodayCount, lastWebhookLog] = await Promise.all([
+    prisma.systemLog.count({
+      where: { service: 'webhook', level: 'info', message: { startsWith: 'Breaking' }, createdAt: { gte: todayStart } },
+    }),
+    prisma.systemLog.findFirst({
+      where: { service: 'webhook', level: 'info', message: { startsWith: 'Breaking' } },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true, message: true },
+    }),
+  ])
+
   // Recent logs
   const logs = await prisma.systemLog.findMany({
     orderBy: { createdAt: 'desc' },
@@ -152,6 +164,11 @@ export async function GET() {
       lastRun: lastArticle?.createdAt || null,
       lastModel: lastArticle?.aiModel || null,
       lastTitle: lastArticle?.title || null,
+    },
+    webhook: {
+      triggeredToday: webhookTodayCount,
+      lastTrigger: lastWebhookLog?.createdAt || null,
+      lastMessage: lastWebhookLog?.message || null,
     },
     logs,
     envVars,

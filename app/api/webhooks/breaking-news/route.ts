@@ -14,10 +14,17 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json() as {
-    clusterId: string
-    title: string
-    dis: number
+    clusterId?: string
+    title?: string
+    dis?: number
     orgId?: string
+    test?: boolean
+  }
+
+  // Test mode — verify endpoint is reachable and auth works
+  if (body.test) {
+    await systemLog('info', 'webhook', 'Breaking news webhook test ping')
+    return NextResponse.json({ success: true, mode: 'test', message: 'Webhook endpoint is operational' })
   }
 
   if (!body.clusterId || !body.title) {

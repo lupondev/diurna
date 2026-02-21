@@ -31,6 +31,11 @@ type DashboardData = {
     lastModel: string | null
     lastTitle: string | null
   }
+  webhook: {
+    triggeredToday: number
+    lastTrigger: string | null
+    lastMessage: string | null
+  }
   logs: LogEntry[]
   envVars: Record<string, boolean>
 }
@@ -173,6 +178,15 @@ export default function HealthPage() {
         {data.autopilot.lastTitle && (
           <div style={s.lastArticle}>
             Last article: {data.autopilot.lastTitle}
+          </div>
+        )}
+        <div style={{ ...s.metaRow, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--g200, #e5e7eb)' }}>
+          <span>Webhook triggers today: <b>{data.webhook.triggeredToday}</b></span>
+          <span>Last webhook: <b>{data.webhook.lastTrigger ? timeAgo(data.webhook.lastTrigger) : 'Never'}</b></span>
+        </div>
+        {data.webhook.lastMessage && (
+          <div style={s.lastArticle}>
+            {data.webhook.lastMessage}
           </div>
         )}
       </section>
