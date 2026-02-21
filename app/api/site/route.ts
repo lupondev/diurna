@@ -17,13 +17,54 @@ const UpdateSiteSchema = z.object({
   competitorFeeds: z.array(z.string().url().max(500)).max(10).optional(),
 })
 
-export async function GET() {
+const CreateSiteSchema = z.object({
+  name: z.string().min(1).max(100),
+  domain: z.string().max(253).optional(),
+  language: z.string().min(2).max(10).optional(),
+  timezone: z.string().max(50).optional(),
+})
+
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const site = await getDefaultSite(session.user.organizationId)
+
+    const orgId = session.user.organizationId
+    const { searchParams } = new URL(req.url)
+    const all = searchParams.get('all')
+
+    // Return all sites for the org
+    if (all === 'true') {
+      const sites = await prisma.site.findMany({
+        where: { organizationId: orgId, deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+        include: {
+          categories: { select: { id: true, name: true, slug: true } },
+          _count: { select: { articles: true } },
+        },
+      })
+
+      return NextResponse.json({
+        sites: sites.map(s => ({
+          id: s.id,
+          name: s.name,
+          slug: s.slug,
+          domain: s.domain,
+          language: s.language,
+          timezone: s.timezone,
+          theme: s.theme,
+          categories: s.categories,
+          articleCount: s._count.articles,
+          createdAt: s.createdAt,
+        })),
+        total: sites.length,
+      })
+    }
+
+    // Default: return the primary site (backwards compatible)
+    const site = await getDefaultSite(orgId)
     if (!site) {
       return NextResponse.json({ error: 'No site found' }, { status: 404 })
     }
@@ -46,6 +87,61 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Get site error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const data = CreateSiteSchema.parse(body)
+
+    const slug = data.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+
+    // Check for duplicate slug within org
+    const existing = await prisma.site.findFirst({
+      where: {
+        organizationId: session.user.organizationId,
+        slug,
+      },
+    })
+    if (existing) {
+      return NextResponse.json({ error: 'A site with this name already exists' }, { status: 409 })
+    }
+
+    const site = await prisma.site.create({
+      data: {
+        organizationId: session.user.organizationId,
+        name: data.name,
+        slug,
+        domain: data.domain || null,
+        language: data.language || 'en',
+        timezone: data.timezone || 'UTC',
+      },
+    })
+
+    return NextResponse.json({
+      id: site.id,
+      name: site.name,
+      slug: site.slug,
+      domain: site.domain,
+      language: site.language,
+      timezone: site.timezone,
+      theme: site.theme,
+    }, { status: 201 })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 })
+    }
+    console.error('Create site error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
