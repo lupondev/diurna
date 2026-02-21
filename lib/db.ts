@@ -68,11 +68,27 @@ export async function getCategories(siteId: string) {
 }
 
 export async function getDefaultSite(organizationId?: string) {
-  return prisma.site.findFirst({
+  // If organizationId given, use it directly
+  if (organizationId) {
+    return prisma.site.findFirst({
+      where: { deletedAt: null, organizationId },
+      orderBy: { createdAt: 'asc' },
+    })
+  }
+
+  // Prefer site with domain configured (the live production site)
+  const withDomain = await prisma.site.findFirst({
     where: {
       deletedAt: null,
-      ...(organizationId && { organizationId }),
+      domain: { not: null },
     },
+    orderBy: { createdAt: 'asc' },
+  })
+  if (withDomain) return withDomain
+
+  // Fallback: oldest site
+  return prisma.site.findFirst({
+    where: { deletedAt: null },
     orderBy: { createdAt: 'asc' },
   })
 }
