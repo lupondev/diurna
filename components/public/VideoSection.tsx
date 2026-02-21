@@ -12,11 +12,8 @@ interface Video {
   channel: string
 }
 
-function timeAgo(dateStr: string): string {
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} min`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
-  return `${Math.floor(seconds / 86400)}d`
+function isNew(dateStr: string): boolean {
+  return Date.now() - new Date(dateStr).getTime() < 7 * 24 * 60 * 60 * 1000
 }
 
 export function VideoSection() {
@@ -26,7 +23,7 @@ export function VideoSection() {
   useEffect(() => {
     fetch('/api/videos?channel=all')
       .then(r => r.json() as Promise<{ videos?: Video[] }>)
-      .then(data => setVideos((data.videos || []).slice(0, 3)))
+      .then(data => setVideos((data.videos || []).slice(0, 6)))
       .catch(() => {})
   }, [])
 
@@ -36,7 +33,8 @@ export function VideoSection() {
     if (!playingId) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
     document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
+    document.body.style.overflow = 'hidden'
+    return () => { document.removeEventListener('keydown', handler); document.body.style.overflow = '' }
   }, [playingId, closeModal])
 
   if (videos.length === 0) return null
@@ -48,83 +46,42 @@ export function VideoSection() {
           <h2 className="sba-section-title">Video</h2>
           <Link href="/video" className="sba-section-more">Pogledaj sve &rarr;</Link>
         </div>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 12,
-        }} className="video-section-grid">
+
+        <div className="vid-scroll">
           {videos.map(v => (
             <button
               key={v.videoId}
               onClick={() => setPlayingId(v.videoId)}
-              style={{
-                background: 'var(--sba-bg-1)', border: '1px solid var(--sba-border)',
-                borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
-                textAlign: 'left', transition: 'border-color 0.2s, transform 0.2s',
-                display: 'flex', flexDirection: 'column',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--sba-accent)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--sba-border)'; e.currentTarget.style.transform = 'none' }}
+              className="vid-card"
             >
-              <div style={{ position: 'relative', aspectRatio: '16/9', overflow: 'hidden' }}>
+              <div className="vid-thumb">
                 <img
-                  src={v.thumbnail}
+                  src={`https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg`}
+                  onError={e => { e.currentTarget.src = `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg` }}
                   alt={v.title}
                   loading="lazy"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
-                <div style={{
-                  position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'rgba(0,0,0,0.2)',
-                }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.9)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                  }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#111"><polygon points="6,3 20,12 6,21" /></svg>
-                  </div>
+                {isNew(v.publishedAt) && <span className="vid-badge-new">NOVO</span>}
+                <div className="vid-play">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><polygon points="6,3 20,12 6,21" /></svg>
                 </div>
               </div>
-              <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{
-                  fontFamily: 'var(--sba-serif)', fontSize: 13, fontWeight: 600, lineHeight: 1.35,
-                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                }}>{v.title}</span>
-                <span style={{ fontSize: 11, color: 'var(--sba-text-2)' }}>{timeAgo(v.publishedAt)} &middot; {v.channelTitle}</span>
-              </div>
+              <span className="vid-title">{v.title}</span>
             </button>
           ))}
         </div>
       </section>
 
-      {/* Modal Player */}
       {playingId && (
-        <div
-          onClick={closeModal}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 16,
-          }}
-        >
-          <div onClick={e => e.stopPropagation()} style={{ position: 'relative', width: '100%', maxWidth: 900 }}>
-            <button
-              onClick={closeModal}
-              style={{
-                position: 'absolute', top: -40, right: 0,
-                background: 'none', border: 'none', color: '#fff', fontSize: 28,
-                cursor: 'pointer', padding: '4px 8px', lineHeight: 1,
-              }}
-              aria-label="Zatvori"
-            >&#10005;</button>
-            <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 12, overflow: 'hidden' }}>
+        <div className="vid-modal-overlay" onClick={closeModal}>
+          <div className="vid-modal" onClick={e => e.stopPropagation()}>
+            <button onClick={closeModal} className="vid-modal-close" aria-label="Zatvori">&#10005;</button>
+            <div className="vid-modal-frame">
               <iframe
                 src={`https://www.youtube.com/embed/${playingId}?autoplay=1`}
                 allow="autoplay; encrypted-media; picture-in-picture"
                 allowFullScreen
                 loading="lazy"
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
               />
             </div>
           </div>
@@ -132,21 +89,73 @@ export function VideoSection() {
       )}
 
       <style>{`
-        @media (max-width: 768px) {
-          .video-section-grid {
-            grid-template-columns: 1fr !important;
-            overflow-x: auto;
-            display: flex !important;
-            gap: 12px;
-            scroll-snap-type: x mandatory;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 4px;
-          }
-          .video-section-grid > button {
-            min-width: 260px;
-            scroll-snap-align: start;
-            flex-shrink: 0;
-          }
+        .vid-scroll {
+          display: flex; gap: 12px; overflow-x: auto;
+          scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+          padding-bottom: 4px; scrollbar-width: none;
+        }
+        .vid-scroll::-webkit-scrollbar { display: none; }
+
+        .vid-card {
+          flex-shrink: 0; width: 220px; background: none; border: none;
+          cursor: pointer; text-align: left; scroll-snap-align: start;
+          display: flex; flex-direction: column; gap: 8px;
+        }
+        @media (min-width: 768px) { .vid-card { width: 240px; } }
+
+        .vid-thumb {
+          position: relative; border-radius: 10px; overflow: hidden;
+          aspect-ratio: 16/9;
+        }
+        .vid-thumb img {
+          width: 100%; height: 100%; object-fit: cover; display: block;
+          transition: transform 0.3s ease;
+        }
+        .vid-card:hover .vid-thumb img { transform: scale(1.05); }
+
+        .vid-badge-new {
+          position: absolute; top: 8px; left: 8px; z-index: 1;
+          background: #22c55e; color: #fff; font-size: 9px; font-weight: 700;
+          padding: 2px 7px; border-radius: 3px; letter-spacing: 0.05em;
+          font-family: var(--sba-mono, monospace);
+        }
+
+        .vid-play {
+          position: absolute; inset: 0; display: flex; align-items: center;
+          justify-content: center; opacity: 0; transition: opacity 0.2s;
+        }
+        .vid-play::before {
+          content: ''; position: absolute; inset: 0;
+          background: rgba(0,0,0,0.35);
+        }
+        .vid-play svg { position: relative; z-index: 1; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.5)); }
+        .vid-card:hover .vid-play { opacity: 1; }
+
+        .vid-title {
+          font-family: var(--sba-serif, serif); font-size: 13px; font-weight: 600;
+          line-height: 1.35; color: var(--sba-text-0, #fff);
+          display: -webkit-box; -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical; overflow: hidden;
+        }
+
+        .vid-modal-overlay {
+          position: fixed; inset: 0; z-index: 9999;
+          background: rgba(0,0,0,0.9); display: flex;
+          align-items: center; justify-content: center; padding: 16px;
+        }
+        .vid-modal { position: relative; width: 100%; max-width: 900px; }
+        .vid-modal-close {
+          position: absolute; top: -40px; right: 0; background: none;
+          border: none; color: #fff; font-size: 28px; cursor: pointer;
+          padding: 4px 8px; line-height: 1; opacity: 0.7; transition: opacity 0.2s;
+        }
+        .vid-modal-close:hover { opacity: 1; }
+        .vid-modal-frame {
+          position: relative; padding-bottom: 56.25%;
+          border-radius: 12px; overflow: hidden; background: #000;
+        }
+        .vid-modal-frame iframe {
+          position: absolute; inset: 0; width: 100%; height: 100%; border: none;
         }
       `}</style>
     </>

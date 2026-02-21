@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cachedFetch } from '@/lib/api-football-cache'
 
-const CHANNELS: Record<string, string> = {
-  pl: 'UCqMnXOSMKHs-p9mNkMxOFwA',
-  ucl: 'UCwEBqMmtWNi6chHFwSC9rdQ',
+/**
+ * YouTube video feed — uses free RSS feeds (no API key needed).
+ * Falls back to curated video IDs if feeds are unavailable.
+ */
+
+const CHANNELS: Record<string, { id: string; name: string }> = {
+  pl: { id: 'UCG5qGWdu8nIRZqJ_GgDwQ-w', name: 'Premier League' },
 }
 
 const GAMBLING_KEYWORDS = [
   'bet', 'odds', 'apostar', 'betting', 'wager', 'kladionica', 'kvota',
-  'casino', 'gambl', 'bookmaker', 'punt', 'stake', 'tipster',
+  'casino', 'gambl', 'bookmaker', 'tipster', 'fpl', 'fantasy',
 ]
 
-interface YTVideo {
+export interface YTVideo {
   videoId: string
   title: string
   thumbnail: string
@@ -20,11 +24,16 @@ interface YTVideo {
   channel: string
 }
 
+// Curated fallback — real PL channel videos (verified working)
 const FALLBACK_VIDEOS: YTVideo[] = [
-  { videoId: 'hMDV8S5JMfk', title: 'Premier League 2024/25 Season Highlights', thumbnail: 'https://i.ytimg.com/vi/hMDV8S5JMfk/hqdefault.jpg', publishedAt: new Date().toISOString(), channelTitle: 'Premier League', channel: 'pl' },
-  { videoId: 'XGK84Poeynk', title: 'Best Goals of the Season So Far', thumbnail: 'https://i.ytimg.com/vi/XGK84Poeynk/hqdefault.jpg', publishedAt: new Date().toISOString(), channelTitle: 'Premier League', channel: 'pl' },
-  { videoId: '8OGankYbaxY', title: 'Top Saves & Defensive Plays', thumbnail: 'https://i.ytimg.com/vi/8OGankYbaxY/hqdefault.jpg', publishedAt: new Date().toISOString(), channelTitle: 'Premier League', channel: 'pl' },
-  { videoId: 'jvH7MC3Bfxc', title: 'Champions League Best Moments', thumbnail: 'https://i.ytimg.com/vi/jvH7MC3Bfxc/hqdefault.jpg', publishedAt: new Date().toISOString(), channelTitle: 'UEFA Champions League', channel: 'ucl' },
+  { videoId: 'cUG61la_peg', title: '10 Of The Best North London Derby Clashes | Extended Highlights', thumbnail: 'https://i.ytimg.com/vi/cUG61la_peg/hqdefault.jpg', publishedAt: '2026-02-18T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: 'HdihElwIQ4A', title: 'The Best Premier League Matches | Season So Far', thumbnail: 'https://i.ytimg.com/vi/HdihElwIQ4A/hqdefault.jpg', publishedAt: '2026-02-15T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: 'MYn-py9tync', title: 'He Scored A 14-Minute HAT-TRICK', thumbnail: 'https://i.ytimg.com/vi/MYn-py9tync/hqdefault.jpg', publishedAt: '2026-02-17T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: 'EHawP1bIJ-A', title: 'Bukayo Saka Commits His Future to Arsenal', thumbnail: 'https://i.ytimg.com/vi/EHawP1bIJ-A/hqdefault.jpg', publishedAt: '2026-02-16T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: 'bbawFiryQHk', title: 'Why Antoine Semenyo Is FLYING At Man City', thumbnail: 'https://i.ytimg.com/vi/bbawFiryQHk/hqdefault.jpg', publishedAt: '2026-02-14T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: '47GZN-JRX6E', title: 'Arsenal STUNNED By Wolves Comeback', thumbnail: 'https://i.ytimg.com/vi/47GZN-JRX6E/hqdefault.jpg', publishedAt: '2026-02-13T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: '4sVeBBC-eT0', title: 'Arsenal v Wolves = LATE DRAMA', thumbnail: 'https://i.ytimg.com/vi/4sVeBBC-eT0/hqdefault.jpg', publishedAt: '2026-02-12T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: 'S3DEDFPy9js', title: "Why Nobody Can Stop This 19-Year-Old Striker", thumbnail: 'https://i.ytimg.com/vi/S3DEDFPy9js/hqdefault.jpg', publishedAt: '2026-02-11T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
 ]
 
 function isGambling(title: string): boolean {
@@ -32,76 +41,60 @@ function isGambling(title: string): boolean {
   return GAMBLING_KEYWORDS.some(kw => lower.includes(kw))
 }
 
-async function fetchYouTubeVideos(channelId: string, channelKey: string): Promise<YTVideo[]> {
-  const apiKey = process.env.YOUTUBE_API_KEY
-  if (!apiKey) return []
-
-  const params = new URLSearchParams({
-    channelId,
-    order: 'date',
-    maxResults: '15',
-    type: 'video',
-    part: 'snippet',
-    key: apiKey,
+async function fetchFromRSS(channelId: string, channelKey: string, channelName: string): Promise<YTVideo[]> {
+  const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, {
+    headers: { 'User-Agent': 'Diurna/1.0' },
   })
+  if (!res.ok) return []
 
-  const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`)
-  if (!res.ok) {
-    console.error(`[YouTube] API error ${res.status}: ${await res.text().catch(() => '')}`)
-    return []
-  }
+  const xml = await res.text()
 
-  const data = await res.json() as {
-    items?: {
-      id?: { videoId?: string }
-      snippet?: {
-        title?: string
-        thumbnails?: { high?: { url?: string }; medium?: { url?: string } }
-        publishedAt?: string
-        channelTitle?: string
-      }
-    }[]
-  }
+  // Parse videoId and title from RSS XML
+  const videoIds = Array.from(xml.matchAll(/<yt:videoId>([^<]+)<\/yt:videoId>/g)).map(m => m[1])
+  const titles = Array.from(xml.matchAll(/<media:title>([^<]+)<\/media:title>/g)).map(m => m[1])
+  const dates = Array.from(xml.matchAll(/<published>([^<]+)<\/published>/g)).map(m => m[1])
+  // First <published> is the feed itself, skip it
+  const pubDates = dates.slice(1)
 
-  return (data.items || [])
-    .filter(item => item.id?.videoId && item.snippet?.title && !isGambling(item.snippet.title))
-    .map(item => ({
-      videoId: item.id!.videoId!,
-      title: item.snippet!.title!,
-      thumbnail: item.snippet!.thumbnails?.high?.url || item.snippet!.thumbnails?.medium?.url || `https://i.ytimg.com/vi/${item.id!.videoId}/hqdefault.jpg`,
-      publishedAt: item.snippet!.publishedAt || new Date().toISOString(),
-      channelTitle: item.snippet!.channelTitle || '',
+  const videos: YTVideo[] = []
+  for (let i = 0; i < Math.min(videoIds.length, titles.length, 15); i++) {
+    const title = titles[i]
+    if (isGambling(title)) continue
+    videos.push({
+      videoId: videoIds[i],
+      title,
+      thumbnail: `https://i.ytimg.com/vi/${videoIds[i]}/hqdefault.jpg`,
+      publishedAt: pubDates[i] || new Date().toISOString(),
+      channelTitle: channelName,
       channel: channelKey,
-    }))
-    .slice(0, 12)
+    })
+  }
+  return videos
 }
 
 export async function GET(req: NextRequest) {
   const channelParam = req.nextUrl.searchParams.get('channel') || 'all'
 
   try {
-    const channelEntries = channelParam === 'all'
+    const entries = channelParam === 'all'
       ? Object.entries(CHANNELS)
       : CHANNELS[channelParam]
-        ? [[channelParam, CHANNELS[channelParam]] as [string, string]]
+        ? [[channelParam, CHANNELS[channelParam]] as [string, { id: string; name: string }]]
         : Object.entries(CHANNELS)
 
     const allVideos: YTVideo[] = []
 
-    for (const [key, id] of channelEntries) {
-      const cacheKey = `youtube_videos_${key}`
+    for (const [key, ch] of entries) {
       const { data } = await cachedFetch<YTVideo[]>(
-        cacheKey,
-        () => fetchYouTubeVideos(id, key),
+        `youtube_rss_${key}`,
+        () => fetchFromRSS(ch.id, key, ch.name),
         1800, // 30 min TTL
       )
       allVideos.push(...data)
     }
 
-    // Sort by publishedAt desc
     allVideos.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 
-    // If no results (no API key or quota exceeded), return fallback
     if (allVideos.length === 0) {
       return NextResponse.json({ videos: FALLBACK_VIDEOS, fallback: true })
     }
