@@ -11,6 +11,8 @@ const NAV_ITEMS = [
   { href: '/tabela', label: 'Tabela' },
   { href: '/povrede', label: 'Povrede' },
   { href: '/video', label: 'Video' },
+  { href: '/legende', label: 'Legende' },
+  { href: '/organizacije', label: 'Organizacije' },
 ]
 
 function parseLogo(name: string) {

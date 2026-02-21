@@ -10,6 +10,7 @@ import { ForYou } from '@/components/public/sportba/for-you'
 import { ClubLogoStrip } from '@/components/public/ClubLogoStrip'
 import { FixturesTicker } from '@/components/public/FixturesTicker'
 import { VideoSection } from '@/components/public/VideoSection'
+import { LegendsWidget } from '@/components/public/LegendsWidget'
 import './home.css'
 
 export const dynamic = 'force-dynamic'
@@ -265,6 +266,8 @@ export default async function HomePage() {
               </div>
             </div>
           )}
+
+          <LegendsWidget />
 
           <div className="sba-rail-sticky">
             <AdSlot variant="skyscraper" />

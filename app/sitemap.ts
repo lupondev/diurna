@@ -36,7 +36,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const staticPages: MetadataRoute.Sitemap = [
     '/o-nama', '/impressum', '/privatnost', '/uslovi', '/kontakt', '/marketing',
-    '/igraci', '/tabela',
+    '/igraci', '/tabela', '/legende', '/organizacije',
   ].map((path) => ({
     url: `${baseUrl}${path}`,
     lastModified: new Date(),
@@ -44,10 +44,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }))
 
+  // Athletes
+  const athletes = await prisma.athlete.findMany({
+    where: { status: 'published', deletedAt: null },
+    select: { slug: true, updatedAt: true },
+    orderBy: { legendRank: 'asc' },
+  })
+
+  const athleteEntries: MetadataRoute.Sitemap = athletes.map((a) => ({
+    url: `${baseUrl}/legende/${a.slug}`,
+    lastModified: a.updatedAt,
+    changeFrequency: 'monthly',
+    priority: 0.8,
+  }))
+
+  // Organizations
+  const organizations = await prisma.sportOrganization.findMany({
+    where: { status: 'published', deletedAt: null },
+    select: { slug: true, updatedAt: true },
+  })
+
+  const orgEntries: MetadataRoute.Sitemap = organizations.map((o) => ({
+    url: `${baseUrl}/organizacije/${o.slug}`,
+    lastModified: o.updatedAt,
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  }))
+
   return [
     { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
     ...staticPages,
     ...categoryEntries,
     ...articleEntries,
+    ...athleteEntries,
+    ...orgEntries,
   ]
 }
