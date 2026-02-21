@@ -17,6 +17,7 @@ const sections: NavSection[] = [
       { label: 'Editor', icon: '✍️', href: '/editor' },
       { label: 'Calendar', icon: '📅', href: '/calendar' },
       { label: 'Articles', icon: '📄', href: '/articles' },
+      { label: 'Health', icon: '⚙️', href: '/health' },
     ],
   },
   {

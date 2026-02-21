@@ -1,4 +1,5 @@
 import type { LiveMatch } from '@/components/public/sportba'
+import { systemLog } from '@/lib/system-log'
 
 const BASE = 'https://v3.football.api-sports.io'
 
@@ -101,6 +102,7 @@ async function apiFootball<T>(endpoint: string, revalidate = 60): Promise<T[]> {
 
   if (!res.ok) {
     console.error(`[API-Football] ${res.status} ${res.statusText} for ${endpoint}`)
+    systemLog('error', 'api-football', `${res.status} ${res.statusText} for ${endpoint}`).catch(() => {})
     return []
   }
 

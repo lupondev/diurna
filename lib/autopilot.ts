@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { systemLog } from '@/lib/system-log'
 
 // ══════════════════════════════════
 // TYPES
@@ -330,9 +331,14 @@ export async function fetchUnsplashImage(query: string): Promise<string | null> 
     }
 
     const data = await res.json() as { urls?: { regular?: string; full?: string } }
-    return data?.urls?.regular || data?.urls?.full || null
+    const url = data?.urls?.regular || data?.urls?.full || null
+    if (url) {
+      await systemLog('info', 'unsplash', `Image fetched for: ${query.substring(0, 60)}`, { url })
+    }
+    return url
   } catch (e) {
     console.error('[Unsplash] Fetch failed:', e)
+    await systemLog('error', 'unsplash', `Fetch failed for: ${query.substring(0, 60)}`, { error: e instanceof Error ? e.message : 'unknown' })
     return null
   }
 }

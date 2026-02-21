@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { generateContent } from '@/lib/ai/client'
 import { Prisma } from '@prisma/client'
 import { buildPromptContext, htmlToTiptap, injectWidgets, slugify, fetchUnsplashImage } from '@/lib/autopilot'
+import { systemLog } from '@/lib/system-log'
 
 export const maxDuration = 60
 
@@ -175,7 +176,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log(`[Breaking Webhook] Generated article: ${title} (DIS: ${body.dis})`)
+    await systemLog('info', 'webhook', `Breaking article generated: ${title} (DIS: ${body.dis})`, { articleId: article.id, slug, dis: body.dis })
 
     return NextResponse.json({
       success: true,
@@ -186,6 +187,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('[Breaking Webhook] Error:', error)
+    await systemLog('error', 'webhook', error instanceof Error ? error.message : 'Unknown error')
     return NextResponse.json({
       success: false,
       reason: error instanceof Error ? error.message : 'Internal error',

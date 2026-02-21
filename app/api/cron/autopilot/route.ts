@@ -13,6 +13,7 @@ import {
   slugify,
   fetchUnsplashImage,
 } from '@/lib/autopilot'
+import { systemLog } from '@/lib/system-log'
 
 export const maxDuration = 60
 
@@ -445,23 +446,34 @@ export async function GET(req: NextRequest) {
     const generated = results.filter(r => r.action === 'generated')
     const skipped = results.filter(r => r.action === 'skipped')
 
+    const action = generated.length > 0 ? 'generated' : 'skipped'
+    const reason = generated.length > 0
+      ? generated[0].reason
+      : skipped[0]?.reason || 'No active configs'
+
+    await systemLog(
+      generated.length > 0 ? 'info' : 'warn',
+      'autopilot',
+      `${action}: ${reason}`,
+      { generated: generated.length, skipped: skipped.length, article: generated[0]?.title },
+    )
+
     return NextResponse.json({
       success: true,
       processed: configs.length,
-      action: generated.length > 0 ? 'generated' : 'skipped',
+      action,
       article: generated[0] ? {
         id: generated[0].articleId,
         title: generated[0].title,
         category: generated[0].category,
         status: generated[0].status,
       } : undefined,
-      reason: generated.length > 0
-        ? generated[0].reason
-        : skipped[0]?.reason || 'No active configs',
+      reason,
       results,
     })
   } catch (error) {
     console.error('Autopilot cron error:', error)
+    await systemLog('error', 'autopilot', error instanceof Error ? error.message : 'Unknown error')
     return NextResponse.json({
       success: false,
       action: 'error',

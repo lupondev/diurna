@@ -783,3 +783,21 @@ model DistributionChannel {
 
   @@index([configId])
 }
+
+// ══════════════════════════════════
+// SYSTEM LOGGING
+// ══════════════════════════════════
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  level     String   // 'error' | 'warn' | 'info'
+  service   String   // 'autopilot' | 'ai-engine' | 'webhook' | 'api-football' | 'unsplash'
+  message   String
+  meta      Json?
+  orgId     String?
+  createdAt DateTime @default(now())
+
+  @@index([service])
+  @@index([level])
+  @@index([createdAt])
+}

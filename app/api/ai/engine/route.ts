@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
 import Anthropic from '@anthropic-ai/sdk';
 import { generateWithGemini } from '@/lib/ai/client';
+import { systemLog } from '@/lib/system-log';
 
 // AI Engine V2 modules
 import { ingestMatchData, createSnapshotFromData } from '@/lib/ai-engine/ingestion';
@@ -460,6 +461,7 @@ export async function POST(req: NextRequest) {
     }
 
     console.error('AI Engine V2 error:', error);
+    await systemLog('error', 'ai-engine', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json(
       {
         error: 'AI Engine generation failed',
