@@ -29,7 +29,7 @@ function parseLogo(name: string) {
   return { main: name.toUpperCase(), suffix: '' }
 }
 
-export function Footer({ siteName = 'Sport.ba' }: { siteName?: string }) {
+export function Footer({ siteName = 'TodayFootballMatch' }: { siteName?: string }) {
   const logo = parseLogo(siteName)
 
   return (

@@ -24,16 +24,16 @@ export interface YTVideo {
   channel: string
 }
 
-// Curated fallback — real PL channel videos (verified working)
+// Curated fallback — real PL channel videos (verified via oEmbed + RSS)
 const FALLBACK_VIDEOS: YTVideo[] = [
-  { videoId: 'cUG61la_peg', title: '10 Of The Best North London Derby Clashes | Extended Highlights', thumbnail: 'https://i.ytimg.com/vi/cUG61la_peg/hqdefault.jpg', publishedAt: '2026-02-18T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
-  { videoId: 'HdihElwIQ4A', title: 'The Best Premier League Matches | Season So Far', thumbnail: 'https://i.ytimg.com/vi/HdihElwIQ4A/hqdefault.jpg', publishedAt: '2026-02-15T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
-  { videoId: 'MYn-py9tync', title: 'He Scored A 14-Minute HAT-TRICK', thumbnail: 'https://i.ytimg.com/vi/MYn-py9tync/hqdefault.jpg', publishedAt: '2026-02-17T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
-  { videoId: 'EHawP1bIJ-A', title: 'Bukayo Saka Commits His Future to Arsenal', thumbnail: 'https://i.ytimg.com/vi/EHawP1bIJ-A/hqdefault.jpg', publishedAt: '2026-02-16T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
-  { videoId: 'bbawFiryQHk', title: 'Why Antoine Semenyo Is FLYING At Man City', thumbnail: 'https://i.ytimg.com/vi/bbawFiryQHk/hqdefault.jpg', publishedAt: '2026-02-14T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
-  { videoId: '47GZN-JRX6E', title: 'Arsenal STUNNED By Wolves Comeback', thumbnail: 'https://i.ytimg.com/vi/47GZN-JRX6E/hqdefault.jpg', publishedAt: '2026-02-13T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
-  { videoId: '4sVeBBC-eT0', title: 'Arsenal v Wolves = LATE DRAMA', thumbnail: 'https://i.ytimg.com/vi/4sVeBBC-eT0/hqdefault.jpg', publishedAt: '2026-02-12T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
-  { videoId: 'S3DEDFPy9js', title: "Why Nobody Can Stop This 19-Year-Old Striker", thumbnail: 'https://i.ytimg.com/vi/S3DEDFPy9js/hqdefault.jpg', publishedAt: '2026-02-11T12:00:00Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: 'cUG61la_peg', title: '10 Of The Best North London Derby Clashes | Extended Highlights', thumbnail: 'https://i.ytimg.com/vi/cUG61la_peg/maxresdefault.jpg', publishedAt: '2026-02-20T15:32:37Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: '1IcDF1VimQM', title: "Cole Palmer's INSANE Vision Sets Up Joao Pedro", thumbnail: 'https://i.ytimg.com/vi/1IcDF1VimQM/maxresdefault.jpg', publishedAt: '2026-02-20T14:11:43Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: 'MYn-py9tync', title: 'He Scored A 14-Minute HAT-TRICK', thumbnail: 'https://i.ytimg.com/vi/MYn-py9tync/maxresdefault.jpg', publishedAt: '2026-02-20T09:52:10Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: 'EHawP1bIJ-A', title: 'Bukayo Saka Commits His Future to Arsenal', thumbnail: 'https://i.ytimg.com/vi/EHawP1bIJ-A/maxresdefault.jpg', publishedAt: '2026-02-19T16:00:20Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: 'bbawFiryQHk', title: 'Why Antoine Semenyo Is FLYING At Man City', thumbnail: 'https://i.ytimg.com/vi/bbawFiryQHk/maxresdefault.jpg', publishedAt: '2026-02-19T14:49:53Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: 'S3DEDFPy9js', title: 'Why Nobody Can Stop This 19-Year-Old Striker', thumbnail: 'https://i.ytimg.com/vi/S3DEDFPy9js/maxresdefault.jpg', publishedAt: '2026-02-19T11:01:41Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: '47GZN-JRX6E', title: 'Arsenal STUNNED By Wolves Comeback', thumbnail: 'https://i.ytimg.com/vi/47GZN-JRX6E/maxresdefault.jpg', publishedAt: '2026-02-19T10:19:27Z', channelTitle: 'Premier League', channel: 'pl' },
+  { videoId: 'HdihElwIQ4A', title: 'The Best Premier League Matches | Season So Far', thumbnail: 'https://i.ytimg.com/vi/HdihElwIQ4A/maxresdefault.jpg', publishedAt: '2026-02-18T15:01:56Z', channelTitle: 'Premier League', channel: 'pl' },
 ]
 
 function isGambling(title: string): boolean {
@@ -63,7 +63,7 @@ async function fetchFromRSS(channelId: string, channelKey: string, channelName: 
     videos.push({
       videoId: videoIds[i],
       title,
-      thumbnail: `https://i.ytimg.com/vi/${videoIds[i]}/hqdefault.jpg`,
+      thumbnail: `https://i.ytimg.com/vi/${videoIds[i]}/maxresdefault.jpg`,
       publishedAt: pubDates[i] || new Date().toISOString(),
       channelTitle: channelName,
       channel: channelKey,

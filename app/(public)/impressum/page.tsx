@@ -11,8 +11,8 @@ const INFO = [
   { label: 'Izdava\u010d', value: 'Lupon Media d.o.o.' },
   { label: 'Direktor', value: 'Harun Omerovi\u0107' },
   { label: 'Sjedi\u0161te', value: 'Sarajevo, Bosna i Hercegovina' },
-  { label: 'Email', value: 'redakcija@sport.ba' },
-  { label: 'Web', value: 'sport.ba' },
+  { label: 'Email', value: 'redakcija@todayfootballmatch.com' },
+  { label: 'Web', value: 'todayfootballmatch.com' },
   { label: 'Glavni urednik', value: 'Emir Had\u017ei\u0107' },
 ]
 
@@ -45,7 +45,7 @@ export default function ImpressumPage() {
             Fotografije kori\u0161tene na Diurna dolaze iz sljede\u0107ih izvora: Getty Images, AFP, Reuters,
             te iz sopstvene arhive. Fotografi i agencije navedeni su uz svaku fotografiju.
             Ako smatrate da je va\u0161e autorsko pravo povrije\u0111eno, kontaktirajte nas na{' '}
-            <a href="mailto:redakcija@sport.ba">redakcija@sport.ba</a>.
+            <a href="mailto:redakcija@todayfootballmatch.com">redakcija@todayfootballmatch.com</a>.
           </p>
 
           <h2>Odricanje od odgovornosti</h2>

@@ -93,7 +93,7 @@ export default function MarketingPage() {
           <h2>Kontakt za ogla\u0161iva\u010de</h2>
           <p>
             Za media kit, cjenovnik i custom kampanje, kontaktirajte na\u0161 marketing tim
-            na <a href="mailto:marketing@sport.ba">marketing@sport.ba</a>.
+            na <a href="mailto:marketing@todayfootballmatch.com">marketing@todayfootballmatch.com</a>.
           </p>
         </div>
       </div>

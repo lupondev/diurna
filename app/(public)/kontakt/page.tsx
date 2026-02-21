@@ -11,22 +11,22 @@ export const metadata: Metadata = {
 const EMAILS = [
   {
     dept: 'Redakcija',
-    addr: 'redakcija@sport.ba',
+    addr: 'redakcija@todayfootballmatch.com',
     desc: 'Za vijesti, ispravke, prijedloge i saradnju sa novinarima.',
   },
   {
     dept: 'Marketing',
-    addr: 'marketing@sport.ba',
+    addr: 'marketing@todayfootballmatch.com',
     desc: 'Za ogla\u0161avanje, sponzorstva i poslovnu saradnju.',
   },
   {
     dept: 'Podr\u0161ka',
-    addr: 'support@sport.ba',
+    addr: 'support@todayfootballmatch.com',
     desc: 'Za tehni\u010dke probleme, prijavu gre\u0161aka i korisni\u010dku pomo\u0107.',
   },
   {
     dept: 'Privatnost',
-    addr: 'privacy@sport.ba',
+    addr: 'privacy@todayfootballmatch.com',
     desc: 'Za pitanja o privatnosti, GDPR zahtjeve i brisanje podataka.',
   },
 ]

@@ -61,7 +61,7 @@ export default function PrivacyPage() {
           </ul>
           <p>
             Za ostvarivanje ovih prava, kontaktirajte nas na{' '}
-            <a href="mailto:privacy@sport.ba">privacy@sport.ba</a>.
+            <a href="mailto:privacy@todayfootballmatch.com">privacy@todayfootballmatch.com</a>.
           </p>
 
           <h2>Tre\u0107e strane</h2>

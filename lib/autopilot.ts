@@ -313,6 +313,41 @@ export function injectWidgets(
 // SLUG GENERATOR
 // ══════════════════════════════════
 
+// Words that lead Unsplash to return non-football images
+const UNSPLASH_NOISE_WORDS = [
+  'wolf', 'wolves', 'eagle', 'eagles', 'fox', 'foxes', 'bear', 'bears',
+  'lion', 'lions', 'tiger', 'tigers', 'robin', 'robin hood', 'swan', 'swans',
+  'horse', 'horses', 'bee', 'bees', 'hornet', 'hornets', 'ram', 'rams',
+  'hawk', 'hawks', 'owl', 'owls', 'cat', 'cats', 'dog', 'dogs',
+  'cherry', 'forest', 'ocean', 'river', 'lake', 'mountain', 'sunset',
+]
+
+function buildFootballQueries(query: string): string[] {
+  // Strip noise words that cause animal/nature photos
+  const cleaned = query
+    .split(/\s+/)
+    .filter(w => !UNSPLASH_NOISE_WORDS.includes(w.toLowerCase()))
+    .join(' ')
+    .trim()
+
+  const queries: string[] = []
+
+  // Primary: cleaned query + football context
+  if (cleaned.length > 2) {
+    queries.push(`${cleaned} football soccer`)
+  }
+
+  // Fallback: just the original query + football
+  if (query !== cleaned && query.length > 2) {
+    queries.push(`${query} football`)
+  }
+
+  // Generic football fallbacks
+  queries.push('football match stadium', 'soccer premier league', 'football stadium')
+
+  return queries
+}
+
 export async function fetchUnsplashImage(query: string): Promise<string | null> {
   const key = process.env.UNSPLASH_ACCESS_KEY
   if (!key) {
@@ -320,27 +355,37 @@ export async function fetchUnsplashImage(query: string): Promise<string | null> 
     return null
   }
 
-  try {
-    const res = await fetch(
-      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=landscape&content_filter=high&client_id=${key}`,
-      { cache: 'no-store' },
-    )
-    if (!res.ok) {
-      console.error('[Unsplash] Error:', res.status, await res.text().catch(() => ''))
-      return null
-    }
+  const queries = buildFootballQueries(query)
 
-    const data = await res.json() as { urls?: { regular?: string; full?: string } }
-    const url = data?.urls?.regular || data?.urls?.full || null
-    if (url) {
-      await systemLog('info', 'unsplash', `Image fetched for: ${query.substring(0, 60)}`, { url })
+  for (const q of queries) {
+    try {
+      const res = await fetch(
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&orientation=landscape&content_filter=high&per_page=5&client_id=${key}`,
+        { cache: 'no-store' },
+      )
+      if (!res.ok) {
+        console.error(`[Unsplash] Search error for "${q}":`, res.status)
+        continue
+      }
+
+      const data = await res.json() as { results?: { urls?: { regular?: string; full?: string } }[] }
+      const results = data?.results
+      if (!results || results.length === 0) continue
+
+      // Pick random from top results for variety
+      const pick = results[Math.floor(Math.random() * results.length)]
+      const url = pick?.urls?.regular || pick?.urls?.full || null
+      if (url) {
+        await systemLog('info', 'unsplash', `Image fetched for: "${q.substring(0, 60)}" (original: "${query.substring(0, 40)}")`, { url })
+        return url
+      }
+    } catch (e) {
+      console.error(`[Unsplash] Fetch failed for "${q}":`, e)
     }
-    return url
-  } catch (e) {
-    console.error('[Unsplash] Fetch failed:', e)
-    await systemLog('error', 'unsplash', `Fetch failed for: ${query.substring(0, 60)}`, { error: e instanceof Error ? e.message : 'unknown' })
-    return null
   }
+
+  await systemLog('error', 'unsplash', `No image found for: ${query.substring(0, 60)}`, { queries })
+  return null
 }
 
 export function slugify(text: string): string {

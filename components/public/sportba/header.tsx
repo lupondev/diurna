@@ -19,7 +19,7 @@ function parseLogo(name: string) {
   return { main: name.toUpperCase(), suffix: '' }
 }
 
-export function Header({ siteName = 'Sport.ba' }: { siteName?: string }) {
+export function Header({ siteName = 'TodayFootballMatch' }: { siteName?: string }) {
   const { toggle } = useTheme()
   const logo = parseLogo(siteName)
 
