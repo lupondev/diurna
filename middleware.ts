@@ -16,6 +16,8 @@ export async function middleware(req: NextRequest) {
   const isEmbedRoute = pathname.startsWith('/api/embed')
   const isOgRoute = pathname.startsWith('/api/og')
   const isFeedRoute = pathname.startsWith('/feed')
+  const isHealthRoute = pathname.startsWith('/api/health')
+  const isWebhookRoute = pathname.startsWith('/api/webhooks')
   const isCronRoute = pathname.startsWith('/api/cron')
   const isSeedRoute = pathname.startsWith('/api/admin/seed-feeds') || pathname.startsWith('/api/admin/seed-entities') || pathname.startsWith('/api/admin/seed-players') || pathname.startsWith('/api/admin/enrich-players') || pathname.startsWith('/api/admin/seed-matches') || pathname.startsWith('/api/admin/sync-players') || pathname.startsWith('/api/admin/scrape-salaries')
   const isNewsroomPublic = pathname.startsWith('/api/newsroom/clusters') || pathname.startsWith('/api/entities/search')
@@ -25,9 +27,9 @@ export async function middleware(req: NextRequest) {
   const isPublicArticle = /^\/[a-z0-9-]+\/[a-z0-9-]+$/.test(pathname) && !pathname.startsWith('/api') && !pathname.startsWith('/site') && !pathname.startsWith('/feed') && !pathname.startsWith('/landing') && !pathname.startsWith('/login') && !pathname.startsWith('/register') && !pathname.startsWith('/onboarding') && !pathname.startsWith('/admin') && !pathname.startsWith('/editor') && !pathname.startsWith('/newsroom') && !pathname.startsWith('/copilot') && !pathname.startsWith('/dashboard') && !pathname.startsWith('/widgets') && !pathname.startsWith('/widget-creator') && !pathname.startsWith('/media') && !pathname.startsWith('/calendar') && !pathname.startsWith('/analytics') && !pathname.startsWith('/settings') && !pathname.startsWith('/team') && !pathname.startsWith('/templates') && !pathname.startsWith('/export') && !pathname.startsWith('/import') && !pathname.startsWith('/articles')
   const isHomepage = pathname === '/'
   const isStaticPage = ['/o-nama', '/impressum', '/privatnost', '/uslovi', '/kontakt', '/marketing'].includes(pathname)
-  const isCategoryPage = ['/vijesti', '/transferi', '/utakmice', '/povrede', '/video'].includes(pathname)
+  const isCategoryPage = ['/vijesti', '/transferi', '/utakmice', '/povrede', '/video', '/igraci', '/tabela'].includes(pathname)
   const isMatchCenter = pathname.startsWith('/utakmica/')
-  const isPublicRoute = isHomepage || isStaticPage || isCategoryPage || isMatchCenter || pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isCronRoute || isSeedRoute || isNewsroomPublic || isSetupRoute || isDashboardStats || isCategoriesRoute || isPublicArticle
+  const isPublicRoute = isHomepage || isStaticPage || isCategoryPage || isMatchCenter || pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isCronRoute || isSeedRoute || isNewsroomPublic || isSetupRoute || isDashboardStats || isCategoriesRoute || isPublicArticle || isHealthRoute || isWebhookRoute
 
   if (!isPublicRoute) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
