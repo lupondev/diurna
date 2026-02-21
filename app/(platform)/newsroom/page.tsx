@@ -427,6 +427,7 @@ export default function NewsroomPage() {
   const [fixtures, setFixtures] = useState<Fixture[]>([])
   const [liveMatches, setLiveMatches] = useState<Fixture[]>([])
   const [dismissedBreaking, setDismissedBreaking] = useState<Set<string>>(new Set())
+  const [fetchingFeeds, setFetchingFeeds] = useState(false)
 
   // ─── Fetch clusters ─────────────────────────────────────
   const fetchClusters = useCallback(async () => {
@@ -448,6 +449,16 @@ export default function NewsroomPage() {
       setLiveMatches(data.live || [])
     } catch {}
   }, [])
+
+  const triggerFeedFetch = useCallback(async () => {
+    setFetchingFeeds(true)
+    try {
+      await fetch('/api/cron/fetch-feeds')
+      await fetch('/api/cron/cluster-engine')
+      await fetchClusters()
+    } catch {}
+    finally { setFetchingFeeds(false) }
+  }, [fetchClusters])
 
   useEffect(() => {
     fetchClusters()
@@ -640,6 +651,14 @@ export default function NewsroomPage() {
           background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
           padding: '5px 8px', cursor: 'pointer', color: '#94a3b8', fontSize: 14, flexShrink: 0,
         }} title="Refresh">↻</button>
+
+        <button onClick={triggerFeedFetch} disabled={fetchingFeeds} style={{
+          background: fetchingFeeds ? '#334155' : '#1e293b', border: '1px solid #334155', borderRadius: 6,
+          padding: '4px 10px', cursor: fetchingFeeds ? 'wait' : 'pointer', color: fetchingFeeds ? '#64748b' : '#94a3b8',
+          fontSize: 11, flexShrink: 0, fontFamily: 'monospace',
+        }} title="Fetch feeds + recluster">
+          {fetchingFeeds ? '⏳ Fetching…' : '📡 Fetch Now'}
+        </button>
 
         <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
