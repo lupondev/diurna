@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { getCategoriesForSite, NEWS_CATEGORIES, detectCategoryFromTitle } from '@/lib/newsroom-categories'
+import { getCategoriesForSite, FOOTBALL_CATEGORIES, NEWS_CATEGORIES, detectCategoryFromTitle } from '@/lib/newsroom-categories'
 import type { CategoryItem } from '@/lib/newsroom-categories'
 
 // ─── Types ───────────────────────────────────────────────
@@ -127,7 +127,9 @@ function TrendsPanel({ onWriteTrend }: { onWriteTrend: (title: string) => void }
 
 export default function NewsroomPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const searchRef = useRef<HTMLInputElement>(null)
+  const mode = searchParams.get('mode')
 
   const [site, setSite] = useState<SiteInfo | null>(null)
   const [clusters, setClusters] = useState<Cluster[]>([])
@@ -149,20 +151,24 @@ export default function NewsroomPage() {
       .catch(() => {})
   }, [])
 
-  // Categories based on site
-  const categories = useMemo(() => getCategoriesForSite(site?.domain), [site?.domain])
+  // Categories based on site or mode param
+  const categories = useMemo(() => {
+    if (mode === 'football') return FOOTBALL_CATEGORIES
+    return getCategoriesForSite(site?.domain)
+  }, [site?.domain, mode])
 
   // Load clusters
   const loadClusters = useCallback(async () => {
     try {
-      const res = await fetch('/api/newsroom/clusters?limit=80')
-      const data = await res.json() as { clusters?: Cluster[]; count?: number }
+      const params = new URLSearchParams({ limit: '80', timeFilter })
+      const res = await fetch(`/api/newsroom/clusters?${params}`)
+      const data = await res.json() as { clusters?: Cluster[]; count?: number; stats?: { total: number; spiking: number; tier1: number; filtered: number } }
       setClusters(data.clusters || [])
       setClusterCount(data.count || 0)
       setLastFetch(new Date().toLocaleTimeString('bs', { hour: '2-digit', minute: '2-digit' }))
     } catch { setClusters([]) }
     finally { setLoading(false) }
-  }, [])
+  }, [timeFilter])
 
   useEffect(() => {
     loadClusters()
@@ -195,13 +201,11 @@ export default function NewsroomPage() {
     } finally { setFetching(false) }
   }
 
-  // Filter clusters
-  const activeTimeHours = TIME_FILTERS.find(t => t.key === timeFilter)?.hours ?? null
+  // Filter clusters (time filter is handled server-side now)
   const searchLower = search.toLowerCase()
 
   const filtered = useMemo(() => {
     let result = [...clusters]
-    result = filterByTime(result, activeTimeHours)
 
     if (categoryFilter !== 'sve' && categoryFilter !== 'napisano' && categoryFilter !== 'ceka') {
       result = result.filter(c => getClusterCategory(c) === categoryFilter)
@@ -221,7 +225,7 @@ export default function NewsroomPage() {
     }
 
     return result.sort((a, b) => b.dis - a.dis)
-  }, [clusters, categoryFilter, activeTimeHours, search, searchLower])
+  }, [clusters, categoryFilter, search, searchLower])
 
   // Category counts
   const getCategoryCount = useCallback((slug: string): number => {

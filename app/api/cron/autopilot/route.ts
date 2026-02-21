@@ -286,6 +286,44 @@ export async function GET(req: NextRequest) {
         continue
       }
 
+      // ── Hourly quota check ──
+      const remaining = config.dailyTarget - todayCount
+      if (remaining <= 0) {
+        results.push({
+          orgId: config.orgId,
+          action: 'skipped',
+          reason: `Daily target reached (${todayCount}/${config.dailyTarget})`,
+        })
+        continue
+      }
+
+      // Calculate hourly pacing
+      const currentHour = new Date().getHours()
+      const schedEndRaw = config.scheduleEnd || '00:00'
+      const schedEndHour = schedEndRaw === '00:00' ? 24 : parseInt(schedEndRaw.split(':')[0])
+      const schedStartHour = parseInt((config.scheduleStart || '08:00').split(':')[0])
+      const remainingHours = Math.max(1, schedEndHour - currentHour)
+      const hourlyTarget = Math.ceil(remaining / remainingHours)
+
+      const startOfHour = new Date()
+      startOfHour.setMinutes(0, 0, 0)
+      const articlesThisHour = await prisma.article.count({
+        where: {
+          siteId: site.id,
+          aiGenerated: true,
+          createdAt: { gte: startOfHour },
+        },
+      })
+
+      if (articlesThisHour >= hourlyTarget) {
+        results.push({
+          orgId: config.orgId,
+          action: 'skipped',
+          reason: `Hourly quota met (${articlesThisHour}/${hourlyTarget} this hour, ${todayCount}/${config.dailyTarget} today)`,
+        })
+        continue
+      }
+
       // ── Normal mode: single task via priority system ──
       const task = await getNextTask(config, site.id, todayCount, false)
 
@@ -293,7 +331,7 @@ export async function GET(req: NextRequest) {
         results.push({
           orgId: config.orgId,
           action: 'skipped',
-          reason: 'All quotas met for current hour',
+          reason: `No matching stories found (${todayCount}/${config.dailyTarget} today, ${remaining} remaining)`,
         })
         continue
       }

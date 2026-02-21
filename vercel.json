@@ -2,23 +2,23 @@
   "crons": [
     {
       "path": "/api/cron/fetch-feeds",
-      "schedule": "0 6 * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/cluster-engine",
-      "schedule": "0 7 * * *"
+      "schedule": "*/20 * * * *"
     },
     {
       "path": "/api/cron/autopilot",
-      "schedule": "0 8 * * *"
+      "schedule": "*/10 * * * *"
     },
     {
       "path": "/api/cron/publish",
-      "schedule": "0 9 * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/live-updates",
-      "schedule": "0 12 * * *"
+      "schedule": "*/30 * * * *"
     },
     {
       "path": "/api/cron/sync-data",

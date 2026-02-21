@@ -13,10 +13,18 @@ const sections: NavSection[] = [
   {
     label: 'Main',
     items: [
-      { label: 'Newsroom', icon: '📰', href: '/newsroom', badge: '12' },
+      { label: 'Newsroom', icon: '📰', href: '/newsroom' },
       { label: 'Editor', icon: '✍️', href: '/editor' },
       { label: 'Calendar', icon: '📅', href: '/calendar' },
       { label: 'Articles', icon: '📄', href: '/articles' },
+    ],
+  },
+  {
+    label: 'Sport',
+    items: [
+      { label: 'Football Hub', icon: '⚽', href: '/football' },
+      { label: 'Utakmice', icon: '📅', href: '/football/fixtures' },
+      { label: 'Liga & Tabela', icon: '🏆', href: '/football/leagues' },
     ],
   },
   {
