@@ -110,8 +110,8 @@ export async function GET(req: NextRequest) {
           }
         }
 
-        // Fetch top 5 clusters by DIS, exclude already covered
-        const topClusters = await prisma.storyCluster.findMany({
+        // Fetch top cluster by DIS, exclude already covered (1 per invocation to fit in timeout)
+        const topCluster = await prisma.storyCluster.findFirst({
           where: {
             latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
             dis: { gte: 15 },
@@ -120,10 +120,9 @@ export async function GET(req: NextRequest) {
               : {}),
           },
           orderBy: { dis: 'desc' },
-          take: 5,
         })
 
-        if (topClusters.length === 0) {
+        if (!topCluster) {
           results.push({
             orgId: config.orgId,
             action: 'skipped',
@@ -132,7 +131,7 @@ export async function GET(req: NextRequest) {
           continue
         }
 
-        for (const topCluster of topClusters) {
+        {
           const newsItems = await prisma.newsItem.findMany({
             where: { clusterId: topCluster.id },
             orderBy: { pubDate: 'desc' },
