@@ -785,6 +785,21 @@ model DistributionChannel {
 }
 
 // ══════════════════════════════════
+// API CACHE
+// ══════════════════════════════════
+
+model ApiCache {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  data      Json
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([key])
+  @@index([expiresAt])
+}
+
+// ══════════════════════════════════
 // SYSTEM LOGGING
 // ══════════════════════════════════
 

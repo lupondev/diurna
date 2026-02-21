@@ -136,6 +136,14 @@ export async function GET() {
     }),
   ])
 
+  // Cache stats
+  const [cacheTotal, apiCallsToday] = await Promise.all([
+    prisma.apiCache.count(),
+    prisma.systemLog.count({
+      where: { service: 'api-football', level: 'info', message: { startsWith: 'API call:' }, createdAt: { gte: todayStart } },
+    }),
+  ])
+
   // Recent logs
   const logs = await prisma.systemLog.findMany({
     orderBy: { createdAt: 'desc' },
@@ -169,6 +177,12 @@ export async function GET() {
       triggeredToday: webhookTodayCount,
       lastTrigger: lastWebhookLog?.createdAt || null,
       lastMessage: lastWebhookLog?.message || null,
+    },
+    cache: {
+      entries: cacheTotal,
+      apiCallsToday,
+      quotaUsed: footballQuota.current,
+      quotaLimit: footballQuota.limit,
     },
     logs,
     envVars,

@@ -1,5 +1,6 @@
 import type { LiveMatch } from '@/components/public/sportba'
 import { systemLog } from '@/lib/system-log'
+import { cachedFetch, CACHE_TTL } from '@/lib/api-football-cache'
 
 const BASE = 'https://v3.football.api-sports.io'
 
@@ -86,9 +87,9 @@ export interface ApiPlayer {
   }>
 }
 
-/* ── Base fetcher ── */
+/* ── Base fetcher (direct API call, no cache) ── */
 
-async function apiFootball<T>(endpoint: string, revalidate = 60): Promise<T[]> {
+async function apiFootballDirect<T>(endpoint: string): Promise<T[]> {
   const key = process.env.API_FOOTBALL_KEY
   if (!key) {
     console.warn('[API-Football] API_FOOTBALL_KEY not set')
@@ -97,7 +98,6 @@ async function apiFootball<T>(endpoint: string, revalidate = 60): Promise<T[]> {
 
   const res = await fetch(`${BASE}${endpoint}`, {
     headers: { 'x-apisports-key': key },
-    next: { revalidate },
   })
 
   if (!res.ok) {
@@ -110,17 +110,30 @@ async function apiFootball<T>(endpoint: string, revalidate = 60): Promise<T[]> {
   return json.response ?? []
 }
 
-async function apiFootballRaw<T>(endpoint: string, revalidate = 60): Promise<{ response: T[]; paging?: { current: number; total: number } }> {
+async function apiFootballRawDirect<T>(endpoint: string): Promise<{ response: T[]; paging?: { current: number; total: number } }> {
   const key = process.env.API_FOOTBALL_KEY
   if (!key) return { response: [], paging: { current: 1, total: 0 } }
 
   const res = await fetch(`${BASE}${endpoint}`, {
     headers: { 'x-apisports-key': key },
-    next: { revalidate },
   })
 
   if (!res.ok) return { response: [], paging: { current: 1, total: 0 } }
   return (await res.json()) as { response: T[]; paging?: { current: number; total: number } }
+}
+
+/* ── Cached fetchers ── */
+
+async function apiFootball<T>(endpoint: string, ttl: number = CACHE_TTL.DEFAULT): Promise<T[]> {
+  const cacheKey = `apifb:${endpoint}`
+  const { data } = await cachedFetch<T[]>(cacheKey, () => apiFootballDirect<T>(endpoint), ttl)
+  return data
+}
+
+async function apiFootballRaw<T>(endpoint: string, ttl: number = CACHE_TTL.DEFAULT): Promise<{ response: T[]; paging?: { current: number; total: number } }> {
+  const cacheKey = `apifb:${endpoint}`
+  const { data } = await cachedFetch(cacheKey, () => apiFootballRawDirect<T>(endpoint), ttl)
+  return data
 }
 
 /* ── Helpers ── */
@@ -148,13 +161,13 @@ function dateOffsetStr(days: number): string {
 /* ── Public API ── */
 
 export async function getLiveMatches(): Promise<LiveMatch[]> {
-  // Try live fixtures first
-  let fixtures = await apiFootball<ApiFixture>('/fixtures?live=all')
+  // Try live fixtures first (1 minute cache)
+  let fixtures = await apiFootball<ApiFixture>('/fixtures?live=all', CACHE_TTL.LIVE)
   fixtures = fixtures.filter((f) => LEAGUE_IDS.includes(f.league.id))
 
-  // Fallback to today's fixtures
+  // Fallback to today's fixtures (5 minute cache)
   if (fixtures.length === 0) {
-    const all = await apiFootball<ApiFixture>(`/fixtures?date=${todayStr()}&season=${CURRENT_SEASON}`)
+    const all = await apiFootball<ApiFixture>(`/fixtures?date=${todayStr()}&season=${CURRENT_SEASON}`, CACHE_TTL.FIXTURES_TODAY)
     fixtures = all.filter((f) => LEAGUE_IDS.includes(f.league.id))
   }
 
@@ -171,7 +184,9 @@ export async function getLiveMatches(): Promise<LiveMatch[]> {
 }
 
 export async function getFixturesByDate(date: string): Promise<ApiFixture[]> {
-  const all = await apiFootball<ApiFixture>(`/fixtures?date=${date}&season=${CURRENT_SEASON}`)
+  const isToday = date === todayStr()
+  const ttl = isToday ? CACHE_TTL.FIXTURES_TODAY : CACHE_TTL.FIXTURES_FUTURE
+  const all = await apiFootball<ApiFixture>(`/fixtures?date=${date}&season=${CURRENT_SEASON}`, ttl)
   return all.filter((f) => LEAGUE_IDS.includes(f.league.id))
 }
 
@@ -184,7 +199,7 @@ export async function getFixturesRange(days: number): Promise<ApiFixture[]> {
 export async function getStandings(leagueId: number): Promise<ApiStanding[]> {
   const data = await apiFootball<{ league: { standings: ApiStanding[][] } }>(
     `/standings?league=${leagueId}&season=${CURRENT_SEASON}`,
-    3600,
+    CACHE_TTL.STANDINGS,
   )
   return data[0]?.league?.standings?.[0] ?? []
 }
@@ -204,7 +219,7 @@ export async function searchPlayers(params: {
     parts.push(`league=${LEAGUES.PL}`)
   }
 
-  const data = await apiFootballRaw<ApiPlayer>(`/players?${parts.join('&')}`, 300)
+  const data = await apiFootballRaw<ApiPlayer>(`/players?${parts.join('&')}`, CACHE_TTL.PLAYER)
   return {
     players: data.response ?? [],
     totalPages: data.paging?.total ?? 0,
@@ -212,12 +227,12 @@ export async function searchPlayers(params: {
 }
 
 export async function getPlayer(id: number): Promise<ApiPlayer | null> {
-  const data = await apiFootball<ApiPlayer>(`/players?id=${id}&season=${CURRENT_SEASON}`, 300)
+  const data = await apiFootball<ApiPlayer>(`/players?id=${id}&season=${CURRENT_SEASON}`, CACHE_TTL.PLAYER)
   return data[0] ?? null
 }
 
 export async function getTeamFixtures(teamId: number, last = 5): Promise<ApiFixture[]> {
-  return apiFootball<ApiFixture>(`/fixtures?team=${teamId}&last=${last}&season=${CURRENT_SEASON}`, 300)
+  return apiFootball<ApiFixture>(`/fixtures?team=${teamId}&last=${last}&season=${CURRENT_SEASON}`, CACHE_TTL.FIXTURES_TODAY)
 }
 
 export { formatTime, todayStr, dateOffsetStr, mapStatus }

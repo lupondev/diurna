@@ -36,6 +36,12 @@ type DashboardData = {
     lastTrigger: string | null
     lastMessage: string | null
   }
+  cache: {
+    entries: number
+    apiCallsToday: number
+    quotaUsed: number
+    quotaLimit: number
+  }
   logs: LogEntry[]
   envVars: Record<string, boolean>
 }
@@ -191,22 +197,44 @@ export default function HealthPage() {
         )}
       </section>
 
-      {/* SECTION 3: API Usage */}
+      {/* SECTION 3: API Usage & Cache */}
       <section style={s.section}>
-        <h2 style={s.h2}>API Usage</h2>
+        <h2 style={s.h2}>API Usage & Cache</h2>
+        <div style={s.grid}>
+          <div style={s.statCard}>
+            <div style={s.statValue}>{data.cache.entries}</div>
+            <div style={s.statLabel}>Cached Entries</div>
+          </div>
+          <div style={s.statCard}>
+            <div style={s.statValue}>{data.cache.apiCallsToday}</div>
+            <div style={s.statLabel}>API Calls Today</div>
+          </div>
+          <div style={s.statCard}>
+            <div style={s.statValue}>{data.cache.quotaUsed} / {data.cache.quotaLimit}</div>
+            <div style={s.statLabel}>API-Football Quota</div>
+          </div>
+          <div style={s.statCard}>
+            <div style={s.statValue}>
+              {data.cache.quotaUsed > 0
+                ? `${Math.round(((data.cache.quotaUsed - data.cache.apiCallsToday) / Math.max(1, data.cache.quotaUsed)) * 100)}%`
+                : 'N/A'}
+            </div>
+            <div style={s.statLabel}>Cache Hit Rate</div>
+          </div>
+        </div>
         <div style={s.card}>
           <div style={s.cardHeader}>
             <span style={s.cardTitle}>API-Football Quota</span>
             <span style={s.quotaText}>
-              {data.footballQuota.current} / {data.footballQuota.limit} requests today
+              {data.cache.quotaUsed} / {data.cache.quotaLimit} requests today
             </span>
           </div>
           <div style={s.progressBar}>
             <div
               style={{
                 ...s.progressFill,
-                width: `${Math.min(100, (data.footballQuota.current / data.footballQuota.limit) * 100)}%`,
-                background: data.footballQuota.current / data.footballQuota.limit > 0.8 ? '#ef4444' : '#22c55e',
+                width: `${Math.min(100, (data.cache.quotaUsed / Math.max(1, data.cache.quotaLimit)) * 100)}%`,
+                background: data.cache.quotaUsed / Math.max(1, data.cache.quotaLimit) > 0.8 ? '#ef4444' : '#22c55e',
               }}
             />
           </div>
