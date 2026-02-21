@@ -21,9 +21,9 @@ export async function GET() {
 
     if (!API_KEY) {
       return NextResponse.json({
-        standings: getMockStandings(),
-        topScorers: getMockScorers(),
-        source: 'mock',
+        standings: [],
+        topScorers: [],
+        source: 'no-key',
         fetchedAt: new Date().toISOString(),
       })
     }
@@ -87,39 +87,7 @@ export async function GET() {
     return NextResponse.json(result)
   } catch (error) {
     console.error('Stats error:', error)
-    return NextResponse.json({ standings: getMockStandings(), topScorers: getMockScorers(), source: 'mock-fallback', fetchedAt: new Date().toISOString() })
+    return NextResponse.json({ standings: [], topScorers: [], source: 'error', fetchedAt: new Date().toISOString() })
   }
 }
 
-function getMockStandings() {
-  const teams = [
-    { team: 'Arsenal', pts: 65, w: 20, d: 5, l: 4, gf: 62, ga: 24 },
-    { team: 'Liverpool', pts: 63, w: 19, d: 6, l: 4, gf: 68, ga: 29 },
-    { team: 'Manchester City', pts: 60, w: 18, d: 6, l: 5, gf: 61, ga: 28 },
-    { team: 'Chelsea', pts: 52, w: 15, d: 7, l: 7, gf: 50, ga: 35 },
-    { team: 'Newcastle', pts: 50, w: 14, d: 8, l: 7, gf: 48, ga: 32 },
-    { team: 'Aston Villa', pts: 48, w: 14, d: 6, l: 9, gf: 51, ga: 40 },
-    { team: 'Tottenham', pts: 45, w: 13, d: 6, l: 10, gf: 55, ga: 48 },
-    { team: 'Manchester United', pts: 42, w: 12, d: 6, l: 11, gf: 39, ga: 42 },
-  ]
-  return teams.map((t, i) => ({
-    rank: i + 1, team: t.team, points: t.pts,
-    played: t.w + t.d + t.l, won: t.w, drawn: t.d, lost: t.l,
-    gf: t.gf, ga: t.ga, gd: t.gf - t.ga,
-  }))
-}
-
-function getMockScorers() {
-  return [
-    { name: 'Erling Haaland', team: 'Manchester City', goals: 22, appearances: 27 },
-    { name: 'Mohamed Salah', team: 'Liverpool', goals: 19, appearances: 28 },
-    { name: 'Alexander Isak', team: 'Newcastle', goals: 17, appearances: 26 },
-    { name: 'Bukayo Saka', team: 'Arsenal', goals: 15, appearances: 28 },
-    { name: 'Cole Palmer', team: 'Chelsea', goals: 14, appearances: 27 },
-    { name: 'Ollie Watkins', team: 'Aston Villa', goals: 13, appearances: 28 },
-    { name: 'Son Heung-min', team: 'Tottenham', goals: 12, appearances: 25 },
-    { name: 'Bruno Fernandes', team: 'Manchester United', goals: 11, appearances: 27 },
-    { name: 'Jarrod Bowen', team: 'West Ham', goals: 10, appearances: 26 },
-    { name: 'Jean-Philippe Mateta', team: 'Crystal Palace', goals: 10, appearances: 27 },
-  ]
-}

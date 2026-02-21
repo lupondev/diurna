@@ -28,15 +28,6 @@ const GRADIENTS = [
   'linear-gradient(135deg,#2d1b69,#11052c)',
 ]
 
-const DEMO_ARTICLES = [
-  { slug: 'haaland-hat-trick-city-arsenal-derbi', title: 'Haaland postiže hat-trick dok City uništava Arsenal u velikom derbiju', time: '45 min', league: 'Premier League', bg: GRADIENTS[0] },
-  { slug: 'mourinho-povratak-premijer-liga', title: "Mourinho se vraća: 'Imam nedovršenog posla u Premijer ligi'", time: '2h', league: 'Premier League', bg: GRADIENTS[1] },
-  { slug: 'var-kontroverza-tri-penala', title: 'VAR kontroverza: Tri penala u 10 minuta mijenjaju utakmicu', time: '3h', league: 'Premier League', bg: GRADIENTS[2] },
-  { slug: 'fifa-novo-pravilo-ofsajd-2026', title: 'FIFA potvrđuje novo pravilo o ofsajdu za sezonu 2026/27', time: '10h', league: 'FIFA', bg: GRADIENTS[3] },
-  { slug: 'arsenal-liga-prvaka-pohod-2025', title: 'Arsenal na pragu historije — pohod ka prvom naslovu u Ligi prvaka', time: '1d', league: 'Liga prvaka', bg: GRADIENTS[4] },
-  { slug: 'guardiola-priznaje-arsenal-najbolji', title: 'Guardiola priznaje: Arsenal je najbolji tim u Engleskoj', time: '1d', league: 'Premier League', bg: GRADIENTS[1] },
-]
-
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
   if (seconds < 3600) return `${Math.floor(seconds / 60)} min`
@@ -74,19 +65,8 @@ export default async function VijestiPage() {
     }))
   }
 
-  // Merge: DB articles first, then fill with demos
-  const dbSlugs = new Set(dbArticles.map((a) => a.slug))
-  const demoFill = DEMO_ARTICLES.filter((d) => !dbSlugs.has(d.slug)).map((d) => ({
-    ...d,
-    href: `/vijesti/${d.slug}`,
-  }))
-  const allArticles = [
-    ...dbArticles,
-    ...demoFill,
-  ]
-
-  const featured = allArticles[0]
-  const grid = allArticles.slice(1)
+  const featured = dbArticles[0]
+  const grid = dbArticles.slice(1)
 
   return (
     <main className="sba-cat">
@@ -97,6 +77,9 @@ export default async function VijestiPage() {
 
       <div className="sba-cat-layout">
         <div className="sba-cat-main">
+          {dbArticles.length === 0 && (
+            <p style={{ color: 'var(--sba-muted)', padding: '2rem 0' }}>Trenutno nema objavljenih vijesti.</p>
+          )}
           {featured && (
             <Link href={featured.href} className="sba-cat-featured">
               <div className="sba-cat-featured-bg" style={{ background: featured.bg }} />

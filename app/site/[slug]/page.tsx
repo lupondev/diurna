@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
+import { getArticleUrl } from '@/lib/article-url'
 import { tiptapToHtml } from '@/lib/tiptap-html'
 import { generateNewsArticleSchema } from '@/lib/seo'
 import { SubscribeWidget } from '@/components/subscribe-widget'
@@ -179,10 +180,10 @@ export default async function ArticlePage({ params }: { params: { slug: string }
 
           {related.length > 0 && (
             <div className="pub-related">
-              <h2 className="pub-related-title">Related Articles</h2>
+              <h2 className="pub-related-title">Povezani članci</h2>
               <div className="pub-grid">
                 {related.map((rel) => (
-                  <Link key={rel.id} href={`/site/${rel.slug}`} className="pub-card">
+                  <Link key={rel.id} href={getArticleUrl(rel)} className="pub-card">
                     <div className="pub-card-thumb">&#9998;</div>
                     <div className="pub-card-body">
                       {rel.category && (
@@ -200,7 +201,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           )}
 
           <div className="pub-comments">
-            Comments coming soon. Stay tuned!
+            Komentari dolaze uskoro.
           </div>
         </article>
 
@@ -219,7 +220,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
 }
 
 function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('bs-BA', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',

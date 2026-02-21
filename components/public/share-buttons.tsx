@@ -20,7 +20,7 @@ export function ShareButtons({ title }: { title: string }) {
 
   return (
     <div className="pub-share">
-      <span className="pub-share-label">Share</span>
+      <span className="pub-share-label">Podijeli</span>
       <a
         className="pub-share-btn"
         href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getUrl())}`}

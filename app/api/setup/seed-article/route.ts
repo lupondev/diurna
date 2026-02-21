@@ -234,7 +234,7 @@ export async function GET() {
           status: 'PUBLISHED',
           publishedAt: existing.publishedAt || new Date(),
           categoryId: category.id,
-          metaTitle: 'Vinícius Júnior: Sezona za pamćenje 2025/26 — Sport.ba',
+          metaTitle: `Vinícius Júnior: Sezona za pamćenje 2025/26 — ${site.name}`,
           metaDescription: 'Detaljan pregled sezone Viníciusa Júniora — 19 golova, El Clásico show, statistike i put ka Zlatnoj lopti 2026.',
         },
       })
@@ -260,7 +260,7 @@ export async function GET() {
         publishedAt: new Date(),
         categoryId: category.id,
         aiGenerated: false,
-        metaTitle: 'Vinícius Júnior: Sezona za pamćenje 2025/26 — Sport.ba',
+        metaTitle: `Vinícius Júnior: Sezona za pamćenje 2025/26 — ${site.name}`,
         metaDescription: 'Detaljan pregled sezone Viníciusa Júniora — 19 golova, El Clásico show, statistike i put ka Zlatnoj lopti 2026.',
       },
     })

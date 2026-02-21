@@ -64,8 +64,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Google News error:', error)
     const q = req.nextUrl.searchParams.get('q') || ''
-    const mock = q.includes('transfer') ? getMockTransferNews() : getMockBreakingNews()
-    return NextResponse.json({ items: mock, total: mock.length, query: q || 'football', source: 'mock', fetchedAt: new Date().toISOString() })
+    return NextResponse.json({ items: [], total: 0, query: q || 'football', source: 'error', fetchedAt: new Date().toISOString() })
   }
 }
 
@@ -74,37 +73,3 @@ function extractSource(title: string): string {
   return match ? match[1].trim() : 'Unknown'
 }
 
-function getMockBreakingNews(): { title: string; source: string; link: string; pubDate: string }[] {
-  return [
-    { title: 'Arsenal extend Premier League lead with dominant win over Wolves', source: 'BBC Sport', link: 'https://bbc.co.uk/sport/football', pubDate: new Date(Date.now() - 1800000).toISOString() },
-    { title: 'Haaland scores hat-trick as Man City thrash Everton 5-0', source: 'Sky Sports', link: 'https://skysports.com/football', pubDate: new Date(Date.now() - 3600000).toISOString() },
-    { title: 'Liverpool confirm Salah contract extension through 2027', source: 'ESPN', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 5400000).toISOString() },
-    { title: 'Real Madrid eye summer move for Premier League midfielder', source: 'The Guardian', link: 'https://theguardian.com/football', pubDate: new Date(Date.now() - 7200000).toISOString() },
-    { title: 'Champions League draw: Barcelona face Bayern Munich in quarter-finals', source: 'ESPN FC', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 9000000).toISOString() },
-    { title: 'VAR controversy overshadows Manchester derby as City snatch late equalizer', source: 'BBC Sport', link: 'https://bbc.co.uk/sport/football', pubDate: new Date(Date.now() - 10800000).toISOString() },
-    { title: 'Newcastle United announce record commercial deal worth £40m per year', source: 'Sky Sports', link: 'https://skysports.com/football', pubDate: new Date(Date.now() - 14400000).toISOString() },
-    { title: 'Tottenham sack manager after five consecutive Premier League defeats', source: 'The Athletic', link: 'https://theathletic.com/football', pubDate: new Date(Date.now() - 18000000).toISOString() },
-    { title: 'Mbappe suffers hamstring injury, could miss Champions League tie', source: 'Marca', link: 'https://marca.com', pubDate: new Date(Date.now() - 21600000).toISOString() },
-    { title: 'Chelsea youngster breaks through with stunning debut goal against Aston Villa', source: 'ESPN', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 25200000).toISOString() },
-    { title: 'Premier League table: How the standings look after Matchday 28', source: 'BBC Sport', link: 'https://bbc.co.uk/sport/football', pubDate: new Date(Date.now() - 28800000).toISOString() },
-    { title: 'Serie A roundup: Inter Milan maintain perfect home record', source: 'Reuters', link: 'https://reuters.com/sports', pubDate: new Date(Date.now() - 32400000).toISOString() },
-    { title: 'Bundesliga: Dortmund close gap on Bayern with comeback victory', source: 'The Guardian', link: 'https://theguardian.com/football', pubDate: new Date(Date.now() - 36000000).toISOString() },
-    { title: 'World Cup 2026 qualification: Key results from around the globe', source: 'ESPN FC', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 43200000).toISOString() },
-    { title: 'FA Cup semi-final draw: Arsenal to face Manchester United at Wembley', source: 'Sky Sports', link: 'https://skysports.com/football', pubDate: new Date(Date.now() - 50400000).toISOString() },
-  ]
-}
-
-function getMockTransferNews(): { title: string; source: string; link: string; pubDate: string }[] {
-  return [
-    { title: '[Fabrizio Romano] Arsenal complete signing of Spain international — here we go confirmed', source: 'The Guardian', link: 'https://theguardian.com/football', pubDate: new Date(Date.now() - 3600000).toISOString() },
-    { title: 'Manchester United agree £65m fee for Bundesliga striker', source: 'Sky Sports', link: 'https://skysports.com/football', pubDate: new Date(Date.now() - 7200000).toISOString() },
-    { title: 'Chelsea target Ajax defender as Pochettino plans squad overhaul', source: 'ESPN', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 10800000).toISOString() },
-    { title: 'Liverpool identify La Liga winger as Salah long-term successor', source: 'The Athletic', link: 'https://theathletic.com/football', pubDate: new Date(Date.now() - 14400000).toISOString() },
-    { title: 'Real Madrid to trigger €120m release clause for Premier League star', source: 'Marca', link: 'https://marca.com', pubDate: new Date(Date.now() - 18000000).toISOString() },
-    { title: 'PSG offer Barcelona forward in swap deal for midfielder', source: 'ESPN FC', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 21600000).toISOString() },
-    { title: 'Tottenham close in on Serie A midfielder for £30m transfer', source: 'BBC Sport', link: 'https://bbc.co.uk/sport/football', pubDate: new Date(Date.now() - 25200000).toISOString() },
-    { title: 'Aston Villa sign Brazilian full-back on five-year deal', source: 'Sky Sports', link: 'https://skysports.com/football', pubDate: new Date(Date.now() - 28800000).toISOString() },
-    { title: 'Newcastle enter race for Napoli winger rated at €80m', source: 'The Guardian', link: 'https://theguardian.com/football', pubDate: new Date(Date.now() - 36000000).toISOString() },
-    { title: 'Bayern Munich confirm departure of veteran midfielder on free transfer', source: 'ESPN', link: 'https://espn.com/soccer', pubDate: new Date(Date.now() - 43200000).toISOString() },
-  ]
-}

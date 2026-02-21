@@ -73,8 +73,8 @@ export function Sidebar() {
         <div className="ss-row">
           <div className="ss-icon">⚽</div>
           <div>
-            <div className="ss-name">SportNews Pro</div>
-            <div className="ss-url">sportnews.com</div>
+            <div className="ss-name">Diurna</div>
+            <div className="ss-url">Publishing Platform</div>
           </div>
           <span style={{ color: 'var(--g400)', fontSize: 12, marginLeft: 'auto' }}>▼</span>
         </div>
