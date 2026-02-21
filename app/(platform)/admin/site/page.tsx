@@ -8,7 +8,13 @@ type SiteSettings = {
   slug: string
   language: string
   timezone: string
-  openaiKey: string | null
+  apiKeys: {
+    anthropic: boolean
+    gemini: boolean
+    unsplash: boolean
+    apiFootball: boolean
+    cronSecret: boolean
+  }
 }
 
 export default function AdminSitePage() {
@@ -150,19 +156,32 @@ export default function AdminSitePage() {
 
       <div className="adm-card">
         <div className="adm-card-title">API Keys</div>
-        <div className="adm-card-desc" style={{ marginBottom: 16 }}>Manage external service connections</div>
+        <div className="adm-card-desc" style={{ marginBottom: 16 }}>External service connections (set via environment variables)</div>
 
-        <div className="adm-field">
-          <label className="adm-label">OpenAI API Key</label>
-          <input
-            className="adm-input"
-            value={settings.openaiKey ? `sk-...${settings.openaiKey.slice(-4)}` : 'Not configured'}
-            disabled
-            style={{ background: 'var(--g50)', color: 'var(--g400)', fontFamily: 'var(--mono)', fontSize: 12 }}
-          />
-          <div style={{ fontSize: 11, color: 'var(--g400)', marginTop: 4 }}>
-            Set via environment variables for security
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {([
+            ['Anthropic (Claude)', settings.apiKeys.anthropic],
+            ['Google Gemini', settings.apiKeys.gemini],
+            ['Unsplash', settings.apiKeys.unsplash],
+            ['API-Football', settings.apiKeys.apiFootball],
+            ['CRON_SECRET', settings.apiKeys.cronSecret],
+          ] as [string, boolean][]).map(([name, configured]) => (
+            <div key={name} style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '10px 14px', borderRadius: 8,
+              background: 'var(--g50)', fontSize: 13,
+            }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: '50%',
+                background: configured ? '#22c55e' : '#ef4444',
+                flexShrink: 0,
+              }} />
+              <span style={{ color: 'var(--g700)' }}>{name}</span>
+              <span style={{ marginLeft: 'auto', fontSize: 11, color: configured ? '#22c55e' : 'var(--g400)' }}>
+                {configured ? 'Active' : 'Missing'}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 

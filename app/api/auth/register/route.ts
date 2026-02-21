@@ -55,13 +55,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ id: user.id, email: user.email }, { status: 201 })
     }
 
-    let org = await prisma.organization.findFirst({ where: { slug: 'demo' } })
-    if (!org) {
-      const slug = data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30)
-      org = await prisma.organization.create({
-        data: { name: data.name + "'s Newsroom", slug, plan: 'FREE' },
-      })
+    // Always create a new org for non-invite signups
+    const baseSlug = data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30) || 'org'
+    let slug = baseSlug
+    let suffix = 1
+    while (await prisma.organization.findFirst({ where: { slug } })) {
+      slug = `${baseSlug}-${suffix++}`
     }
+    const org = await prisma.organization.create({
+      data: { name: data.name + "'s Newsroom", slug, plan: 'FREE' },
+    })
 
     const user = await prisma.user.create({
       data: {

@@ -39,7 +39,6 @@ const sections: NavSection[] = [
     label: 'Admin',
     roles: ['OWNER', 'ADMIN'],
     items: [
-      { label: 'Users', icon: '👥', href: '/admin/users' },
       { label: 'Invites', icon: '✉️', href: '/admin/invites' },
       { label: 'Audit Log', icon: '📋', href: '/admin/audit-log' },
       { label: 'Site Settings', icon: '⚙️', href: '/admin/site' },

@@ -26,7 +26,13 @@ export async function GET() {
     slug: org.slug,
     language: site?.language || 'en',
     timezone: site?.timezone || 'UTC',
-    openaiKey: process.env.OPENAI_API_KEY ? `...${process.env.OPENAI_API_KEY.slice(-4)}` : null,
+    apiKeys: {
+      anthropic: !!process.env.ANTHROPIC_API_KEY,
+      gemini: !!process.env.GEMINI_API_KEY,
+      unsplash: !!process.env.UNSPLASH_ACCESS_KEY,
+      apiFootball: !!process.env.API_FOOTBALL_KEY,
+      cronSecret: !!process.env.CRON_SECRET,
+    },
   })
 }
 

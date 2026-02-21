@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import './admin.css'
 
 const adminNav = [
-  { label: 'Users', href: '/admin/users', icon: '👥' },
   { label: 'Invites', href: '/admin/invites', icon: '✉️' },
   { label: 'Audit Log', href: '/admin/audit-log', icon: '📋' },
   { label: 'Site Settings', href: '/admin/site', icon: '⚙️' },
