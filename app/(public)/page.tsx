@@ -7,6 +7,8 @@ import { AdSlot } from '@/components/public/sportba'
 import { MatchOfDay } from '@/components/public/sportba/match-of-day'
 import { StandingsTable } from '@/components/public/sportba/standings-table'
 import { ForYou } from '@/components/public/sportba/for-you'
+import { ClubLogoStrip } from '@/components/public/ClubLogoStrip'
+import { FixturesTicker } from '@/components/public/FixturesTicker'
 import './home.css'
 
 export const dynamic = 'force-dynamic'
@@ -143,6 +145,9 @@ export default async function HomePage() {
 
   return (
     <main className="sba-home">
+      <ClubLogoStrip />
+      <FixturesTicker />
+
       <div className="sba-home-leaderboard">
         <AdSlot variant="leaderboard" />
       </div>
