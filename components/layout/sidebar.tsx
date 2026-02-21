@@ -23,8 +23,8 @@ const sections: NavSection[] = [
     label: 'Sport',
     items: [
       { label: 'Football Hub', icon: '⚽', href: '/football' },
-      { label: 'Utakmice', icon: '📅', href: '/football/fixtures' },
-      { label: 'Liga & Tabela', icon: '🏆', href: '/football/leagues' },
+      { label: 'Fixtures', icon: '📅', href: '/football/fixtures' },
+      { label: 'Leagues & Tables', icon: '🏆', href: '/football/leagues' },
     ],
   },
   {
@@ -46,7 +46,7 @@ const sections: NavSection[] = [
     label: 'Admin',
     roles: ['OWNER', 'ADMIN'],
     items: [
-      { label: 'Postavke', icon: '⚙️', href: '/settings' },
+      { label: 'Settings', icon: '⚙️', href: '/settings' },
     ],
   },
 ]

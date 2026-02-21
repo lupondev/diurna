@@ -7,7 +7,7 @@ export async function GET(req: Request) {
   const limit = parseInt(searchParams.get('limit') || '80')
   const eventType = searchParams.get('eventType') || undefined
   const minDis = parseInt(searchParams.get('minDis') || '0')
-  const timeFilter = searchParams.get('timeFilter') || 'SVE'
+  const timeFilter = searchParams.get('timeFilter') || 'ALL'
   const siteId = searchParams.get('siteId') || undefined
 
   // Calculate cutoff time based on timeFilter
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   } else if (timeFilter === '24H') {
     cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
   }
-  // SVE = no cutoff
+  // ALL / SVE = no cutoff
 
   const where = {
     ...(eventType ? { eventType } : {}),

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { getCategoriesForSite, FOOTBALL_CATEGORIES, NEWS_CATEGORIES, detectCategoryFromTitle } from '@/lib/newsroom-categories'
+import { getCategoriesForSite, FOOTBALL_CATEGORIES, detectCategoryFromTitle } from '@/lib/newsroom-categories'
 import type { CategoryItem } from '@/lib/newsroom-categories'
 
 // ─── Types ───────────────────────────────────────────────
@@ -34,14 +34,14 @@ interface TrendItem {
   title: string; traffic: string; link: string
 }
 
-type TimeFilter = '1H' | '6H' | '12H' | '24H' | 'SVE'
+type TimeFilter = '1H' | '6H' | '12H' | '24H' | 'ALL'
 
 // ─── Constants ───────────────────────────────────────────
 
 const TIME_FILTERS: { key: TimeFilter; hours: number | null }[] = [
   { key: '1H', hours: 1 }, { key: '6H', hours: 6 },
   { key: '12H', hours: 12 }, { key: '24H', hours: 24 },
-  { key: 'SVE', hours: null },
+  { key: 'ALL', hours: null },
 ]
 
 const GEO_OPTIONS = [
@@ -55,19 +55,11 @@ const BLOCKED_TRENDS = ['bet365', 'kladionica', 'betting', 'odds', 'casino', 'po
 
 function timeAgo(dateStr: string): string {
   const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000)
-  if (mins < 1) return 'sad'
+  if (mins < 1) return 'now'
   if (mins < 60) return `${mins}m`
   const hrs = Math.floor(mins / 60)
   if (hrs < 24) return `${hrs}h`
   return `${Math.floor(hrs / 24)}d`
-}
-
-function filterByTime(clusters: Cluster[], hours: number | null): Cluster[] {
-  if (!hours) return clusters
-  const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000)
-  const filtered = clusters.filter(c => new Date(c.latestItem) >= cutoff)
-  if (filtered.length < 5) return [...clusters].sort((a, b) => b.dis - a.dis).slice(0, Math.max(5, filtered.length))
-  return filtered
 }
 
 function getClusterCategory(c: Cluster): string {
@@ -106,7 +98,7 @@ function TrendsPanel({ onWriteTrend }: { onWriteTrend: (title: string) => void }
       {loading ? (
         <div className="py-3 text-center text-[11px] text-muted-foreground">Loading...</div>
       ) : trends.length === 0 ? (
-        <div className="py-3 text-center text-[11px] text-muted-foreground">Nema trendova</div>
+        <div className="py-3 text-center text-[11px] text-muted-foreground">No trends</div>
       ) : (
         <div className="flex flex-col max-h-[280px] overflow-y-auto">
           {trends.slice(0, 10).map((t, i) => (
@@ -162,10 +154,10 @@ export default function NewsroomPage() {
     try {
       const params = new URLSearchParams({ limit: '80', timeFilter })
       const res = await fetch(`/api/newsroom/clusters?${params}`)
-      const data = await res.json() as { clusters?: Cluster[]; count?: number; stats?: { total: number; spiking: number; tier1: number; filtered: number } }
+      const data = await res.json() as { clusters?: Cluster[]; count?: number }
       setClusters(data.clusters || [])
       setClusterCount(data.count || 0)
-      setLastFetch(new Date().toLocaleTimeString('bs', { hour: '2-digit', minute: '2-digit' }))
+      setLastFetch(new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }))
     } catch { setClusters([]) }
     finally { setLoading(false) }
   }, [timeFilter])
@@ -195,13 +187,13 @@ export default function NewsroomPage() {
       await fetch('/api/cron/fetch-feeds')
       await fetch('/api/cron/cluster-engine')
       await loadClusters()
-      toast.success('Feedovi osvježeni')
+      toast.success('Feeds refreshed')
     } catch {
-      toast.error('Greška pri dohvaćanju feedova')
+      toast.error('Error fetching feeds')
     } finally { setFetching(false) }
   }
 
-  // Filter clusters (time filter is handled server-side now)
+  // Filter clusters
   const searchLower = search.toLowerCase()
 
   const filtered = useMemo(() => {
@@ -258,15 +250,6 @@ export default function NewsroomPage() {
     router.push(`/editor?prompt=${encodeURIComponent(`Write an article about the trending topic: ${title}`)}`)
   }
 
-  // Group categories by section
-  const sections = useMemo(() => {
-    return categories.reduce((acc, cat) => {
-      if (!acc[cat.section]) acc[cat.section] = []
-      acc[cat.section].push(cat)
-      return acc
-    }, {} as Record<string, CategoryItem[]>)
-  }, [categories])
-
   const featured = filtered[0] || null
   const rest = filtered.slice(1)
 
@@ -296,102 +279,97 @@ export default function NewsroomPage() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden -m-0">
-      {/* LEFT SIDEBAR — Categories */}
-      <div className="w-52 shrink-0 border-r border-border bg-background flex flex-col overflow-hidden">
-        <nav className="flex-1 overflow-y-auto py-2">
-          {Object.entries(sections).map(([section, cats]) => (
-            <div key={section}>
-              <div className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
-                {section}
-              </div>
-              {cats.map(cat => {
-                const count = getCategoryCount(cat.slug)
-                const hot = isHotCategory(cat.slug)
-                const active = categoryFilter === cat.slug
-                return (
-                  <button
-                    key={cat.slug}
-                    onClick={() => setCategoryFilter(cat.slug)}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors relative
-                      ${active
-                        ? 'bg-accent text-foreground font-medium'
-                        : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-                      }`}
-                  >
-                    {active && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-orange-500" />}
-                    <span className="shrink-0 w-[18px] text-center text-sm">{cat.icon}</span>
-                    <span className="flex-1 truncate text-left">{cat.label}</span>
-                    {count > 0 && (
-                      <span className={`text-[10px] px-1.5 rounded font-mono ${hot ? 'bg-red-500/20 text-red-500 dark:text-red-400' : 'bg-muted text-muted-foreground'}`}>
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          ))}
-        </nav>
-      </div>
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Top controls bar */}
+      <div className="h-11 shrink-0 border-b border-border flex items-center gap-2 px-4 bg-background">
+        {TIME_FILTERS.map(tf => (
+          <button
+            key={tf.key}
+            onClick={() => setTimeFilter(tf.key)}
+            className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
+              timeFilter === tf.key
+                ? 'bg-orange-500 text-white font-semibold'
+                : 'bg-muted text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tf.key}
+          </button>
+        ))}
 
-      {/* CENTER */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Topbar controls */}
-        <div className="h-11 shrink-0 border-b border-border flex items-center gap-2 px-4 bg-background">
-          {TIME_FILTERS.map(tf => (
-            <button
-              key={tf.key}
-              onClick={() => setTimeFilter(tf.key)}
-              className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
-                timeFilter === tf.key
-                  ? 'bg-orange-500 text-white font-semibold'
-                  : 'bg-muted text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tf.key}
-            </button>
-          ))}
-
-          <div className="relative flex-1 max-w-lg ml-2">
-            <input
-              ref={searchRef}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Pretraži priče... (/)"
-              className="w-full h-7 text-xs bg-muted border border-border rounded px-3 pr-7 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-            {search ? (
-              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs hover:text-foreground">✕</button>
-            ) : (
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px] font-mono">/</span>
-            )}
-          </div>
-
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground font-mono">{filtered.length} priča</span>
-            <button
-              onClick={triggerFetch}
-              disabled={fetching}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs bg-muted border border-border rounded hover:bg-accent transition-colors text-foreground disabled:opacity-50"
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${fetching ? 'bg-amber-400 animate-pulse' : 'bg-green-500'}`} />
-              {fetching ? 'Fetching...' : 'Fetch sada'}
-            </button>
-          </div>
+        <div className="relative flex-1 max-w-lg ml-2">
+          <input
+            ref={searchRef}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search stories... (/)"
+            className="w-full h-7 text-xs bg-muted border border-border rounded px-3 pr-7 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-orange-500"
+          />
+          {search ? (
+            <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs hover:text-foreground">✕</button>
+          ) : (
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px] font-mono">/</span>
+          )}
         </div>
 
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-[11px] text-muted-foreground font-mono">{filtered.length} stories</span>
+          <button
+            onClick={triggerFetch}
+            disabled={fetching}
+            className="flex items-center gap-1.5 px-3 py-1 text-xs bg-muted border border-border rounded hover:bg-accent transition-colors text-foreground disabled:opacity-50"
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${fetching ? 'bg-amber-400 animate-pulse' : 'bg-green-500'}`} />
+            {fetching ? 'Fetching...' : 'Fetch now'}
+          </button>
+        </div>
+      </div>
+
+      {/* Category horizontal strip */}
+      <div className="shrink-0 border-b border-border bg-background">
+        <div className="flex items-center gap-1 px-4 py-1.5 overflow-x-auto">
+          {categories.map(cat => {
+            const count = getCategoryCount(cat.slug)
+            const hot = isHotCategory(cat.slug)
+            const active = categoryFilter === cat.slug
+            return (
+              <button
+                key={cat.slug}
+                onClick={() => setCategoryFilter(cat.slug)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] whitespace-nowrap transition-colors shrink-0 ${
+                  active
+                    ? 'bg-orange-500 text-white font-semibold'
+                    : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground'
+                }`}
+              >
+                <span className="text-sm">{cat.icon}</span>
+                <span>{cat.label}</span>
+                {count > 0 && (
+                  <span className={`text-[10px] px-1 rounded font-mono ${
+                    active ? 'bg-white/20 text-white' :
+                    hot ? 'bg-red-500/20 text-red-500 dark:text-red-400' : 'text-muted-foreground'
+                  }`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Main area */}
+      <div className="flex flex-1 overflow-hidden">
         {/* Cluster list */}
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-              Učitavanje klastera...
+              Loading clusters...
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
               <span className="text-2xl">📭</span>
-              <span className="text-sm">{search ? `Nema rezultata za "${search}"` : 'Nema priča za ovaj filter'}</span>
-              <span className="text-xs text-muted-foreground/60">Pokušajte drugi filter ili osvježite feedove.</span>
+              <span className="text-sm">{search ? `No results for "${search}"` : 'No stories for this filter'}</span>
+              <span className="text-xs text-muted-foreground/60">Try another filter or refresh feeds.</span>
             </div>
           ) : (
             <div className="space-y-3">
@@ -438,7 +416,7 @@ export default function NewsroomPage() {
                     onClick={() => writeArticle(featured)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded transition-colors"
                   >
-                    ✨ Napiši članak
+                    ✨ Write article
                   </button>
                 </div>
               )}
@@ -484,7 +462,7 @@ export default function NewsroomPage() {
                             : 'bg-orange-500 hover:bg-orange-600 text-white'
                         }`}
                       >
-                        {(cluster.articles?.length || 0) > 0 ? '✓ Napisano' : '✨ Napiši'}
+                        {(cluster.articles?.length || 0) > 0 ? '✓ Written' : '✨ Write'}
                       </button>
                     </div>
                   ))}
@@ -493,51 +471,51 @@ export default function NewsroomPage() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* RIGHT PANEL */}
-      <div className="w-64 shrink-0 border-l border-border bg-background overflow-y-auto hidden xl:block">
-        <div className="p-3 space-y-3">
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: 'KLASTERA', value: stats.total },
-              { label: 'SPIKING', value: stats.spiking },
-              { label: 'TIER-1', value: stats.tier1 },
-              { label: 'FILTRIRANO', value: stats.filtered },
-            ].map(s => (
-              <div key={s.label} className="bg-card border border-border rounded-lg p-2 text-center">
-                <div className="text-xl font-black font-mono text-foreground">{s.value}</div>
-                <div className="text-[9px] tracking-widest text-muted-foreground uppercase mt-0.5">{s.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Google Trends */}
-          <TrendsPanel onWriteTrend={writeFromTrend} />
-
-          {/* Signal Guide */}
-          <div className="bg-card border border-border rounded-lg p-3">
-            <div className="text-xs font-semibold text-foreground mb-2">Signal vodič</div>
-            {[
-              { dot: 'bg-red-500', label: 'SPIKING', desc: 'Piši ODMAH' },
-              { dot: 'bg-amber-400', label: 'RISING', desc: 'Uskoro pokrij' },
-              { dot: 'bg-gray-400 dark:bg-gray-600', label: 'STABLE', desc: 'Stabilan' },
-            ].map(s => (
-              <div key={s.label} className="flex items-center gap-2 py-1">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${s.dot}`} />
-                <span className="text-[11px] font-semibold text-foreground w-16">{s.label}</span>
-                <span className="text-[11px] text-muted-foreground">{s.desc}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Last fetch */}
-          {lastFetch && (
-            <div className="text-[10px] text-muted-foreground text-center">
-              Zadnji fetch: {lastFetch}
+        {/* RIGHT PANEL */}
+        <div className="w-64 shrink-0 border-l border-border bg-background overflow-y-auto hidden xl:block">
+          <div className="p-3 space-y-3">
+            {/* Stats grid */}
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'CLUSTERS', value: stats.total },
+                { label: 'SPIKING', value: stats.spiking },
+                { label: 'TIER-1', value: stats.tier1 },
+                { label: 'FILTERED', value: stats.filtered },
+              ].map(s => (
+                <div key={s.label} className="bg-card border border-border rounded-lg p-2 text-center">
+                  <div className="text-xl font-black font-mono text-foreground">{s.value}</div>
+                  <div className="text-[9px] tracking-widest text-muted-foreground uppercase mt-0.5">{s.label}</div>
+                </div>
+              ))}
             </div>
-          )}
+
+            {/* Google Trends */}
+            <TrendsPanel onWriteTrend={writeFromTrend} />
+
+            {/* Signal Guide */}
+            <div className="bg-card border border-border rounded-lg p-3">
+              <div className="text-xs font-semibold text-foreground mb-2">Signal Guide</div>
+              {[
+                { dot: 'bg-red-500', label: 'SPIKING', desc: 'Write NOW' },
+                { dot: 'bg-amber-400', label: 'RISING', desc: 'Cover soon' },
+                { dot: 'bg-gray-400 dark:bg-gray-600', label: 'STABLE', desc: 'Stable' },
+              ].map(s => (
+                <div key={s.label} className="flex items-center gap-2 py-1">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${s.dot}`} />
+                  <span className="text-[11px] font-semibold text-foreground w-16">{s.label}</span>
+                  <span className="text-[11px] text-muted-foreground">{s.desc}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Last fetch */}
+            {lastFetch && (
+              <div className="text-[10px] text-muted-foreground text-center">
+                Last fetch: {lastFetch}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
