@@ -284,19 +284,27 @@ export default function NewsroomPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Site tabs */}
+      {sites.length > 1 && (
+        <div className="flex items-center gap-0.5 px-4 pt-2 border-b border-border bg-background">
+          {sites.map(s => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedSiteId(s.id)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors whitespace-nowrap ${
+                site?.id === s.id
+                  ? 'bg-muted text-foreground border border-b-muted border-border'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {s.domain || s.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Top controls bar */}
       <div className="h-11 shrink-0 border-b border-border flex items-center gap-2 px-4 bg-background">
-        {sites.length > 1 && (
-          <select
-            value={selectedSiteId || ''}
-            onChange={e => setSelectedSiteId(e.target.value)}
-            className="text-xs px-2 py-1 border border-border rounded bg-muted text-foreground font-medium mr-1"
-          >
-            {sites.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        )}
         {TIME_FILTERS.map(tf => (
           <button
             key={tf.key}
