@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { detectCategoryFromTitle } from '@/lib/newsroom-categories'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -19,5 +20,11 @@ export async function GET(req: Request) {
     take: limit,
   })
 
-  return NextResponse.json({ clusters, count: clusters.length })
+  // Add category detection if missing
+  const enriched = clusters.map(c => ({
+    ...c,
+    category: c.category || detectCategoryFromTitle(c.title),
+  }))
+
+  return NextResponse.json({ clusters: enriched, count: enriched.length })
 }

@@ -80,7 +80,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="bs">
+    <html lang="bs" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{__html: `try{const t=localStorage.getItem('diurna-theme')||'light';document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}`}} />
+      </head>
       <body className={`${jakarta.variable} ${jetbrains.variable} ${instrumentSerif.variable} ${dmSerif.variable} ${ibmSans.variable} ${ibmMono.variable} antialiased`}>
         <GoogleAnalytics />
         <Toaster />

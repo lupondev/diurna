@@ -11,6 +11,7 @@ import {
   LANG_CHANGE_EVENT,
   type LangCode,
 } from '@/lib/languages'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 const pageMeta: Record<string, { icon: string; title: string }> = {
   '/': { icon: '📊', title: 'Dashboard' },
@@ -128,6 +129,7 @@ export function Topbar() {
             </div>
           )}
         </div>
+        <ThemeToggle />
         <Link href="/editor" className="btn-m">✨ New Article</Link>
       </div>
     </header>
