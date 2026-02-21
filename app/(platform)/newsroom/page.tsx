@@ -107,10 +107,11 @@ function filterByTime(clusters: Cluster[], hours: number | null): Cluster[] {
   if (!hours) return clusters
   const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000)
   const filtered = clusters.filter(c => new Date(c.latestItem) >= cutoff)
-  // If a narrow window returns too few results, show at least 20 stories by DIS
-  if (filtered.length < 20 && hours <= 6) {
+  // Minimum thresholds: 5 for 1H, 10 for 6H/12H
+  const minResults = hours <= 1 ? 5 : hours <= 12 ? 10 : 0
+  if (minResults > 0 && filtered.length < minResults) {
     const sorted = [...clusters].sort((a, b) => b.dis - a.dis)
-    return sorted.slice(0, 20)
+    return sorted.slice(0, minResults)
   }
   return filtered
 }

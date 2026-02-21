@@ -45,9 +45,12 @@ export default async function HomePage() {
   type NewsItem = { cat: string; title: string; time: string; href: string; bg: string }
   type TrendingItem = { title: string; meta: string; href: string }
 
+  type TransferItem = { title: string; href: string; badge: 'hot' | 'confirmed' | 'rumour'; time: string }
+
   let heroItems: HeroItem[] = []
   let newsItems: NewsItem[] = []
   let trendingItems: TrendingItem[] = []
+  let transferItems: TransferItem[] = []
 
   if (site) {
     const articles = await prisma.article.findMany({
@@ -68,6 +71,45 @@ export default async function HomePage() {
       },
       orderBy: { publishedAt: 'desc' },
       take: 20,
+    })
+
+    // Transfer articles for Transfer Radar
+    const transferArticles = await prisma.article.findMany({
+      where: {
+        siteId: site.id,
+        status: 'PUBLISHED',
+        deletedAt: null,
+        isTest: false,
+        category: { slug: 'transferi' },
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        publishedAt: true,
+        excerpt: true,
+        category: { select: { name: true, slug: true } },
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: 5,
+    })
+
+    transferItems = transferArticles.map((a) => {
+      const titleLower = a.title.toLowerCase()
+      const excerptLower = (a.excerpt || '').toLowerCase()
+      const combined = titleLower + ' ' + excerptLower
+      let badge: 'hot' | 'confirmed' | 'rumour' = 'rumour'
+      if (combined.includes('potvrđen') || combined.includes('zvanič') || combined.includes('potpis') || combined.includes('confirmed') || combined.includes('official')) {
+        badge = 'confirmed'
+      } else if (combined.includes('blizu') || combined.includes('dogovor') || combined.includes('ponuda') || combined.includes('pregovor') || combined.includes('close') || combined.includes('bid')) {
+        badge = 'hot'
+      }
+      return {
+        title: a.title,
+        href: getArticleUrl(a),
+        badge,
+        time: a.publishedAt ? timeAgo(a.publishedAt) : 'Novo',
+      }
     })
 
     if (articles.length > 0) {
@@ -166,6 +208,27 @@ export default async function HomePage() {
                       <span className="sba-feed-title">{n.title}</span>
                       <span className="sba-feed-meta">{n.time}</span>
                     </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Transfer Radar */}
+          {transferItems.length > 0 && (
+            <section>
+              <div className="sba-section-head">
+                <h2 className="sba-section-title">Transfer radar</h2>
+                <Link href="/transferi" className="sba-section-more">Svi transferi &rarr;</Link>
+              </div>
+              <div className="sba-transfers-scroll">
+                {transferItems.map((t, i) => (
+                  <Link key={i} href={t.href} className="sba-transfer-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <span className={`sba-transfer-badge sba-transfer-badge--${t.badge}`}>
+                      {t.badge === 'hot' ? '🔥 HOT' : t.badge === 'confirmed' ? '✅ POTVRĐENO' : '💬 GLASINA'}
+                    </span>
+                    <span className="sba-transfer-player">{t.title}</span>
+                    <span className="sba-transfer-fee">{t.time}</span>
                   </Link>
                 ))}
               </div>

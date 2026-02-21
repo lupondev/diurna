@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 
-const API_KEY = process.env.FOOTBALL_API_KEY
+const API_KEY = process.env.FOOTBALL_API_KEY || process.env.API_FOOTBALL_KEY
 const BASE = 'https://v3.football.api-sports.io'
 
 let cache: { data: unknown; ts: number } | null = null
@@ -10,11 +8,6 @@ const CACHE_TTL = 15 * 60 * 1000
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     if (cache && Date.now() - cache.ts < CACHE_TTL) {
       return NextResponse.json(cache.data)
     }

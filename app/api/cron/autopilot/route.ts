@@ -162,14 +162,21 @@ export async function GET(req: NextRequest) {
           const maxTokens = Math.min(4000, Math.max(500, Math.round(config.defaultLength * 2.5)))
           let ai
           try {
+            console.log(`[Autopilot] Force mode: generating article for cluster "${topCluster.title}" (DIS: ${topCluster.dis}, sources: ${newsItems.length})`)
+            await systemLog('info', 'autopilot', `AI call starting for: ${topCluster.title}`, { dis: topCluster.dis, maxTokens })
             ai = await generateContent({
               system: promptData.system,
               prompt: promptData.prompt,
               maxTokens,
               temperature: 0.3,
             })
+            console.log(`[Autopilot] AI response received: model=${ai.model}, tokensIn=${ai.tokensIn}, tokensOut=${ai.tokensOut}`)
+            await systemLog('info', 'autopilot', `AI call success: ${ai.model}`, { tokensIn: ai.tokensIn, tokensOut: ai.tokensOut })
           } catch (aiErr) {
-            results.push({ orgId: config.orgId, action: 'error', reason: `AI call failed: ${aiErr instanceof Error ? aiErr.message : 'unknown'}` })
+            const errMsg = aiErr instanceof Error ? aiErr.message : 'unknown'
+            console.error(`[Autopilot] AI call failed:`, errMsg)
+            await systemLog('error', 'autopilot', `AI call failed: ${errMsg}`)
+            results.push({ orgId: config.orgId, action: 'error', reason: `AI call failed: ${errMsg}` })
             continue
           }
 
@@ -309,12 +316,16 @@ export async function GET(req: NextRequest) {
       )
 
       const maxTokens = Math.min(4000, Math.max(500, Math.round(task.wordCount * 2.5)))
+      console.log(`[Autopilot] Normal mode: generating for task "${task.title}" (priority: ${task.priority})`)
+      await systemLog('info', 'autopilot', `AI call starting for task: ${task.title}`, { priority: task.priority, maxTokens })
       const ai = await generateContent({
         system: promptData.system,
         prompt: promptData.prompt,
         maxTokens,
         temperature: 0.3,
       })
+      console.log(`[Autopilot] AI response: model=${ai.model}, tokensIn=${ai.tokensIn}, tokensOut=${ai.tokensOut}`)
+      await systemLog('info', 'autopilot', `AI call success: ${ai.model}`, { tokensIn: ai.tokensIn, tokensOut: ai.tokensOut })
 
       // Parse AI JSON response
       let parsed: {
