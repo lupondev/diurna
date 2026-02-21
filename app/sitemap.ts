@@ -37,6 +37,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     '/o-nama', '/impressum', '/privatnost', '/uslovi', '/kontakt', '/marketing',
     '/igraci', '/tabela', '/legende', '/organizacije',
+    '/aktuelno', '/bih', '/svijet', '/region', '/tech', '/biznis',
   ].map((path) => ({
     url: `${baseUrl}${path}`,
     lastModified: new Date(),

@@ -639,6 +639,8 @@ model StoryCluster {
   firstSeen       DateTime
   latestItem      DateTime
   siteId          String?
+  category        String?   @default("vijesti")
+  categoryBadge   String?
   newsItems       String[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -649,6 +651,7 @@ model StoryCluster {
   @@index([eventType])
   @@index([trend])
   @@index([primaryEntity])
+  @@index([siteId, category])
 }
 
 model ClusterSummary {

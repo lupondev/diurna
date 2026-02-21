@@ -92,11 +92,30 @@ export function getArticlesNeeded(dailyTarget: number, todayCount: number): numb
 }
 
 // ══════════════════════════════════
+// CATEGORY-SPECIFIC PROMPTS
+// ══════════════════════════════════
+
+export const CATEGORY_PROMPTS: Record<string, string> = {
+  'aktuelno': 'This is BREAKING/AKTUELNO news. Write with urgency. Lead with the most important fact. Use short paragraphs. Include who/what/when/where in the first paragraph.',
+  'bih': 'This is a Bosnia and Herzegovina domestic news story. Provide local context. Reference relevant institutions (Vijeće ministara, entitetske vlade, OHR) when applicable.',
+  'crna-hronika': 'This is a CRIME/CRNA HRONIKA story. Be strictly factual — no speculation. Use "osumnjičeni" not "krivac". Respect presumption of innocence. Do not sensationalize violence.',
+  'svijet': 'This is a WORLD news story. Provide geopolitical context briefly. Explain why it matters to Bosnian readers when possible.',
+  'region': 'This is a REGIONAL (Balkans) news story. Reference regional dynamics when relevant. Avoid editorializing on inter-state relations.',
+  'sport': 'This is a SPORT news story. Include key stats and results. Reference league standings or tournament context when available.',
+  'fudbal': 'This is a FOOTBALL story. Include match context, league position, and relevant player stats. Reference H2H history if applicable.',
+  'tech': 'This is a TECH news story. Explain technical concepts simply. Focus on user impact rather than technical jargon.',
+  'biznis': 'This is a BUSINESS news story. Include relevant numbers and financial context. Reference market impact when applicable.',
+  'nauka': 'This is a SCIENCE news story. Reference the research source/journal. Explain methodology briefly. Avoid overstating findings.',
+  'transferi': 'This is a TRANSFER story. Include fee (if known), contract length, and selling/buying club context. Reference player stats from previous season.',
+  'vijesti': 'This is a general NEWS story. Write in a balanced, informative tone.',
+}
+
+// ══════════════════════════════════
 // PROMPT BUILDER
 // ══════════════════════════════════
 
 export function buildPromptContext(
-  cluster: { title: string; eventType: string; entities: string[]; dis: number },
+  cluster: { title: string; eventType: string; entities: string[]; dis: number; category?: string | null },
   newsItems: { title: string; source: string; content?: string | null }[],
   config: {
     contentStyle: string
@@ -130,11 +149,14 @@ export function buildPromptContext(
         ? 'English'
         : config.translateLang
 
-  const system = `You are a senior sports journalist for a Bosnian sports news portal.
+  const categoryInstruction = cluster.category ? (CATEGORY_PROMPTS[cluster.category] ?? '') : ''
+
+  const system = `You are a senior journalist for a Bosnian news portal.
 Output valid JSON only, no markdown wrapping.
 
 ${styleMap[config.contentStyle] || styleMap.signal_only}
 ${toneMap[config.tone] || toneMap.neutral}
+${categoryInstruction ? `\nCATEGORY GUIDANCE: ${categoryInstruction}` : ''}
 
 LANGUAGE: Write in ${langLabel}.
 TARGET LENGTH: ~${config.defaultLength} words.
