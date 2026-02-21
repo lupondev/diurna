@@ -17,6 +17,20 @@ interface ParsedArticle {
   selected?: boolean
 }
 
+interface ImportedArticleData {
+  title?: string
+  slug?: string
+  content?: string | Record<string, unknown>
+  excerpt?: string
+  status?: string
+  publishedAt?: string | null
+  author?: string
+  categories?: string | string[]
+  category?: string
+  tags?: string[]
+  featuredImage?: string | null
+}
+
 type ImportTab = 'wordpress' | 'csv' | 'json'
 
 export default function ImportPage() {
@@ -51,8 +65,8 @@ export default function ImportPage() {
       const data = await res.json() as { error?: string; articles: ParsedArticle[] }
       if (!res.ok) throw new Error(data.error || 'Parse failed')
       setArticles(data.articles.map((a: ParsedArticle) => ({ ...a, selected: true })))
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
       setParsing(false)
     }
@@ -98,8 +112,8 @@ export default function ImportPage() {
         })
       }
       setArticles(parsed)
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
       setParsing(false)
     }
@@ -111,7 +125,7 @@ export default function ImportPage() {
     try {
       const data = JSON.parse(jsonText)
       const arr = Array.isArray(data) ? data : [data]
-      const parsed: ParsedArticle[] = arr.map((a: any) => ({
+      const parsed: ParsedArticle[] = arr.map((a: ImportedArticleData) => ({
         title: a.title || '',
         slug: a.slug || a.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || '',
         content: typeof a.content === 'string' ? a.content : JSON.stringify(a.content || ''),
@@ -136,7 +150,7 @@ export default function ImportPage() {
     try {
       const data = JSON.parse(text)
       const arr = Array.isArray(data) ? data : [data]
-      setArticles(arr.map((a: any) => ({
+      setArticles(arr.map((a: ImportedArticleData) => ({
         title: a.title || '',
         slug: a.slug || a.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || '',
         content: typeof a.content === 'string' ? a.content : JSON.stringify(a.content || ''),
@@ -171,8 +185,8 @@ export default function ImportPage() {
       if (!res.ok) throw new Error(data.error || 'Import failed')
       setResult({ imported: data.imported, skipped: data.skipped })
       setArticles([])
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
       setImporting(false)
     }

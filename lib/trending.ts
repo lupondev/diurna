@@ -22,6 +22,17 @@ interface RawItem {
   pubDate?: string
 }
 
+interface FootballMatchData {
+  teams?: { home?: { name?: string }; away?: { name?: string } }
+  homeTeam?: string
+  awayTeam?: string
+}
+
+interface FootballTodayResponse {
+  matches?: FootballMatchData[]
+  response?: FootballMatchData[]
+}
+
 const cache = new Map<string, { data: TrendingTopic[]; expires: number }>()
 const CACHE_TTL = 10 * 60 * 1000
 
@@ -164,7 +175,7 @@ async function fetchFootballTrends(): Promise<RawItem[]> {
     })
     if (!res.ok) return items
 
-    const data = await res.json() as { matches?: any[]; response?: any[] }
+    const data = await res.json() as FootballTodayResponse
     const matches = data.matches || data.response || []
     for (const m of matches.slice(0, 10)) {
       const home = m.teams?.home?.name || m.homeTeam || ''

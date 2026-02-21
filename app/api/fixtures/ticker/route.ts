@@ -38,7 +38,9 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json({ fixtures: mapped })
+    return NextResponse.json({ fixtures: mapped }, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' },
+    })
   } catch (e) {
     console.error('[Ticker API]', e instanceof Error ? e.message : e)
     return NextResponse.json({ fixtures: [] })

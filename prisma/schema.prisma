@@ -194,6 +194,8 @@ model Article {
   @@unique([siteId, slug])
   @@index([siteId, status])
   @@index([siteId, publishedAt])
+  @@index([siteId, status, deletedAt])
+  @@index([siteId, categoryId])
   @@index([siteId])
 }
 
@@ -815,4 +817,5 @@ model SystemLog {
   @@index([service])
   @@index([level])
   @@index([createdAt])
+  @@index([orgId, level, createdAt])
 }

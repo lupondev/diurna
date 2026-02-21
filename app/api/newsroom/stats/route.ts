@@ -3,6 +3,12 @@ import { NextResponse } from 'next/server'
 const API_KEY = process.env.FOOTBALL_API_KEY || process.env.API_FOOTBALL_KEY
 const BASE = 'https://v3.football.api-sports.io'
 
+interface ApiFootballResponse<T> {
+  response?: T[]
+  results?: number
+  paging?: { current: number; total: number }
+}
+
 let cache: { data: unknown; ts: number } | null = null
 const CACHE_TTL = 15 * 60 * 1000
 
@@ -36,6 +42,10 @@ export async function GET() {
       all: { played: number; win: number; draw: number; lose: number; goals: { for: number; against: number } }
     }
 
+    interface StandingsApiEntry {
+      league?: { standings?: StandingsTeam[][] }
+    }
+
     type TopScorer = {
       player: { name: string; photo: string; nationality: string }
       statistics: Array<{ team: { name: string }; goals: { total: number }; games: { appearences: number } }>
@@ -45,7 +55,7 @@ export async function GET() {
     let topScorers: unknown[] = []
 
     if (standingsRes.status === 'fulfilled' && standingsRes.value.ok) {
-      const data = await standingsRes.value.json() as { response?: any[] }
+      const data = await standingsRes.value.json() as ApiFootballResponse<StandingsApiEntry>
       const league = data.response?.[0]?.league?.standings?.[0] || []
       standings = league.map((t: StandingsTeam) => ({
         rank: t.rank,
@@ -63,7 +73,7 @@ export async function GET() {
     }
 
     if (scorersRes.status === 'fulfilled' && scorersRes.value.ok) {
-      const data = await scorersRes.value.json() as { response?: any[] }
+      const data = await scorersRes.value.json() as ApiFootballResponse<TopScorer>
       topScorers = (data.response || []).slice(0, 10).map((p: TopScorer) => ({
         name: p.player.name,
         photo: p.player.photo,
@@ -77,7 +87,9 @@ export async function GET() {
     const result = { standings, topScorers, source: 'api-football', fetchedAt: new Date().toISOString() }
     cache = { data: result, ts: Date.now() }
 
-    return NextResponse.json(result)
+    return NextResponse.json(result, {
+      headers: { 'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=300' },
+    })
   } catch (error) {
     console.error('Stats error:', error)
     return NextResponse.json({ standings: [], topScorers: [], source: 'error', fetchedAt: new Date().toISOString() })

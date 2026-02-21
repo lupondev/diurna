@@ -21,7 +21,9 @@ export async function GET(req: NextRequest) {
       rank: s.rank,
     }))
 
-    return NextResponse.json({ clubs, league: leagueId, season: CURRENT_SEASON })
+    return NextResponse.json({ clubs, league: leagueId, season: CURRENT_SEASON }, {
+      headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=600' },
+    })
   } catch (e) {
     console.error('[Clubs API]', e instanceof Error ? e.message : e)
     return NextResponse.json({ clubs: [] })

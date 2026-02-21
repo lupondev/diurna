@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { systemLog } from '@/lib/system-log'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -63,7 +64,7 @@ async function generateWithGemini(input: {
     throw new Error('No AI provider available (ANTHROPIC_API_KEY and GEMINI_API_KEY both missing)')
   }
 
-  console.log('[AI] Using Gemini fallback')
+  systemLog('info', 'ai-engine', 'Using Gemini fallback').catch(() => {})
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.0-flash',

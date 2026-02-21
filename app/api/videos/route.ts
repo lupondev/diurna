@@ -99,7 +99,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ videos: FALLBACK_VIDEOS, fallback: true })
     }
 
-    return NextResponse.json({ videos: allVideos.slice(0, 24), fallback: false })
+    return NextResponse.json({ videos: allVideos.slice(0, 24), fallback: false }, {
+      headers: { 'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=600' },
+    })
   } catch (e) {
     console.error('[YouTube] Error:', e instanceof Error ? e.message : e)
     return NextResponse.json({ videos: FALLBACK_VIDEOS, fallback: true })

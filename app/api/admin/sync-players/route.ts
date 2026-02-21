@@ -15,12 +15,53 @@ const LEAGUES = [
   { id: 61, name: 'Ligue 1', season: 2024 },
 ]
 
+interface ApiFootballPlayerItem {
+  player: {
+    id: number
+    name: string
+    firstname?: string
+    lastname?: string
+    nationality?: string
+    birth?: { date?: string }
+    age?: number
+    height?: string
+    weight?: string
+    photo?: string
+    injured?: boolean
+  }
+  statistics?: Array<{
+    team?: { id?: number; name?: string }
+    league?: { id?: number; name?: string }
+    games?: {
+      position?: string
+      number?: number
+      appearences?: number
+      lineups?: number
+      minutes?: number
+      rating?: string
+    }
+    goals?: { total?: number; assists?: number; saves?: number; conceded?: number }
+    shots?: { total?: number; on?: number }
+    passes?: { total?: number; key?: number; accuracy?: string }
+    tackles?: { total?: number; blocks?: number; interceptions?: number }
+    dribbles?: { attempts?: number; success?: number }
+    cards?: { yellow?: number; red?: number }
+    fouls?: { committed?: number; drawn?: number }
+  }>
+}
+
+interface ApiFootballResponse<T> {
+  response: T[]
+  results?: number
+  paging?: { current: number; total: number }
+}
+
 async function fetchAPI(endpoint: string) {
   const res = await fetch(`${BASE}${endpoint}`, {
     headers: { 'x-apisports-key': API_KEY! },
   })
   if (!res.ok) throw new Error(`API-Football error: ${res.status}`)
-  const data = await res.json() as { response: any[] }
+  const data = await res.json() as ApiFootballResponse<ApiFootballPlayerItem>
   return data.response
 }
 

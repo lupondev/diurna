@@ -17,6 +17,12 @@ type Match = {
   goals: { home: number | null; away: number | null }
 }
 
+interface ApiFootballResponse<T> {
+  response?: T[]
+  results?: number
+  paging?: { current: number; total: number }
+}
+
 const teamEmojis: Record<string, string> = {
   'Manchester City': '🔵',
   'Liverpool': '🔴',
@@ -87,14 +93,14 @@ export function LiveMatches() {
     async function fetchMatches() {
       try {
         const liveRes = await fetch('/api/football?action=live')
-        const liveData = await liveRes.json() as { response?: any[] }
+        const liveData = await liveRes.json() as ApiFootballResponse<Match>
 
         if (liveData.response && liveData.response.length > 0) {
           setMatches(sortMatches(liveData.response).slice(0, 6))
           setHasLive(true)
         } else {
           const todayRes = await fetch('/api/football?action=today')
-          const todayData = await todayRes.json() as { response?: any[] }
+          const todayData = await todayRes.json() as ApiFootballResponse<Match>
           if (todayData.response) {
             setMatches(sortMatches(todayData.response).slice(0, 6))
           }

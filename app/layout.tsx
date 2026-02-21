@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Plus_Jakarta_Sans, JetBrains_Mono, Instrument_Serif, DM_Serif_Display, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { SessionProvider } from '@/components/providers/session-provider'
 import { GoogleAnalytics } from '@/components/analytics/ga4'
+import { Toaster } from '@/components/providers/toaster'
 import './globals.css'
 import './sportba.css'
 
@@ -82,6 +83,7 @@ export default function RootLayout({
     <html lang="bs">
       <body className={`${jakarta.variable} ${jetbrains.variable} ${instrumentSerif.variable} ${dmSerif.variable} ${ibmSans.variable} ${ibmMono.variable} antialiased`}>
         <GoogleAnalytics />
+        <Toaster />
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>

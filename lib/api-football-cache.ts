@@ -29,7 +29,7 @@ export async function cachedFetch<T>(
     }
   } catch (e) {
     // Cache read failed, proceed to fetch
-    console.warn('[ApiCache] Read error:', e instanceof Error ? e.message : e)
+    systemLog('warn', 'api-football', `Cache read error: ${e instanceof Error ? e.message : String(e)}`).catch(() => {})
   }
 
   // Fetch fresh data
@@ -42,7 +42,7 @@ export async function cachedFetch<T>(
     update: { data: data as never, expiresAt },
     create: { key: cacheKey, data: data as never, expiresAt },
   }).catch((e) => {
-    console.warn('[ApiCache] Write error:', e instanceof Error ? e.message : e)
+    systemLog('warn', 'api-football', `Cache write error: ${e instanceof Error ? e.message : String(e)}`).catch(() => {})
   })
 
   // Log the API call for stats

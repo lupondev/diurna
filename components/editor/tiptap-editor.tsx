@@ -45,6 +45,22 @@ interface UnsplashImage {
   id: string; small: string; regular: string; alt: string; author: string; authorUrl: string
 }
 
+interface MediaItem {
+  id: string
+  url: string
+  filename: string
+  alt?: string | null
+}
+
+interface MediaApiResponse {
+  media?: MediaItem[]
+}
+
+interface ImageSearchResponse {
+  results: UnsplashImage[]
+  totalPages: number
+}
+
 const BLOCK_TYPES = [
   { name: 'poll', icon: '🗳️', label: 'Poll' },
   { name: 'quiz', icon: '🧠', label: 'Quiz' },
@@ -61,7 +77,7 @@ function MediaLibraryModal({ onClose, onSelect }: {
   onSelect: (url: string, alt: string) => void
 }) {
   const [tab, setTab] = useState<'upload' | 'search'>('upload')
-  const [media, setMedia] = useState<Array<{ id: string; url: string; filename: string; alt?: string | null }>>([])
+  const [media, setMedia] = useState<MediaItem[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<UnsplashImage[]>([])
@@ -71,7 +87,7 @@ function MediaLibraryModal({ onClose, onSelect }: {
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    fetch('/api/media').then((r) => r.json() as Promise<any>)
+    fetch('/api/media').then((r) => r.json() as Promise<MediaItem[] | MediaApiResponse>)
       .then((data) => { setMedia(Array.isArray(data) ? data : data.media || []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
@@ -85,7 +101,7 @@ function MediaLibraryModal({ onClose, onSelect }: {
     setSearching(true)
     try {
       const res = await fetch(`/api/images/search?query=${encodeURIComponent(query)}&page=${page}`)
-      const data = await res.json() as { results: any[]; totalPages: number }
+      const data = await res.json() as ImageSearchResponse
       if (res.ok) {
         setSearchResults(page === 1 ? data.results : [...searchResults, ...data.results])
         setSearchPage(page)

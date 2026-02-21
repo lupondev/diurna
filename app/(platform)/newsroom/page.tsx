@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -456,7 +457,10 @@ export default function NewsroomPage() {
       await fetch('/api/cron/fetch-feeds')
       await fetch('/api/cron/cluster-engine')
       await fetchClusters()
-    } catch {}
+      toast.success('Feedovi osvježeni')
+    } catch {
+      toast.error('Greška pri dohvaćanju feedova')
+    }
     finally { setFetchingFeeds(false) }
   }, [fetchClusters])
 

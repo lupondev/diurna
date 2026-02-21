@@ -163,15 +163,13 @@ export async function GET(req: NextRequest) {
           const maxTokens = Math.min(4000, Math.max(500, Math.round(config.defaultLength * 2.5)))
           let ai
           try {
-            console.log(`[Autopilot] Force mode: generating article for cluster "${topCluster.title}" (DIS: ${topCluster.dis}, sources: ${newsItems.length})`)
-            await systemLog('info', 'autopilot', `AI call starting for: ${topCluster.title}`, { dis: topCluster.dis, maxTokens })
+            await systemLog('info', 'autopilot', `Force mode: AI call starting for cluster "${topCluster.title}"`, { dis: topCluster.dis, sources: newsItems.length, maxTokens })
             ai = await generateContent({
               system: promptData.system,
               prompt: promptData.prompt,
               maxTokens,
               temperature: 0.3,
             })
-            console.log(`[Autopilot] AI response received: model=${ai.model}, tokensIn=${ai.tokensIn}, tokensOut=${ai.tokensOut}`)
             await systemLog('info', 'autopilot', `AI call success: ${ai.model}`, { tokensIn: ai.tokensIn, tokensOut: ai.tokensOut })
           } catch (aiErr) {
             const errMsg = aiErr instanceof Error ? aiErr.message : 'unknown'
@@ -317,15 +315,13 @@ export async function GET(req: NextRequest) {
       )
 
       const maxTokens = Math.min(4000, Math.max(500, Math.round(task.wordCount * 2.5)))
-      console.log(`[Autopilot] Normal mode: generating for task "${task.title}" (priority: ${task.priority})`)
-      await systemLog('info', 'autopilot', `AI call starting for task: ${task.title}`, { priority: task.priority, maxTokens })
+      await systemLog('info', 'autopilot', `Normal mode: AI call starting for task "${task.title}"`, { priority: task.priority, maxTokens })
       const ai = await generateContent({
         system: promptData.system,
         prompt: promptData.prompt,
         maxTokens,
         temperature: 0.3,
       })
-      console.log(`[Autopilot] AI response: model=${ai.model}, tokensIn=${ai.tokensIn}, tokensOut=${ai.tokensOut}`)
       await systemLog('info', 'autopilot', `AI call success: ${ai.model}`, { tokensIn: ai.tokensIn, tokensOut: ai.tokensOut })
 
       // Parse AI JSON response
@@ -462,9 +458,9 @@ export async function GET(req: NextRequest) {
     if (generated.length > 0) {
       try {
         revalidatePath('/', 'layout')
-        console.log('[Autopilot] Revalidated all paths')
+        await systemLog('info', 'autopilot', 'Revalidated all paths')
       } catch (e) {
-        console.warn('[Autopilot] Revalidation failed:', e instanceof Error ? e.message : e)
+        await systemLog('warn', 'autopilot', `Revalidation failed: ${e instanceof Error ? e.message : String(e)}`)
       }
     }
 

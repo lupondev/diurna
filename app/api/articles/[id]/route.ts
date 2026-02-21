@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { postToMultiplePages } from '@/lib/facebook'
 import { distributeArticle } from '@/lib/distribution'
+import { systemLog } from '@/lib/system-log'
 import { z } from 'zod'
 
 const UpdateArticleSchema = z.object({
@@ -129,7 +130,7 @@ export async function PATCH(
           const results = await postToMultiplePages(fbConnection.pages, title, articleUrl)
           const failures = results.filter((r) => !r.success)
           if (failures.length > 0) {
-            console.warn('Facebook auto-post partial failures:', failures)
+            await systemLog('warn', 'system', `Facebook auto-post partial failures`, { failures })
           }
         }
       } catch (fbError) {

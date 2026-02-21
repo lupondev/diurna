@@ -5,6 +5,19 @@ import { authOptions } from '@/lib/auth'
 const API_KEY = process.env.FOOTBALL_API_KEY
 const BASE = 'https://v3.football.api-sports.io'
 
+interface ApiFootballResponse<T> {
+  response: T[]
+  results?: number
+  paging?: { current: number; total: number }
+}
+
+type FixtureResponse = {
+  fixture: { id: number; date: string; status: { short: string; elapsed: number | null } }
+  league: { name: string; country: string; logo: string }
+  teams: { home: { name: string; logo: string }; away: { name: string; logo: string } }
+  goals: { home: number | null; away: number | null }
+}
+
 let cache: { data: unknown; ts: number } | null = null
 const CACHE_TTL = 5 * 60 * 1000
 
@@ -31,19 +44,12 @@ export async function GET() {
     ])
 
     const upcoming = upcomingRes.status === 'fulfilled' && upcomingRes.value.ok
-      ? await upcomingRes.value.json() as { response: any[] }
-      : { response: [] as any[] }
+      ? await upcomingRes.value.json() as ApiFootballResponse<FixtureResponse>
+      : { response: [] as FixtureResponse[] }
 
     const live = liveRes.status === 'fulfilled' && liveRes.value.ok
-      ? await liveRes.value.json() as { response: any[] }
-      : { response: [] as any[] }
-
-    type FixtureResponse = {
-      fixture: { id: number; date: string; status: { short: string; elapsed: number | null } }
-      league: { name: string; country: string; logo: string }
-      teams: { home: { name: string; logo: string }; away: { name: string; logo: string } }
-      goals: { home: number | null; away: number | null }
-    }
+      ? await liveRes.value.json() as ApiFootballResponse<FixtureResponse>
+      : { response: [] as FixtureResponse[] }
 
     const fixtures = (upcoming.response || []).map((f: FixtureResponse) => ({
       id: f.fixture.id,

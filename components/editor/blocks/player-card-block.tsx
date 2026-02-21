@@ -5,9 +5,14 @@ import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import { useState, useEffect } from 'react'
 
 type PlayerData = {
+  id?: string
   name: string; photo?: string; position?: string; currentTeam?: string
   nationality?: string; age?: number; salary?: number; marketValue?: string
   goals?: number; assists?: number; appearances?: number; rating?: number
+}
+
+interface PlayerSearchResponse {
+  players?: PlayerData[]
 }
 
 function PlayerCardComponent({ node, updateAttributes, deleteNode, selected }: {
@@ -25,7 +30,7 @@ function PlayerCardComponent({ node, updateAttributes, deleteNode, selected }: {
     if (playerId) {
       setLoading(true)
       fetch(`/api/players/${playerId}`)
-        .then((r) => r.json() as Promise<any>)
+        .then((r) => r.json() as Promise<PlayerData>)
         .then((data) => { if (data.name) setPlayer(data) })
         .catch(() => {})
         .finally(() => setLoading(false))
@@ -37,7 +42,7 @@ function PlayerCardComponent({ node, updateAttributes, deleteNode, selected }: {
     setLoading(true)
     try {
       const res = await fetch(`/api/players?search=${encodeURIComponent(search)}&limit=1`)
-      const data = await res.json() as { players?: any[] }
+      const data = await res.json() as PlayerSearchResponse
       const players = data.players || data
       if (Array.isArray(players) && players.length > 0) {
         const p = players[0]

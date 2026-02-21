@@ -1,5 +1,6 @@
 import type { GeneratedArticle, NormalizedSnapshot, CDIResult } from './types';
 import { DIURNA_STYLE_GUIDE } from './style-guide';
+import { systemLog } from '@/lib/system-log';
 
 /**
  * Style Refiner — Pass 2 of the article generation pipeline.
@@ -251,7 +252,7 @@ async function callStyleLLM(prompt: string): Promise<LLMResult | null> {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (geminiKey) {
     try {
-      console.log('[Style Refiner] Using Gemini fallback');
+      systemLog('info', 'ai-engine', 'Style refiner using Gemini fallback').catch(() => {});
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

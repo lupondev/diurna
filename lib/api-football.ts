@@ -92,7 +92,7 @@ export interface ApiPlayer {
 async function apiFootballDirect<T>(endpoint: string): Promise<T[]> {
   const key = process.env.API_FOOTBALL_KEY
   if (!key) {
-    console.warn('[API-Football] API_FOOTBALL_KEY not set')
+    systemLog('warn', 'api-football', 'API_FOOTBALL_KEY not set').catch(() => {})
     return []
   }
 

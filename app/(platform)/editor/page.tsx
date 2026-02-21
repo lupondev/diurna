@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import toast from 'react-hot-toast'
 import './editor.css'
 
 const TiptapEditor = dynamic(() => import('@/components/editor/tiptap-editor'), {
@@ -286,24 +287,25 @@ export default function EditorPage() {
       if (status === 'SCHEDULED' && scheduledAt) body.scheduledAt = scheduledAt
 
       if (articleIdRef.current) {
-        // Update existing
         const res = await fetch(`/api/articles/${articleIdRef.current}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         })
         if (res.ok) {
+          toast.success(status === 'PUBLISHED' ? 'Objavljeno' : 'Sačuvano')
           if (sendNewsletter && status === 'PUBLISHED') {
             fetch('/api/newsletter/send', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ articleId: articleIdRef.current }),
-            }).catch(console.error)
+            }).catch(() => toast.error('Newsletter slanje neuspješno'))
           }
           localStorage.removeItem('diurna_editor_backup')
           router.push('/articles')
           router.refresh()
+        } else {
+          toast.error('Greška pri čuvanju')
         }
       } else {
-        // Create new
         const res = await fetch('/api/articles', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -311,18 +313,23 @@ export default function EditorPage() {
         if (res.ok) {
           const article = await res.json() as { id?: string }
           articleIdRef.current = article.id ?? null
+          toast.success(status === 'PUBLISHED' ? 'Objavljeno' : 'Kreirano')
           if (sendNewsletter && status === 'PUBLISHED' && article.id) {
             fetch('/api/newsletter/send', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ articleId: article.id }),
-            }).catch(console.error)
+            }).catch(() => toast.error('Newsletter slanje neuspješno'))
           }
           localStorage.removeItem('diurna_editor_backup')
           router.push('/articles')
           router.refresh()
+        } else {
+          toast.error('Greška pri kreiranju')
         }
       }
-    } catch {} finally { setSaving(false) }
+    } catch {
+      toast.error('Greška — pokušaj ponovo')
+    } finally { setSaving(false) }
   }
 
   function handleAIGenerate(result: { title?: string; content?: Record<string, unknown>; model?: string; tokensIn?: number; tokensOut?: number }) {

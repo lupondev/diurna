@@ -30,8 +30,8 @@ export default function ExportPage() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
       setExporting(null)
     }
