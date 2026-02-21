@@ -144,7 +144,8 @@ export default function NewsroomPage() {
           (s: SiteInfo) => s.domain || (s.articleCount ?? 0) > 5
         )
         setSites(usableSites)
-        setSelectedSiteId(usableSites[0]?.id ?? null)
+        const defaultSite = usableSites.find((s: SiteInfo) => s.domain) ?? usableSites[0]
+        setSelectedSiteId(defaultSite?.id ?? null)
       })
       .catch(() => {})
   }, [])
