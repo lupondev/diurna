@@ -459,7 +459,7 @@ export default async function DashboardPage() {
               <div style={{ textAlign: 'center', padding: '8px 0' }}>
                 <p style={{ fontSize: 13, color: 'var(--g500)', marginBottom: 10 }}>You&apos;re working solo</p>
                 <Link
-                  href="/team"
+                  href="/settings?tab=team"
                   style={{
                     display: 'inline-block',
                     fontSize: 12,

@@ -17,7 +17,6 @@ const sections: NavSection[] = [
       { label: 'Editor', icon: '✍️', href: '/editor' },
       { label: 'Calendar', icon: '📅', href: '/calendar' },
       { label: 'Articles', icon: '📄', href: '/articles' },
-      { label: 'Health', icon: '⚙️', href: '/health' },
     ],
   },
   {
@@ -39,16 +38,7 @@ const sections: NavSection[] = [
     label: 'Admin',
     roles: ['OWNER', 'ADMIN'],
     items: [
-      { label: 'Invites', icon: '✉️', href: '/admin/invites' },
-      { label: 'Audit Log', icon: '📋', href: '/admin/audit-log' },
-      { label: 'Site Settings', icon: '⚙️', href: '/admin/site' },
-    ],
-  },
-  {
-    label: 'Settings',
-    items: [
-      { label: 'Team', icon: '👥', href: '/team' },
-      { label: 'Settings', icon: '⚙️', href: '/settings' },
+      { label: 'Postavke', icon: '⚙️', href: '/settings' },
     ],
   },
 ]

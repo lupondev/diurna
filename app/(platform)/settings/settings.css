@@ -1,4 +1,15 @@
-.st-page { padding: 24px 32px 80px; max-width: 820px; }
+.st-page { padding: 24px 32px 80px; max-width: 960px; }
+
+.st-page-header { margin-bottom: 20px; }
+.st-page-title { font-size: 22px; font-weight: 800; color: var(--g900); margin: 0 0 4px; }
+.st-page-desc { font-size: 13px; color: var(--g500); margin: 0; }
+
+.st-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--brd); margin-bottom: 24px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.st-tab { padding: 10px 16px; font-size: 13px; font-weight: 600; color: var(--g500); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; transition: all .15s; font-family: inherit; }
+.st-tab:hover { color: var(--g700); }
+.st-tab-active { color: var(--g900); border-bottom-color: var(--mint, #00D4AA); }
+
+.st-tab-content { min-height: 400px; }
 
 .st-section { margin-bottom: 36px; }
 .st-section:last-child { margin-bottom: 80px; }
