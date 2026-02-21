@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { generateContent } from '@/lib/ai/client'
 import { Prisma } from '@prisma/client'
@@ -181,6 +182,13 @@ export async function POST(req: NextRequest) {
         }
         await prisma.articleTag.create({ data: { articleId: article.id, tagId: tag.id } }).catch(() => {})
       }
+    }
+
+    // Revalidate public pages so article appears immediately
+    try {
+      revalidatePath('/', 'layout')
+    } catch (e) {
+      console.warn('[Webhook] Revalidation failed:', e instanceof Error ? e.message : e)
     }
 
     await systemLog('info', 'webhook', `Breaking article generated: ${title} (DIS: ${body.dis})`, { articleId: article.id, slug, dis: body.dis })

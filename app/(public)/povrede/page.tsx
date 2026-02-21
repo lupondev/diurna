@@ -1,24 +1,73 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { prisma } from '@/lib/prisma'
+import { getDefaultSite } from '@/lib/db'
+import { getArticleUrl } from '@/lib/article-url'
 import { AdSlot } from '@/components/public/sportba'
 import '../category.css'
 
-export const metadata: Metadata = {
-  title: 'Povrede — Diurna',
-  description: 'Najnovije informacije o povredama igrača i očekivanim povratcima.',
+export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getDefaultSite()
+  const siteName = site?.name || 'Diurna'
+  return {
+    title: `Povrede \u2014 ${siteName}`,
+    description: 'Najnovije informacije o povredama igrača i očekivanim povratcima.',
+  }
 }
 
-const ARTICLES = [
-  { slug: 'mbappe-propusta-el-clasico', title: 'Mbappé propušta El Clásico — problemi sa koljenom', time: '6h', league: 'La Liga', bg: 'linear-gradient(135deg,#3b0a0a,#1a0404)' },
-  { slug: 'de-bruyne-povratak-trening', title: 'De Bruyne se vraća na trening — City dobija pojačanje', time: '1d', league: 'Premier League', bg: 'linear-gradient(135deg,#1e3a5f,#0d1b2a)' },
-  { slug: 'neymar-al-hilal-operacija', title: 'Neymar ponovo operisan — sezona gotova', time: '2d', league: 'Saudi Pro League', bg: 'linear-gradient(135deg,#2d1b69,#11052c)' },
-  { slug: 'gavi-barcelona-oporavak', title: 'Gavi napreduje u oporavku — Barcelona optimistična', time: '3d', league: 'La Liga', bg: 'linear-gradient(135deg,#0d2818,#051208)' },
-  { slug: 'chiesa-liverpool-mišić', title: 'Chiesa pauzira 3 sedmice — povreda mišića', time: '3d', league: 'Premier League', bg: 'linear-gradient(135deg,#1a1a2e,#0a0a14)' },
-  { slug: 'ter-stegen-povratak-barcelona', title: 'Ter Stegen se bliži povratku nakon teške povrede koljena', time: '4d', league: 'La Liga', bg: 'linear-gradient(135deg,#3d1f00,#1a0d00)' },
-  { slug: 'arsenal-povrede-update', title: 'Arsenal: Ažuriranje stanja povreda pred Ligu prvaka', time: '5d', league: 'Premier League', bg: 'linear-gradient(135deg,#2d2d00,#141400)' },
+const GRADIENTS = [
+  'linear-gradient(135deg,#3b0a0a,#1a0404)',
+  'linear-gradient(135deg,#1e3a5f,#0d1b2a)',
+  'linear-gradient(135deg,#2d1b69,#11052c)',
+  'linear-gradient(135deg,#0d2818,#051208)',
+  'linear-gradient(135deg,#1a1a2e,#0a0a14)',
+  'linear-gradient(135deg,#3d1f00,#1a0d00)',
+  'linear-gradient(135deg,#2d2d00,#141400)',
+  'linear-gradient(135deg,#1b4332,#081c15)',
 ]
 
-export default function PovredePage() {
+function timeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
+  return `${Math.floor(seconds / 86400)}d`
+}
+
+export default async function PovredePage() {
+  const site = await getDefaultSite()
+  let dbArticles: { slug: string; title: string; time: string; league: string; bg: string; href: string }[] = []
+
+  if (site) {
+    const articles = await prisma.article.findMany({
+      where: {
+        siteId: site.id,
+        status: 'PUBLISHED',
+        deletedAt: null,
+        isTest: false,
+        category: { slug: 'povrede' },
+      },
+      include: {
+        category: { select: { name: true, slug: true } },
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: 20,
+    })
+
+    dbArticles = articles.map((a, i) => ({
+      slug: a.slug,
+      title: a.title,
+      time: a.publishedAt ? timeAgo(a.publishedAt) : 'Novo',
+      league: a.category?.name || 'Povrede',
+      bg: GRADIENTS[i % GRADIENTS.length],
+      href: getArticleUrl(a),
+    }))
+  }
+
+  const featured = dbArticles[0]
+  const grid = dbArticles.slice(1)
+
   return (
     <main className="sba-cat">
       <div className="sba-cat-header">
@@ -28,18 +77,23 @@ export default function PovredePage() {
 
       <div className="sba-cat-layout">
         <div className="sba-cat-main">
-          <Link href={`/povrede/${ARTICLES[0].slug}`} className="sba-cat-featured">
-            <div className="sba-cat-featured-bg" style={{ background: ARTICLES[0].bg }} />
-            <div className="sba-cat-featured-content">
-              <span className="sba-cat-badge">Povrede</span>
-              <h2 className="sba-cat-featured-title">{ARTICLES[0].title}</h2>
-              <span className="sba-cat-featured-meta">{ARTICLES[0].time} · {ARTICLES[0].league}</span>
-            </div>
-          </Link>
+          {dbArticles.length === 0 && (
+            <p style={{ color: 'var(--sba-muted)', padding: '2rem 0' }}>Trenutno nema objavljenih vijesti o povredama.</p>
+          )}
+          {featured && (
+            <Link href={featured.href} className="sba-cat-featured">
+              <div className="sba-cat-featured-bg" style={{ background: featured.bg }} />
+              <div className="sba-cat-featured-content">
+                <span className="sba-cat-badge">Povrede</span>
+                <h2 className="sba-cat-featured-title">{featured.title}</h2>
+                <span className="sba-cat-featured-meta">{featured.time} · {featured.league}</span>
+              </div>
+            </Link>
+          )}
 
           <div className="sba-cat-grid">
-            {ARTICLES.slice(1).map((a) => (
-              <Link key={a.slug} href={`/povrede/${a.slug}`} className="sba-cat-card">
+            {grid.map((a) => (
+              <Link key={a.slug} href={a.href} className="sba-cat-card">
                 <div className="sba-cat-card-thumb">
                   <div className="sba-cat-card-thumb-bg" style={{ background: a.bg }} />
                 </div>

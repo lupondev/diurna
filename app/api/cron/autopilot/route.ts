@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -456,6 +457,16 @@ export async function GET(req: NextRequest) {
     // Return structured response
     const generated = results.filter(r => r.action === 'generated')
     const skipped = results.filter(r => r.action === 'skipped')
+
+    // Revalidate public pages so new articles appear immediately
+    if (generated.length > 0) {
+      try {
+        revalidatePath('/', 'layout')
+        console.log('[Autopilot] Revalidated all paths')
+      } catch (e) {
+        console.warn('[Autopilot] Revalidation failed:', e instanceof Error ? e.message : e)
+      }
+    }
 
     const action = generated.length > 0 ? 'generated' : 'skipped'
     const reason = generated.length > 0
