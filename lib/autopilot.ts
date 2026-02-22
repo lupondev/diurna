@@ -195,17 +195,7 @@ The JSON must have this structure:
     })
     .join('\n\n')
 
-  const prompt = `Write an article about this story:
-
-TOPIC: ${cluster.title}
-EVENT TYPE: ${cluster.eventType}
-KEY ENTITIES: ${cluster.entities.join(', ')}
-IMPORTANCE (DIS): ${cluster.dis}/100
-
-SOURCES:
-${sourcesText || 'No source text available — write a brief news stub only.'}
-
-${config.translateLang === 'bs' ? 'Write the article in Bosnian language.' : ''}`
+  const prompt = `Write an article about this story:\n\nTOPIC: ${cluster.title}\nEVENT TYPE: ${cluster.eventType}\nKEY ENTITIES: ${cluster.entities.join(', ')}\nIMPORTANCE (DIS): ${cluster.dis}/100\n\nSOURCES:\n${sourcesText || 'No source text available — write a brief news stub only.'}\n\n${config.translateLang === 'bs' ? 'Write the article in Bosnian language.' : ''}`
 
   return { system, prompt }
 }
@@ -216,12 +206,12 @@ ${config.translateLang === 'bs' ? 'Write the article in Bosnian language.' : ''}
 
 export function htmlToTiptap(html: string): Record<string, unknown> {
   const content: Record<string, unknown>[] = []
-  const blockRegex = /<(h[1-6]|p|ul|ol)>([\s\S]*?)<\/\1>/gi
+  const blockRegex = /<(h[1-6]|p|ul|ol)([^>]*)>([\s\S]*?)<\/\1>/gi
   let match
 
   while ((match = blockRegex.exec(html)) !== null) {
     const tag = match[1].toLowerCase()
-    const inner = match[2].trim()
+    const inner = match[3].trim()
 
     if (tag.startsWith('h')) {
       const level = parseInt(tag[1])
@@ -232,10 +222,11 @@ export function htmlToTiptap(html: string): Record<string, unknown> {
       })
     } else if (tag === 'p') {
       if (inner) {
-        content.push({
-          type: 'paragraph',
-          content: [{ type: 'text', text: inner.replace(/<[^>]+>/g, '') }],
-        })
+        // Preserve inline formatting by converting to text with marks
+        const textContent = parseInlineMarks(inner)
+        if (textContent.length > 0) {
+          content.push({ type: 'paragraph', content: textContent })
+        }
       }
     } else if (tag === 'ul' || tag === 'ol') {
       const liRegex = /<li>([\s\S]*?)<\/li>/gi
@@ -274,6 +265,33 @@ export function htmlToTiptap(html: string): Record<string, unknown> {
   return { type: 'doc', content }
 }
 
+// Parse inline HTML marks (<strong>, <em>, <a>) into Tiptap mark objects
+function parseInlineMarks(html: string): Record<string, unknown>[] {
+  const nodes: Record<string, unknown>[] = []
+  // Simple regex-based parser for common inline tags
+  const parts = html.split(/(<strong>.*?<\/strong>|<em>.*?<\/em>|<b>.*?<\/b>|<i>.*?<\/i>|<a[^>]*>.*?<\/a>)/gi)
+
+  for (const part of parts) {
+    if (!part) continue
+    const strongMatch = part.match(/^<(?:strong|b)>(.*?)<\/(?:strong|b)>$/i)
+    const emMatch = part.match(/^<(?:em|i)>(.*?)<\/(?:em|i)>$/i)
+    const linkMatch = part.match(/^<a[^>]+href="([^"]+)"[^>]*>(.*?)<\/a>$/i)
+
+    if (strongMatch) {
+      nodes.push({ type: 'text', text: strongMatch[1].replace(/<[^>]+>/g, ''), marks: [{ type: 'bold' }] })
+    } else if (emMatch) {
+      nodes.push({ type: 'text', text: emMatch[1].replace(/<[^>]+>/g, ''), marks: [{ type: 'italic' }] })
+    } else if (linkMatch) {
+      nodes.push({ type: 'text', text: linkMatch[2].replace(/<[^>]+>/g, ''), marks: [{ type: 'link', attrs: { href: linkMatch[1], target: '_blank' } }] })
+    } else {
+      const text = part.replace(/<[^>]+>/g, '')
+      if (text) nodes.push({ type: 'text', text })
+    }
+  }
+
+  return nodes
+}
+
 // ══════════════════════════════════
 // WIDGET INJECTION
 // ══════════════════════════════════
@@ -294,33 +312,18 @@ export function injectWidgets(
 
   const widgets: Record<string, unknown>[] = []
 
+  // Use proper Tiptap widget nodes instead of placeholder text
   if (categoryConfig.widgetPoll) {
-    widgets.push({
-      type: 'paragraph',
-      attrs: { class: 'widget-placeholder' },
-      content: [{ type: 'text', text: '{{WIDGET:POLL}}' }],
-    })
+    widgets.push({ type: 'poll', attrs: { question: '', options: [] } })
   }
   if (categoryConfig.widgetStats) {
-    widgets.push({
-      type: 'paragraph',
-      attrs: { class: 'widget-placeholder' },
-      content: [{ type: 'text', text: '{{WIDGET:STATS}}' }],
-    })
+    widgets.push({ type: 'statsTable', attrs: { title: '', homeLabel: 'Home', awayLabel: 'Away', rows: [] } })
   }
   if (categoryConfig.widgetPlayer) {
-    widgets.push({
-      type: 'paragraph',
-      attrs: { class: 'widget-placeholder' },
-      content: [{ type: 'text', text: '{{WIDGET:PLAYER}}' }],
-    })
+    widgets.push({ type: 'playerCard', attrs: { playerName: '' } })
   }
   if (categoryConfig.widgetVideo) {
-    widgets.push({
-      type: 'paragraph',
-      attrs: { class: 'widget-placeholder' },
-      content: [{ type: 'text', text: '{{WIDGET:VIDEO}}' }],
-    })
+    widgets.push({ type: 'video', attrs: { url: '', caption: '' } })
   }
 
   if (widgets.length > 0) {
@@ -345,7 +348,6 @@ const UNSPLASH_NOISE_WORDS = [
 ]
 
 function buildFootballQueries(query: string): string[] {
-  // Strip noise words that cause animal/nature photos
   const cleaned = query
     .split(/\s+/)
     .filter(w => !UNSPLASH_NOISE_WORDS.includes(w.toLowerCase()))
@@ -354,17 +356,14 @@ function buildFootballQueries(query: string): string[] {
 
   const queries: string[] = []
 
-  // Primary: cleaned query + football context
   if (cleaned.length > 2) {
     queries.push(`${cleaned} football soccer`)
   }
 
-  // Fallback: just the original query + football
   if (query !== cleaned && query.length > 2) {
     queries.push(`${query} football`)
   }
 
-  // Generic football fallbacks
   queries.push('football match stadium', 'soccer premier league', 'football stadium')
 
   return queries
@@ -394,7 +393,6 @@ export async function fetchUnsplashImage(query: string): Promise<string | null> 
       const results = data?.results
       if (!results || results.length === 0) continue
 
-      // Pick random from top results for variety
       const pick = results[Math.floor(Math.random() * results.length)]
       const url = pick?.urls?.regular || pick?.urls?.full || null
       if (url) {
@@ -441,7 +439,7 @@ export async function getNextTask(
   startOfDay.setHours(0, 0, 0, 0)
   const now = new Date()
 
-  // ── Priority 1: Breaking news — high DIS clusters not yet covered ──
+  // ── Priority 1: Breaking news ──
   if (config.breakingNews) {
     const breakingCluster = await prisma.storyCluster.findFirst({
       where: {
@@ -454,11 +452,7 @@ export async function getNextTask(
 
     if (breakingCluster) {
       const alreadyCovered = await prisma.article.findFirst({
-        where: {
-          siteId,
-          aiPrompt: { contains: breakingCluster.id },
-          createdAt: { gte: startOfDay },
-        },
+        where: { siteId, aiPrompt: { contains: breakingCluster.id }, createdAt: { gte: startOfDay } },
       })
 
       if (!alreadyCovered) {
@@ -467,19 +461,13 @@ export async function getNextTask(
           orderBy: { pubDate: 'desc' },
           take: 5,
         })
-
-        const catConfig =
-          config.categories.find((c) => c.slug === 'breaking') || config.categories[0]
+        const catConfig = config.categories.find((c) => c.slug === 'breaking') || config.categories[0]
         return {
           priority: 'breaking',
           title: breakingCluster.title,
           category: catConfig?.name || 'Breaking',
           categorySlug: catConfig?.slug || 'breaking',
-          sources: newsItems.map((n) => ({
-            title: n.title,
-            source: n.source,
-            content: n.content || undefined,
-          })),
+          sources: newsItems.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
           clusterId: breakingCluster.id,
           wordCount: Math.min(config.defaultLength, 400),
         }
@@ -487,7 +475,7 @@ export async function getNextTask(
     }
   }
 
-  // ── Priority 2: Match previews — upcoming matches within 24h ──
+  // ── Priority 2: Match previews ──
   if (config.matchAutoCoverage) {
     const upcomingMatch = await prisma.matchResult.findFirst({
       where: {
@@ -499,11 +487,7 @@ export async function getNextTask(
 
     if (upcomingMatch) {
       const alreadyCovered = await prisma.article.findFirst({
-        where: {
-          siteId,
-          aiPrompt: { contains: upcomingMatch.id },
-          createdAt: { gte: startOfDay },
-        },
+        where: { siteId, aiPrompt: { contains: upcomingMatch.id }, createdAt: { gte: startOfDay } },
       })
 
       if (!alreadyCovered) {
@@ -518,20 +502,13 @@ export async function getNextTask(
           orderBy: { pubDate: 'desc' },
           take: 5,
         })
-
-        const catConfig =
-          config.categories.find((c) => c.slug === 'matches' || c.slug === 'football') ||
-          config.categories[0]
+        const catConfig = config.categories.find((c) => c.slug === 'matches' || c.slug === 'football') || config.categories[0]
         return {
           priority: 'match_preview',
           title: `${upcomingMatch.homeTeam} vs ${upcomingMatch.awayTeam} — Match Preview`,
           category: catConfig?.name || 'Football',
           categorySlug: catConfig?.slug || 'football',
-          sources: teamNews.map((n) => ({
-            title: n.title,
-            source: n.source,
-            content: n.content || undefined,
-          })),
+          sources: teamNews.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
           matchId: upcomingMatch.id,
           wordCount: config.defaultLength,
         }
@@ -539,52 +516,35 @@ export async function getNextTask(
     }
   }
 
-  // ── Priority 3: Topic-triggered — active topics with matching clusters ──
+  // ── Priority 3: Topic-triggered ──
   for (const topic of config.topics.filter((t) => t.isActive)) {
     const keywordConditions = topic.keywords.map((kw) => ({
       title: { contains: kw, mode: 'insensitive' as const },
     }))
-
     if (keywordConditions.length === 0) continue
 
     const topicCluster = await prisma.storyCluster.findFirst({
-      where: {
-        OR: keywordConditions,
-        latestItem: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) },
-        dis: { gte: 30 },
-      },
+      where: { OR: keywordConditions, latestItem: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) }, dis: { gte: 30 } },
       orderBy: { dis: 'desc' },
     })
 
     if (topicCluster) {
       const alreadyCovered = await prisma.article.findFirst({
-        where: {
-          siteId,
-          aiPrompt: { contains: topicCluster.id },
-          createdAt: { gte: startOfDay },
-        },
+        where: { siteId, aiPrompt: { contains: topicCluster.id }, createdAt: { gte: startOfDay } },
       })
-
       if (!alreadyCovered) {
         const newsItems = await prisma.newsItem.findMany({
           where: { clusterId: topicCluster.id },
           orderBy: { pubDate: 'desc' },
           take: 5,
         })
-
-        const catConfig =
-          config.categories.find((c) => topic.name.toLowerCase().includes(c.slug)) ||
-          config.categories[0]
+        const catConfig = config.categories.find((c) => topic.name.toLowerCase().includes(c.slug)) || config.categories[0]
         return {
           priority: 'topic_triggered',
           title: topicCluster.title,
           category: catConfig?.name || 'Sport',
           categorySlug: catConfig?.slug || 'sport',
-          sources: newsItems.map((n) => ({
-            title: n.title,
-            source: n.source,
-            content: n.content || undefined,
-          })),
+          sources: newsItems.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
           clusterId: topicCluster.id,
           wordCount: config.defaultLength,
         }
@@ -592,15 +552,11 @@ export async function getNextTask(
     }
   }
 
-  // ── Priority 4: Category fill — underrepresented categories ──
+  // ── Priority 4: Category fill ──
   for (const cat of config.categories.sort((a, b) => b.percentage - a.percentage)) {
     const expectedCount = Math.ceil(config.dailyTarget * (cat.percentage / 100))
     const currentCount = await prisma.article.count({
-      where: {
-        siteId,
-        category: { slug: cat.slug },
-        createdAt: { gte: startOfDay },
-      },
+      where: { siteId, category: { slug: cat.slug }, createdAt: { gte: startOfDay } },
     })
 
     if (currentCount < expectedCount) {
@@ -615,13 +571,8 @@ export async function getNextTask(
 
       if (cluster) {
         const alreadyCovered = await prisma.article.findFirst({
-          where: {
-            siteId,
-            aiPrompt: { contains: cluster.id },
-            createdAt: { gte: startOfDay },
-          },
+          where: { siteId, aiPrompt: { contains: cluster.id }, createdAt: { gte: startOfDay } },
         })
-
         if (!alreadyCovered) {
           const newsItems = await prisma.newsItem.findMany({
             where: { clusterId: cluster.id },
@@ -633,11 +584,7 @@ export async function getNextTask(
             title: cluster.title,
             category: cat.name,
             categorySlug: cat.slug,
-            sources: newsItems.map((n) => ({
-              title: n.title,
-              source: n.source,
-              content: n.content || undefined,
-            })),
+            sources: newsItems.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
             clusterId: cluster.id,
             wordCount: config.defaultLength,
           }
@@ -646,34 +593,24 @@ export async function getNextTask(
     }
   }
 
-  // ── Priority 5: Gap fill — no article in last N hours ──
+  // ── Priority 5: Gap fill ──
   if (config.gapDetection) {
     const lastArticle = await prisma.article.findFirst({
       where: { siteId, aiGenerated: true },
       orderBy: { createdAt: 'desc' },
     })
-
     const gapMs = config.gapHours * 60 * 60 * 1000
     const hasGap = !lastArticle || Date.now() - lastArticle.createdAt.getTime() > gapMs
 
     if (hasGap) {
       const cluster = await prisma.storyCluster.findFirst({
-        where: {
-          latestItem: { gte: new Date(Date.now() - 6 * 60 * 60 * 1000) },
-          dis: { gte: 15 },
-        },
+        where: { latestItem: { gte: new Date(Date.now() - 6 * 60 * 60 * 1000) }, dis: { gte: 15 } },
         orderBy: { dis: 'desc' },
       })
-
       if (cluster) {
         const alreadyCovered = await prisma.article.findFirst({
-          where: {
-            siteId,
-            aiPrompt: { contains: cluster.id },
-            createdAt: { gte: startOfDay },
-          },
+          where: { siteId, aiPrompt: { contains: cluster.id }, createdAt: { gte: startOfDay } },
         })
-
         if (!alreadyCovered) {
           const newsItems = await prisma.newsItem.findMany({
             where: { clusterId: cluster.id },
@@ -686,11 +623,7 @@ export async function getNextTask(
             title: cluster.title,
             category: catConfig?.name || 'Sport',
             categorySlug: catConfig?.slug || 'sport',
-            sources: newsItems.map((n) => ({
-              title: n.title,
-              source: n.source,
-              content: n.content || undefined,
-            })),
+            sources: newsItems.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
             clusterId: cluster.id,
             wordCount: Math.min(config.defaultLength, 500),
           }
@@ -699,7 +632,7 @@ export async function getNextTask(
     }
   }
 
-  // ── Priority 6: Post-match — completed matches without coverage ──
+  // ── Priority 6: Post-match ──
   if (config.matchAutoCoverage) {
     const completedMatch = await prisma.matchResult.findFirst({
       where: {
@@ -708,16 +641,10 @@ export async function getNextTask(
       },
       orderBy: { matchDate: 'desc' },
     })
-
     if (completedMatch) {
       const alreadyCovered = await prisma.article.findFirst({
-        where: {
-          siteId,
-          aiPrompt: { contains: completedMatch.id },
-          createdAt: { gte: startOfDay },
-        },
+        where: { siteId, aiPrompt: { contains: completedMatch.id }, createdAt: { gte: startOfDay } },
       })
-
       if (!alreadyCovered) {
         const teamNews = await prisma.newsItem.findMany({
           where: {
@@ -730,24 +657,15 @@ export async function getNextTask(
           orderBy: { pubDate: 'desc' },
           take: 5,
         })
-
-        const score =
-          completedMatch.homeScore != null && completedMatch.awayScore != null
-            ? `${completedMatch.homeScore}-${completedMatch.awayScore}`
-            : ''
-        const catConfig =
-          config.categories.find((c) => c.slug === 'matches' || c.slug === 'football') ||
-          config.categories[0]
+        const score = completedMatch.homeScore != null && completedMatch.awayScore != null
+          ? `${completedMatch.homeScore}-${completedMatch.awayScore}` : ''
+        const catConfig = config.categories.find((c) => c.slug === 'matches' || c.slug === 'football') || config.categories[0]
         return {
           priority: 'post_match',
           title: `${completedMatch.homeTeam} ${score} ${completedMatch.awayTeam} — Match Report`,
           category: catConfig?.name || 'Football',
           categorySlug: catConfig?.slug || 'football',
-          sources: teamNews.map((n) => ({
-            title: n.title,
-            source: n.source,
-            content: n.content || undefined,
-          })),
+          sources: teamNews.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
           matchId: completedMatch.id,
           wordCount: config.defaultLength,
         }
@@ -756,14 +674,11 @@ export async function getNextTask(
   }
 
   // ── Priority 7 (force only): Latest news fallback ──
-  // When no clusters/matches exist, use the freshest news items directly
   if (force) {
-    // Try any cluster first, even low DIS
     const anyCluster = await prisma.storyCluster.findFirst({
       where: { latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
       orderBy: { dis: 'desc' },
     })
-
     if (anyCluster) {
       const newsItems = await prisma.newsItem.findMany({
         where: { clusterId: anyCluster.id },
@@ -776,23 +691,17 @@ export async function getNextTask(
         title: anyCluster.title,
         category: catConfig?.name || 'Vijesti',
         categorySlug: catConfig?.slug || 'vijesti',
-        sources: newsItems.map((n) => ({
-          title: n.title,
-          source: n.source,
-          content: n.content || undefined,
-        })),
+        sources: newsItems.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
         clusterId: anyCluster.id,
         wordCount: config.defaultLength,
       }
     }
 
-    // No clusters at all — use raw news items
     const latestNews = await prisma.newsItem.findMany({
       where: { pubDate: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
       orderBy: { pubDate: 'desc' },
       take: 5,
     })
-
     if (latestNews.length > 0) {
       const catConfig = config.categories[0]
       return {
@@ -800,11 +709,7 @@ export async function getNextTask(
         title: latestNews[0].title,
         category: catConfig?.name || 'Vijesti',
         categorySlug: catConfig?.slug || 'vijesti',
-        sources: latestNews.map((n) => ({
-          title: n.title,
-          source: n.source,
-          content: n.content || undefined,
-        })),
+        sources: latestNews.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
         wordCount: config.defaultLength,
       }
     }

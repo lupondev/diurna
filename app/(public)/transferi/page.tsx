@@ -37,7 +37,7 @@ function timeAgo(date: Date): string {
 
 export default async function TransferiPage() {
   const site = await getDefaultSite()
-  let dbArticles: { slug: string; title: string; time: string; league: string; bg: string; href: string }[] = []
+  let dbArticles: { slug: string; title: string; time: string; league: string; bg: string; image: string | null; href: string }[] = []
 
   if (site) {
     const articles = await prisma.article.findMany({
@@ -48,7 +48,11 @@ export default async function TransferiPage() {
         isTest: false,
         category: { slug: 'transferi' },
       },
-      include: {
+      select: {
+        slug: true,
+        title: true,
+        featuredImage: true,
+        publishedAt: true,
         category: { select: { name: true, slug: true } },
       },
       orderBy: { publishedAt: 'desc' },
@@ -61,6 +65,7 @@ export default async function TransferiPage() {
       time: a.publishedAt ? timeAgo(a.publishedAt) : 'Novo',
       league: a.category?.name || 'Transferi',
       bg: GRADIENTS[i % GRADIENTS.length],
+      image: a.featuredImage ?? null,
       href: getArticleUrl(a),
     }))
   }
@@ -78,11 +83,16 @@ export default async function TransferiPage() {
       <div className="sba-cat-layout">
         <div className="sba-cat-main">
           {dbArticles.length === 0 && (
-            <p style={{ color: 'var(--sba-muted)', padding: '2rem 0' }}>Trenutno nema objavljenih vijesti o transferima.</p>
+            <p style={{ color: 'var(--sba-text-3)', padding: '2rem 0' }}>Trenutno nema objavljenih vijesti o transferima.</p>
           )}
           {featured && (
             <Link href={featured.href} className="sba-cat-featured">
-              <div className="sba-cat-featured-bg" style={{ background: featured.bg }} />
+              {featured.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={featured.image} alt={featured.title} className="sba-cat-featured-img" />
+              ) : (
+                <div className="sba-cat-featured-bg" style={{ background: featured.bg }} />
+              )}
               <div className="sba-cat-featured-content">
                 <span className="sba-cat-badge">Transferi</span>
                 <h2 className="sba-cat-featured-title">{featured.title}</h2>
@@ -95,7 +105,12 @@ export default async function TransferiPage() {
             {grid.map((a) => (
               <Link key={a.slug} href={a.href} className="sba-cat-card">
                 <div className="sba-cat-card-thumb">
-                  <div className="sba-cat-card-thumb-bg" style={{ background: a.bg }} />
+                  {a.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.image} alt={a.title} className="sba-cat-card-thumb-img" />
+                  ) : (
+                    <div className="sba-cat-card-thumb-bg" style={{ background: a.bg }} />
+                  )}
                 </div>
                 <div className="sba-cat-card-body">
                   <span className="sba-cat-card-title">{a.title}</span>
