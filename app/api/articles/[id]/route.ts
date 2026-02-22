@@ -16,6 +16,8 @@ const UpdateArticleSchema = z.object({
   scheduledAt: z.string().nullable().optional(),
   slug: z.string().min(1).max(200).optional(),
   tagIds: z.array(z.string()).optional(),
+  metaTitle: z.string().optional(),
+  metaDescription: z.string().optional(),
 })
 
 export async function GET(
@@ -66,7 +68,11 @@ export async function PATCH(
       select: { status: true, siteId: true, title: true, slug: true, content: true, site: { select: { domain: true, slug: true } } },
     })
 
-    if (existing && (data.content || data.title)) {
+    if (!existing) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    if (data.content || data.title) {
       const lastVersion = await prisma.articleVersion.findFirst({
         where: { articleId: params.id },
         orderBy: { version: 'desc' },
@@ -84,7 +90,7 @@ export async function PATCH(
     }
 
     let slugUpdate: string | undefined
-    if (data.slug && existing && data.slug !== existing.slug) {
+    if (data.slug && data.slug !== existing.slug) {
       const slugExists = await prisma.article.findFirst({
         where: { siteId: existing.siteId, slug: data.slug, id: { not: params.id } },
       })
@@ -113,9 +119,13 @@ export async function PATCH(
         ...(scheduledAtStr !== undefined && { scheduledAt: scheduledAtStr ? new Date(scheduledAtStr) : null }),
         publishedAt: data.status === 'PUBLISHED' ? new Date() : undefined,
       },
+      // Bug D fix: include versions in PATCH response so client doesn't need extra GET
+      include: {
+        versions: { orderBy: { version: 'desc' }, take: 20 },
+      },
     })
 
-    if (data.status === 'PUBLISHED' && existing && existing.status !== 'PUBLISHED') {
+    if (data.status === 'PUBLISHED' && existing.status !== 'PUBLISHED') {
       try {
         const fbConnection = await prisma.socialConnection.findUnique({
           where: { siteId_provider: { siteId: existing.siteId, provider: 'facebook' } },
@@ -130,14 +140,13 @@ export async function PATCH(
           const results = await postToMultiplePages(fbConnection.pages, title, articleUrl)
           const failures = results.filter((r) => !r.success)
           if (failures.length > 0) {
-            await systemLog('warn', 'system', `Facebook auto-post partial failures`, { failures })
+            await systemLog('warn', 'system', 'Facebook auto-post partial failures', { failures })
           }
         }
       } catch (fbError) {
         console.error('Facebook auto-post error:', fbError)
       }
 
-      // Distribution channels (Twitter, Telegram, Newsletter, etc.)
       distributeArticle(params.id).catch(err => console.error('Distribution error:', err))
     }
 

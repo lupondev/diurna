@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import toast from 'react-hot-toast'
 import '../editor.css'
 
 const TiptapEditor = dynamic(() => import('@/components/editor/tiptap-editor'), {
@@ -18,9 +19,13 @@ const AISidebar = dynamic(() => import('@/components/editor/ai-sidebar').then(m 
 type Version = { id: string; version: number; title: string; content: Record<string, unknown>; createdAt: string }
 type TagItem = { id: string; name: string; slug: string }
 type ArticleTag = { tag: TagItem }
+type Category = { id: string; name: string; slug?: string; icon?: string }
 
+// Bug A fix: include Bosnian character replacements
 function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim().slice(0, 100)
+  return text.toLowerCase()
+    .replace(/[čć]/g, 'c').replace(/[š]/g, 's').replace(/[ž]/g, 'z').replace(/[đ]/g, 'dj')
+    .replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim().slice(0, 100)
 }
 
 export default function ArticleEditor({ id }: { id: string }) {
@@ -47,12 +52,19 @@ export default function ArticleEditor({ id }: { id: string }) {
   const [showSEO, setShowSEO] = useState(false)
   const [metaTitle, setMetaTitle] = useState('')
   const [metaDesc, setMetaDesc] = useState('')
+  // Bug C fix: load and track categoryId
+  const [categoryId, setCategoryId] = useState('')
+  const [categories, setCategories] = useState<Category[]>([])
   const editorRef = useRef<unknown>(null)
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     fetch(`/api/articles/${id}`)
-      .then((r) => r.json() as Promise<{ title?: string; content?: Record<string, unknown>; status?: string; slug?: string; aiGenerated?: boolean; metaTitle?: string; metaDescription?: string; scheduledAt?: string; versions?: Version[]; tags?: ArticleTag[] }>)
+      .then((r) => r.json() as Promise<{
+        title?: string; content?: Record<string, unknown>; status?: string; slug?: string
+        aiGenerated?: boolean; metaTitle?: string; metaDescription?: string; scheduledAt?: string
+        versions?: Version[]; tags?: ArticleTag[]; categoryId?: string | null
+      }>)
       .then((data) => {
         setTitle(data.title || '')
         setInitialContent(data.content || {})
@@ -65,9 +77,17 @@ export default function ArticleEditor({ id }: { id: string }) {
         if (data.scheduledAt) setScheduledAt(new Date(data.scheduledAt).toISOString().slice(0, 16))
         if (data.versions) setVersions(data.versions)
         if (data.tags) setArticleTags(data.tags.map((t: ArticleTag) => t.tag))
+        // Bug C fix: restore categoryId from loaded article
+        if (data.categoryId) setCategoryId(data.categoryId)
         setLoading(false)
       })
       .catch(() => setLoading(false))
+
+    // Bug C fix: also load site categories for the select
+    fetch('/api/site')
+      .then((r) => r.json() as Promise<{ categories?: Category[] }>)
+      .then((data) => { if (data.categories) setCategories(data.categories) })
+      .catch(() => {})
 
     fetch('/api/tags').then((r) => r.json() as Promise<TagItem[]>).then(setAllTags).catch(() => {})
   }, [id])
@@ -109,28 +129,38 @@ export default function ArticleEditor({ id }: { id: string }) {
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, content, status])
+  }, [title, content, status, categoryId])
 
   async function handleSave(newStatus?: string) {
     setSaving(true)
     try {
       const body: Record<string, unknown> = {
-        title, content, status: newStatus || status, slug,
+        title,
+        content,
+        status: newStatus || status,
+        slug,
         metaTitle: metaTitle || undefined,
         metaDescription: metaDesc || undefined,
+        // Bug C fix: always send categoryId
+        categoryId: categoryId || null,
+        tagIds: articleTags.map((t) => t.id),
       }
       if (newStatus === 'SCHEDULED' && scheduledAt) {
         body.scheduledAt = scheduledAt
         body.status = 'SCHEDULED'
       }
-      body.tagIds = articleTags.map((t) => t.id)
 
       const res = await fetch(`/api/articles/${id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+
       if (res.ok) {
+        const updated = await res.json() as { status?: string; versions?: Version[] }
         if (newStatus) setStatus(newStatus)
+        // Bug D fix: use versions from PATCH response instead of extra GET
+        if (updated.versions) setVersions(updated.versions)
+        toast.success(newStatus === 'PUBLISHED' ? 'Objavljeno' : 'Sačuvano')
         if (sendNewsletter && newStatus === 'PUBLISHED') {
           fetch('/api/newsletter/send', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -138,20 +168,19 @@ export default function ArticleEditor({ id }: { id: string }) {
           }).catch(console.error)
           setSendNewsletter(false)
         }
-        const data = await res.json() as { id?: string }
-        if (data.id) {
-          const fresh = await fetch(`/api/articles/${id}`).then((r) => r.json() as Promise<{ versions?: Version[] }>)
-          if (fresh.versions) setVersions(fresh.versions)
-        }
         router.refresh()
       } else if (res.status === 409) {
-        alert('This slug is already taken. Please choose a different one.')
+        toast.error('Slug je već zauzet — odaberi drugi.')
+      } else {
+        toast.error('Greška pri čuvanju')
       }
-    } catch {} finally { setSaving(false) }
+    } catch {
+      toast.error('Greška — pokušaj ponovo')
+    } finally { setSaving(false) }
   }
 
   async function handleDelete() {
-    if (!confirm('Are you sure you want to delete this article?')) return
+    if (!confirm('Obrisati ovaj članak?')) return
     try {
       const res = await fetch(`/api/articles/${id}`, { method: 'DELETE' })
       if (res.ok) { router.push('/articles'); router.refresh() }
@@ -163,6 +192,7 @@ export default function ArticleEditor({ id }: { id: string }) {
     setContent(v.content)
     setInitialContent(v.content)
     setShowHistory(false)
+    toast.success(`Verzija v${v.version} restaurirana`)
   }
 
   async function addTag(name: string) {
@@ -232,6 +262,20 @@ export default function ArticleEditor({ id }: { id: string }) {
               value={title} onChange={(e) => handleTitleChange(e.target.value)} />
 
             <div className="ed-meta">
+              {/* Bug C fix: category selector */}
+              {categories.length > 0 && (
+                <select
+                  className="ed-select"
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  style={{ marginBottom: 8 }}
+                >
+                  <option value="">No category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.icon ? `${cat.icon} ` : ''}{cat.name}</option>
+                  ))}
+                </select>
+              )}
               <div className="ed-slug-row">
                 <span className="ed-slug-label">Slug:</span>
                 <input type="text" className="ed-slug-input"
