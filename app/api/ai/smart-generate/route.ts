@@ -152,13 +152,13 @@ Remember: ONLY use facts from the headlines above. Do NOT invent details. Max ${
     } else if (input.mode === 'copilot') {
       contextLevel = 'full'
       const typeMap: Record<string, string> = {
-        preview: 'Napiši najavu utakmice. Uključi formu oba tima, historiju međusobnih susreta, ključne igrače i prognozu.',
-        report: 'Napiši izvještaj. Uključi ključne momente, statistiku, ocjene igrača i analizu.',
-        transfer: 'Napiši članak o transferu. Uključi detalje ugovora, reakcije, i kako ovaj transfer utječe na tim.',
-        analysis: 'Napiši taktičku analizu. Uključi formacije, ključne statističke podatke i zaključke.',
-        rankings: 'Napiši ranking listu. Uključi obrazloženje za svaku poziciju.',
-        profile: 'Napiši profil igrača. Uključi karijeru, statistiku, stil igre i tržišnu vrijednost.',
-        breaking: 'Napiši vijest.',
+        preview: 'Write a match preview. Include both teams form, head-to-head history, key players and prediction.',
+        report: 'Write a match report. Include key moments, statistics, player ratings and analysis.',
+        transfer: 'Write a transfer article. Include contract details, reactions, and how this transfer affects the team.',
+        analysis: 'Write a tactical analysis. Include formations, key statistics and conclusions.',
+        rankings: 'Write a rankings list. Include reasoning for each position.',
+        profile: 'Write a player profile. Include career, statistics, playing style and market value.',
+        breaking: 'Write a breaking news article.',
       }
       const typeInstruction = typeMap[input.articleType || 'report'] || typeMap.report
 

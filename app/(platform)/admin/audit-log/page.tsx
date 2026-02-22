@@ -52,17 +52,17 @@ export default function AdminAuditLogPage() {
   return (
     <>
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>Zapisnik aktivnosti</div>
-        <div style={{ fontSize: 12, color: 'var(--g500)' }}>Pratite sve aktivnosti i promjene u timu</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>Activity Log</div>
+        <div style={{ fontSize: 12, color: 'var(--g500)' }}>Track all activities and changes in your team</div>
       </div>
 
       {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--g400)' }}>Učitavanje aktivnosti...</div>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--g400)' }}>Loading activities...</div>
       ) : logs.length === 0 ? (
         <div className="adm-card" style={{ textAlign: 'center', padding: 40 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>{'\u{1F4CB}'}</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g900)', marginBottom: 4 }}>Nema aktivnosti</div>
-          <div style={{ fontSize: 12, color: 'var(--g400)' }}>Akcije će se pojaviti ovdje dok vaš tim koristi platformu</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g900)', marginBottom: 4 }}>No activities</div>
+          <div style={{ fontSize: 12, color: 'var(--g400)' }}>Actions will appear here as your team uses the platform</div>
         </div>
       ) : (
         <div className="adm-card" style={{ padding: '8px 24px' }}>
@@ -73,14 +73,14 @@ export default function AdminAuditLogPage() {
                 <div className="adm-log-icon" style={{ background: bg }}>{icon}</div>
                 <div style={{ flex: 1 }}>
                   <div className="adm-log-text">
-                    <strong>{entry.userName || 'Sistem'}</strong>{' '}
+                    <strong>{entry.userName || 'System'}</strong>{' '}
                     {formatAction(entry)}
                   </div>
                   {entry.detail && (
                     <div style={{ fontSize: 11, color: 'var(--g400)', marginTop: 2 }}>{entry.detail}</div>
                   )}
                   <div className="adm-log-time">
-                    {new Date(entry.createdAt).toLocaleString('bs-BA')}
+                    {new Date(entry.createdAt).toLocaleString('en-US')}
                   </div>
                 </div>
               </div>

@@ -23,29 +23,29 @@ const avatarGradients = [
 ]
 
 const roleInfo: Record<string, { icon: string; cls: string; label: string }> = {
-  OWNER: { icon: '\u{1F451}', cls: 'owner', label: 'Vlasnik' },
+  OWNER: { icon: '\u{1F451}', cls: 'owner', label: 'Owner' },
   ADMIN: { icon: '\u{1F6E1}\uFE0F', cls: 'admin', label: 'Admin' },
-  EDITOR: { icon: '\u{1F4DD}', cls: 'editor', label: 'Urednik' },
-  JOURNALIST: { icon: '\u270D\uFE0F', cls: 'journalist', label: 'Novinar' },
+  EDITOR: { icon: '\u{1F4DD}', cls: 'editor', label: 'Editor' },
+  JOURNALIST: { icon: '\u270D\uFE0F', cls: 'journalist', label: 'Journalist' },
 }
 
 const permissionsData = [
-  { section: 'Sadržaj' },
-  { perm: 'Kreiranje članaka', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'yes' },
-  { perm: 'Uređivanje svojih članaka', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'yes' },
-  { perm: 'Uređivanje svih članaka', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'no' },
-  { perm: 'Objavljivanje članaka', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'no' },
-  { perm: 'Brisanje članaka', owner: 'yes', admin: 'yes', editor: 'limited', journalist: 'no' },
-  { perm: 'Korištenje AI Co-Pilota', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'yes' },
-  { section: 'Distribucija' },
-  { perm: 'Upravljanje kalendarom', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'no' },
-  { perm: 'Društvena distribucija', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'limited' },
-  { perm: 'Autopilot postavke', owner: 'yes', admin: 'yes', editor: 'no', journalist: 'no' },
-  { section: 'Administracija' },
-  { perm: 'Upravljanje članovima tima', owner: 'yes', admin: 'yes', editor: 'no', journalist: 'no' },
-  { perm: 'Postavke platforme', owner: 'yes', admin: 'yes', editor: 'no', journalist: 'no' },
-  { perm: 'Naplata i pretplata', owner: 'yes', admin: 'no', editor: 'no', journalist: 'no' },
-  { perm: 'Brisanje sajta', owner: 'yes', admin: 'no', editor: 'no', journalist: 'no' },
+  { section: 'Content' },
+  { perm: 'Create articles', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'yes' },
+  { perm: 'Edit own articles', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'yes' },
+  { perm: 'Edit all articles', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'no' },
+  { perm: 'Publish articles', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'no' },
+  { perm: 'Delete articles', owner: 'yes', admin: 'yes', editor: 'limited', journalist: 'no' },
+  { perm: 'Use AI Co-Pilot', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'yes' },
+  { section: 'Distribution' },
+  { perm: 'Calendar management', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'no' },
+  { perm: 'Social distribution', owner: 'yes', admin: 'yes', editor: 'yes', journalist: 'limited' },
+  { perm: 'Autopilot settings', owner: 'yes', admin: 'yes', editor: 'no', journalist: 'no' },
+  { section: 'Administration' },
+  { perm: 'Team member management', owner: 'yes', admin: 'yes', editor: 'no', journalist: 'no' },
+  { perm: 'Platform settings', owner: 'yes', admin: 'yes', editor: 'no', journalist: 'no' },
+  { perm: 'Billing & subscription', owner: 'yes', admin: 'no', editor: 'no', journalist: 'no' },
+  { perm: 'Delete site', owner: 'yes', admin: 'no', editor: 'no', journalist: 'no' },
 ]
 
 const checkIcons: Record<string, { cls: string; icon: string }> = {
@@ -86,7 +86,7 @@ export default function TeamPage() {
   }
 
   function formatDate(date: string) {
-    return new Date(date).toLocaleDateString('bs-BA', {
+    return new Date(date).toLocaleDateString('en-US', {
       day: 'numeric', month: 'short', year: 'numeric',
     })
   }
@@ -103,7 +103,7 @@ export default function TeamPage() {
   }
 
   function handleRemove(memberId: string) {
-    if (!confirm('Da li ste sigurni da želite ukloniti ovog člana tima?')) return
+    if (!confirm('Are you sure you want to remove this team member?')) return
     setMembers((prev) => prev.filter((m) => m.id !== memberId))
     fetch('/api/team', {
       method: 'DELETE',
@@ -122,20 +122,20 @@ export default function TeamPage() {
   }
 
   const stats = [
-    { label: 'Članovi tima', value: members.length, icon: '\u{1F465}', cls: 'members' },
+    { label: 'Team members', value: members.length, icon: '\u{1F465}', cls: 'members' },
     { label: 'Online', value: members.length > 0 ? Math.min(members.length, Math.ceil(members.length * 0.6)) : 0, icon: '\u{1F7E2}', cls: 'active' },
-    { label: 'Pozivnice na čekanju', value: 0, icon: '\u{1F4E7}', cls: 'pending' },
-    { label: 'Članaka ovog mjeseca', value: articlesThisMonth, icon: '\u{1F4DD}', cls: 'articles' },
+    { label: 'Pending invites', value: 0, icon: '\u{1F4E7}', cls: 'pending' },
+    { label: 'Articles this month', value: articlesThisMonth, icon: '\u{1F4DD}', cls: 'articles' },
   ]
 
   return (
     <div className="tm-page">
       <div className="tm-header">
         <div className="tm-header-left">
-          <h1>Upravljanje timom</h1>
-          <p>{members.length} {members.length === 1 ? 'član' : 'članova'} u vašem timu</p>
+          <h1>Team Management</h1>
+          <p>{members.length} {members.length === 1 ? 'member' : 'members'} in your team</p>
         </div>
-        <button className="tm-invite-btn" onClick={() => setShowInvite(true)}>+ Dodaj člana</button>
+        <button className="tm-invite-btn" onClick={() => setShowInvite(true)}>+ Add member</button>
       </div>
 
       <div className="tm-stats">
@@ -151,29 +151,29 @@ export default function TeamPage() {
       </div>
 
       <div className="tm-tabs">
-        <button className={`tm-tab${activeTab === 'members' ? ' act' : ''}`} onClick={() => setActiveTab('members')}>Članovi</button>
-        <button className={`tm-tab${activeTab === 'permissions' ? ' act' : ''}`} onClick={() => setActiveTab('permissions')}>Dozvole</button>
+        <button className={`tm-tab${activeTab === 'members' ? ' act' : ''}`} onClick={() => setActiveTab('members')}>Members</button>
+        <button className={`tm-tab${activeTab === 'permissions' ? ' act' : ''}`} onClick={() => setActiveTab('permissions')}>Permissions</button>
       </div>
 
       {activeTab === 'members' && (
         <div className="member-list">
           <div className="ml-head">
-            <span>Član</span>
-            <span>Uloga</span>
+            <span>Member</span>
+            <span>Role</span>
             <span>Status</span>
-            <span>Pridružen</span>
+            <span>Joined</span>
             <span></span>
           </div>
 
           {loading ? (
             <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--g400)', fontSize: 13 }}>
-              Učitavanje članova tima...
+              Loading team members...
             </div>
           ) : members.length === 0 ? (
             <div style={{ padding: '60px 20px', textAlign: 'center' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>{'\u{1F465}'}</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g900)', marginBottom: 4 }}>Još nema članova tima</div>
-              <div style={{ fontSize: 12, color: 'var(--g400)' }}>Pozovite prvog člana tima da započnete saradnju</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g900)', marginBottom: 4 }}>No team members yet</div>
+              <div style={{ fontSize: 12, color: 'var(--g400)' }}>Invite your first team member to start collaborating</div>
             </div>
           ) : (
             members.map((m, i) => {
@@ -187,7 +187,7 @@ export default function TeamPage() {
                       {getInitial(m.user.name, m.user.email)}
                     </div>
                     <div>
-                      <div className="ml-name">{m.user.name || 'Bez imena'}</div>
+                      <div className="ml-name">{m.user.name || 'No name'}</div>
                       <div className="ml-email">{m.user.email}</div>
                     </div>
                   </div>
@@ -201,8 +201,8 @@ export default function TeamPage() {
                         onChange={(e) => handleRoleChange(m.id, e.target.value)}
                       >
                         <option value="ADMIN">{'\u{1F6E1}\uFE0F'} Admin</option>
-                        <option value="EDITOR">{'\u{1F4DD}'} Urednik</option>
-                        <option value="JOURNALIST">{'\u270D\uFE0F'} Novinar</option>
+                        <option value="EDITOR">{'\u{1F4DD}'} Editor</option>
+                        <option value="JOURNALIST">{'\u270D\uFE0F'} Journalist</option>
                       </select>
                     )}
                   </div>
@@ -213,11 +213,11 @@ export default function TeamPage() {
                   <div className="ml-joined">{formatDate(m.joinedAt)}</div>
                   <div className="ml-actions">
                     {isSelf ? (
-                      <button className="ml-act" title="Postavke">{'\u2699\uFE0F'}</button>
+                      <button className="ml-act" title="Settings">{'\u2699\uFE0F'}</button>
                     ) : (
                       <>
-                        <button className="ml-act" title="Uredi">{'\u270F\uFE0F'}</button>
-                        <button className="ml-act danger" title="Ukloni" onClick={() => handleRemove(m.id)}>{'\u{1F5D1}\uFE0F'}</button>
+                        <button className="ml-act" title="Edit">{'\u270F\uFE0F'}</button>
+                        <button className="ml-act danger" title="Remove" onClick={() => handleRemove(m.id)}>{'\u{1F5D1}\uFE0F'}</button>
                       </>
                     )}
                   </div>
@@ -232,11 +232,11 @@ export default function TeamPage() {
         <>
           <div className="perm-matrix">
             <div className="pm-head">
-              <div className="pm-head-cell">Dozvola</div>
-              <div className="pm-head-cell"><span className="pm-head-role" style={{ background: 'linear-gradient(135deg, #FFD700, #FFA500)', color: '#7C2D12' }}>Vlasnik</span></div>
+              <div className="pm-head-cell">Permission</div>
+              <div className="pm-head-cell"><span className="pm-head-role" style={{ background: 'linear-gradient(135deg, #FFD700, #FFA500)', color: '#7C2D12' }}>Owner</span></div>
               <div className="pm-head-cell"><span className="pm-head-role" style={{ background: 'var(--elec-l)', color: 'var(--elec)' }}>Admin</span></div>
-              <div className="pm-head-cell"><span className="pm-head-role" style={{ background: 'var(--mint-l)', color: 'var(--mint-d)' }}>Urednik</span></div>
-              <div className="pm-head-cell"><span className="pm-head-role" style={{ background: 'var(--gold-l)', color: 'var(--gold)' }}>Novinar</span></div>
+              <div className="pm-head-cell"><span className="pm-head-role" style={{ background: 'var(--mint-l)', color: 'var(--mint-d)' }}>Editor</span></div>
+              <div className="pm-head-cell"><span className="pm-head-role" style={{ background: 'var(--gold-l)', color: 'var(--gold)' }}>Journalist</span></div>
             </div>
             {permissionsData.map((row, i) => {
               if ('section' in row) {
@@ -259,9 +259,9 @@ export default function TeamPage() {
             })}
           </div>
           <div className="pm-legend">
-            <span className="pm-legend-item"><span className="pm-check yes">{'\u2713'}</span> Potpuni pristup</span>
-            <span className="pm-legend-item"><span className="pm-check limited">{'\u25D0'}</span> Ograničen pristup</span>
-            <span className="pm-legend-item"><span className="pm-check no">{'\u2014'}</span> Bez pristupa</span>
+            <span className="pm-legend-item"><span className="pm-check yes">{'\u2713'}</span> Full access</span>
+            <span className="pm-legend-item"><span className="pm-check limited">{'\u25D0'}</span> Limited access</span>
+            <span className="pm-legend-item"><span className="pm-check no">{'\u2014'}</span> No access</span>
           </div>
         </>
       )}
@@ -270,37 +270,37 @@ export default function TeamPage() {
         <div className="tm-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowInvite(false) }}>
           <div className="tm-modal">
             <div className="tm-modal-head">
-              <div className="tm-modal-title">{'\u{1F4E7}'} Pozovi člana tima</div>
+              <div className="tm-modal-title">{'\u{1F4E7}'} Invite team member</div>
               <button className="tm-modal-close" onClick={() => setShowInvite(false)}>{'\u2715'}</button>
             </div>
             <div className="tm-modal-body">
               <div className="tm-form-group">
-                <label className="tm-form-label">Email adresa</label>
+                <label className="tm-form-label">Email address</label>
                 <input
                   className="tm-form-input"
                   type="email"
-                  placeholder="kolega@firma.com"
+                  placeholder="colleague@company.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                 />
               </div>
               <div className="tm-form-group">
-                <label className="tm-form-label">Ime i prezime (opciono)</label>
+                <label className="tm-form-label">Full name (optional)</label>
                 <input
                   className="tm-form-input"
                   type="text"
-                  placeholder="Ime Prezime"
+                  placeholder="Full Name"
                   value={inviteName}
                   onChange={(e) => setInviteName(e.target.value)}
                 />
               </div>
               <div className="tm-form-group">
-                <label className="tm-form-label">Uloga</label>
+                <label className="tm-form-label">Role</label>
                 <div className="role-cards">
                   {[
-                    { role: 'ADMIN', icon: '\u{1F6E1}\uFE0F', name: 'Admin', desc: 'Potpuni pristup osim naplate' },
-                    { role: 'EDITOR', icon: '\u{1F4DD}', name: 'Urednik', desc: 'Pisanje, uređivanje, objavljivanje' },
-                    { role: 'JOURNALIST', icon: '\u270D\uFE0F', name: 'Novinar', desc: 'Pisanje i uređivanje svojih članaka' },
+                    { role: 'ADMIN', icon: '\u{1F6E1}\uFE0F', name: 'Admin', desc: 'Full access except billing' },
+                    { role: 'EDITOR', icon: '\u{1F4DD}', name: 'Editor', desc: 'Write, edit, publish' },
+                    { role: 'JOURNALIST', icon: '\u270D\uFE0F', name: 'Journalist', desc: 'Write and edit own articles' },
                   ].map((r) => (
                     <div
                       key={r.role}
@@ -315,11 +315,11 @@ export default function TeamPage() {
                 </div>
               </div>
               <div className="tm-form-group">
-                <label className="tm-form-label">Lična poruka (opciono)</label>
+                <label className="tm-form-label">Personal message (optional)</label>
                 <textarea
                   className="tm-form-input"
                   rows={2}
-                  placeholder="Hej! Pridruži se našem timu na Diurna..."
+                  placeholder="Hey! Join our team on Diurna..."
                   style={{ resize: 'none' }}
                   value={inviteMessage}
                   onChange={(e) => setInviteMessage(e.target.value)}
@@ -327,8 +327,8 @@ export default function TeamPage() {
               </div>
             </div>
             <div className="tm-modal-foot">
-              <button className="tm-cancel-btn" onClick={() => setShowInvite(false)}>Otkaži</button>
-              <button className="tm-send-btn" onClick={handleInvite}>{'\u{1F4E7}'} Pošalji pozivnicu</button>
+              <button className="tm-cancel-btn" onClick={() => setShowInvite(false)}>Cancel</button>
+              <button className="tm-send-btn" onClick={handleInvite}>{'\u{1F4E7}'} Send invite</button>
             </div>
           </div>
         </div>

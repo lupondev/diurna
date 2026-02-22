@@ -58,7 +58,7 @@ export default function AdminSitePage() {
         setTimeout(() => setSaved(false), 2000)
       } else {
         const data = await res.json() as { error?: string }
-        alert(data.error || 'Greška pri čuvanju postavki')
+        alert(data.error || 'Error saving settings')
       }
     } finally {
       setSaving(false)
@@ -66,26 +66,26 @@ export default function AdminSitePage() {
   }
 
   if (loading) {
-    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--g400)' }}>Učitavanje postavki...</div>
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--g400)' }}>Loading settings...</div>
   }
 
   if (!settings) {
-    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--g400)' }}>Greška pri učitavanju postavki</div>
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--g400)' }}>Error loading settings</div>
   }
 
   return (
     <>
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>Postavke sajta</div>
-        <div style={{ fontSize: 12, color: 'var(--g500)' }}>Konfigurirajte postavke vaše organizacije</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>Site Settings</div>
+        <div style={{ fontSize: 12, color: 'var(--g500)' }}>Configure your organization settings</div>
       </div>
 
       <div className="adm-card">
-        <div className="adm-card-title">Opšte</div>
-        <div className="adm-card-desc" style={{ marginBottom: 16 }}>Osnovne informacije o organizaciji</div>
+        <div className="adm-card-title">General</div>
+        <div className="adm-card-desc" style={{ marginBottom: 16 }}>Basic organization information</div>
 
         <div className="adm-field">
-          <label className="adm-label">Naziv organizacije</label>
+          <label className="adm-label">Organization name</label>
           <input
             className="adm-input"
             value={settings.name}
@@ -101,19 +101,19 @@ export default function AdminSitePage() {
             disabled
             style={{ background: 'var(--g50)', color: 'var(--g400)' }}
           />
-          <div style={{ fontSize: 11, color: 'var(--g400)', marginTop: 4 }}>Slug se ne može promijeniti</div>
+          <div style={{ fontSize: 11, color: 'var(--g400)', marginTop: 4 }}>Slug cannot be changed</div>
         </div>
 
         <div style={{ display: 'flex', gap: 16 }}>
           <div className="adm-field" style={{ flex: 1 }}>
-            <label className="adm-label">Jezik</label>
+            <label className="adm-label">Language</label>
             <select
               className="adm-select"
               value={settings.language}
               onChange={(e) => setSettings({ ...settings, language: e.target.value })}
               style={{ width: '100%', padding: '10px 14px' }}
             >
-              <option value="bs">Bosanski</option>
+              <option value="bs">Bosnian</option>
               <option value="en">English</option>
               <option value="tr">Turkish</option>
               <option value="es">Spanish</option>
@@ -125,7 +125,7 @@ export default function AdminSitePage() {
           </div>
 
           <div className="adm-field" style={{ flex: 1 }}>
-            <label className="adm-label">Vremenska zona</label>
+            <label className="adm-label">Timezone</label>
             <select
               className="adm-select"
               value={settings.timezone}
@@ -153,14 +153,14 @@ export default function AdminSitePage() {
             disabled={saving}
             style={{ opacity: saving ? 0.5 : 1 }}
           >
-            {saved ? '\u2713 Sačuvano' : saving ? 'Čuvanje...' : 'Sačuvaj promjene'}
+            {saved ? '\u2713 Saved' : saving ? 'Saving...' : 'Save changes'}
           </button>
         </div>
       </div>
 
       <div className="adm-card">
-        <div className="adm-card-title">API ključevi</div>
-        <div className="adm-card-desc" style={{ marginBottom: 16 }}>Veze s eksternim servisima (postavljeno putem env varijabli)</div>
+        <div className="adm-card-title">API Keys</div>
+        <div className="adm-card-desc" style={{ marginBottom: 16 }}>Connections to external services (configured via env variables)</div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {([
@@ -182,7 +182,7 @@ export default function AdminSitePage() {
               }} />
               <span style={{ color: 'var(--g700)' }}>{name}</span>
               <span style={{ marginLeft: 'auto', fontSize: 11, color: configured ? '#22c55e' : 'var(--g400)' }}>
-                {configured ? 'Aktivan' : 'Nedostaje'}
+                {configured ? 'Active' : 'Missing'}
               </span>
             </div>
           ))}
@@ -191,7 +191,7 @@ export default function AdminSitePage() {
 
       <div className="adm-card">
         <div className="adm-card-title">Google Analytics</div>
-        <div className="adm-card-desc" style={{ marginBottom: 16 }}>GA4 Measurement ID za praćenje posjeta na javnom sajtu</div>
+        <div className="adm-card-desc" style={{ marginBottom: 16 }}>GA4 Measurement ID for tracking visits on the public site</div>
 
         <div className="adm-field">
           <label className="adm-label">GA4 Measurement ID</label>
@@ -202,7 +202,7 @@ export default function AdminSitePage() {
             placeholder="G-XXXXXXXXXX"
           />
           <div style={{ fontSize: 11, color: 'var(--g400)', marginTop: 4 }}>
-            Unesite GA4 Measurement ID (npr. G-XXXXXXXXXX). Ostavite prazno da onemogućite praćenje.
+            Enter your GA4 Measurement ID (e.g. G-XXXXXXXXXX). Leave empty to disable tracking.
           </div>
         </div>
 
@@ -213,21 +213,21 @@ export default function AdminSitePage() {
             disabled={saving}
             style={{ opacity: saving ? 0.5 : 1 }}
           >
-            {saved ? '\u2713 Sačuvano' : saving ? 'Čuvanje...' : 'Sačuvaj promjene'}
+            {saved ? '\u2713 Saved' : saving ? 'Saving...' : 'Save changes'}
           </button>
         </div>
       </div>
 
       {isOwner && (
         <div className="adm-danger">
-          <div className="adm-danger-title">Opasna zona</div>
+          <div className="adm-danger-title">Danger Zone</div>
           <div className="adm-danger-desc">
-            Trajno obrišite ovu organizaciju i sve njene podatke. Ova radnja se ne može poništiti.
+            Permanently delete this organization and all its data. This action cannot be undone.
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               className="adm-input"
-              placeholder={`Unesite "${settings.slug}" za potvrdu`}
+              placeholder={`Type "${settings.slug}" to confirm`}
               value={deleteConfirm}
               onChange={(e) => setDeleteConfirm(e.target.value)}
               style={{ maxWidth: 260 }}
@@ -236,9 +236,9 @@ export default function AdminSitePage() {
               className="adm-btn adm-btn-danger"
               disabled={deleteConfirm !== settings.slug}
               style={{ opacity: deleteConfirm !== settings.slug ? 0.4 : 1 }}
-              onClick={() => alert('Kontaktirajte podršku za brisanje vaše organizacije.')}
+              onClick={() => alert('Contact support to delete your organization.')}
             >
-              Obriši organizaciju
+              Delete organization
             </button>
           </div>
         </div>

@@ -4,12 +4,12 @@ import { useState, useCallback, useEffect } from 'react'
 import type { Editor } from '@tiptap/react'
 
 const TEMPLATES = [
-  { label: '⚽ Preview', articleType: 'preview', prompt: 'Napiši najavu utakmice' },
-  { label: '📝 Report', articleType: 'report', prompt: 'Napiši izvještaj o utakmici' },
-  { label: '🔄 Transfer', articleType: 'transfer', prompt: 'Napiši članak o transferu' },
-  { label: '📊 Analysis', articleType: 'analysis', prompt: 'Napiši taktičku analizu' },
-  { label: '🏆 Rankings', articleType: 'rankings', prompt: 'Napiši ranking listu' },
-  { label: '👤 Profile', articleType: 'profile', prompt: 'Napiši profil igrača' },
+  { label: '⚽ Preview', articleType: 'preview', prompt: 'Write match preview' },
+  { label: '📝 Report', articleType: 'report', prompt: 'Write match report' },
+  { label: '🔄 Transfer', articleType: 'transfer', prompt: 'Write transfer article' },
+  { label: '📊 Analysis', articleType: 'analysis', prompt: 'Write tactical analysis' },
+  { label: '🏆 Rankings', articleType: 'rankings', prompt: 'Write rankings' },
+  { label: '👤 Profile', articleType: 'profile', prompt: 'Write player profile' },
 ]
 
 const COVERAGE = [
@@ -95,7 +95,7 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
         }),
       })
       const data = await res.json() as { error?: string; model?: string; tokensIn?: number; tokensOut?: number; title?: string; tiptapContent?: Record<string, unknown>; content?: string }
-      if (!res.ok) throw new Error(data.error || 'Generisanje nije uspjelo')
+      if (!res.ok) throw new Error(data.error || 'Generation failed')
 
       setLastResult({ model: data.model, tokensIn: data.tokensIn, tokensOut: data.tokensOut })
 
@@ -113,7 +113,7 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
 
       detectContext()
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Generisanje nije uspjelo. Pokušajte ponovo.'
+      const message = err instanceof Error ? err.message : 'Generation failed. Please try again.'
       setError(message)
       console.error('AI generate error:', err)
     } finally {
@@ -180,7 +180,7 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
         <textarea
           className="ai-sb-prompt"
           rows={3}
-          placeholder="Opišite temu — AI će napisati članak"
+          placeholder="Describe the topic — AI will write the article"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) handleGenerate() }}

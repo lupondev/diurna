@@ -13,9 +13,9 @@ type InviteRow = {
 }
 
 function inviteStatus(invite: InviteRow): { label: string; cls: string } {
-  if (invite.usedAt) return { label: 'Iskorištena', cls: 'used' }
-  if (new Date(invite.expiresAt) < new Date()) return { label: 'Istekla', cls: 'expired' }
-  return { label: 'Na čekanju', cls: 'pending' }
+  if (invite.usedAt) return { label: 'Used', cls: 'used' }
+  if (new Date(invite.expiresAt) < new Date()) return { label: 'Expired', cls: 'expired' }
+  return { label: 'Pending', cls: 'pending' }
 }
 
 export default function AdminInvitesPage() {
@@ -55,7 +55,7 @@ export default function AdminInvitesPage() {
         setRole('JOURNALIST')
         fetchInvites()
       } else {
-        alert(data.error || 'Greška pri kreiranju pozivnice')
+        alert(data.error || 'Error creating invite')
       }
     } finally {
       setSubmitting(false)
@@ -74,21 +74,21 @@ export default function AdminInvitesPage() {
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>Pozivnice za tim</div>
-          <div style={{ fontSize: 12, color: 'var(--g500)' }}>Pozovite članove da se pridruže vašoj organizaciji</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--g900)' }}>Team Invites</div>
+          <div style={{ fontSize: 12, color: 'var(--g500)' }}>Invite members to join your organization</div>
         </div>
         <button className="adm-btn adm-btn-primary" onClick={() => { setShowModal(true); setLastInviteUrl(null) }}>
-          + Pozovi člana
+          + Invite member
         </button>
       </div>
 
       {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--g400)' }}>Učitavanje pozivnica...</div>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--g400)' }}>Loading invites...</div>
       ) : invites.length === 0 ? (
         <div className="adm-card" style={{ textAlign: 'center', padding: 40 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>{'\u2709\uFE0F'}</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g900)', marginBottom: 4 }}>Nema pozivnica</div>
-          <div style={{ fontSize: 12, color: 'var(--g400)' }}>Pozovite prvog člana tima za početak</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--g900)', marginBottom: 4 }}>No invites</div>
+          <div style={{ fontSize: 12, color: 'var(--g400)' }}>Invite your first team member to get started</div>
         </div>
       ) : (
         <div className="adm-table">
@@ -96,10 +96,10 @@ export default function AdminInvitesPage() {
             <thead>
               <tr>
                 <th>Email</th>
-                <th>Uloga</th>
+                <th>Role</th>
                 <th>Status</th>
-                <th>Kreirano</th>
-                <th>Ističe</th>
+                <th>Created</th>
+                <th>Expires</th>
               </tr>
             </thead>
             <tbody>
@@ -111,10 +111,10 @@ export default function AdminInvitesPage() {
                     <td><span className={`adm-badge ${inv.role.toLowerCase()}`}>{inv.role}</span></td>
                     <td><span className={`adm-badge ${status.cls}`}>{status.label}</span></td>
                     <td style={{ fontSize: 12, color: 'var(--g400)', fontFamily: 'var(--mono)' }}>
-                      {new Date(inv.createdAt).toLocaleDateString('bs-BA')}
+                      {new Date(inv.createdAt).toLocaleDateString('en-US')}
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--g400)', fontFamily: 'var(--mono)' }}>
-                      {new Date(inv.expiresAt).toLocaleDateString('bs-BA')}
+                      {new Date(inv.expiresAt).toLocaleDateString('en-US')}
                     </td>
                   </tr>
                 )
@@ -127,12 +127,12 @@ export default function AdminInvitesPage() {
       {showModal && (
         <div className="adm-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}>
           <div className="adm-modal">
-            <div className="adm-modal-title">Pozovi člana tima</div>
+            <div className="adm-modal-title">Invite team member</div>
 
             {lastInviteUrl ? (
               <>
                 <div style={{ fontSize: 13, color: 'var(--g700)', marginBottom: 12 }}>
-                  Pozivnica kreirana! Podijelite ovaj link:
+                  Invite created! Share this link:
                 </div>
                 <div style={{
                   padding: '10px 14px', background: 'var(--g50)', borderRadius: 10,
@@ -143,33 +143,33 @@ export default function AdminInvitesPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="adm-btn adm-btn-primary" onClick={copyLink}>
-                    {copied ? '\u2705 Kopirano!' : '\u{1F4CB} Kopiraj link'}
+                    {copied ? '\u2705 Copied!' : '\u{1F4CB} Copy link'}
                   </button>
                   <button className="adm-btn adm-btn-secondary" onClick={() => { setShowModal(false); setLastInviteUrl(null) }}>
-                    Gotovo
+                    Done
                   </button>
                 </div>
               </>
             ) : (
               <>
                 <div className="adm-field">
-                  <label className="adm-label">Email adresa</label>
+                  <label className="adm-label">Email address</label>
                   <input
                     className="adm-input"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="kolega@primjer.com"
+                    placeholder="colleague@example.com"
                     autoFocus
                   />
                 </div>
 
                 <div className="adm-field">
-                  <label className="adm-label">Uloga</label>
+                  <label className="adm-label">Role</label>
                   <select className="adm-select" value={role} onChange={(e) => setRole(e.target.value)} style={{ width: '100%', padding: '10px 14px' }}>
-                    <option value="ADMIN">Admin — Potpuni pristup + upravljanje korisnicima</option>
-                    <option value="EDITOR">Urednik — Kreiranje sadržaja + kalendar</option>
-                    <option value="JOURNALIST">Novinar — Samo pisanje članaka</option>
+                    <option value="ADMIN">Admin — Full access + user management</option>
+                    <option value="EDITOR">Editor — Content creation + calendar</option>
+                    <option value="JOURNALIST">Journalist — Article writing only</option>
                   </select>
                 </div>
 
@@ -180,9 +180,9 @@ export default function AdminInvitesPage() {
                     disabled={submitting || !email.trim()}
                     style={{ opacity: submitting || !email.trim() ? 0.5 : 1 }}
                   >
-                    {submitting ? 'Kreiranje...' : 'Pošalji pozivnicu'}
+                    {submitting ? 'Creating...' : 'Send invite'}
                   </button>
-                  <button className="adm-btn adm-btn-secondary" onClick={() => setShowModal(false)}>Otkaži</button>
+                  <button className="adm-btn adm-btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
                 </div>
               </>
             )}

@@ -16,13 +16,13 @@ const SyncTab = dynamic(() => import('../admin/sync/page'), { ssr: false })
 const HealthTab = dynamic(() => import('../health/page'), { ssr: false })
 
 const TABS = [
-  { id: 'general', label: 'Opšte' },
-  { id: 'api-keys', label: 'API Ključevi' },
-  { id: 'team', label: 'Tim' },
-  { id: 'invites', label: 'Pozivnice' },
-  { id: 'audit', label: 'Zapisnik' },
-  { id: 'sync', label: 'Sinhronizacija' },
-  { id: 'health', label: 'Zdravlje sistema' },
+  { id: 'general', label: 'General' },
+  { id: 'api-keys', label: 'API Keys' },
+  { id: 'team', label: 'Team' },
+  { id: 'invites', label: 'Invites' },
+  { id: 'audit', label: 'Logs' },
+  { id: 'sync', label: 'Sync' },
+  { id: 'health', label: 'System Health' },
 ]
 
 function SettingsInner() {
@@ -37,8 +37,8 @@ function SettingsInner() {
   return (
     <div className="st-page">
       <div className="st-page-header">
-        <h1 className="st-page-title">Postavke</h1>
-        <p className="st-page-desc">Upravljajte svim postavkama na jednom mjestu</p>
+        <h1 className="st-page-title">Settings</h1>
+        <p className="st-page-desc">Manage all settings in one place</p>
       </div>
 
       <div className="st-tabs">
