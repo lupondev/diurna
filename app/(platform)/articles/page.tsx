@@ -29,12 +29,13 @@ export default function ArticlesPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
 
-  // Bug C fix: pass filter & search to server so it applies across ALL articles, not just the current page
   const fetchArticles = useCallback((p: number, status: StatusFilter, q: string) => {
     setLoading(true)
     const params = new URLSearchParams({ page: String(p), limit: '20' })
     if (status !== 'ALL') params.set('status', status)
     if (q.trim()) params.set('q', q.trim())
+    // Bug fix: exclude test articles from the list
+    params.set('isTest', 'false')
     fetch(`/api/articles?${params}`)
       .then((r) => r.json() as Promise<{ articles?: Article[]; pagination?: { totalPages?: number; total?: number } }>)
       .then((data) => {
@@ -61,8 +62,19 @@ export default function ArticlesPage() {
     setPage(1)
   }
 
-  async function quickAction(id: string, action: 'publish' | 'unpublish' | 'delete') {
-    if (action === 'delete' && !confirm('Delete this article?')) return
+  async function quickAction(id: string, action: 'publish' | 'unpublish' | 'delete', article: Article) {
+    if (action === 'delete') {
+      // Bug fix: stronger confirmation for published articles
+      if (article.status === 'PUBLISHED') {
+        const confirmed = confirm(
+          `"${article.title}" is currently PUBLISHED and live on your site.\n\nAre you sure you want to delete it? It will be removed from your site immediately.`
+        )
+        if (!confirmed) return
+      } else {
+        if (!confirm(`Delete "${article.title}"?`)) return
+      }
+    }
+
     try {
       if (action === 'delete') {
         await fetch(`/api/articles/${id}`, { method: 'DELETE' })
@@ -118,7 +130,6 @@ export default function ArticlesPage() {
         </Link>
       </div>
 
-      {/* Bug F fix: search bar */}
       <form onSubmit={handleSearch} style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
         <input
           type="text"
@@ -153,7 +164,6 @@ export default function ArticlesPage() {
         )}
       </form>
 
-      {/* Bug C fix: filter buttons now trigger server-side filtering */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
         {(['ALL', 'DRAFT', 'IN_REVIEW', 'PUBLISHED', 'SCHEDULED'] as StatusFilter[]).map((f) => (
           <button
@@ -221,7 +231,7 @@ export default function ArticlesPage() {
                     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                       {a.status !== 'PUBLISHED' && (
                         <button
-                          onClick={() => quickAction(a.id, 'publish')}
+                          onClick={() => quickAction(a.id, 'publish', a)}
                           style={{ fontSize: 10, padding: '4px 8px', borderRadius: 4, border: '1px solid #dcfce7', background: '#f0fdf4', color: '#166534', cursor: 'pointer', fontWeight: 600 }}
                         >
                           Publish
@@ -229,14 +239,14 @@ export default function ArticlesPage() {
                       )}
                       {a.status === 'PUBLISHED' && (
                         <button
-                          onClick={() => quickAction(a.id, 'unpublish')}
+                          onClick={() => quickAction(a.id, 'unpublish', a)}
                           style={{ fontSize: 10, padding: '4px 8px', borderRadius: 4, border: '1px solid #fef3c7', background: '#fffbeb', color: '#92400e', cursor: 'pointer', fontWeight: 600 }}
                         >
                           Unpublish
                         </button>
                       )}
                       <button
-                        onClick={() => quickAction(a.id, 'delete')}
+                        onClick={() => quickAction(a.id, 'delete', a)}
                         style={{ fontSize: 10, padding: '4px 8px', borderRadius: 4, border: '1px solid #fee2e2', background: '#fef2f2', color: '#991b1b', cursor: 'pointer', fontWeight: 600 }}
                       >
                         Delete
