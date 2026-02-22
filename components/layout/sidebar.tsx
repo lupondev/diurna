@@ -6,7 +6,7 @@ import { signOut, useSession } from 'next-auth/react'
 import { LanguageSelector } from '@/components/language-selector'
 import { useLanguage } from '@/hooks/use-language'
 
-type NavItem = { label: string; icon: string; href: string; badge?: string }
+type NavItem = { label: string; icon: string; href: string; badge?: string; exact?: boolean }
 type NavSection = { label: string; items: NavItem[]; roles?: string[] }
 
 const sections: NavSection[] = [
@@ -14,7 +14,7 @@ const sections: NavSection[] = [
     label: 'Main',
     items: [
       { label: 'Newsroom', icon: '\ud83d\udcf0', href: '/newsroom' },
-      { label: 'Editor', icon: '\u270d\ufe0f', href: '/editor' },
+      { label: 'Editor', icon: '\u270d\ufe0f', href: '/editor', exact: true },
       { label: 'Calendar', icon: '\ud83d\udcc5', href: '/calendar' },
       { label: 'Articles', icon: '\ud83d\udcc4', href: '/articles' },
     ],
@@ -22,7 +22,6 @@ const sections: NavSection[] = [
   {
     label: 'Intelligence',
     items: [
-      // Bug C fix: add AI Co-Pilot to sidebar
       { label: 'AI Co-Pilot', icon: '\ud83e\udd16', href: '/copilot' },
       { label: 'Analytics', icon: '\ud83d\udcca', href: '/analytics' },
     ],
@@ -30,8 +29,8 @@ const sections: NavSection[] = [
   {
     label: 'Sport',
     items: [
-      { label: 'Football Hub', icon: '\u26bd', href: '/football' },
-      // Bug D fix: use different icon for Fixtures vs Calendar
+      // exact: true so /football/fixtures doesn't also highlight Football Hub
+      { label: 'Football Hub', icon: '\u26bd', href: '/football', exact: true },
       { label: 'Fixtures', icon: '\ud83d\udd22', href: '/football/fixtures' },
       { label: 'Leagues & Tables', icon: '\ud83c\udfc6', href: '/football/leagues' },
     ],
@@ -69,8 +68,18 @@ export function Sidebar() {
   const userRole = (session?.user as { role?: string } | undefined)?.role || ''
   const { locale, setLocale } = useLanguage()
 
-  // Bug E fix: derive plan label from role instead of hardcoding 'Pro Plan'
-  const planLabel = userRole === 'OWNER' ? 'Owner' : userRole === 'ADMIN' ? 'Admin' : userRole === 'EDITOR' ? 'Editor' : userRole === 'WRITER' ? 'Writer' : 'Member'
+  const planLabel =
+    userRole === 'OWNER' ? 'Owner'
+    : userRole === 'ADMIN' ? 'Admin'
+    : userRole === 'EDITOR' ? 'Editor'
+    : userRole === 'JOURNALIST' ? 'Journalist'
+    : 'Member'
+
+  function isActive(item: NavItem): boolean {
+    if (item.exact) return pathname === item.href
+    // Editor sub-pages like /editor/[id] should keep editor highlighted
+    return pathname.startsWith(item.href)
+  }
 
   return (
     <aside className="sb">
@@ -93,24 +102,17 @@ export function Sidebar() {
         {sections.filter((s) => !s.roles || s.roles.includes(userRole)).map((section) => (
           <div key={section.label} className="ns">
             <div className="nl">{section.label}</div>
-            {section.items.map((item) => {
-              const isActive =
-                item.href === '/'
-                  ? pathname === '/'
-                  : pathname.startsWith(item.href)
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`ni${isActive ? ' act' : ''}`}
-                >
-                  <span className="ni-i">{item.icon}</span>
-                  {item.label}
-                  {item.badge && <span className="ni-b">{item.badge}</span>}
-                </Link>
-              )
-            })}
+            {section.items.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`ni${isActive(item) ? ' act' : ''}`}
+              >
+                <span className="ni-i">{item.icon}</span>
+                {item.label}
+                {item.badge && <span className="ni-b">{item.badge}</span>}
+              </Link>
+            ))}
           </div>
         ))}
       </nav>
@@ -123,7 +125,6 @@ export function Sidebar() {
           <div className="sb-av">{userInitial}</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--g900)' }}>{userName}</div>
-            {/* Bug E fix: show actual role instead of hardcoded 'Pro Plan' */}
             <div style={{ fontSize: 10, color: 'var(--g500)' }}>{planLabel}</div>
           </div>
           <button
