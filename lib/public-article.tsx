@@ -17,10 +17,6 @@ import { MetaBar } from '@/components/public/sportba/meta-bar'
 import { Reactions } from '@/components/public/sportba/reactions'
 import { NewsletterForm } from '@/components/public/sportba/newsletter-form'
 
-/* ═══════════════════════════════════════════════════
-   Shared article fetch + render for all category routes
-   ═══════════════════════════════════════════════════ */
-
 export async function fetchArticle(slug: string, categorySlug?: string) {
   const site = await getDefaultSite()
   if (!site) return null
@@ -67,7 +63,7 @@ export async function fetchArticle(slug: string, categorySlug?: string) {
       isTest: false,
       id: { not: article.id },
     },
-    select: { title: true, slug: true, category: { select: { slug: true, name: true } }, publishedAt: true },
+    select: { title: true, slug: true, featuredImage: true, category: { select: { slug: true, name: true } }, publishedAt: true },
     orderBy: { publishedAt: 'desc' },
     take: 3,
   })
@@ -119,8 +115,6 @@ export async function buildArticleMetadata(slug: string, categorySlug?: string):
   }
 }
 
-/* ── Helpers ── */
-
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
   if (seconds < 3600) return `${Math.floor(seconds / 60)} min`
@@ -129,7 +123,8 @@ function timeAgo(date: Date): string {
 }
 
 function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('bs-BA', { day: 'numeric', month: 'long', year: 'numeric' }).format(date) + '.'
+  const formatted = new Intl.DateTimeFormat('bs-BA', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
+  return formatted.replace(/\.+$/, '') + '.'
 }
 
 function removeLeadingTitle(html: string, title: string): string {
@@ -149,8 +144,6 @@ function getCategoryFallback(slug?: string): string {
   }
   return map[slug || ''] || '/images/fallback/news.svg'
 }
-
-/* ── Article Page Component ── */
 
 export function ArticlePage({ data }: { data: ArticleData }) {
   const { article, authorName, related, trending, site } = data
@@ -190,13 +183,10 @@ export function ArticlePage({ data }: { data: ArticleData }) {
 
       <div className="sba-article-layout">
         <article className="sba-article-main">
-          {/* Breadcrumb */}
           <nav className="sba-breadcrumb" aria-label="Breadcrumb">
             <Link href="/">Početna</Link>
             <span className="sba-breadcrumb-sep">/</span>
             <Link href={`/${categorySlug}`}>{categoryName}</Link>
-            <span className="sba-breadcrumb-sep">/</span>
-            <span className="sba-breadcrumb-current">Članak</span>
           </nav>
 
           <span className="sba-article-cat">{categoryName}</span>
@@ -213,7 +203,6 @@ export function ArticlePage({ data }: { data: ArticleData }) {
             views=""
           />
 
-          {/* Featured Image */}
           <div className="sba-featured-img">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -224,12 +213,10 @@ export function ArticlePage({ data }: { data: ArticleData }) {
             />
           </div>
 
-          {/* Article Body */}
           <div className="sba-article-body">
             <WidgetHydrator html={bodyHtml} />
           </div>
 
-          {/* Tags */}
           {article.tags.length > 0 && (
             <div className="sba-article-tags">
               {article.tags.map(({ tag }) => (
@@ -242,7 +229,6 @@ export function ArticlePage({ data }: { data: ArticleData }) {
 
           <Reactions />
 
-          {/* Related Articles */}
           {related.length > 0 && (
             <section className="sba-related">
               <div className="sba-section-head">
@@ -252,10 +238,19 @@ export function ArticlePage({ data }: { data: ArticleData }) {
                 {related.map((r) => (
                   <Link key={r.slug} href={getArticleUrl(r)} className="sba-related-card">
                     <div className="sba-related-card-img">
-                      <div
-                        className="sba-related-card-img-bg"
-                        style={{ background: 'linear-gradient(135deg, #1e3a5f, #0d1b2a)' }}
-                      />
+                      {r.featuredImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={r.featuredImage}
+                          alt={r.title}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                      ) : (
+                        <div
+                          className="sba-related-card-img-bg"
+                          style={{ background: 'linear-gradient(135deg, #1e3a5f, #0d1b2a)', width: '100%', height: '100%' }}
+                        />
+                      )}
                     </div>
                     <div className="sba-related-card-body">
                       <span className="sba-related-card-cat">{r.category?.name?.toUpperCase() || 'VIJESTI'}</span>
@@ -275,7 +270,6 @@ export function ArticlePage({ data }: { data: ArticleData }) {
           </div>
         </article>
 
-        {/* Sidebar */}
         <aside className="sba-article-sidebar">
           <div className="sba-sidebar-sticky">
             <AdSlot variant="rectangle" />
@@ -290,7 +284,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
                       <div className="sba-trending-body">
                         <span className="sba-trending-title">{t.title}</span>
                         <span className="sba-trending-meta">
-                          {t.category?.name || 'Vijesti'} {t.publishedAt ? `· ${timeAgo(t.publishedAt)}` : ''}
+                          {t.category?.name || 'Vijesti'}{t.publishedAt ? ` · ${timeAgo(t.publishedAt)}` : ''}
                         </span>
                       </div>
                     </Link>
