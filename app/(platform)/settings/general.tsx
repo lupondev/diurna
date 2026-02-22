@@ -20,6 +20,7 @@ interface NewsletterStats {
 interface SiteData {
   name: string
   domain: string
+  description: string
   gaId: string
   language: string
   timezone: string
@@ -27,6 +28,33 @@ interface SiteData {
   wpSiteUrl: string
   wpApiKey: string
   competitorFeeds: string[]
+  metaTitle: string
+  metaDescription: string
+  ogImage: string
+  twitterHandle: string
+  facebookUrl: string
+  instagramHandle: string
+  youtubeUrl: string
+}
+
+const DEFAULT_SITE: SiteData = {
+  name: '',
+  domain: '',
+  description: '',
+  gaId: '',
+  language: 'bs',
+  timezone: 'Europe/Sarajevo',
+  theme: 'editorial',
+  wpSiteUrl: '',
+  wpApiKey: '',
+  competitorFeeds: [],
+  metaTitle: '',
+  metaDescription: '',
+  ogImage: '',
+  twitterHandle: '',
+  facebookUrl: '',
+  instagramHandle: '',
+  youtubeUrl: '',
 }
 
 export default function GeneralTab() {
@@ -42,28 +70,18 @@ export default function GeneralTab() {
 
   const [nlStats, setNlStats] = useState<NewsletterStats | null>(null)
 
-  // Bug E fix: store server-loaded values so Discard resets to them, not hardcoded defaults
-  const serverData = useRef<SiteData>({
-    name: 'SportNews Pro',
-    domain: 'sportnews.com',
-    gaId: '',
-    language: 'bs',
-    timezone: 'Europe/Sarajevo',
-    theme: 'editorial',
-    wpSiteUrl: '',
-    wpApiKey: '',
-    competitorFeeds: [],
-  })
+  // Store server-loaded values so Discard resets to them, not hardcoded defaults
+  const serverData = useRef<SiteData>({ ...DEFAULT_SITE })
 
-  const [siteName, setSiteName] = useState('SportNews Pro')
-  const [siteUrl, setSiteUrl] = useState('sportnews.com')
-  const [description, setDescription] = useState('Breaking sports news, powered by AI')
+  const [siteName, setSiteName] = useState('')
+  const [siteUrl, setSiteUrl] = useState('')
+  const [description, setDescription] = useState('')
   const [language, setLanguage] = useState('bs')
   const [timezone, setTimezone] = useState('Europe/Sarajevo')
   const [theme, setTheme] = useState('editorial')
   const [brandColor, setBrandColor] = useState('#00D4AA')
-  const [metaTitle, setMetaTitle] = useState('SportNews Pro — AI-Powered Sports News')
-  const [metaDesc, setMetaDesc] = useState('Breaking sports news, match previews, transfer updates and tactical analysis. Powered by AI.')
+  const [metaTitle, setMetaTitle] = useState('')
+  const [metaDesc, setMetaDesc] = useState('')
   const [ogImage, setOgImage] = useState('')
   const [gaId, setGaId] = useState('')
   const [twitter, setTwitter] = useState('')
@@ -79,13 +97,13 @@ export default function GeneralTab() {
 
   useEffect(() => {
     fetch('/api/site')
-      .then((r) => r.ok ? r.json() as Promise<{ name?: string; domain?: string; gaId?: string; language?: string; timezone?: string; theme?: string; wpSiteUrl?: string; wpApiKey?: string; competitorFeeds?: string[] }> : null)
+      .then((r) => r.ok ? r.json() as Promise<Partial<SiteData>> : null)
       .then((data) => {
         if (!data) return
-        // Bug E fix: cache loaded values in ref for Discard
-        serverData.current = {
-          name: data.name ?? serverData.current.name,
-          domain: data.domain ?? serverData.current.domain,
+        const loaded: SiteData = {
+          name: data.name ?? '',
+          domain: data.domain ?? '',
+          description: data.description ?? '',
           gaId: data.gaId ?? '',
           language: data.language ?? 'bs',
           timezone: data.timezone ?? 'Europe/Sarajevo',
@@ -93,16 +111,32 @@ export default function GeneralTab() {
           wpSiteUrl: data.wpSiteUrl ?? '',
           wpApiKey: data.wpApiKey ?? '',
           competitorFeeds: data.competitorFeeds ?? [],
+          metaTitle: data.metaTitle ?? '',
+          metaDescription: data.metaDescription ?? '',
+          ogImage: data.ogImage ?? '',
+          twitterHandle: data.twitterHandle ?? '',
+          facebookUrl: data.facebookUrl ?? '',
+          instagramHandle: data.instagramHandle ?? '',
+          youtubeUrl: data.youtubeUrl ?? '',
         }
-        if (data.name) setSiteName(data.name)
-        if (data.domain) setSiteUrl(data.domain)
-        if (data.gaId) setGaId(data.gaId)
-        if (data.language) setLanguage(data.language)
-        if (data.timezone) setTimezone(data.timezone)
-        if (data.theme) setTheme(data.theme)
-        if (data.wpSiteUrl) setWpSiteUrl(data.wpSiteUrl)
-        if (data.wpApiKey) setWpApiKey(data.wpApiKey)
-        if (data.competitorFeeds) setCompetitorFeeds(data.competitorFeeds)
+        serverData.current = loaded
+        setSiteName(loaded.name)
+        setSiteUrl(loaded.domain)
+        setDescription(loaded.description)
+        setGaId(loaded.gaId)
+        setLanguage(loaded.language)
+        setTimezone(loaded.timezone)
+        setTheme(loaded.theme)
+        setWpSiteUrl(loaded.wpSiteUrl)
+        setWpApiKey(loaded.wpApiKey)
+        setCompetitorFeeds(loaded.competitorFeeds)
+        setMetaTitle(loaded.metaTitle)
+        setMetaDesc(loaded.metaDescription)
+        setOgImage(loaded.ogImage)
+        setTwitter(loaded.twitterHandle)
+        setFacebook(loaded.facebookUrl)
+        setInstagram(loaded.instagramHandle)
+        setYoutube(loaded.youtubeUrl)
       })
       .catch(() => {})
   }, [])
@@ -187,6 +221,7 @@ export default function GeneralTab() {
         body: JSON.stringify({
           name: siteName,
           domain: siteUrl,
+          description: description || null,
           gaId,
           language,
           timezone,
@@ -194,11 +229,22 @@ export default function GeneralTab() {
           wpSiteUrl: wpSiteUrl || null,
           wpApiKey: wpApiKey || null,
           competitorFeeds,
+          metaTitle: metaTitle || null,
+          metaDescription: metaDesc || null,
+          ogImage: ogImage || null,
+          twitterHandle: twitter || null,
+          facebookUrl: facebook || null,
+          instagramHandle: instagram || null,
+          youtubeUrl: youtube || null,
         }),
       })
       if (res.ok) {
-        // Bug E fix: update cached server values after successful save
-        serverData.current = { name: siteName, domain: siteUrl, gaId, language, timezone, theme, wpSiteUrl, wpApiKey, competitorFeeds }
+        serverData.current = {
+          name: siteName, domain: siteUrl, description, gaId, language, timezone, theme,
+          wpSiteUrl, wpApiKey, competitorFeeds,
+          metaTitle, metaDescription: metaDesc, ogImage,
+          twitterHandle: twitter, facebookUrl: facebook, instagramHandle: instagram, youtubeUrl: youtube,
+        }
         setDirty(false)
         setSaved(true)
         setTimeout(() => setSaved(false), 2000)
@@ -209,11 +255,12 @@ export default function GeneralTab() {
     }
   }
 
-  // Bug E fix: discard resets to server-loaded values, not hardcoded
+  // Discard resets to server-loaded values, not hardcoded
   function handleDiscard() {
     const s = serverData.current
     setSiteName(s.name)
     setSiteUrl(s.domain)
+    setDescription(s.description)
     setGaId(s.gaId)
     setLanguage(s.language)
     setTimezone(s.timezone)
@@ -221,6 +268,13 @@ export default function GeneralTab() {
     setWpSiteUrl(s.wpSiteUrl)
     setWpApiKey(s.wpApiKey)
     setCompetitorFeeds(s.competitorFeeds)
+    setMetaTitle(s.metaTitle)
+    setMetaDesc(s.metaDescription)
+    setOgImage(s.ogImage)
+    setTwitter(s.twitterHandle)
+    setFacebook(s.facebookUrl)
+    setInstagram(s.instagramHandle)
+    setYoutube(s.youtubeUrl)
     setDirty(false)
   }
 
@@ -384,15 +438,15 @@ export default function GeneralTab() {
           <div className="st-card-desc">Search engine and social media appearance defaults.</div>
           <div className="st-row">
             <span className="st-label">Default Meta Title</span>
-            <input className="st-input" value={metaTitle} onChange={(e) => change(setMetaTitle)(e.target.value)} />
+            <input className="st-input" value={metaTitle} onChange={(e) => change(setMetaTitle)(e.target.value)} placeholder="My SportNews — AI-Powered Sports News" />
           </div>
           <div className="st-row">
             <span className="st-label">Meta Description</span>
-            <textarea className="st-textarea" value={metaDesc} onChange={(e) => change(setMetaDesc)(e.target.value)} rows={2} />
+            <textarea className="st-textarea" value={metaDesc} onChange={(e) => change(setMetaDesc)(e.target.value)} rows={2} placeholder="Breaking sports news, match previews, transfer updates..." />
           </div>
           <div className="st-row">
             <span className="st-label">OG Image URL</span>
-            <input className="st-input mono" value={ogImage} onChange={(e) => change(setOgImage)(e.target.value)} placeholder="https://sportnews.com/og-image.jpg" />
+            <input className="st-input mono" value={ogImage} onChange={(e) => change(setOgImage)(e.target.value)} placeholder="https://yoursite.com/og-image.jpg" />
           </div>
         </div>
       </div>
