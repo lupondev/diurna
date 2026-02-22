@@ -46,9 +46,8 @@ export default async function HomePage() {
   const site = await getDefaultSite()
 
   type HeroItem = { title: string; cat: string; href: string; meta: string; bg: string }
-  type NewsItem = { cat: string; title: string; time: string; href: string; bg: string }
+  type NewsItem = { cat: string; title: string; time: string; href: string; bg: string; image: string | null }
   type TrendingItem = { title: string; meta: string; href: string }
-
   type TransferItem = { title: string; href: string; badge: 'hot' | 'confirmed' | 'rumour'; time: string }
 
   let heroItems: HeroItem[] = []
@@ -135,6 +134,7 @@ export default async function HomePage() {
         time: a.publishedAt ? timeAgo(a.publishedAt) : 'Novo',
         href: getArticleUrl(a),
         bg: GRADIENTS[(i + 4) % GRADIENTS.length],
+        image: a.featuredImage ?? null,
       }))
 
       trendingItems = articles.slice(0, 5).map((a) => ({
@@ -192,23 +192,19 @@ export default async function HomePage() {
                 <Link href="/vijesti" className="sba-section-more">Sve vijesti &rarr;</Link>
               </div>
               <div className="sba-feed">
-                {newsItems.slice(0, 4).map((n, i) => (
+                {newsItems.slice(0, 8).map((n, i) => (
                   <Link key={i} href={n.href} className="sba-feed-card">
                     <div className="sba-feed-thumb">
-                      <div className="sba-feed-thumb-bg" style={{ background: n.bg }} />
-                    </div>
-                    <div className="sba-feed-body">
-                      <span className="sba-feed-cat">{n.cat}</span>
-                      <span className="sba-feed-title">{n.title}</span>
-                      <span className="sba-feed-meta">{n.time}</span>
-                    </div>
-                  </Link>
-                ))}
-
-                {newsItems.slice(4, 8).map((n, i) => (
-                  <Link key={i + 4} href={n.href} className="sba-feed-card">
-                    <div className="sba-feed-thumb">
-                      <div className="sba-feed-thumb-bg" style={{ background: n.bg }} />
+                      {n.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={n.image}
+                          alt={n.title}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                      ) : (
+                        <div className="sba-feed-thumb-bg" style={{ background: n.bg }} />
+                      )}
                     </div>
                     <div className="sba-feed-body">
                       <span className="sba-feed-cat">{n.cat}</span>
