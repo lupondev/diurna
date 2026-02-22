@@ -13,7 +13,6 @@ function getGreeting() {
   return 'Dobro veče'
 }
 
-// Bug D fix: use en-GB locale for consistent day-first date format
 function formatDate() {
   return new Date().toLocaleDateString('en-GB', {
     weekday: 'long',
@@ -60,6 +59,7 @@ async function getDashboardData(orgId: string) {
     articlesPrevMonth,
     recentArticles,
     teamCount,
+    gaConnected,
   ] = await Promise.all([
     prisma.article.count({ where: orgFilter }),
     prisma.article.count({
@@ -86,12 +86,17 @@ async function getDashboardData(orgId: string) {
     prisma.userOnOrganization.count({
       where: { organizationId: orgId, deletedAt: null },
     }),
+    // Real GA4 check — look for any site in this org with a gaId set
+    prisma.site.findFirst({
+      where: { organizationId: orgId, deletedAt: null, gaId: { not: null } },
+      select: { gaId: true },
+    }),
   ])
 
-  let clusters: { title: string; dis: number; trend: string }[] = []
+  let clusters: { id: string; title: string; dis: number; trend: string }[] = []
   try {
     clusters = await prisma.storyCluster.findMany({
-      select: { title: true, dis: true, trend: true },
+      select: { id: true, title: true, dis: true, trend: true },
       orderBy: { dis: 'desc' },
       take: 3,
     })
@@ -115,6 +120,7 @@ async function getDashboardData(orgId: string) {
     recentArticles,
     clusters,
     teamCount,
+    hasGa: !!gaConnected?.gaId,
   }
 }
 
@@ -193,57 +199,90 @@ export default async function DashboardPage() {
           value={`${data?.aiPercentage ?? 0}%`}
           detail="of total articles"
         />
-        <div
-          style={{
-            background: 'var(--wh)',
-            border: '1px solid var(--brd)',
-            borderRadius: 'var(--rl)',
-            padding: '18px 20px',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 14,
-          }}
-        >
+        {/* ── GA4 card — real status from DB ── */}
+        {data?.hasGa ? (
           <div
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: 'var(--rm)',
-              background: 'var(--g50)',
+              background: 'var(--wh)',
+              border: '1px solid var(--brd)',
+              borderRadius: 'var(--rl)',
+              padding: '18px 20px',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 18,
-              flexShrink: 0,
+              alignItems: 'flex-start',
+              gap: 14,
             }}
           >
-            📈
-          </div>
-          <div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 700, color: 'var(--mint-d)', lineHeight: 1.3 }}>
-              GA4 Connected
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--g500)', marginTop: 2 }}>Analytics</div>
-            <a
-              href="https://analytics.google.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            <div
               style={{
-                display: 'inline-block',
-                marginTop: 6,
-                fontSize: 11,
-                fontWeight: 700,
-                fontFamily: 'var(--mono)',
-                padding: '2px 6px',
-                borderRadius: 4,
-                background: 'var(--elec-l)',
-                color: 'var(--elec)',
+                width: 40, height: 40, borderRadius: 'var(--rm)',
+                background: 'var(--mint-l)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, flexShrink: 0,
               }}
             >
-              View in Google Analytics →
-            </a>
+              📈
+            </div>
+            <div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 700, color: 'var(--mint-d)', lineHeight: 1.3 }}>
+                GA4 Connected
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--g500)', marginTop: 2 }}>Analytics active</div>
+              <a
+                href="https://analytics.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-block', marginTop: 6,
+                  fontSize: 11, fontWeight: 700, fontFamily: 'var(--mono)',
+                  padding: '2px 6px', borderRadius: 4,
+                  background: 'var(--elec-l)', color: 'var(--elec)',
+                }}
+              >
+                Open Analytics →
+              </a>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div
+            style={{
+              background: 'var(--wh)',
+              border: '1px dashed var(--brd)',
+              borderRadius: 'var(--rl)',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 14,
+            }}
+          >
+            <div
+              style={{
+                width: 40, height: 40, borderRadius: 'var(--rm)',
+                background: 'var(--g50)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, flexShrink: 0,
+              }}
+            >
+              📡
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--g700)', lineHeight: 1.3 }}>
+                Analytics
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--g400)', marginTop: 2 }}>GA4 not connected</div>
+              <Link
+                href="/settings#integrations"
+                style={{
+                  display: 'inline-block', marginTop: 6,
+                  fontSize: 11, fontWeight: 700,
+                  padding: '2px 6px', borderRadius: 4,
+                  background: 'var(--g100)', color: 'var(--g600)',
+                }}
+              >
+                Connect →
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Two-column Layout ── */}
@@ -293,16 +332,10 @@ export default async function DashboardPage() {
                       </div>
                       <span
                         style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          fontFamily: 'var(--mono)',
-                          padding: '3px 8px',
-                          borderRadius: 6,
-                          background: st.bg,
-                          color: st.color,
-                          flexShrink: 0,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
+                          fontSize: 10, fontWeight: 700, fontFamily: 'var(--mono)',
+                          padding: '3px 8px', borderRadius: 6,
+                          background: st.bg, color: st.color,
+                          flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.04em',
                         }}
                       >
                         {st.label}
@@ -323,7 +356,7 @@ export default async function DashboardPage() {
               <div>
                 {data.clusters.map((cluster, i) => (
                   <div
-                    key={i}
+                    key={cluster.id}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -334,15 +367,9 @@ export default async function DashboardPage() {
                   >
                     <div
                       style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: 'var(--rm)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 13,
-                        fontWeight: 700,
-                        fontFamily: 'var(--mono)',
+                        width: 38, height: 38, borderRadius: 'var(--rm)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 13, fontWeight: 700, fontFamily: 'var(--mono)',
                         flexShrink: 0,
                         background: cluster.dis >= 60 ? 'var(--coral-l)' : cluster.dis >= 40 ? 'var(--gold-l)' : 'var(--g100)',
                         color: cluster.dis >= 60 ? 'var(--coral)' : cluster.dis >= 40 ? '#92400E' : 'var(--g600)',
@@ -358,16 +385,14 @@ export default async function DashboardPage() {
                         {trendIcon(cluster.trend)} {cluster.trend}
                       </div>
                     </div>
+                    {/* Fix: Write goes to editor with cluster context, not copilot */}
                     <Link
-                      href="/copilot"
+                      href={`/editor?clusterId=${cluster.id}&title=${encodeURIComponent(cluster.title)}`}
                       style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: '5px 10px',
-                        borderRadius: 'var(--r)',
-                        background: 'var(--mint-l)',
-                        color: 'var(--mint-d)',
-                        flexShrink: 0,
+                        fontSize: 11, fontWeight: 700,
+                        padding: '5px 10px', borderRadius: 'var(--r)',
+                        background: 'var(--mint-l)', color: 'var(--mint-d)',
+                        flexShrink: 0, textDecoration: 'none',
                       }}
                     >
                       Write
@@ -399,16 +424,10 @@ export default async function DashboardPage() {
                   key={action.href}
                   href={action.href}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '9px 12px',
-                    borderRadius: 'var(--rm)',
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: 'var(--g700)',
-                    transition: 'all .12s',
-                    textDecoration: 'none',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '9px 12px', borderRadius: 'var(--rm)',
+                    fontSize: 13, fontWeight: 500, color: 'var(--g700)',
+                    transition: 'all .12s', textDecoration: 'none',
                   }}
                   className="qa-link"
                 >
@@ -424,7 +443,7 @@ export default async function DashboardPage() {
 
           {/* Today's Matches */}
           <Card>
-            <CardHead title="Today's Matches" href="/newsroom" linkText="All fixtures" />
+            <CardHead title="Today's Matches" href="/football/fixtures" linkText="All fixtures" />
             <MatchesWidget />
           </Card>
 
@@ -440,9 +459,7 @@ export default async function DashboardPage() {
                     <div
                       key={i}
                       style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: '50%',
+                        width: 28, height: 28, borderRadius: '50%',
                         background: ['linear-gradient(135deg,var(--elec),#8B5CF6)', 'linear-gradient(135deg,var(--mint),var(--mint-d))', 'linear-gradient(135deg,var(--gold),#F59E0B)', 'linear-gradient(135deg,var(--coral),#DC2626)'][i % 4],
                         border: '2px solid var(--wh)',
                         marginLeft: i > 0 ? -8 : 0,
@@ -460,13 +477,9 @@ export default async function DashboardPage() {
                 <Link
                   href="/settings?tab=team"
                   style={{
-                    display: 'inline-block',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    padding: '6px 14px',
-                    borderRadius: 'var(--r)',
-                    background: 'var(--elec-l)',
-                    color: 'var(--elec)',
+                    display: 'inline-block', fontSize: 12, fontWeight: 700,
+                    padding: '6px 14px', borderRadius: 'var(--r)',
+                    background: 'var(--elec-l)', color: 'var(--elec)',
                   }}
                 >
                   Invite Team
@@ -537,15 +550,10 @@ function StatCard({
     >
       <div
         style={{
-          width: 40,
-          height: 40,
-          borderRadius: 'var(--rm)',
+          width: 40, height: 40, borderRadius: 'var(--rm)',
           background: 'var(--g50)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 18,
-          flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 18, flexShrink: 0,
         }}
       >
         {icon}
@@ -558,15 +566,9 @@ function StatCard({
         {trend !== undefined && (
           <div
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 3,
-              marginTop: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              fontFamily: 'var(--mono)',
-              padding: '2px 6px',
-              borderRadius: 4,
+              display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6,
+              fontSize: 11, fontWeight: 700, fontFamily: 'var(--mono)',
+              padding: '2px 6px', borderRadius: 4,
               background: trend >= 0 ? 'var(--mint-l)' : 'var(--coral-l)',
               color: trend >= 0 ? 'var(--mint-d)' : 'var(--coral)',
             }}
@@ -609,24 +611,10 @@ function MatchesWidget() {
 
 function MatchesWidgetInner() {
   return (
-    <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }} id="matches-widget">
-        <p style={{ fontSize: 12, color: 'var(--g400)', textAlign: 'center', padding: '12px 0' }}>
-          Match data loads in the Newsroom
-        </p>
-      </div>
-      <style>{`
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        .skel {
-          background: linear-gradient(90deg, var(--g100) 25%, var(--g50) 50%, var(--g100) 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s infinite;
-          border-radius: var(--r);
-        }
-      `}</style>
-    </>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <p style={{ fontSize: 12, color: 'var(--g400)', textAlign: 'center', padding: '12px 0' }}>
+        Match data loads in the Newsroom
+      </p>
+    </div>
   )
 }
