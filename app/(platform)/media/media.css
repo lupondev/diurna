@@ -32,9 +32,19 @@
 .ml-item-body { padding: 10px 12px; }
 .ml-item-name { font-size: 12px; font-weight: 600; color: var(--g800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ml-item-meta { font-size: 10px; color: var(--g400); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+
+/* Delete button — shown on hover */
 .ml-item-delete { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; border: none; cursor: pointer; font-size: 14px; display: none; align-items: center; justify-content: center; transition: background .12s; }
 .ml-item:hover .ml-item-delete { display: flex; }
 .ml-item-delete:hover { background: var(--coral); }
+
+/* Inline confirm overlay — replaces browser confirm() */
+.ml-item-confirm { position: absolute; inset: 0; background: rgba(255,255,255,.96); display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--rl); backdrop-filter: blur(2px); animation: nrBulkIn .15s ease; }
+.ml-item-confirm-yes { padding: 6px 14px; font-size: 11px; font-weight: 800; background: var(--coral); color: #fff; border: none; border-radius: var(--rm); cursor: pointer; font-family: var(--sans); transition: opacity .12s; }
+.ml-item-confirm-yes:hover { opacity: .85; }
+.ml-item-confirm-yes:disabled { opacity: .5; cursor: not-allowed; }
+.ml-item-confirm-no { padding: 6px 14px; font-size: 11px; font-weight: 700; background: var(--g100); color: var(--g600); border: 1px solid var(--brd); border-radius: var(--rm); cursor: pointer; font-family: var(--sans); }
+.ml-item-confirm-no:hover { background: var(--g200); }
 
 .ml-uploading { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--mint-l); border: 1px solid var(--mint); border-radius: var(--rl); margin-bottom: 12px; animation: nrBulkIn .2s ease; }
 .ml-uploading-spinner { width: 18px; height: 18px; border: 2px solid var(--mint-g); border-top-color: var(--mint); border-radius: 50%; animation: spin .7s linear infinite; }
