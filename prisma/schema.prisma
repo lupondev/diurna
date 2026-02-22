@@ -169,9 +169,11 @@ model Article {
   authorId  String?
 
   isTest       Boolean  @default(false)
-  aiGenerated  Boolean  @default(false)
-  aiModel      String?
-  aiPrompt     String?
+  aiGenerated          Boolean  @default(false)
+  aiModel              String?
+  aiPrompt             String?
+  aiVerificationScore  Int?
+  aiVerificationIssues String?
   aiRevisions  AIRevision[]
   versions     ArticleVersion[]
   tags         ArticleTag[]

@@ -14,6 +14,7 @@ import {
   slugify,
   fetchUnsplashImage,
 } from '@/lib/autopilot'
+import { verifyArticle } from '@/lib/model-router'
 import { systemLog } from '@/lib/system-log'
 
 export const maxDuration = 60
@@ -208,6 +209,22 @@ export async function GET(req: NextRequest) {
           }
 
           const htmlContent = parsed.content || ''
+
+          let verification: { score: number; issues: string[] } | null = null
+          if (process.env.OPENAI_API_KEY) {
+            try {
+              verification = await verifyArticle(htmlContent)
+              await systemLog('info', 'autopilot', `Verification score: ${verification.score}`, { issues: verification.issues })
+              if (verification.score < 60) {
+                await systemLog('warn', 'autopilot', `Article skipped — verification score ${verification.score}/100`, { title, issues: verification.issues })
+                results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Verification score too low: ${verification.score}/100` })
+                continue
+              }
+            } catch (verifyErr) {
+              await systemLog('warn', 'autopilot', `Verification failed, proceeding without: ${verifyErr instanceof Error ? verifyErr.message : 'unknown'}`)
+            }
+          }
+
           let tiptapContent = htmlToTiptap(htmlContent)
 
           if (catConfig) {
@@ -250,6 +267,8 @@ export async function GET(req: NextRequest) {
                 clusterId: topCluster.id,
                 sources: newsItems.map((n) => n.title),
               }),
+              aiVerificationScore: verification?.score ?? null,
+              aiVerificationIssues: verification?.issues.join(', ') ?? null,
               metaTitle: parsed.seo?.metaTitle || title,
               metaDescription: parsed.seo?.metaDescription || parsed.excerpt || '',
             },
@@ -280,7 +299,7 @@ export async function GET(req: NextRequest) {
             title,
             category: taskCategory,
             status: config.autoPublish ? 'published' : 'draft',
-            reason: `top_story: DIS ${topCluster.dis} — ${topCluster.title}`,
+            reason: `top_story: DIS ${topCluster.dis} — ${topCluster.title} (verified: ${verification?.score ?? 'n/a'})`,
           })
         }
         continue
@@ -402,9 +421,24 @@ export async function GET(req: NextRequest) {
       }
 
       const htmlContent = parsed.content || ''
+
+      let verification: { score: number; issues: string[] } | null = null
+      if (process.env.OPENAI_API_KEY) {
+        try {
+          verification = await verifyArticle(htmlContent)
+          await systemLog('info', 'autopilot', `Verification score: ${verification.score}`, { issues: verification.issues })
+          if (verification.score < 60) {
+            await systemLog('warn', 'autopilot', `Article skipped — verification score ${verification.score}/100`, { title, issues: verification.issues })
+            results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Verification score too low: ${verification.score}/100` })
+            continue
+          }
+        } catch (verifyErr) {
+          await systemLog('warn', 'autopilot', `Verification failed, proceeding without: ${verifyErr instanceof Error ? verifyErr.message : 'unknown'}`)
+        }
+      }
+
       let tiptapContent = htmlToTiptap(htmlContent)
 
-      // Inject widgets based on category config
       const catConfig = config.categories.find((c) => c.slug === task.categorySlug)
       if (catConfig) {
         tiptapContent = injectWidgets(tiptapContent, catConfig)
@@ -453,6 +487,8 @@ export async function GET(req: NextRequest) {
             matchId: task.matchId,
             sources: task.sources.map((s) => s.title),
           }),
+          aiVerificationScore: verification?.score ?? null,
+          aiVerificationIssues: verification?.issues.join(', ') ?? null,
           metaTitle: parsed.seo?.metaTitle || title,
           metaDescription: parsed.seo?.metaDescription || parsed.excerpt || '',
         },
@@ -484,7 +520,7 @@ export async function GET(req: NextRequest) {
         title,
         category: task.category,
         status: config.autoPublish ? 'published' : 'draft',
-        reason: `${task.priority}: ${task.category} (${task.categorySlug})`,
+        reason: `${task.priority}: ${task.category} (${task.categorySlug}) (verified: ${verification?.score ?? 'n/a'})`,
       })
     }
 
