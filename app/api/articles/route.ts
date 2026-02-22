@@ -129,9 +129,10 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10) || 20))
     const skip = (page - 1) * limit
-    // Bug C fix: server-side status filter and title search
     const statusParam = searchParams.get('status')
     const qParam = searchParams.get('q')?.trim()
+    // Bug fix: honour isTest param — 'false' excludes test articles from lists
+    const isTestParam = searchParams.get('isTest')
 
     const where: Record<string, unknown> = {
       deletedAt: null,
@@ -142,6 +143,11 @@ export async function GET(req: NextRequest) {
     }
     if (qParam) {
       where.title = { contains: qParam, mode: 'insensitive' }
+    }
+    if (isTestParam === 'false') {
+      where.isTest = false
+    } else if (isTestParam === 'true') {
+      where.isTest = true
     }
 
     const [articles, total] = await Promise.all([
