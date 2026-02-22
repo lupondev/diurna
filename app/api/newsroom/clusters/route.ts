@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server'
 import { detectCategoryFromTitle } from '@/lib/newsroom-categories'
 
 export async function GET(req: Request) {
+  const mcpSecret = req.headers.get('x-mcp-secret')
+  if (mcpSecret && mcpSecret !== process.env.MCP_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
   const limit = parseInt(searchParams.get('limit') || '80')
   const eventType = searchParams.get('eventType') || undefined
@@ -10,7 +15,6 @@ export async function GET(req: Request) {
   const timeFilter = searchParams.get('timeFilter') || 'ALL'
   const siteId = searchParams.get('siteId') || undefined
 
-  // Calculate cutoff time based on timeFilter
   let cutoffDate: Date | undefined
   const now = new Date()
 
@@ -23,7 +27,6 @@ export async function GET(req: Request) {
   } else if (timeFilter === '24H') {
     cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
   }
-  // ALL / SVE = no cutoff
 
   const where = {
     ...(eventType ? { eventType } : {}),
@@ -44,13 +47,11 @@ export async function GET(req: Request) {
     take: limit,
   })
 
-  // Add category detection if missing
   const enriched = clusters.map(c => ({
     ...c,
     category: c.category || detectCategoryFromTitle(c.title),
   }))
 
-  // Stats
   const total = clusters.length
   const spiking = clusters.filter(c => c.trend === 'SPIKING').length
   const tier1 = clusters.filter(c => c.tier1Count > 0).length

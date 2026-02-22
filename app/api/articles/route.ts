@@ -29,8 +29,20 @@ function slugify(text: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    let userId: string | undefined
+
+    const mcpSecret = req.headers.get('x-mcp-secret')
+    if (mcpSecret && mcpSecret === process.env.MCP_SECRET) {
+      userId = req.headers.get('x-user-id') || undefined
+    } else {
+      const session = await getServerSession(authOptions)
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      userId = session.user.id
+    }
+
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -54,7 +66,7 @@ export async function POST(req: NextRequest) {
         status: data.status,
         siteId: data.siteId,
         categoryId: data.categoryId || null,
-        authorId: session.user.id,
+        authorId: userId,
         aiGenerated: data.aiGenerated,
         aiModel: data.aiModel,
         aiPrompt: data.aiPrompt,
@@ -62,7 +74,6 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Distribute if publishing
     if (data.status === 'PUBLISHED') {
       distributeArticle(article.id).catch(err => console.error('Distribution error:', err))
     }
@@ -79,11 +90,22 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.organizationId) {
+    let orgId: string | undefined
+
+    const mcpSecret = req.headers.get('x-mcp-secret')
+    if (mcpSecret && mcpSecret === process.env.MCP_SECRET) {
+      orgId = req.headers.get('x-org-id') || undefined
+    } else {
+      const session = await getServerSession(authOptions)
+      if (!session?.user?.organizationId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      orgId = session.user.organizationId
+    }
+
+    if (!orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const orgId = session.user.organizationId
 
     const { searchParams } = req.nextUrl
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)

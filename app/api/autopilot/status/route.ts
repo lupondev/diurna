@@ -1,16 +1,28 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id || !session.user.organizationId) {
+export async function GET(request: NextRequest) {
+  let orgId: string | undefined
+
+  const mcpSecret = request.headers.get('x-mcp-secret')
+  if (mcpSecret && mcpSecret === process.env.MCP_SECRET) {
+    orgId = request.headers.get('x-org-id') || undefined
+  } else {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id || !session.user.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    orgId = session.user.organizationId
+  }
+
+  if (!orgId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const config = await prisma.autopilotConfig.findFirst({
-    where: { orgId: session.user.organizationId },
+    where: { orgId },
     include: {
       categories: { orderBy: { sortOrder: 'asc' } },
     },
@@ -29,7 +41,7 @@ export async function GET() {
   }
 
   const site = await prisma.site.findFirst({
-    where: { organizationId: session.user.organizationId },
+    where: { organizationId: orgId },
   })
 
   const startOfDay = new Date()

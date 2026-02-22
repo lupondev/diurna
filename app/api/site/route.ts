@@ -26,16 +26,26 @@ const CreateSiteSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.organizationId) {
+    let orgId: string | undefined
+
+    const mcpSecret = req.headers.get('x-mcp-secret')
+    if (mcpSecret && mcpSecret === process.env.MCP_SECRET) {
+      orgId = req.headers.get('x-org-id') || undefined
+    } else {
+      const session = await getServerSession(authOptions)
+      if (!session?.user?.organizationId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      orgId = session.user.organizationId
+    }
+
+    if (!orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const orgId = session.user.organizationId
     const { searchParams } = new URL(req.url)
     const all = searchParams.get('all')
 
-    // Return all sites for the org
     if (all === 'true') {
       const sites = await prisma.site.findMany({
         where: { organizationId: orgId, deletedAt: null },
@@ -63,7 +73,6 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // Default: return the primary site (backwards compatible)
     const site = await getDefaultSite(orgId)
     if (!site) {
       return NextResponse.json({ error: 'No site found' }, { status: 404 })
@@ -93,8 +102,20 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.organizationId) {
+    let orgId: string | undefined
+
+    const mcpSecret = req.headers.get('x-mcp-secret')
+    if (mcpSecret && mcpSecret === process.env.MCP_SECRET) {
+      orgId = req.headers.get('x-org-id') || undefined
+    } else {
+      const session = await getServerSession(authOptions)
+      if (!session?.user?.organizationId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      orgId = session.user.organizationId
+    }
+
+    if (!orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -106,10 +127,9 @@ export async function POST(req: NextRequest) {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
 
-    // Check for duplicate slug within org
     const existing = await prisma.site.findFirst({
       where: {
-        organizationId: session.user.organizationId,
+        organizationId: orgId,
         slug,
       },
     })
@@ -119,7 +139,7 @@ export async function POST(req: NextRequest) {
 
     const site = await prisma.site.create({
       data: {
-        organizationId: session.user.organizationId,
+        organizationId: orgId,
         name: data.name,
         slug,
         domain: data.domain || null,
@@ -148,11 +168,24 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.organizationId) {
+    let orgId: string | undefined
+
+    const mcpSecret = req.headers.get('x-mcp-secret')
+    if (mcpSecret && mcpSecret === process.env.MCP_SECRET) {
+      orgId = req.headers.get('x-org-id') || undefined
+    } else {
+      const session = await getServerSession(authOptions)
+      if (!session?.user?.organizationId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      orgId = session.user.organizationId
+    }
+
+    if (!orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const site = await getDefaultSite(session.user.organizationId)
+
+    const site = await getDefaultSite(orgId)
     if (!site) {
       return NextResponse.json({ error: 'No site found' }, { status: 404 })
     }
