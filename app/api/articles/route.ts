@@ -52,7 +52,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = CreateArticleSchema.parse(body)
 
-    // FIX WARN-002: Tenant isolation — verify siteId belongs to the user's org
     if (orgId) {
       const site = await prisma.site.findFirst({
         where: { id: data.siteId, organizationId: orgId, deletedAt: null },
@@ -62,7 +61,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // FIX BUG-004: Use slugify from lib/autopilot which handles Bosnian chars
     let slug = slugify(data.title)
     const existing = await prisma.article.findFirst({
       where: { siteId: data.siteId, slug },
@@ -131,10 +129,19 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10) || 20))
     const skip = (page - 1) * limit
+    // Bug C fix: server-side status filter and title search
+    const statusParam = searchParams.get('status')
+    const qParam = searchParams.get('q')?.trim()
 
-    const where = {
+    const where: Record<string, unknown> = {
       deletedAt: null,
       site: { organizationId: orgId },
+    }
+    if (statusParam && ['DRAFT', 'IN_REVIEW', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'].includes(statusParam)) {
+      where.status = statusParam
+    }
+    if (qParam) {
+      where.title = { contains: qParam, mode: 'insensitive' }
     }
 
     const [articles, total] = await Promise.all([

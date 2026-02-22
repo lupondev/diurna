@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { SUPPORTED_LANGUAGES, setClientLanguage, LANG_CHANGE_EVENT, type LangCode } from '@/lib/languages'
 
@@ -17,6 +17,18 @@ interface NewsletterStats {
   recent: { id: string; email: string; name: string | null; isActive: boolean; subscribedAt: string }[]
 }
 
+interface SiteData {
+  name: string
+  domain: string
+  gaId: string
+  language: string
+  timezone: string
+  theme: string
+  wpSiteUrl: string
+  wpApiKey: string
+  competitorFeeds: string[]
+}
+
 export default function GeneralTab() {
   const [dirty, setDirty] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -29,17 +41,59 @@ export default function GeneralTab() {
   const searchParams = useSearchParams()
 
   const [nlStats, setNlStats] = useState<NewsletterStats | null>(null)
+
+  // Bug E fix: store server-loaded values so Discard resets to them, not hardcoded defaults
+  const serverData = useRef<SiteData>({
+    name: 'SportNews Pro',
+    domain: 'sportnews.com',
+    gaId: '',
+    language: 'bs',
+    timezone: 'Europe/Sarajevo',
+    theme: 'editorial',
+    wpSiteUrl: '',
+    wpApiKey: '',
+    competitorFeeds: [],
+  })
+
   const [siteName, setSiteName] = useState('SportNews Pro')
   const [siteUrl, setSiteUrl] = useState('sportnews.com')
   const [description, setDescription] = useState('Breaking sports news, powered by AI')
   const [language, setLanguage] = useState('bs')
   const [timezone, setTimezone] = useState('Europe/Sarajevo')
+  const [theme, setTheme] = useState('editorial')
+  const [brandColor, setBrandColor] = useState('#00D4AA')
+  const [metaTitle, setMetaTitle] = useState('SportNews Pro — AI-Powered Sports News')
+  const [metaDesc, setMetaDesc] = useState('Breaking sports news, match previews, transfer updates and tactical analysis. Powered by AI.')
+  const [ogImage, setOgImage] = useState('')
+  const [gaId, setGaId] = useState('')
+  const [twitter, setTwitter] = useState('')
+  const [facebook, setFacebook] = useState('')
+  const [instagram, setInstagram] = useState('')
+  const [youtube, setYoutube] = useState('')
+  const [wpSiteUrl, setWpSiteUrl] = useState('')
+  const [wpApiKey, setWpApiKey] = useState('')
+  const [wpTesting, setWpTesting] = useState(false)
+  const [wpTestResult, setWpTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [competitorFeeds, setCompetitorFeeds] = useState<string[]>([])
+  const [newFeedUrl, setNewFeedUrl] = useState('')
 
   useEffect(() => {
     fetch('/api/site')
       .then((r) => r.ok ? r.json() as Promise<{ name?: string; domain?: string; gaId?: string; language?: string; timezone?: string; theme?: string; wpSiteUrl?: string; wpApiKey?: string; competitorFeeds?: string[] }> : null)
       .then((data) => {
         if (!data) return
+        // Bug E fix: cache loaded values in ref for Discard
+        serverData.current = {
+          name: data.name ?? serverData.current.name,
+          domain: data.domain ?? serverData.current.domain,
+          gaId: data.gaId ?? '',
+          language: data.language ?? 'bs',
+          timezone: data.timezone ?? 'Europe/Sarajevo',
+          theme: data.theme ?? 'editorial',
+          wpSiteUrl: data.wpSiteUrl ?? '',
+          wpApiKey: data.wpApiKey ?? '',
+          competitorFeeds: data.competitorFeeds ?? [],
+        }
         if (data.name) setSiteName(data.name)
         if (data.domain) setSiteUrl(data.domain)
         if (data.gaId) setGaId(data.gaId)
@@ -120,26 +174,6 @@ export default function GeneralTab() {
     }
   }
 
-  const [theme, setTheme] = useState('editorial')
-  const [brandColor, setBrandColor] = useState('#00D4AA')
-  const [metaTitle, setMetaTitle] = useState('SportNews Pro — AI-Powered Sports News')
-  const [metaDesc, setMetaDesc] = useState('Breaking sports news, match previews, transfer updates and tactical analysis. Powered by AI.')
-  const [ogImage, setOgImage] = useState('')
-
-  const [gaId, setGaId] = useState('')
-  const [twitter, setTwitter] = useState('')
-  const [facebook, setFacebook] = useState('')
-  const [instagram, setInstagram] = useState('')
-  const [youtube, setYoutube] = useState('')
-
-  const [wpSiteUrl, setWpSiteUrl] = useState('')
-  const [wpApiKey, setWpApiKey] = useState('')
-  const [wpTesting, setWpTesting] = useState(false)
-  const [wpTestResult, setWpTestResult] = useState<{ success: boolean; message: string } | null>(null)
-
-  const [competitorFeeds, setCompetitorFeeds] = useState<string[]>([])
-  const [newFeedUrl, setNewFeedUrl] = useState('')
-
   function change<T>(setter: (v: T) => void) {
     return (v: T) => { setter(v); setDirty(true); setSaved(false) }
   }
@@ -163,6 +197,8 @@ export default function GeneralTab() {
         }),
       })
       if (res.ok) {
+        // Bug E fix: update cached server values after successful save
+        serverData.current = { name: siteName, domain: siteUrl, gaId, language, timezone, theme, wpSiteUrl, wpApiKey, competitorFeeds }
         setDirty(false)
         setSaved(true)
         setTimeout(() => setSaved(false), 2000)
@@ -173,16 +209,19 @@ export default function GeneralTab() {
     }
   }
 
+  // Bug E fix: discard resets to server-loaded values, not hardcoded
   function handleDiscard() {
+    const s = serverData.current
+    setSiteName(s.name)
+    setSiteUrl(s.domain)
+    setGaId(s.gaId)
+    setLanguage(s.language)
+    setTimezone(s.timezone)
+    setTheme(s.theme)
+    setWpSiteUrl(s.wpSiteUrl)
+    setWpApiKey(s.wpApiKey)
+    setCompetitorFeeds(s.competitorFeeds)
     setDirty(false)
-    setSiteName('SportNews Pro')
-    setSiteUrl('sportnews.com')
-    setDescription('Breaking sports news, powered by AI')
-    setLanguage('bs')
-    setTimezone('Europe/Sarajevo')
-    setBrandColor('#00D4AA')
-    setMetaTitle('SportNews Pro — AI-Powered Sports News')
-    setMetaDesc('Breaking sports news, match previews, transfer updates and tactical analysis. Powered by AI.')
   }
 
   const activeCount = fbPages.filter((p) => p.isActive).length

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -23,22 +23,43 @@ export default function ArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<StatusFilter>('ALL')
+  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
 
-  useEffect(() => {
+  // Bug C fix: pass filter & search to server so it applies across ALL articles, not just the current page
+  const fetchArticles = useCallback((p: number, status: StatusFilter, q: string) => {
     setLoading(true)
-    fetch(`/api/articles?page=${page}&limit=20`)
-      .then((r) => r.json() as Promise<{ articles?: Article[]; pagination?: { totalPages?: number } }>)
+    const params = new URLSearchParams({ page: String(p), limit: '20' })
+    if (status !== 'ALL') params.set('status', status)
+    if (q.trim()) params.set('q', q.trim())
+    fetch(`/api/articles?${params}`)
+      .then((r) => r.json() as Promise<{ articles?: Article[]; pagination?: { totalPages?: number; total?: number } }>)
       .then((data) => {
         setArticles(data.articles || [])
         setTotalPages(data.pagination?.totalPages || 1)
+        setTotal(data.pagination?.total || 0)
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [page])
+  }, [])
 
-  const filtered = filter === 'ALL' ? articles : articles.filter((a) => a.status === filter)
+  useEffect(() => {
+    fetchArticles(page, filter, search)
+  }, [page, filter, search, fetchArticles])
+
+  function handleFilterChange(f: StatusFilter) {
+    setFilter(f)
+    setPage(1)
+  }
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    setSearch(searchInput)
+    setPage(1)
+  }
 
   async function quickAction(id: string, action: 'publish' | 'unpublish' | 'delete') {
     if (action === 'delete' && !confirm('Delete this article?')) return
@@ -52,10 +73,7 @@ export default function ArticlesPage() {
           body: JSON.stringify({ status: action === 'publish' ? 'PUBLISHED' : 'DRAFT' }),
         })
       }
-      const res = await fetch(`/api/articles?page=${page}&limit=20`)
-      const data = await res.json() as { articles?: Article[]; pagination?: { totalPages?: number } }
-      setArticles(data.articles || [])
-      setTotalPages(data.pagination?.totalPages || 1)
+      fetchArticles(page, filter, search)
     } catch (e) {
       console.error('Action failed', e)
     }
@@ -85,7 +103,9 @@ export default function ArticlesPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', margin: 0 }}>Articles</h1>
-          <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 0' }}>Manage all your articles</p>
+          <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 0' }}>
+            {total > 0 ? `${total} article${total !== 1 ? 's' : ''} total` : 'Manage all your articles'}
+          </p>
         </div>
         <Link
           href="/editor"
@@ -98,12 +118,47 @@ export default function ArticlesPage() {
         </Link>
       </div>
 
-      {/* Filters */}
+      {/* Bug F fix: search bar */}
+      <form onSubmit={handleSearch} style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Search articles..."
+          style={{
+            flex: 1, padding: '7px 12px', borderRadius: 6, border: '1px solid #e2e8f0',
+            fontSize: 12, outline: 'none', color: '#0f172a',
+          }}
+        />
+        <button
+          type="submit"
+          style={{
+            padding: '7px 14px', borderRadius: 6, border: 'none',
+            background: '#f1f5f9', color: '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          Search
+        </button>
+        {search && (
+          <button
+            type="button"
+            onClick={() => { setSearch(''); setSearchInput(''); setPage(1) }}
+            style={{
+              padding: '7px 12px', borderRadius: 6, border: '1px solid #e2e8f0',
+              background: '#fff', color: '#94a3b8', fontSize: 12, cursor: 'pointer',
+            }}
+          >
+            Clear
+          </button>
+        )}
+      </form>
+
+      {/* Bug C fix: filter buttons now trigger server-side filtering */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
         {(['ALL', 'DRAFT', 'IN_REVIEW', 'PUBLISHED', 'SCHEDULED'] as StatusFilter[]).map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f)}
+            onClick={() => handleFilterChange(f)}
             style={{
               padding: '6px 14px', borderRadius: 6, border: '1px solid',
               borderColor: filter === f ? '#f97316' : '#e2e8f0',
@@ -123,9 +178,10 @@ export default function ArticlesPage() {
             <div key={i} style={{ height: 56, background: '#f8fafc', borderRadius: 8, animation: 'pulse 2s infinite' }} />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : articles.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, color: '#94a3b8', fontSize: 13 }}>
-          No articles found. <Link href="/editor" style={{ color: '#f97316' }}>Create your first article.</Link>
+          {search ? `No articles matching "${search}".` : 'No articles found.'}{' '}
+          <Link href="/editor" style={{ color: '#f97316' }}>Create your first article.</Link>
         </div>
       ) : (
         <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
@@ -141,7 +197,7 @@ export default function ArticlesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((a) => (
+              {articles.map((a) => (
                 <tr
                   key={a.id}
                   style={{ borderBottom: '1px solid #f8fafc', cursor: 'pointer', transition: 'background .1s' }}
@@ -194,7 +250,6 @@ export default function ArticlesPage() {
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
           <button

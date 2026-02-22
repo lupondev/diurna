@@ -31,6 +31,7 @@ export default function EditorPage() {
   const [content, setContent] = useState<Record<string, unknown>>({})
   const [initialContent, setInitialContent] = useState<Record<string, unknown> | undefined>(undefined)
   const [saving, setSaving] = useState(false)
+  const [publishedStatus, setPublishedStatus] = useState<'DRAFT' | 'PUBLISHED' | 'SCHEDULED'>('DRAFT')
   const [siteId, setSiteId] = useState<string | null>(null)
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug?: string; icon?: string }>>([])
   const [categoryId, setCategoryId] = useState('')
@@ -46,6 +47,9 @@ export default function EditorPage() {
   const [smartNotice, setSmartNotice] = useState<string | null>(null)
   const [prefilledPrompt, setPrefilledPrompt] = useState('')
   const [autoGenerate, setAutoGenerate] = useState(false)
+  // Bug B fix: track whether we showed the recovery prompt
+  const [showRecovery, setShowRecovery] = useState(false)
+  const [recoveryData, setRecoveryData] = useState<{ title: string; subtitle: string; content: Record<string, unknown>; categoryId: string } | null>(null)
   const editorRef = useRef<unknown>(null)
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const articleIdRef = useRef<string | null>(null)
@@ -77,7 +81,6 @@ export default function EditorPage() {
 
   // Handle pre-filled content from Newsroom/Calendar
   useEffect(() => {
-    // Smart generate mode (from Newsroom "Write" button)
     if (searchParams.get('smartGenerate') === 'true') {
       try {
         const raw = sessionStorage.getItem('smartArticle')
@@ -91,9 +94,9 @@ export default function EditorPage() {
           sessionStorage.removeItem('smartArticle')
         }
       } catch {}
+      return
     }
 
-    // Rewrite mode
     if (searchParams.get('mode') === 'rewrite') {
       try {
         const raw = sessionStorage.getItem('diurna_rewrite_source')
@@ -105,9 +108,9 @@ export default function EditorPage() {
           runAutoGenerate(data, 'rewrite')
         }
       } catch {}
+      return
     }
 
-    // Headline-only mode
     if (searchParams.get('mode') === 'headline-only') {
       try {
         const raw = sessionStorage.getItem('diurna_headline_only')
@@ -119,9 +122,9 @@ export default function EditorPage() {
           runAutoGenerate(data, 'headline-only')
         }
       } catch {}
+      return
     }
 
-    // Combined sources mode
     if (searchParams.get('mode') === 'combined') {
       try {
         const raw = sessionStorage.getItem('diurna_combined_sources')
@@ -135,25 +138,58 @@ export default function EditorPage() {
           }
         }
       } catch {}
+      return
     }
 
-    // Cluster context from Newsroom
     if (searchParams.get('clusterId') && searchParams.get('title')) {
       const clusterTitle = searchParams.get('title') || ''
       const clusterSummary = searchParams.get('summary') || ''
       setTitle(clusterTitle)
       setPrefilledPrompt(`Write an article about: ${clusterTitle}${clusterSummary ? `\n\nContext: ${clusterSummary}` : ''}`)
       setShowAI(true)
+      return
     }
 
     const promptParam = searchParams.get('prompt')
-    if (promptParam && !searchParams.get('smartGenerate') && searchParams.get('mode') !== 'combined') {
+    if (promptParam) {
       setPrefilledPrompt(promptParam)
       setShowAI(true)
       setAutoGenerate(true)
+      return
     }
+
+    // Bug B fix: check localStorage but PROMPT user instead of silently restoring
+    try {
+      const backup = localStorage.getItem('diurna_editor_backup')
+      if (backup) {
+        const data = JSON.parse(backup)
+        if (data.timestamp && Date.now() - data.timestamp < 3600000 && data.title) {
+          setRecoveryData(data)
+          setShowRecovery(true)
+        }
+      }
+    } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  function applyRecovery() {
+    if (!recoveryData) return
+    setTitle(recoveryData.title)
+    setSubtitle(recoveryData.subtitle || '')
+    if (recoveryData.content && Object.keys(recoveryData.content).length > 0) {
+      setContent(recoveryData.content)
+      setInitialContent(recoveryData.content)
+    }
+    if (recoveryData.categoryId) setCategoryId(recoveryData.categoryId)
+    setShowRecovery(false)
+    setRecoveryData(null)
+  }
+
+  function discardRecovery() {
+    localStorage.removeItem('diurna_editor_backup')
+    setShowRecovery(false)
+    setRecoveryData(null)
+  }
 
   async function runAutoGenerate(data: { title: string; sourceText?: string; domain?: string }, mode: string) {
     try {
@@ -200,12 +236,10 @@ export default function EditorPage() {
     } catch {}
   }
 
-  // Auto-slug from title
   useEffect(() => {
     if (title && !slug) setSlug(slugify(title))
   }, [title, slug])
 
-  // Auto-save every 30s (only if article was already created)
   const autoSave = useCallback(async () => {
     if (!articleIdRef.current || !title.trim() || saving) return
     try {
@@ -223,7 +257,6 @@ export default function EditorPage() {
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
   }, [autoSave])
 
-  // localStorage backup
   useEffect(() => {
     if (title || Object.keys(content).length > 0) {
       try {
@@ -232,29 +265,6 @@ export default function EditorPage() {
     }
   }, [title, subtitle, content, categoryId])
 
-  // Restore from localStorage on mount if no other content source
-  useEffect(() => {
-    if (!searchParams.get('smartGenerate') && !searchParams.get('mode') && !searchParams.get('clusterId')) {
-      try {
-        const backup = localStorage.getItem('diurna_editor_backup')
-        if (backup) {
-          const data = JSON.parse(backup)
-          if (data.timestamp && Date.now() - data.timestamp < 3600000 && data.title) {
-            setTitle(data.title)
-            setSubtitle(data.subtitle || '')
-            if (data.content && Object.keys(data.content).length > 0) {
-              setContent(data.content)
-              setInitialContent(data.content)
-            }
-            if (data.categoryId) setCategoryId(data.categoryId)
-          }
-        }
-      } catch {}
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
@@ -292,6 +302,7 @@ export default function EditorPage() {
           body: JSON.stringify(body),
         })
         if (res.ok) {
+          setPublishedStatus(status === 'SCHEDULED' ? 'SCHEDULED' : status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT')
           toast.success(status === 'PUBLISHED' ? 'Objavljeno' : 'Sačuvano')
           if (sendNewsletter && status === 'PUBLISHED') {
             fetch('/api/newsletter/send', {
@@ -313,6 +324,7 @@ export default function EditorPage() {
         if (res.ok) {
           const article = await res.json() as { id?: string }
           articleIdRef.current = article.id ?? null
+          setPublishedStatus(status === 'SCHEDULED' ? 'SCHEDULED' : status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT')
           toast.success(status === 'PUBLISHED' ? 'Objavljeno' : 'Kreirano')
           if (sendNewsletter && status === 'PUBLISHED' && article.id) {
             fetch('/api/newsletter/send', {
@@ -338,6 +350,13 @@ export default function EditorPage() {
     if (result.model) setAiResult({ model: result.model, tokensIn: result.tokensIn, tokensOut: result.tokensOut })
   }
 
+  // Bug A fix: status badge colors
+  const statusBadgeStyle = {
+    DRAFT: { background: '#fef3c7', color: '#92400e' },
+    PUBLISHED: { background: '#dcfce7', color: '#166534' },
+    SCHEDULED: { background: '#dbeafe', color: '#1d4ed8' },
+  }[publishedStatus]
+
   return (
     <div className="editor-layout">
       {/* Top bar */}
@@ -346,7 +365,17 @@ export default function EditorPage() {
         <div className="ed-title-bar">
           {title || 'New Article'}
           {aiResult && <span className="badge-ai">AI</span>}
-          <span className="badge-status draft">Draft</span>
+          {/* Bug A fix: dynamic status badge */}
+          <span
+            className="badge-status"
+            style={{
+              fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+              fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.05em',
+              ...statusBadgeStyle,
+            }}
+          >
+            {publishedStatus.toLowerCase()}
+          </span>
         </div>
         <button className="ed-btn ed-btn-secondary" onClick={() => handleSave('DRAFT')} disabled={saving || !title.trim()}>
           💾 {saving ? 'Saving...' : 'Save Draft'}
@@ -369,8 +398,30 @@ export default function EditorPage() {
         </div>
       )}
 
+      {/* Bug B fix: recovery prompt instead of silent restore */}
+      {showRecovery && recoveryData && (
+        <div style={{
+          background: '#fffbeb', borderBottom: '1px solid #fde68a',
+          padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12,
+          fontSize: 13, color: '#92400e',
+        }}>
+          <span>📝 You have an unsaved draft: <strong>{recoveryData.title}</strong></span>
+          <button
+            onClick={applyRecovery}
+            style={{ padding: '4px 12px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: 12 }}
+          >
+            Restore
+          </button>
+          <button
+            onClick={discardRecovery}
+            style={{ padding: '4px 12px', background: 'none', border: '1px solid #fde68a', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 12, color: '#92400e' }}
+          >
+            Discard
+          </button>
+        </div>
+      )}
+
       <div className="editor-main">
-        {/* LEFT: Editor */}
         <div className="editor-left">
           <div className="ed-form">
             <input type="text" className="ed-title-input" placeholder="Naslov članka..."
@@ -393,7 +444,6 @@ export default function EditorPage() {
             />
           </div>
 
-          {/* Bottom bar: SEO */}
           <div className="ed-bottom">
             <button className="ed-seo-toggle" onClick={() => setShowSEO(!showSEO)}>
               {showSEO ? '▾' : '▸'} SEO Settings
@@ -426,7 +476,6 @@ export default function EditorPage() {
           )}
         </div>
 
-        {/* RIGHT: AI Sidebar */}
         {showAI && (
           <div className="editor-right">
             <AISidebar
@@ -439,12 +488,10 @@ export default function EditorPage() {
         )}
       </div>
 
-      {/* Floating AI toggle */}
       <button className="ai-toggle-btn" onClick={() => setShowAI(!showAI)} title="Toggle AI Co-Pilot">
         {showAI ? '✕' : '🤖'} {showAI ? '' : 'AI'}
       </button>
 
-      {/* Schedule modal */}
       {showSchedule && (
         <div className="ed-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowSchedule(false) }}>
           <div className="ed-modal">

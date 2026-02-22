@@ -13,8 +13,9 @@ function getGreeting() {
   return 'Dobro veče'
 }
 
+// Bug D fix: use en-GB locale for consistent day-first date format
 function formatDate() {
-  return new Date().toLocaleDateString('en-US', {
+  return new Date().toLocaleDateString('en-GB', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -87,7 +88,6 @@ async function getDashboardData(orgId: string) {
     }),
   ])
 
-  // Trending clusters (global — not org-scoped)
   let clusters: { title: string; dis: number; trend: string }[] = []
   try {
     clusters = await prisma.storyCluster.findMany({
@@ -99,7 +99,6 @@ async function getDashboardData(orgId: string) {
     // storyCluster table may not exist yet
   }
 
-  // Today's matches via internal API would require fetch; use empty fallback
   const aiPercentage = totalArticles > 0 ? Math.round((aiArticles / totalArticles) * 100) : 0
   const monthTrend =
     articlesPrevMonth > 0
@@ -604,11 +603,7 @@ function trendIcon(trend: string) {
   return '→'
 }
 
-/* ── Matches Widget (client-fetch) ── */
-
 function MatchesWidget() {
-  // Since football API requires auth and external calls,
-  // render a static placeholder that the client can hydrate
   return <MatchesWidgetInner />
 }
 
