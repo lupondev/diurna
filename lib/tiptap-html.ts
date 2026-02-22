@@ -176,7 +176,6 @@ function renderNode(node: TiptapNode): string {
     }
 
     case 'codeBlock': {
-      // Render codeBlock as paragraphs (AI often puts article text in codeBlocks)
       const text = getNodeText(node).trim()
       if (!text) return ''
       return text.split('\n\n').map(p => `<p>${escapeHtml(p)}</p>`).join('')
@@ -201,8 +200,6 @@ function renderNode(node: TiptapNode): string {
 
     case 'hardBreak':
       return '<br />'
-
-    // ── Custom Tiptap widget node types ──
 
     case 'poll': {
       const question = escapeHtml(String(node.attrs?.question || ''))
@@ -272,15 +269,16 @@ function renderChildren(node: TiptapNode): string {
   return node.content.map(renderNode).join('')
 }
 
+function stripLegacyWidgetPlaceholders(html: string): string {
+  return html.replace(/\{\{WIDGET:[A-Z_]+\}\}/g, '')
+}
+
 export function tiptapToHtml(doc: unknown): string {
   if (!doc) return ''
-  // Raw HTML string passthrough
-  if (typeof doc === 'string') return doc
+  if (typeof doc === 'string') return stripLegacyWidgetPlaceholders(doc)
   if (typeof doc !== 'object') return ''
-  // { html: "..." } format — raw HTML stored in wrapper
   const obj = doc as Record<string, unknown>
-  if (typeof obj.html === 'string') return obj.html
-  // Standard Tiptap JSON
+  if (typeof obj.html === 'string') return stripLegacyWidgetPlaceholders(obj.html)
   const root = doc as TiptapNode
   if (root.type !== 'doc' || !root.content) return ''
   return root.content.map(renderNode).join('')
