@@ -11,6 +11,12 @@ type Member = {
   user: { id: string; name: string | null; email: string | null; image: string | null }
 }
 
+type InviteResult = {
+  success: boolean
+  inviteUrl?: string
+  error?: string
+}
+
 const avatarGradients = [
   'linear-gradient(135deg, #5B5FFF, #8B5CF6)',
   'linear-gradient(135deg, #F59E0B, #EF4444)',
@@ -65,6 +71,8 @@ export default function TeamPage() {
   const [inviteName, setInviteName] = useState('')
   const [inviteRole, setInviteRole] = useState('EDITOR')
   const [inviteMessage, setInviteMessage] = useState('')
+  const [inviteSending, setInviteSending] = useState(false)
+  const [inviteResult, setInviteResult] = useState<{ type: 'success' | 'error'; message: string; url?: string } | null>(null)
 
   const currentUserId = (session?.user as { id?: string } | undefined)?.id
 
@@ -112,9 +120,51 @@ export default function TeamPage() {
     }).catch(() => {})
   }
 
-  function handleInvite() {
-    if (!inviteEmail) return
+  async function handleInvite() {
+    if (!inviteEmail || inviteSending) return
+    setInviteSending(true)
+    setInviteResult(null)
+
+    try {
+      const res = await fetch('/api/team/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteEmail,
+          name: inviteName || undefined,
+          role: inviteRole,
+          message: inviteMessage || undefined,
+        }),
+      })
+
+      const data = await res.json() as InviteResult
+
+      if (!res.ok || !data.success) {
+        setInviteResult({ type: 'error', message: data.error || 'Failed to send invite' })
+        return
+      }
+
+      setInviteResult({
+        type: 'success',
+        message: `Invite created for ${inviteEmail}`,
+        url: data.inviteUrl,
+      })
+
+      // Reset form fields but keep modal open to show the invite link
+      setInviteEmail('')
+      setInviteName('')
+      setInviteRole('EDITOR')
+      setInviteMessage('')
+    } catch {
+      setInviteResult({ type: 'error', message: 'Network error — please try again' })
+    } finally {
+      setInviteSending(false)
+    }
+  }
+
+  function closeInviteModal() {
     setShowInvite(false)
+    setInviteResult(null)
     setInviteEmail('')
     setInviteName('')
     setInviteRole('EDITOR')
@@ -267,68 +317,118 @@ export default function TeamPage() {
       )}
 
       {showInvite && (
-        <div className="tm-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowInvite(false) }}>
+        <div className="tm-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closeInviteModal() }}>
           <div className="tm-modal">
             <div className="tm-modal-head">
               <div className="tm-modal-title">{'\u{1F4E7}'} Invite team member</div>
-              <button className="tm-modal-close" onClick={() => setShowInvite(false)}>{'\u2715'}</button>
+              <button className="tm-modal-close" onClick={closeInviteModal}>{'\u2715'}</button>
             </div>
             <div className="tm-modal-body">
-              <div className="tm-form-group">
-                <label className="tm-form-label">Email address</label>
-                <input
-                  className="tm-form-input"
-                  type="email"
-                  placeholder="colleague@company.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                />
-              </div>
-              <div className="tm-form-group">
-                <label className="tm-form-label">Full name (optional)</label>
-                <input
-                  className="tm-form-input"
-                  type="text"
-                  placeholder="Full Name"
-                  value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                />
-              </div>
-              <div className="tm-form-group">
-                <label className="tm-form-label">Role</label>
-                <div className="role-cards">
-                  {[
-                    { role: 'ADMIN', icon: '\u{1F6E1}\uFE0F', name: 'Admin', desc: 'Full access except billing' },
-                    { role: 'EDITOR', icon: '\u{1F4DD}', name: 'Editor', desc: 'Write, edit, publish' },
-                    { role: 'JOURNALIST', icon: '\u270D\uFE0F', name: 'Journalist', desc: 'Write and edit own articles' },
-                  ].map((r) => (
-                    <div
-                      key={r.role}
-                      className={`role-card${inviteRole === r.role ? ' selected' : ''}`}
-                      onClick={() => setInviteRole(r.role)}
-                    >
-                      <div className="role-card-icon">{r.icon}</div>
-                      <div className="role-card-name">{r.name}</div>
-                      <div className="role-card-desc">{r.desc}</div>
+              {inviteResult && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: 8,
+                  marginBottom: 16,
+                  background: inviteResult.type === 'success' ? 'var(--suc-l, #dcfce7)' : 'var(--coral-l, #fee2e2)',
+                  border: `1px solid ${inviteResult.type === 'success' ? 'var(--suc, #22c55e)' : 'var(--coral, #ef4444)'}`,
+                  fontSize: 13,
+                  color: inviteResult.type === 'success' ? 'var(--suc-d, #166534)' : 'var(--coral-d, #991b1b)',
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: inviteResult.url ? 6 : 0 }}>
+                    {inviteResult.type === 'success' ? '✅ ' : '❌ '}{inviteResult.message}
+                  </div>
+                  {inviteResult.url && (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ fontSize: 11, color: 'var(--g500)', marginBottom: 4 }}>Share this invite link:</div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input
+                          readOnly
+                          value={inviteResult.url}
+                          style={{ flex: 1, fontSize: 11, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--brd)', fontFamily: 'var(--mono)', background: 'white' }}
+                          onClick={(e) => (e.target as HTMLInputElement).select()}
+                        />
+                        <button
+                          onClick={() => navigator.clipboard.writeText(inviteResult.url!)}
+                          style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, background: 'var(--elec)', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+                        >
+                          Copy
+                        </button>
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-              <div className="tm-form-group">
-                <label className="tm-form-label">Personal message (optional)</label>
-                <textarea
-                  className="tm-form-input"
-                  rows={2}
-                  placeholder="Hey! Join our team on Diurna..."
-                  style={{ resize: 'none' }}
-                  value={inviteMessage}
-                  onChange={(e) => setInviteMessage(e.target.value)}
-                />
-              </div>
+              )}
+
+              {!inviteResult?.type || inviteResult.type === 'error' ? (
+                <>
+                  <div className="tm-form-group">
+                    <label className="tm-form-label">Email address</label>
+                    <input
+                      className="tm-form-input"
+                      type="email"
+                      placeholder="colleague@company.com"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="tm-form-group">
+                    <label className="tm-form-label">Full name (optional)</label>
+                    <input
+                      className="tm-form-input"
+                      type="text"
+                      placeholder="Full Name"
+                      value={inviteName}
+                      onChange={(e) => setInviteName(e.target.value)}
+                    />
+                  </div>
+                  <div className="tm-form-group">
+                    <label className="tm-form-label">Role</label>
+                    <div className="role-cards">
+                      {[
+                        { role: 'ADMIN', icon: '\u{1F6E1}\uFE0F', name: 'Admin', desc: 'Full access except billing' },
+                        { role: 'EDITOR', icon: '\u{1F4DD}', name: 'Editor', desc: 'Write, edit, publish' },
+                        { role: 'JOURNALIST', icon: '\u270D\uFE0F', name: 'Journalist', desc: 'Write and edit own articles' },
+                      ].map((r) => (
+                        <div
+                          key={r.role}
+                          className={`role-card${inviteRole === r.role ? ' selected' : ''}`}
+                          onClick={() => setInviteRole(r.role)}
+                        >
+                          <div className="role-card-icon">{r.icon}</div>
+                          <div className="role-card-name">{r.name}</div>
+                          <div className="role-card-desc">{r.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="tm-form-group">
+                    <label className="tm-form-label">Personal message (optional)</label>
+                    <textarea
+                      className="tm-form-input"
+                      rows={2}
+                      placeholder="Hey! Join our team on Diurna..."
+                      style={{ resize: 'none' }}
+                      value={inviteMessage}
+                      onChange={(e) => setInviteMessage(e.target.value)}
+                    />
+                  </div>
+                </>
+              ) : null}
             </div>
             <div className="tm-modal-foot">
-              <button className="tm-cancel-btn" onClick={() => setShowInvite(false)}>Cancel</button>
-              <button className="tm-send-btn" onClick={handleInvite}>{'\u{1F4E7}'} Send invite</button>
+              <button className="tm-cancel-btn" onClick={closeInviteModal}>
+                {inviteResult?.type === 'success' ? 'Close' : 'Cancel'}
+              </button>
+              {(!inviteResult || inviteResult.type === 'error') && (
+                <button
+                  className="tm-send-btn"
+                  onClick={handleInvite}
+                  disabled={!inviteEmail || inviteSending}
+                  style={{ opacity: !inviteEmail || inviteSending ? 0.6 : 1 }}
+                >
+                  {inviteSending ? '⏳ Sending...' : '\u{1F4E7} Send invite'}
+                </button>
+              )}
             </div>
           </div>
         </div>
