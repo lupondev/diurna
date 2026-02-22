@@ -13,40 +13,49 @@ const sections: NavSection[] = [
   {
     label: 'Main',
     items: [
-      { label: 'Newsroom', icon: '📰', href: '/newsroom' },
-      { label: 'Editor', icon: '✍️', href: '/editor' },
-      { label: 'Calendar', icon: '📅', href: '/calendar' },
-      { label: 'Articles', icon: '📄', href: '/articles' },
+      { label: 'Newsroom', icon: '\ud83d\udcf0', href: '/newsroom' },
+      { label: 'Editor', icon: '\u270d\ufe0f', href: '/editor' },
+      { label: 'Calendar', icon: '\ud83d\udcc5', href: '/calendar' },
+      { label: 'Articles', icon: '\ud83d\udcc4', href: '/articles' },
+    ],
+  },
+  {
+    label: 'Intelligence',
+    items: [
+      // Bug C fix: add AI Co-Pilot to sidebar
+      { label: 'AI Co-Pilot', icon: '\ud83e\udd16', href: '/copilot' },
+      { label: 'Analytics', icon: '\ud83d\udcca', href: '/analytics' },
     ],
   },
   {
     label: 'Sport',
     items: [
-      { label: 'Football Hub', icon: '⚽', href: '/football' },
-      { label: 'Fixtures', icon: '📅', href: '/football/fixtures' },
-      { label: 'Leagues & Tables', icon: '🏆', href: '/football/leagues' },
+      { label: 'Football Hub', icon: '\u26bd', href: '/football' },
+      // Bug D fix: use different icon for Fixtures vs Calendar
+      { label: 'Fixtures', icon: '\ud83d\udd22', href: '/football/fixtures' },
+      { label: 'Leagues & Tables', icon: '\ud83c\udfc6', href: '/football/leagues' },
     ],
   },
   {
     label: 'Content',
     items: [
-      { label: 'Widgets', icon: '🧩', href: '/widgets' },
-      { label: 'Widget Creator', icon: '🛠️', href: '/widget-creator' },
-      { label: 'Media', icon: '🖼️', href: '/media' },
+      { label: 'Widgets', icon: '\ud83e\udde9', href: '/widgets' },
+      { label: 'Widget Creator', icon: '\ud83d\udee0\ufe0f', href: '/widget-creator' },
+      { label: 'Media', icon: '\ud83d\uddbc\ufe0f', href: '/media' },
     ],
   },
   {
     label: 'Templates',
     items: [
-      { label: 'Midnight Pro', icon: '🌙', href: '/templates/midnight' },
-      { label: 'Clean Editorial', icon: '📰', href: '/templates/editorial' },
+      { label: 'Midnight Pro', icon: '\ud83c\udf19', href: '/templates/midnight' },
+      { label: 'Clean Editorial', icon: '\ud83d\udcf0', href: '/templates/editorial' },
     ],
   },
   {
     label: 'Admin',
     roles: ['OWNER', 'ADMIN'],
     items: [
-      { label: 'Settings', icon: '⚙️', href: '/settings' },
+      { label: 'Settings', icon: '\u2699\ufe0f', href: '/settings' },
     ],
   },
 ]
@@ -60,6 +69,9 @@ export function Sidebar() {
   const userRole = (session?.user as { role?: string } | undefined)?.role || ''
   const { locale, setLocale } = useLanguage()
 
+  // Bug E fix: derive plan label from role instead of hardcoding 'Pro Plan'
+  const planLabel = userRole === 'OWNER' ? 'Owner' : userRole === 'ADMIN' ? 'Admin' : userRole === 'EDITOR' ? 'Editor' : userRole === 'WRITER' ? 'Writer' : 'Member'
+
   return (
     <aside className="sb">
       <div className="sb-head">
@@ -68,12 +80,12 @@ export function Sidebar() {
 
       <div className="ss">
         <div className="ss-row">
-          <div className="ss-icon">⚽</div>
+          <div className="ss-icon">\u26bd</div>
           <div>
             <div className="ss-name">Diurna</div>
             <div className="ss-url">Publishing Platform</div>
           </div>
-          <span style={{ color: 'var(--g400)', fontSize: 12, marginLeft: 'auto' }}>▼</span>
+          <span style={{ color: 'var(--g400)', fontSize: 12, marginLeft: 'auto' }}>\u25bc</span>
         </div>
       </div>
 
@@ -111,7 +123,8 @@ export function Sidebar() {
           <div className="sb-av">{userInitial}</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--g900)' }}>{userName}</div>
-            <div style={{ fontSize: 10, color: 'var(--g500)' }}>Pro Plan</div>
+            {/* Bug E fix: show actual role instead of hardcoded 'Pro Plan' */}
+            <div style={{ fontSize: 10, color: 'var(--g500)' }}>{planLabel}</div>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: '/login' })}
@@ -135,7 +148,7 @@ export function Sidebar() {
               e.currentTarget.style.color = 'var(--g400)'
             }}
           >
-            ↪
+            \u21aa
           </button>
         </div>
       </div>

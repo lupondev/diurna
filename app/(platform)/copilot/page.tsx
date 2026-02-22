@@ -44,12 +44,16 @@ type FixtureData = {
   articles: { type: string; timing: string }[]
 }
 
+type AutopilotStats = {
+  articlesWrittenToday: number
+  isActive: boolean
+  dailyTarget: number
+}
+
 const DEFAULT_QUEUE: QueueItem[] = [
   { id: 'q1', title: 'Arsenal vs Chelsea: Complete Match Preview & Predictions', category: 'Premier League', suggestedTime: '14:00', confidence: 94, status: 'pending' },
   { id: 'q2', title: 'Transfer Roundup: January Window — Top 10 Deals to Watch', category: 'Transfer News', suggestedTime: '10:30', confidence: 87, status: 'pending' },
   { id: 'q3', title: 'Champions League QF Draw: Who Will Face Who?', category: 'Champions League', suggestedTime: '16:00', confidence: 91, status: 'pending' },
-  { id: 'q4', title: 'Mbappé Real Madrid — First Season Statistical Deep Dive', category: 'La Liga', suggestedTime: '12:00', confidence: 78, status: 'pending' },
-  { id: 'q5', title: 'Premier League Title Race: GW26 Analysis & Predictions', category: 'Premier League', suggestedTime: '08:00', confidence: 85, status: 'pending' },
 ]
 
 const DEFAULT_STRATEGY: ContentStrategy = {
@@ -92,8 +96,6 @@ const DEFAULT_FIXTURES: FixtureData[] = [
   { id: 'f1', home: 'Arsenal', away: 'Chelsea', league: 'Premier League', date: 'Sat, Feb 21', time: '17:30', articles: [{ type: 'Preview', timing: '-24h' }, { type: 'Starting XI', timing: '-2h' }, { type: 'Recap', timing: '+15min' }, { type: 'Ratings', timing: '+2h' }] },
   { id: 'f2', home: 'Real Madrid', away: 'Barcelona', league: 'La Liga', date: 'Sun, Feb 22', time: '21:00', articles: [{ type: 'Preview', timing: '-24h' }, { type: 'Starting XI', timing: '-2h' }, { type: 'Recap', timing: '+15min' }, { type: 'Ratings', timing: '+2h' }] },
   { id: 'f3', home: 'Liverpool', away: 'Man City', league: 'Premier League', date: 'Sun, Feb 22', time: '16:30', articles: [{ type: 'Preview', timing: '-24h' }, { type: 'Starting XI', timing: '-2h' }, { type: 'Recap', timing: '+15min' }, { type: 'Ratings', timing: '+2h' }] },
-  { id: 'f4', home: 'PSG', away: 'Marseille', league: 'Ligue 1', date: 'Mon, Feb 23', time: '21:00', articles: [{ type: 'Preview', timing: '-4h' }, { type: 'Recap', timing: '+30min' }] },
-  { id: 'f5', home: 'Bayern', away: 'Dortmund', league: 'Bundesliga', date: 'Tue, Feb 24', time: '20:30', articles: [{ type: 'Preview', timing: '-24h' }, { type: 'Starting XI', timing: '-2h' }, { type: 'Recap', timing: '+15min' }, { type: 'Ratings', timing: '+2h' }] },
 ]
 
 const PEAK_TIME_OPTIONS = ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00']
@@ -133,6 +135,8 @@ export default function CopilotPage() {
   const [expandedFixture, setExpandedFixture] = useState<string | null>(null)
   const [showAddRule, setShowAddRule] = useState(false)
   const [saveFlash, setSaveFlash] = useState(false)
+  // Bug A: fetch real stats from autopilot API
+  const [apStats, setApStats] = useState<AutopilotStats | null>(null)
 
   const [newRuleName, setNewRuleName] = useState('')
   const [newRuleFilter, setNewRuleFilter] = useState<'top6' | 'all' | 'specific'>('all')
@@ -144,6 +148,12 @@ export default function CopilotPage() {
     setQueue(loadJSON('copilot-queue', DEFAULT_QUEUE))
     setStrategy(loadJSON('copilot-strategy', DEFAULT_STRATEGY))
     setRules(loadJSON('copilot-rules', DEFAULT_RULES))
+
+    // Bug A fix: load real autopilot stats from API
+    fetch('/api/autopilot/stats')
+      .then(r => r.ok ? r.json() as Promise<AutopilotStats> : null)
+      .then(data => { if (data) setApStats(data) })
+      .catch(() => {})
   }, [])
 
   const changeMode = useCallback((m: CopilotMode) => {
@@ -217,6 +227,12 @@ export default function CopilotPage() {
     saveJSON('copilot-strategy', strategy)
     saveJSON('copilot-rules', rules)
     localStorage.setItem('cal-daily-target', String(strategy.dailyTarget))
+    // Also persist dailyTarget to autopilot config API
+    fetch('/api/autopilot/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dailyTarget: strategy.dailyTarget }),
+    }).catch(() => {})
     setSaveFlash(true)
     setTimeout(() => setSaveFlash(false), 1500)
   }, [strategy, rules])
@@ -256,32 +272,42 @@ export default function CopilotPage() {
 
   const pendingQueue = queue.filter(q => q.status === 'pending')
   const approvedCount = queue.filter(q => q.status === 'approved').length
-  const scheduledCount = (() => {
-    try {
-      const saved = localStorage.getItem('cal-scheduled')
-      return saved ? JSON.parse(saved).length : 0
-    } catch { return 0 }
-  })()
-  const planned = strategy.dailyTarget
-  const published = approvedCount + Math.floor(Math.random() * 0.001)
+
+  // Bug B fix: use real stats from API when available, no Math.random()
+  const planned = apStats?.dailyTarget ?? strategy.dailyTarget
+  // Bug B fix: use real articlesWrittenToday from API
+  const published = apStats?.articlesWrittenToday ?? approvedCount
   const inReview = pendingQueue.length
-  const drafts = Math.max(0, planned - published - inReview)
   const completed = Math.min(published, planned)
 
   return (
     <div className="cop">
       <div className="cop-hd">
         <div>
-          <h1>🤖 AI Co-Pilot</h1>
+          <h1>\ud83e\udd16 AI Co-Pilot</h1>
           <p>Your AI-powered editorial brain — configure, queue, and automate content</p>
         </div>
+        {/* Show autopilot live status */}
+        {apStats && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '6px 14px', borderRadius: 20,
+            background: apStats.isActive ? 'var(--mint-l)' : 'var(--g100)',
+            border: `1px solid ${apStats.isActive ? 'var(--mint)' : 'var(--brd)'}`,
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: apStats.isActive ? 'var(--mint)' : 'var(--g400)', display: 'inline-block' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: apStats.isActive ? 'var(--mint-d)' : 'var(--g500)' }}>
+              AutoPilot {apStats.isActive ? 'ACTIVE' : 'PAUSED'}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="cop-modes">
         {([
-          { id: 'full-auto' as const, icon: '🤖', name: 'Full Auto', desc: 'AI generates + publishes automatically. No human review needed.' },
-          { id: 'hybrid' as const, icon: '🔄', name: 'Hybrid', desc: 'AI generates articles, you review + approve before publishing.' },
-          { id: 'manual' as const, icon: '✏️', name: 'Manual', desc: 'You write everything. AI only suggests trending topics.' },
+          { id: 'full-auto' as const, icon: '\ud83e\udd16', name: 'Full Auto', desc: 'AI generates + publishes automatically. No human review needed.' },
+          { id: 'hybrid' as const, icon: '\ud83d\udd04', name: 'Hybrid', desc: 'AI generates articles, you review + approve before publishing.' },
+          { id: 'manual' as const, icon: '\u270f\ufe0f', name: 'Manual', desc: 'You write everything. AI only suggests trending topics.' },
         ]).map(m => (
           <div
             key={m.id}
@@ -295,13 +321,13 @@ export default function CopilotPage() {
         ))}
       </div>
 
-      <div className="cop-sec">📊 Today&apos;s Status</div>
+      <div className="cop-sec">\ud83d\udcca Today&apos;s Status</div>
       <div className="cop-stats">
         {([
           { label: 'Planned', val: planned, color: 'var(--elec)', bg: 'var(--elec-l)' },
           { label: 'Published', val: published, color: 'var(--suc)', bg: 'var(--suc-l)' },
           { label: 'In Review', val: inReview, color: 'var(--gold)', bg: 'var(--gold-l)' },
-          { label: 'Drafts', val: drafts + scheduledCount, color: 'var(--g400)', bg: 'var(--g100)' },
+          { label: 'Remaining', val: Math.max(0, planned - published - inReview), color: 'var(--g400)', bg: 'var(--g100)' },
         ]).map(s => (
           <div key={s.label} className="cop-stat">
             <div className="cop-stat-label">{s.label}</div>
@@ -319,18 +345,18 @@ export default function CopilotPage() {
           <div className="cop-prog-fill" style={{ width: `${Math.min(100, (completed / Math.max(planned, 1)) * 100)}%` }} />
         </div>
         <div className="cop-prog-text" style={{ color: completed >= planned ? 'var(--suc)' : 'var(--g400)' }}>
-          {completed >= planned ? '✅ Complete!' : `${planned - completed} remaining`}
+          {completed >= planned ? '\u2705 Complete!' : `${planned - completed} remaining`}
         </div>
       </div>
 
       {mode === 'hybrid' && (
         <>
-          <div className="cop-sec">📋 Smart Queue <span className="cop-sec-sub">{pendingQueue.length} awaiting review</span></div>
+          <div className="cop-sec">\ud83d\udccb Smart Queue <span className="cop-sec-sub">{pendingQueue.length} awaiting review</span></div>
           <div className="cop-queue">
             <div className="cop-q-head">
               <div className="cop-q-title">AI-Generated Articles</div>
               {pendingQueue.length > 0 && (
-                <button className="cop-q-btn" onClick={approveAll}>✅ Approve All ({pendingQueue.length})</button>
+                <button className="cop-q-btn" onClick={approveAll}>\u2705 Approve All ({pendingQueue.length})</button>
               )}
             </div>
 
@@ -345,22 +371,22 @@ export default function CopilotPage() {
                   </div>
                   <div className="cop-q-info-meta">
                     <span className="cop-q-cat">{item.category}</span>
-                    <span>🕐 {item.suggestedTime}</span>
+                    <span>\ud83d\udd50 {item.suggestedTime}</span>
                     {item.status !== 'pending' && (
                       <span style={{
                         fontWeight: 700, fontSize: 10,
                         color: item.status === 'approved' ? 'var(--suc)' : 'var(--coral)',
                       }}>
-                        {item.status === 'approved' ? '✅ Approved' : '❌ Rejected'}
+                        {item.status === 'approved' ? '\u2705 Approved' : '\u274c Rejected'}
                       </span>
                     )}
                   </div>
                 </div>
                 {item.status === 'pending' && (
                   <div className="cop-q-actions">
-                    <button className="cop-q-act approve" title="Approve" onClick={() => approveItem(item.id)}>✅</button>
-                    <Link href="/editor" className="cop-q-act" title="Edit" style={{ textDecoration: 'none' }}>✏️</Link>
-                    <button className="cop-q-act reject" title="Reject" onClick={() => rejectItem(item.id)}>🗑️</button>
+                    <button className="cop-q-act approve" title="Approve" onClick={() => approveItem(item.id)}>\u2705</button>
+                    <Link href="/editor" className="cop-q-act" title="Edit" style={{ textDecoration: 'none' }}>\u270f\ufe0f</Link>
+                    <button className="cop-q-act reject" title="Reject" onClick={() => rejectItem(item.id)}>\ud83d\uddd1\ufe0f</button>
                   </div>
                 )}
               </div>
@@ -373,7 +399,7 @@ export default function CopilotPage() {
         </>
       )}
 
-      <div className="cop-sec">⚙️ Content Strategy</div>
+      <div className="cop-sec">\u2699\ufe0f Content Strategy</div>
       <div className="cop-strat">
         <div className="cop-strat-grid">
           <div>
@@ -492,11 +518,11 @@ export default function CopilotPage() {
         </div>
 
         <button className={`cop-save${saveFlash ? ' saved' : ''}`} onClick={saveStrategy}>
-          {saveFlash ? '✅ Saved!' : '💾 Save Strategy'}
+          {saveFlash ? '\u2705 Saved!' : '\ud83d\udcbe Save Strategy'}
         </button>
       </div>
 
-      <div className="cop-sec">📐 Fixture Autopilot Rules</div>
+      <div className="cop-sec">\ud83d\udcd0 Fixture Autopilot Rules</div>
       <div className="cop-rules">
         {rules.map(rule => (
           <div key={rule.id} className="cop-rule">
@@ -511,7 +537,7 @@ export default function CopilotPage() {
             </div>
             <div className="cop-rule-desc">
               {rule.slots.length} article{rule.slots.length !== 1 ? 's' : ''} per match
-              {rule.teamFilter === 'specific' && rule.specificTeams ? ` · ${rule.specificTeams}` : ''}
+              {rule.teamFilter === 'specific' && rule.specificTeams ? ` \u00b7 ${rule.specificTeams}` : ''}
             </div>
             <div className="cop-rule-slots">
               {rule.slots.map((slot, si) => (
@@ -600,7 +626,7 @@ export default function CopilotPage() {
                   onClick={() => removeSlotFromNewRule(i)}
                   style={{ background: 'var(--coral-l)', border: 'none', borderRadius: 'var(--r)', padding: '6px 10px', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', fontWeight: 700 }}
                 >
-                  ✕
+                  \u2715
                 </button>
               )}
             </div>
@@ -625,15 +651,15 @@ export default function CopilotPage() {
         </div>
       )}
 
-      <div className="cop-sec" style={{ marginTop: 28 }}>⚽ Upcoming Fixtures</div>
+      <div className="cop-sec" style={{ marginTop: 28 }}>\u26bd Upcoming Fixtures</div>
       <div className="cop-fixtures">
         {fixtures.map(fix => (
           <div key={fix.id} className="cop-fix">
             <div className="cop-fix-row" onClick={() => setExpandedFixture(expandedFixture === fix.id ? null : fix.id)}>
-              <span className={`cop-fix-arrow${expandedFixture === fix.id ? ' open' : ''}`}>▶</span>
+              <span className={`cop-fix-arrow${expandedFixture === fix.id ? ' open' : ''}`}>\u25b6</span>
               <span className="cop-fix-teams">{fix.home} vs {fix.away}</span>
               <span className="cop-fix-league">{fix.league}</span>
-              <span className="cop-fix-date">{fix.date} · {fix.time}</span>
+              <span className="cop-fix-date">{fix.date} \u00b7 {fix.time}</span>
               <span className="cop-fix-count">{fix.articles.length} articles</span>
             </div>
             {expandedFixture === fix.id && (
