@@ -27,6 +27,8 @@ export default function MediaPage() {
   const [uploading, setUploading] = useState(false)
   const [search, setSearch] = useState('')
   const [dragActive, setDragActive] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -65,18 +67,22 @@ export default function MediaPage() {
     e.target.value = ''
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('Delete this media file?')) return
+  async function confirmDelete() {
+    if (!deleteConfirmId) return
+    setDeleting(true)
     try {
       const res = await fetch('/api/media', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: deleteConfirmId }),
       })
       if (res.ok) {
-        setMedia((prev) => prev.filter((m) => m.id !== id))
+        setMedia((prev) => prev.filter((m) => m.id !== deleteConfirmId))
       }
     } catch {
+    } finally {
+      setDeleting(false)
+      setDeleteConfirmId(null)
     }
   }
 
@@ -85,6 +91,7 @@ export default function MediaPage() {
   )
 
   const totalSize = media.reduce((sum, m) => sum + m.size, 0)
+  const itemToDelete = media.find((m) => m.id === deleteConfirmId)
 
   return (
     <div className="ml-page">
@@ -173,13 +180,32 @@ export default function MediaPage() {
                   <span>{new Date(item.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
                 </div>
               </div>
-              <button
-                className="ml-item-delete"
-                onClick={(e) => { e.stopPropagation(); handleDelete(item.id) }}
-                title="Delete"
-              >
-                ×
-              </button>
+              {deleteConfirmId === item.id ? (
+                <div className="ml-item-confirm" onClick={(e) => e.stopPropagation()}>
+                  <span style={{ fontSize: 11, color: 'var(--coral)', fontWeight: 700 }}>Delete?</span>
+                  <button
+                    className="ml-item-confirm-yes"
+                    onClick={confirmDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? '…' : 'Yes'}
+                  </button>
+                  <button
+                    className="ml-item-confirm-no"
+                    onClick={() => setDeleteConfirmId(null)}
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="ml-item-delete"
+                  onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(item.id) }}
+                  title="Delete"
+                >
+                  ×
+                </button>
+              )}
             </div>
           ))}
         </div>

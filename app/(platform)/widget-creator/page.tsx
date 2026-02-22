@@ -1,12 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import './widget-creator.css'
 
 type Template = { id: string; icon: string; name: string; desc: string }
 type MatchOption = { id: string; icon: string; name: string; meta: string; type: 'match' | 'league' }
 type WidgetTheme = 'light' | 'dark' | 'transparent' | 'custom'
+
+type ApiMatch = {
+  fixture: { id: number; date: string; status: { short: string } }
+  teams: { home: { name: string }; away: { name: string } }
+  league: { name: string; country: string }
+  goals: { home: number | null; away: number | null }
+}
 
 const categories = [
   { id: 'football', label: 'Football' },
@@ -43,15 +50,29 @@ const templates: Record<string, Template[]> = {
   ],
 }
 
-const matchOptions: MatchOption[] = [
-  { id: 'rm-barca', icon: '⚽', name: 'Real Madrid vs Barcelona', meta: 'La Liga · Today 21:00', type: 'match' },
-  { id: 'city-pool', icon: '⚽', name: 'Man City vs Liverpool', meta: 'Premier League · Sat 17:30', type: 'match' },
-  { id: 'inter-juve', icon: '⚽', name: 'Inter vs Juventus', meta: 'Serie A · Sun 20:45', type: 'match' },
+const FALLBACK_MATCHES: MatchOption[] = [
+  { id: 'fallback-1', icon: '⚽', name: 'No matches available today', meta: 'Check back later', type: 'match' },
+]
+
+const STATIC_LEAGUES: MatchOption[] = [
   { id: 'prem', icon: '🏴', name: 'Premier League', meta: 'England · 2025/26', type: 'league' },
   { id: 'laliga', icon: '🇪🇸', name: 'La Liga', meta: 'Spain · 2025/26', type: 'league' },
   { id: 'seriea', icon: '🇮🇹', name: 'Serie A', meta: 'Italy · 2025/26', type: 'league' },
   { id: 'bundes', icon: '🇩🇪', name: 'Bundesliga', meta: 'Germany · 2025/26', type: 'league' },
 ]
+
+function matchToOption(m: ApiMatch): MatchOption {
+  const time = new Date(m.fixture.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  const isLive = m.fixture.status.short === '1H' || m.fixture.status.short === '2H' || m.fixture.status.short === 'HT'
+  const score = isLive && m.goals.home !== null ? ` · ${m.goals.home}-${m.goals.away}` : ''
+  return {
+    id: String(m.fixture.id),
+    icon: isLive ? '🔴' : '⚽',
+    name: `${m.teams.home.name} vs ${m.teams.away.name}`,
+    meta: `${m.league.name} · ${isLive ? 'LIVE' : time}${score}`,
+    type: 'match',
+  }
+}
 
 function LiveScoreWidget({ theme, accentColor }: { theme: WidgetTheme; accentColor: string }) {
   const isDark = theme === 'dark'
@@ -189,6 +210,24 @@ export default function WidgetCreatorPage() {
   const [codeModal, setCodeModal] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  // Real match data from API-Football
+  const [matchOptions, setMatchOptions] = useState<MatchOption[]>([])
+  const [matchesLoading, setMatchesLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/football?action=today')
+      .then(r => r.ok ? r.json() as Promise<{ response?: ApiMatch[] }> : null)
+      .then(data => {
+        if (data?.response && data.response.length > 0) {
+          setMatchOptions([...data.response.map(matchToOption), ...STATIC_LEAGUES])
+        } else {
+          setMatchOptions([...FALLBACK_MATCHES, ...STATIC_LEAGUES])
+        }
+      })
+      .catch(() => setMatchOptions([...FALLBACK_MATCHES, ...STATIC_LEAGUES]))
+      .finally(() => setMatchesLoading(false))
+  }, [])
+
   const step2Ready = !!selectedTpl
   const step3Ready = step2Ready && !!selectedMatch
 
@@ -274,22 +313,26 @@ export default function WidgetCreatorPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="wc-results">
-            {filteredMatches.map((m) => (
-              <div
-                key={m.id}
-                className={`wc-result${selectedMatch === m.id ? ' sel' : ''}`}
-                onClick={() => setSelectedMatch(m.id)}
-              >
-                <div className="wc-result-icon">{m.icon}</div>
-                <div className="wc-result-info">
-                  <div className="wc-result-title">{m.name}</div>
-                  <div className="wc-result-meta">{m.meta}</div>
+          {matchesLoading ? (
+            <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--g400)' }}>Loading today&apos;s matches...</div>
+          ) : (
+            <div className="wc-results">
+              {filteredMatches.map((m) => (
+                <div
+                  key={m.id}
+                  className={`wc-result${selectedMatch === m.id ? ' sel' : ''}`}
+                  onClick={() => setSelectedMatch(m.id)}
+                >
+                  <div className="wc-result-icon">{m.icon}</div>
+                  <div className="wc-result-info">
+                    <div className="wc-result-title">{m.name}</div>
+                    <div className="wc-result-meta">{m.meta}</div>
+                  </div>
+                  <div className="wc-result-check">✓</div>
                 </div>
-                <div className="wc-result-check">✓</div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className={`wc-step${!step3Ready ? ' disabled' : ''}`}>

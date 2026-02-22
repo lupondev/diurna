@@ -148,6 +148,19 @@ function confBg(c: number): string {
   return 'var(--g100)'
 }
 
+// Notify backend of queue item status change
+async function syncQueueItem(id: string, status: 'approved' | 'rejected') {
+  try {
+    await fetch('/api/copilot/queue', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    })
+  } catch {
+    // Non-blocking — localStorage is source of truth for UI
+  }
+}
+
 export default function CopilotPage() {
   const [mode, setMode] = useState<CopilotMode>('hybrid')
   const [queue, setQueue] = useState<QueueItem[]>([])
@@ -202,6 +215,7 @@ export default function CopilotPage() {
       saveJSON('copilot-queue', next)
       return next
     })
+    syncQueueItem(id, 'approved')
   }, [])
 
   const rejectItem = useCallback((id: string) => {
@@ -210,12 +224,16 @@ export default function CopilotPage() {
       saveJSON('copilot-queue', next)
       return next
     })
+    syncQueueItem(id, 'rejected')
   }, [])
 
   const approveAll = useCallback(() => {
     setQueue(prev => {
+      const pending = prev.filter(q => q.status === 'pending')
       const next = prev.map(q => q.status === 'pending' ? { ...q, status: 'approved' as const } : q)
       saveJSON('copilot-queue', next)
+      // Sync all pending items to backend
+      pending.forEach(q => syncQueueItem(q.id, 'approved'))
       return next
     })
   }, [])
@@ -256,7 +274,6 @@ export default function CopilotPage() {
     })
   }, [])
 
-  // Fix: only show success flash when API actually succeeds
   const saveStrategy = useCallback(async () => {
     setSaveFlash('saving')
     saveJSON('copilot-rules', rules)
@@ -323,10 +340,10 @@ export default function CopilotPage() {
   const completed = Math.min(published, planned)
 
   const saveBtnLabel =
-    saveFlash === 'saving' ? '\u23F3 Saving...' :
-    saveFlash === 'saved'  ? '\u2705 Saved!' :
-    saveFlash === 'error'  ? '\u274C Save failed' :
-    '\uD83D\uDCBE Save Strategy'
+    saveFlash === 'saving' ? '⏳ Saving...' :
+    saveFlash === 'saved'  ? '✅ Saved!' :
+    saveFlash === 'error'  ? '❌ Save failed' :
+    '💾 Save Strategy'
 
   const saveBtnStyle = saveFlash === 'error'
     ? { background: 'var(--coral)', color: 'white' }
@@ -338,7 +355,7 @@ export default function CopilotPage() {
     <div className="cop">
       <div className="cop-hd">
         <div>
-          <h1>\uD83E\uDD16 AI Co-Pilot</h1>
+          <h1>🤖 AI Co-Pilot</h1>
           <p>Your AI-powered editorial brain — configure, queue, and automate content</p>
         </div>
         {apStats && (
@@ -358,9 +375,9 @@ export default function CopilotPage() {
 
       <div className="cop-modes">
         {([
-          { id: 'full-auto' as const, icon: '\uD83E\uDD16', name: 'Full Auto', desc: 'AI generates + publishes automatically. No human review needed.' },
-          { id: 'hybrid' as const, icon: '\uD83D\uDD04', name: 'Hybrid', desc: 'AI generates articles, you review + approve before publishing.' },
-          { id: 'manual' as const, icon: '\u270F\uFE0F', name: 'Manual', desc: 'You write everything. AI only suggests trending topics.' },
+          { id: 'full-auto' as const, icon: '🤖', name: 'Full Auto', desc: 'AI generates + publishes automatically. No human review needed.' },
+          { id: 'hybrid' as const, icon: '🔄', name: 'Hybrid', desc: 'AI generates articles, you review + approve before publishing.' },
+          { id: 'manual' as const, icon: '✏️', name: 'Manual', desc: 'You write everything. AI only suggests trending topics.' },
         ]).map(m => (
           <div key={m.id} className={`cop-mode${mode === m.id ? ' active' : ''}`} onClick={() => changeMode(m.id)}>
             <div className="cop-mode-icon">{m.icon}</div>
@@ -370,7 +387,7 @@ export default function CopilotPage() {
         ))}
       </div>
 
-      <div className="cop-sec">\uD83D\uDCCA Today&apos;s Status</div>
+      <div className="cop-sec">📊 Today&apos;s Status</div>
       <div className="cop-stats">
         {([
           { label: 'Planned', val: planned, color: 'var(--elec)', bg: 'var(--elec-l)' },
@@ -394,18 +411,18 @@ export default function CopilotPage() {
           <div className="cop-prog-fill" style={{ width: `${Math.min(100, (completed / Math.max(planned, 1)) * 100)}%` }} />
         </div>
         <div className="cop-prog-text" style={{ color: completed >= planned ? 'var(--suc)' : 'var(--g400)' }}>
-          {completed >= planned ? '\u2705 Complete!' : `${planned - completed} remaining`}
+          {completed >= planned ? '✅ Complete!' : `${planned - completed} remaining`}
         </div>
       </div>
 
       {mode === 'hybrid' && (
         <>
-          <div className="cop-sec">\uD83D\uDCCB Smart Queue <span className="cop-sec-sub">{pendingQueue.length} awaiting review</span></div>
+          <div className="cop-sec">📋 Smart Queue <span className="cop-sec-sub">{pendingQueue.length} awaiting review</span></div>
           <div className="cop-queue">
             <div className="cop-q-head">
               <div className="cop-q-title">AI-Generated Articles</div>
               {pendingQueue.length > 0 && (
-                <button className="cop-q-btn" onClick={approveAll}>\u2705 Approve All ({pendingQueue.length})</button>
+                <button className="cop-q-btn" onClick={approveAll}>✅ Approve All ({pendingQueue.length})</button>
               )}
             </div>
             {queue.map(item => (
@@ -419,19 +436,19 @@ export default function CopilotPage() {
                   </div>
                   <div className="cop-q-info-meta">
                     <span className="cop-q-cat">{item.category}</span>
-                    <span>\uD83D\uDD50 {item.suggestedTime}</span>
+                    <span>🕐 {item.suggestedTime}</span>
                     {item.status !== 'pending' && (
                       <span style={{ fontWeight: 700, fontSize: 10, color: item.status === 'approved' ? 'var(--suc)' : 'var(--coral)' }}>
-                        {item.status === 'approved' ? '\u2705 Approved' : '\u274C Rejected'}
+                        {item.status === 'approved' ? '✅ Approved' : '❌ Rejected'}
                       </span>
                     )}
                   </div>
                 </div>
                 {item.status === 'pending' && (
                   <div className="cop-q-actions">
-                    <button className="cop-q-act approve" title="Approve" onClick={() => approveItem(item.id)}>\u2705</button>
-                    <Link href="/editor" className="cop-q-act" title="Edit" style={{ textDecoration: 'none' }}>\u270F\uFE0F</Link>
-                    <button className="cop-q-act reject" title="Reject" onClick={() => rejectItem(item.id)}>\uD83D\uDDD1\uFE0F</button>
+                    <button className="cop-q-act approve" title="Approve" onClick={() => approveItem(item.id)}>✅</button>
+                    <Link href="/editor" className="cop-q-act" title="Edit" style={{ textDecoration: 'none' }}>✏️</Link>
+                    <button className="cop-q-act reject" title="Reject" onClick={() => rejectItem(item.id)}>🗑️</button>
                   </div>
                 )}
               </div>
@@ -443,7 +460,7 @@ export default function CopilotPage() {
         </>
       )}
 
-      <div className="cop-sec">\u2699\uFE0F Content Strategy</div>
+      <div className="cop-sec">⚙️ Content Strategy</div>
       {configLoading ? (
         <div style={{ padding: '24px', textAlign: 'center', color: 'var(--g400)', fontSize: 13 }}>Loading configuration...</div>
       ) : (
@@ -533,7 +550,7 @@ export default function CopilotPage() {
         </div>
       )}
 
-      <div className="cop-sec">\uD83D\uDCD0 Fixture Autopilot Rules</div>
+      <div className="cop-sec">📐 Fixture Autopilot Rules</div>
       <div className="cop-rules">
         {rules.map(rule => (
           <div key={rule.id} className="cop-rule">
@@ -548,7 +565,7 @@ export default function CopilotPage() {
             </div>
             <div className="cop-rule-desc">
               {rule.slots.length} article{rule.slots.length !== 1 ? 's' : ''} per match
-              {rule.teamFilter === 'specific' && rule.specificTeams ? ` \u00B7 ${rule.specificTeams}` : ''}
+              {rule.teamFilter === 'specific' && rule.specificTeams ? ` · ${rule.specificTeams}` : ''}
             </div>
             <div className="cop-rule-slots">
               {rule.slots.map((slot, si) => (
@@ -599,7 +616,7 @@ export default function CopilotPage() {
               </select>
               <input className="cop-input" style={{ flex: 2, minWidth: 150 }} value={slot.template} onChange={e => updateNewRuleSlot(i, 'template', e.target.value)} placeholder="Template description" />
               {newRuleSlots.length > 1 && (
-                <button onClick={() => removeSlotFromNewRule(i)} style={{ background: 'var(--coral-l)', border: 'none', borderRadius: 'var(--r)', padding: '6px 10px', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', fontWeight: 700 }}>\u2715</button>
+                <button onClick={() => removeSlotFromNewRule(i)} style={{ background: 'var(--coral-l)', border: 'none', borderRadius: 'var(--r)', padding: '6px 10px', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', fontWeight: 700 }}>✕</button>
               )}
             </div>
           ))}
@@ -611,7 +628,7 @@ export default function CopilotPage() {
         </div>
       )}
 
-      <div className="cop-sec" style={{ marginTop: 28 }}>\u26BD Configured Leagues</div>
+      <div className="cop-sec" style={{ marginTop: 28 }}>⚽ Configured Leagues</div>
       <div className="cop-fixtures">
         {leaguesLoading ? (
           <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--g400)' }}>Loading leagues...</div>
@@ -623,7 +640,7 @@ export default function CopilotPage() {
           leagues.filter(l => l.isActive).map(league => (
             <div key={league.id} className="cop-fix">
               <div className="cop-fix-row" onClick={() => setExpandedLeague(expandedLeague === league.id ? null : league.id)}>
-                <span className={`cop-fix-arrow${expandedLeague === league.id ? ' open' : ''}`}>\u25B6</span>
+                <span className={`cop-fix-arrow${expandedLeague === league.id ? ' open' : ''}`}>▶</span>
                 <span className="cop-fix-teams">{league.flag} {league.name}</span>
                 <span className="cop-fix-league" style={{ color: 'var(--g400)', fontSize: 11 }}>weight: {league.weight}</span>
                 <span className="cop-fix-count">
