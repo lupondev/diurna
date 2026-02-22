@@ -56,7 +56,9 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as unknown as { role?: string }).role ?? 'JOURNALIST'
       }
 
-      if (token.id && (!token.onboardingCompleted || !token.role)) {
+      // FIX BUG-005: Always refresh from DB to pick up onboardingCompleted changes
+      // Without this, users who finish onboarding stay stuck in redirect loop
+      if (token.id) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },

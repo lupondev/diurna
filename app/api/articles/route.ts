@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { distributeArticle } from '@/lib/distribution'
+import { slugify } from '@/lib/autopilot'
 import { z } from 'zod'
 
 const CreateArticleSchema = z.object({
@@ -17,19 +18,10 @@ const CreateArticleSchema = z.object({
   aiPrompt: z.string().optional(),
 })
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .trim()
-    .slice(0, 100)
-}
-
 export async function POST(req: NextRequest) {
   try {
     let userId: string | undefined
+    let orgId: string | undefined
 
     const mcpSecret = req.headers.get('x-mcp-secret')
     if (mcpSecret && mcpSecret === process.env.MCP_SECRET) {
@@ -41,6 +33,7 @@ export async function POST(req: NextRequest) {
         if (firstOrg) {
           const membership = await prisma.userOnOrganization.findFirst({ where: { organizationId: firstOrg.id } })
           userId = membership?.userId
+          orgId = firstOrg.id
         }
       }
     } else {
@@ -49,6 +42,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
       userId = session.user.id
+      orgId = session.user.organizationId ?? undefined
     }
 
     if (!userId) {
@@ -58,6 +52,17 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = CreateArticleSchema.parse(body)
 
+    // FIX WARN-002: Tenant isolation — verify siteId belongs to the user's org
+    if (orgId) {
+      const site = await prisma.site.findFirst({
+        where: { id: data.siteId, organizationId: orgId, deletedAt: null },
+      })
+      if (!site) {
+        return NextResponse.json({ error: 'Forbidden: site does not belong to your organization' }, { status: 403 })
+      }
+    }
+
+    // FIX BUG-004: Use slugify from lib/autopilot which handles Bosnian chars
     let slug = slugify(data.title)
     const existing = await prisma.article.findFirst({
       where: { siteId: data.siteId, slug },

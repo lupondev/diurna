@@ -95,6 +95,48 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create site. Please try again.' }, { status: 500 })
     }
 
+    // FIX BUG-003: Create AutopilotConfig for new tenant
+    try {
+      await withTimeout(
+        prisma.autopilotConfig.upsert({
+          where: { orgId },
+          update: {},
+          create: {
+            orgId,
+            dailyTarget: 10,
+            defaultLength: 800,
+            isActive: true,
+            autoPublish: true,
+            contentStyle: 'signal_only',
+            translateLang: 'bs',
+            scheduleStart: '07:00',
+            scheduleEnd: '00:00',
+            is24h: true,
+            breakingNews: true,
+            breakingThreshold: 70,
+            gapDetection: true,
+            gapHours: 2,
+            matchAutoCoverage: true,
+            tone: 'neutral',
+            alwaysCreditSources: true,
+            // FIX WARN-004: Create default categories
+            categories: {
+              create: [
+                { name: 'Vijesti', slug: 'vijesti', color: '#3b82f6', percentage: 40, sortOrder: 0, widgetPoll: true, widgetStats: true },
+                { name: 'Premier League', slug: 'premier-league', color: '#7c3aed', percentage: 30, sortOrder: 1, widgetStats: true },
+                { name: 'Transferi', slug: 'transferi', color: '#10b981', percentage: 30, sortOrder: 2 },
+              ]
+            }
+          },
+        }),
+        TIMEOUT_MS,
+        'Create AutopilotConfig'
+      )
+    } catch (err) {
+      // Non-fatal: log but continue — site is created, user can configure autopilot manually
+      console.error('Onboarding step 2.5 (create autopilot config) failed:', err)
+    }
+
     try {
       const leagueCategories = data.leagues.map((league, i) => ({
         siteId,
