@@ -150,7 +150,6 @@ export default function TeamPage() {
         url: data.inviteUrl,
       })
 
-      // Reset form fields but keep modal open to show the invite link
       setInviteEmail('')
       setInviteName('')
       setInviteRole('EDITOR')
@@ -173,7 +172,7 @@ export default function TeamPage() {
 
   const stats = [
     { label: 'Team members', value: members.length, icon: '\u{1F465}', cls: 'members' },
-    { label: 'Online', value: members.length > 0 ? Math.min(members.length, Math.ceil(members.length * 0.6)) : 0, icon: '\u{1F7E2}', cls: 'active' },
+    // "Online" status removed — no real-time session data available
     { label: 'Pending invites', value: 0, icon: '\u{1F4E7}', cls: 'pending' },
     { label: 'Articles this month', value: articlesThisMonth, icon: '\u{1F4DD}', cls: 'articles' },
   ]
@@ -210,7 +209,6 @@ export default function TeamPage() {
           <div className="ml-head">
             <span>Member</span>
             <span>Role</span>
-            <span>Status</span>
             <span>Joined</span>
             <span></span>
           </div>
@@ -255,10 +253,6 @@ export default function TeamPage() {
                         <option value="JOURNALIST">{'\u270D\uFE0F'} Journalist</option>
                       </select>
                     )}
-                  </div>
-                  <div className="ml-status">
-                    <span className={`ml-status-dot ${i < Math.ceil(members.length * 0.6) ? 'online' : 'offline'}`}></span>
-                    {i < Math.ceil(members.length * 0.6) ? 'Online' : 'Offline'}
                   </div>
                   <div className="ml-joined">{formatDate(m.joinedAt)}</div>
                   <div className="ml-actions">
@@ -335,7 +329,7 @@ export default function TeamPage() {
                   color: inviteResult.type === 'success' ? 'var(--suc-d, #166534)' : 'var(--coral-d, #991b1b)',
                 }}>
                   <div style={{ fontWeight: 700, marginBottom: inviteResult.url ? 6 : 0 }}>
-                    {inviteResult.type === 'success' ? '✅ ' : '❌ '}{inviteResult.message}
+                    {inviteResult.type === 'success' ? '\u2705 ' : '\u274C '}{inviteResult.message}
                   </div>
                   {inviteResult.url && (
                     <div style={{ marginTop: 8 }}>
@@ -359,7 +353,7 @@ export default function TeamPage() {
                 </div>
               )}
 
-              {!inviteResult?.type || inviteResult.type === 'error' ? (
+              {(!inviteResult || inviteResult.type === 'error') && (
                 <>
                   <div className="tm-form-group">
                     <label className="tm-form-label">Email address</label>
@@ -413,7 +407,7 @@ export default function TeamPage() {
                     />
                   </div>
                 </>
-              ) : null}
+              )}
             </div>
             <div className="tm-modal-foot">
               <button className="tm-cancel-btn" onClick={closeInviteModal}>
@@ -426,7 +420,7 @@ export default function TeamPage() {
                   disabled={!inviteEmail || inviteSending}
                   style={{ opacity: !inviteEmail || inviteSending ? 0.6 : 1 }}
                 >
-                  {inviteSending ? '⏳ Sending...' : '\u{1F4E7} Send invite'}
+                  {inviteSending ? '\u23F3 Sending...' : '\u{1F4E7} Send invite'}
                 </button>
               )}
             </div>

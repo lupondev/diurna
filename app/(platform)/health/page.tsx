@@ -39,6 +39,7 @@ type DashboardData = {
   cache: {
     entries: number
     apiCallsToday: number
+    cacheHitsToday: number
     quotaUsed: number
     quotaLimit: number
   }
@@ -123,6 +124,13 @@ export default function HealthPage() {
       </div>
     )
   }
+
+  // Cache hit rate: cacheHitsToday / (cacheHitsToday + apiCallsToday)
+  // Falls back to N/A if the API doesn't yet return cacheHitsToday
+  const totalRequests = (data.cache.cacheHitsToday ?? 0) + data.cache.apiCallsToday
+  const cacheHitRate = totalRequests > 0
+    ? `${Math.round(((data.cache.cacheHitsToday ?? 0) / totalRequests) * 100)}%`
+    : 'N/A'
 
   return (
     <div style={s.container}>
@@ -213,12 +221,8 @@ export default function HealthPage() {
             <div style={s.statValue}>{data.cache.quotaUsed} / {data.cache.quotaLimit}</div>
             <div style={s.statLabel}>API-Football quota</div>
           </div>
-          <div style={s.statCard}>
-            <div style={s.statValue}>
-              {data.cache.quotaUsed > 0
-                ? `${Math.round(((data.cache.quotaUsed - data.cache.apiCallsToday) / Math.max(1, data.cache.quotaUsed)) * 100)}%`
-                : 'N/A'}
-            </div>
+          <div style={s.statCard} title="Cache hits / (cache hits + API calls today)">
+            <div style={s.statValue}>{cacheHitRate}</div>
             <div style={s.statLabel}>Cache hit rate</div>
           </div>
         </div>
@@ -321,8 +325,6 @@ export default function HealthPage() {
     </div>
   )
 }
-
-/* Inline styles */
 
 function badgeStyle(status: string): React.CSSProperties {
   return {
