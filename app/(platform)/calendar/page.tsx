@@ -45,6 +45,21 @@ type TlArticle = { id: string; title: string; category: string; categorySlug: st
 type TlMatch = { id: string; homeTeam: string; awayTeam: string; homeScore: number | null; awayScore: number | null; league: string | null; status: string | null; time: string; hour: number }
 type FeedSource = { id: string; name: string; tier: number; active: boolean; category: string }
 
+/* ── Real slot type (replaces GenSlot) ── */
+type RealSlot = {
+  id: string
+  time: string
+  hour: number
+  title: string
+  catSlug: string
+  status: string
+  ai: boolean
+  isMatch: boolean
+  isLive: boolean
+  isGap: boolean
+  isWebhook?: boolean
+}
+
 /* ── Helpers ── */
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -102,7 +117,7 @@ const DIST_PLATFORMS = [
   { platform: 'newsletter', icon: '📧', label: 'Newsletter' },
 ]
 
-/* ── Default feed sources (static — no DB seeding on render) ── */
+/* ── Default feed sources (static) ── */
 const DEFAULT_FEED_SOURCES: FeedSource[] = [
   { id: '1', name: 'BBC Sport', tier: 1, active: true, category: 'breaking' },
   { id: '2', name: 'Sky Sports', tier: 1, active: true, category: 'breaking' },
@@ -128,63 +143,6 @@ const DEFAULT_FEED_SOURCES: FeedSource[] = [
   { id: '22', name: 'Sportske.ba', tier: 4, active: true, category: 'breaking' },
 ]
 
-/* ── Slot generation (seeded) ── */
-function seededRandom(seed: number) { let s = seed; return () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff } }
-type GenSlot = { id: string; time: string; hour: number; title: string; catSlug: string; status: string; ai: boolean; isMatch: boolean; isLive: boolean; isGap: boolean; isWebhook?: boolean }
-
-function generateSlots(date: Date, isToday: boolean, target: number): GenSlot[] {
-  const seed = date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate()
-  const rng = seededRandom(seed)
-  const isPast = date < new Date(new Date().toDateString())
-  const dow = date.getDay()
-  const slots: GenSlot[] = []
-  let id = 0
-
-  const mk = (hour: number, min: number, title: string, catSlug: string, isMatch = false, isLive = false): GenSlot => ({
-    id: `g-${seed}-${id++}`, time: `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`,
-    hour, title, catSlug, ai: true, isMatch, isLive, isGap: false,
-    status: isLive ? 'LIVE' : isPast ? 'PUBLISHED' : (isToday && hour <= new Date().getHours()) ? 'PUBLISHED' : 'SCHEDULED',
-  })
-
-  slots.push(mk(8, 0, 'Morning Briefing: Top Stories', 'vijesti'))
-  if (dow >= 2 && dow <= 5) slots.push(mk(10, 30, 'Transfer Roundup: Latest Deals', 'transferi'))
-  if (dow === 0 || dow === 6) {
-    slots.push(mk(12, 0, `${['Arsenal vs Chelsea', 'Real Madrid vs Barcelona', 'Napoli vs Inter'][Math.floor(rng() * 3)]}: Match Preview`, 'utakmice', true))
-    if (isToday) slots.push(mk(15, 0, 'PL 3pm Kickoffs: Live Coverage', 'utakmice', true, true))
-    slots.push(mk(17, 30, 'Results Roundup & Ratings', 'utakmice', true))
-  }
-  if (dow >= 2 && dow <= 4) slots.push(mk(20, 0, `UCL/UEL: ${['Bayern vs Real Madrid', 'PSG vs Barcelona', 'Arsenal vs Inter'][Math.floor(rng() * 3)]} Preview`, 'utakmice', true))
-
-  const fillers = ['Tactical Analysis: Why Formation Changes Matter', 'Injury Update: Latest Squad News', 'Top 10 Goals of the Week', 'Rising Stars: U21 Players to Watch', "Power Rankings: This Week's Movers"]
-  const cats = ['analize', 'povrede', 'rankings', 'analize', 'rankings']
-  let fi = 0
-  while (slots.length < Math.min(target, 10) && fi < fillers.length) {
-    const h = [9, 11, 13, 16, 19][fi] || 14
-    slots.push(mk(h, 0, fillers[fi], cats[fi]))
-    fi++
-  }
-
-  slots.sort((a, b) => a.hour - b.hour || a.time.localeCompare(b.time))
-
-  // Gap detection
-  if (slots.length >= 2) {
-    for (let i = 1; i < slots.length; i++) {
-      const gap = slots[i].hour - slots[i - 1].hour
-      if (gap >= 3) {
-        const gapHour = slots[i - 1].hour + Math.floor(gap / 2)
-        slots.splice(i, 0, {
-          id: `gap-${seed}-${gapHour}`, time: `${String(gapHour).padStart(2, '0')}:00`, hour: gapHour,
-          title: `No content ${String(slots[i - 1].hour).padStart(2, '0')}:00–${String(slots[i].hour).padStart(2, '0')}:00. Generate trending article?`,
-          catSlug: '', status: 'GAP', ai: false, isMatch: false, isLive: false, isGap: true,
-        })
-        break
-      }
-    }
-  }
-
-  return slots
-}
-
 /* ════════════════════════════════════════════════ */
 /* ─── MAIN COMPONENT ─── */
 /* ════════════════════════════════════════════════ */
@@ -193,7 +151,6 @@ export default function CalendarPage() {
   const router = useRouter()
   const [config, setConfig] = useState<AutopilotConfig | null>(null)
   const [stats, setStats] = useState<Stats>({ today: 0, published: 0, scheduled: 0, live: 0, drafts: 0 })
-  // Sources initialized from static defaults — no DB seeding triggered on every render
   const [sources, setSources] = useState<FeedSource[]>(DEFAULT_FEED_SOURCES)
   const [sourceSearch, setSourceSearch] = useState('')
   const [showAllSources, setShowAllSources] = useState(false)
@@ -223,6 +180,8 @@ export default function CalendarPage() {
   const [tlView, setTlView] = useState<'Day' | 'Week' | 'Month'>('Day')
   const [tlArticles, setTlArticles] = useState<TlArticle[]>([])
   const [tlMatches, setTlMatches] = useState<TlMatch[]>([])
+  // Week article counts per day (real data)
+  const [weekArticleCounts, setWeekArticleCounts] = useState<Record<string, number>>({})
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -230,15 +189,33 @@ export default function CalendarPage() {
   useEffect(() => {
     fetch('/api/autopilot/config', { credentials: 'include' }).then(r => r.json() as Promise<AutopilotConfig>).then(setConfig).catch(() => {})
     fetch('/api/autopilot/stats', { credentials: 'include' }).then(r => r.json() as Promise<Stats>).then(setStats).catch(() => {})
-    fetch('/api/categories', { credentials: 'include' }).then(r => r.json() as Promise<unknown>).catch(() => {})
-    // Note: /api/admin/seed-feeds is intentionally NOT called here to avoid
-    // triggering DB seeding on every Calendar render. Sources use static defaults.
   }, [])
 
   useEffect(() => {
     fetch(`/api/autopilot/timeline?date=${toDateStr(tlDate)}`, { credentials: 'include' })
-      .then(r => r.json() as Promise<{ articles?: TlArticle[]; matches?: TlMatch[] }>).then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) }).catch(() => {})
+      .then(r => r.json() as Promise<{ articles?: TlArticle[]; matches?: TlMatch[] }>)
+      .then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) })
+      .catch(() => {})
   }, [tlDate])
+
+  // Fetch real article counts for week view
+  useEffect(() => {
+    if (tlView !== 'Week') return
+    const weekStart = getMonday(tlDate)
+    const promises = Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(weekStart, i)
+      const dateStr = toDateStr(d)
+      return fetch(`/api/autopilot/timeline?date=${dateStr}`, { credentials: 'include' })
+        .then(r => r.json() as Promise<{ articles?: TlArticle[] }>)
+        .then(data => ({ dateStr, count: data.articles?.length || 0 }))
+        .catch(() => ({ dateStr, count: 0 }))
+    })
+    Promise.all(promises).then(results => {
+      const counts: Record<string, number> = {}
+      results.forEach(r => { counts[r.dateStr] = r.count })
+      setWeekArticleCounts(counts)
+    })
+  }, [tlView, tlDate])
 
   /* ── Config updates ── */
   const updateConfig = useCallback((partial: Partial<AutopilotConfig>) => {
@@ -362,7 +339,6 @@ export default function CalendarPage() {
     setConfig(prev => {
       if (!prev) return prev
       const updated = prev.channels.map(c => c.platform === platform ? { ...c, isActive } : c)
-      // Fire API calls for each channel
       prev.channels.filter(c => c.platform === platform).forEach(c => {
         fetch(`/api/autopilot/channels/${c.id}`, {
           method: 'PUT', credentials: 'include',
@@ -387,7 +363,7 @@ export default function CalendarPage() {
       if (!prev) return prev
       const langs = prev.translateLanguages || ['bs']
       const next = langs.includes(code) ? langs.filter(l => l !== code) : [...langs, code]
-      if (next.length === 0) return prev // must have at least one
+      if (next.length === 0) return prev
       updateConfig({ translateLanguages: next })
       return { ...prev, translateLanguages: next }
     })
@@ -397,7 +373,6 @@ export default function CalendarPage() {
     if (!newLangCode.trim()) return
     const code = newLangCode.trim().toLowerCase()
     if (LANGS.find(l => l.code === code)) { toggleLang(code); setNewLangCode(''); setAddingLang(false); return }
-    // Add to translate languages
     setConfig(prev => {
       if (!prev) return prev
       const langs = prev.translateLanguages || ['bs']
@@ -413,7 +388,9 @@ export default function CalendarPage() {
   const refreshData = useCallback(() => {
     fetch('/api/autopilot/stats', { credentials: 'include' }).then(r => r.json() as Promise<Stats>).then(setStats).catch(() => {})
     fetch(`/api/autopilot/timeline?date=${toDateStr(tlDate)}`, { credentials: 'include' })
-      .then(r => r.json() as Promise<{ articles?: TlArticle[]; matches?: TlMatch[] }>).then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) }).catch(() => {})
+      .then(r => r.json() as Promise<{ articles?: TlArticle[]; matches?: TlMatch[] }>)
+      .then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) })
+      .catch(() => {})
   }, [tlDate])
 
   const runAutopilotNow = useCallback(async () => {
@@ -425,7 +402,7 @@ export default function CalendarPage() {
       if (!res.ok) {
         setRunResult({ type: 'error', message: data.reason || data.error || 'Request failed' })
       } else if (data.action === 'generated' && data.article) {
-        setRunResult({ type: 'success', message: `Generated: ${data.article.title}` })
+        setRunResult({ type: 'success', message: `✅ Generisano: ${data.article.title}` })
         refreshData()
       } else if (data.action === 'skipped') {
         setRunResult({ type: 'info', message: data.reason || 'Nothing to generate' })
@@ -441,30 +418,89 @@ export default function CalendarPage() {
     }
   }, [refreshData])
 
-  /* ── Timeline data ── */
+  /* ── Build real slots from API data only ── */
   const today = new Date()
   const isToday = isSameDay(tlDate, today)
   const nowHour = today.getHours()
   const nowMin = today.getMinutes()
-
-  const genSlots = generateSlots(tlDate, isToday, config?.dailyTarget || 8)
   const hours = Array.from({ length: 17 }, (_, i) => i + 7) // 07:00 to 23:00
 
-  // Merge real articles into timeline
-  const slotsByHour: Record<number, GenSlot[]> = {}
-  for (const s of genSlots) { (slotsByHour[s.hour] ||= []).push(s) }
-  for (const a of tlArticles) { (slotsByHour[a.hour] ||= []).push({ id: a.id, time: new Date(a.time).toTimeString().slice(0, 5), hour: a.hour, title: a.title, catSlug: a.categorySlug, status: a.status, ai: a.aiGenerated, isMatch: false, isLive: false, isGap: false, isWebhook: a.isWebhook }) }
-  for (const m of tlMatches) { (slotsByHour[m.hour] ||= []).push({ id: m.id, time: new Date(m.time).toTimeString().slice(0, 5), hour: m.hour, title: `⚽ ${m.homeTeam} vs ${m.awayTeam}`, catSlug: 'utakmice', status: m.status === 'LIVE' ? 'LIVE' : m.status === 'FT' ? 'PUBLISHED' : 'SCHEDULED', ai: false, isMatch: true, isLive: m.status === 'LIVE' || m.status === '1H' || m.status === '2H', isGap: false }) }
+  // Build slots from real articles + matches only (no fake data)
+  const slotsByHour = useMemo(() => {
+    const map: Record<number, RealSlot[]> = {}
 
-  // Week data
+    for (const a of tlArticles) {
+      const slot: RealSlot = {
+        id: a.id,
+        time: new Date(a.time).toLocaleTimeString('bs-BA', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        hour: a.hour,
+        title: a.title,
+        catSlug: a.categorySlug,
+        status: a.status,
+        ai: a.aiGenerated,
+        isMatch: false,
+        isLive: false,
+        isGap: false,
+        isWebhook: a.isWebhook,
+      }
+      ;(map[a.hour] ||= []).push(slot)
+    }
+
+    for (const m of tlMatches) {
+      const slot: RealSlot = {
+        id: m.id,
+        time: new Date(m.time).toLocaleTimeString('bs-BA', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        hour: m.hour,
+        title: `⚽ ${m.homeTeam} vs ${m.awayTeam}`,
+        catSlug: 'utakmice',
+        status: m.status === 'LIVE' ? 'LIVE' : m.status === 'FT' ? 'PUBLISHED' : 'SCHEDULED',
+        ai: false,
+        isMatch: true,
+        isLive: m.status === 'LIVE' || m.status === '1H' || m.status === '2H',
+        isGap: false,
+      }
+      ;(map[m.hour] ||= []).push(slot)
+    }
+
+    // Gap detection on real data
+    if (config?.gapDetection) {
+      const filledHours = Object.keys(map).map(Number).sort((a, b) => a - b)
+      for (let i = 1; i < filledHours.length; i++) {
+        const gap = filledHours[i] - filledHours[i - 1]
+        if (gap >= (config.gapHours || 2)) {
+          const gapHour = filledHours[i - 1] + Math.floor(gap / 2)
+          ;(map[gapHour] ||= []).push({
+            id: `gap-${gapHour}`,
+            time: `${String(gapHour).padStart(2, '0')}:00`,
+            hour: gapHour,
+            title: `Nema sadržaja ${String(filledHours[i - 1]).padStart(2, '0')}:00–${String(filledHours[i]).padStart(2, '0')}:00. Generisati članak?`,
+            catSlug: '',
+            status: 'GAP',
+            ai: false,
+            isMatch: false,
+            isLive: false,
+            isGap: true,
+          })
+        }
+      }
+    }
+
+    return map
+  }, [tlArticles, tlMatches, config?.gapDetection, config?.gapHours])
+
+  // Week view — use real counts where available, 0 for days without data
   const weekStart = getMonday(tlDate)
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = addDays(weekStart, i)
-    const slots = generateSlots(d, isSameDay(d, today), config?.dailyTarget || 8)
-    return { date: d, isToday: isSameDay(d, today), slots }
+    const dateStr = toDateStr(d)
+    return {
+      date: d,
+      isToday: isSameDay(d, today),
+      count: weekArticleCounts[dateStr] ?? 0,
+    }
   })
 
-  // Month data
+  // Month data (article counts per day — real when available)
   const monthFirst = new Date(tlDate.getFullYear(), tlDate.getMonth(), 1)
   const monthLast = new Date(tlDate.getFullYear(), tlDate.getMonth() + 1, 0)
   const monthStartPad = monthFirst.getDay() === 0 ? 6 : monthFirst.getDay() - 1
@@ -472,7 +508,12 @@ export default function CalendarPage() {
   for (let i = 0; i < monthStartPad; i++) monthCells.push({ date: null, count: 0, isToday: false })
   for (let d = 1; d <= monthLast.getDate(); d++) {
     const dt = new Date(monthFirst.getFullYear(), monthFirst.getMonth(), d)
-    monthCells.push({ date: dt, count: generateSlots(dt, false, config?.dailyTarget || 8).filter(s => !s.isGap).length, isToday: isSameDay(dt, today) })
+    const dateStr = toDateStr(dt)
+    monthCells.push({
+      date: dt,
+      count: weekArticleCounts[dateStr] ?? (isSameDay(dt, today) ? tlArticles.length : 0),
+      isToday: isSameDay(dt, today),
+    })
   }
 
   // Source filtering
@@ -483,12 +524,13 @@ export default function CalendarPage() {
   const catColorMap: Record<string, string> = {}
   config?.categories.forEach(c => { catColorMap[c.slug] = c.color })
 
-  // Stable estimated views (seeded, doesn't change on re-render)
   const estimatedViews = useMemo(() => stats.published * 1240, [stats.published])
   const estimatedSocialPosts = useMemo(
     () => (config?.channels.filter(c => c.isActive).length ?? 0) * stats.published,
     [config?.channels, stats.published]
   )
+
+  const totalRealSlots = tlArticles.length + tlMatches.length
 
   if (!config) return <div className="cal-page"><div style={{ padding: 40, textAlign: 'center', color: '#A1A1AA' }}>Loading configuration...</div></div>
 
@@ -550,7 +592,7 @@ export default function CalendarPage() {
             border: `1px solid ${runResult.type === 'success' ? '#BBF7D0' : runResult.type === 'error' ? '#FECACA' : '#BAE6FD'}`,
           }}
         >
-          {runResult.type === 'success' ? '✅' : runResult.type === 'error' ? '❌' : 'ℹ️'} {runResult.message}
+          {runResult.message}
         </div>
       )}
 
@@ -897,15 +939,31 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Day View */}
+      {/* Day View — only real articles */}
       {tlView === 'Day' && (
         <div className="cal-tl cal-fadein" style={{ animationDelay: '.15s' }}>
           {isToday && (() => {
             const topPx = (nowHour - 7) * 64 + (nowMin / 60) * 64
             return topPx > 0 ? <div className="cal-tl-now" style={{ top: topPx }} /> : null
           })()}
+
+          {/* Empty state */}
+          {totalRealSlots === 0 && (
+            <div style={{ padding: '48px 24px', textAlign: 'center', color: '#A1A1AA' }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Nema objavljenih članaka za ovaj dan</div>
+              <div style={{ fontSize: 12 }}>Klikni ⚡ Run Now da generišeš prvi članak</div>
+            </div>
+          )}
+
           {hours.map(h => {
             const rowSlots = slotsByHour[h] || []
+            if (rowSlots.length === 0) return (
+              <div key={h} className="cal-tl-row">
+                <div className="cal-tl-time">{String(h).padStart(2, '0')}:00</div>
+                <div className="cal-tl-content" />
+              </div>
+            )
             return (
               <div key={h} className="cal-tl-row">
                 <div className="cal-tl-time">{String(h).padStart(2, '0')}:00</div>
@@ -925,7 +983,8 @@ export default function CalendarPage() {
                       <div
                         key={slot.id}
                         className={`cal-tl-card ${catClass} ${extraClass}`}
-                        onClick={() => { if (!slot.isMatch && !slot.id.startsWith('g-')) router.push(`/editor/${slot.id}`) }}
+                        style={{ cursor: slot.isMatch ? 'default' : 'pointer' }}
+                        onClick={() => { if (!slot.isMatch) router.push(`/editor/${slot.id}`) }}
                       >
                         <div className="cal-tl-card-body">
                           <div className="cal-tl-card-title">{slot.title}</div>
@@ -949,7 +1008,7 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* Week View */}
+      {/* Week View — real counts */}
       {tlView === 'Week' && (
         <div className="cal-wk cal-fadein" style={{ animationDelay: '.15s' }}>
           {weekDays.map(wd => (
@@ -957,18 +1016,14 @@ export default function CalendarPage() {
               <div className="cal-wk-head">
                 <span className="cal-wk-name">{DAYS_SHORT[((wd.date.getDay() + 6) % 7)]}</span>
                 <span className="cal-wk-num">{wd.date.getDate()}</span>
-                <span className="cal-wk-count">{wd.slots.filter(s => !s.isGap).length}</span>
+                <span className="cal-wk-count">{wd.count}</span>
               </div>
               <div className="cal-wk-body">
-                {wd.slots.filter(s => !s.isGap).slice(0, 3).map(slot => (
-                  <div key={slot.id} className="cal-wk-mini" style={{ borderColor: catColorMap[slot.catSlug] || '#D4D4D8' }}>
-                    <div className="cal-wk-mini-time">{slot.time}</div>
-                    <div className="cal-wk-mini-title">{slot.title}</div>
-                  </div>
-                ))}
-                {wd.slots.filter(s => !s.isGap).length > 3 && (
-                  <div style={{ fontSize: 10, color: '#A1A1AA', textAlign: 'center', padding: 4, fontWeight: 600 }}>
-                    +{wd.slots.filter(s => !s.isGap).length - 3} more
+                {wd.count === 0 ? (
+                  <div style={{ fontSize: 11, color: '#A1A1AA', textAlign: 'center', padding: '12px 0' }}>—</div>
+                ) : (
+                  <div style={{ fontSize: 11, color: '#A1A1AA', textAlign: 'center', padding: '12px 0', fontWeight: 600 }}>
+                    {wd.count} članak{wd.count === 1 ? '' : wd.count < 5 ? 'a' : 'a'}
                   </div>
                 )}
               </div>
