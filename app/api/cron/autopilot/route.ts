@@ -19,16 +19,28 @@ import { systemLog } from '@/lib/system-log'
 
 export const maxDuration = 60
 
-async function authenticate(req: NextRequest): Promise<{ ok: true; orgId?: string } | { ok: false; response: NextResponse }> {
-  // Method 1: Bearer token (cron jobs)
+async function authenticate(
+  req: NextRequest
+): Promise<{ ok: true; orgId?: string } | { ok: false; response: NextResponse }> {
+  // Method 1: Bearer token header (cron jobs with Authorization header)
   const authHeader = req.headers.get('authorization')
   if (authHeader === `Bearer ${process.env.CRON_SECRET}`) {
     return { ok: true }
   }
 
-  // Method 2: Session cookie (admin UI)
+  // Method 2: Query param secret — cron-job.org doesn't support custom headers on free plan
+  // Usage: /api/cron/autopilot?secret=YOUR_CRON_SECRET
+  const secretParam = req.nextUrl.searchParams.get('secret')
+  if (secretParam && secretParam === process.env.CRON_SECRET) {
+    return { ok: true }
+  }
+
+  // Method 3: Session cookie (admin UI "Run Now" button)
   const session = await getServerSession(authOptions)
-  if (session?.user?.organizationId && (session.user.role === 'ADMIN' || session.user.role === 'OWNER')) {
+  if (
+    session?.user?.organizationId &&
+    (session.user.role === 'ADMIN' || session.user.role === 'OWNER')
+  ) {
     return { ok: true, orgId: session.user.organizationId }
   }
 
@@ -320,7 +332,6 @@ export async function GET(req: NextRequest) {
       const currentHour = new Date().getHours()
       const schedEndRaw = config.scheduleEnd || '00:00'
       const schedEndHour = schedEndRaw === '00:00' ? 24 : parseInt(schedEndRaw.split(':')[0])
-      const schedStartHour = parseInt((config.scheduleStart || '08:00').split(':')[0])
       const remainingHours = Math.max(1, schedEndHour - currentHour)
       const hourlyTarget = Math.ceil(remaining / remainingHours)
 
@@ -410,10 +421,7 @@ export async function GET(req: NextRequest) {
       // Deduplication: skip only if exact slug already exists
       const candidateSlug = parsed.seo?.slug || slugify(title)
       const existingDupe = await prisma.article.findFirst({
-        where: {
-          siteId: site.id,
-          slug: candidateSlug,
-        },
+        where: { siteId: site.id, slug: candidateSlug },
       })
       if (existingDupe) {
         results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Duplicate slug: "${candidateSlug}"` })

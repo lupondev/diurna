@@ -74,6 +74,25 @@ export const metadata: Metadata = {
   },
 }
 
+// Inline script that runs BEFORE any paint — eliminates dark mode FOUC completely.
+// Sets .dark class AND background-color on <html> synchronously from localStorage.
+const themeScript = `
+try {
+  var t = localStorage.getItem('diurna-theme');
+  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var isDark = t === 'dark' || (!t && prefersDark);
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+    document.documentElement.style.backgroundColor = '#0A0A0A';
+    document.documentElement.style.colorScheme = 'dark';
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.style.backgroundColor = '';
+    document.documentElement.style.colorScheme = 'light';
+  }
+} catch(e) {}
+`.trim()
+
 export default function RootLayout({
   children,
 }: {
@@ -82,7 +101,8 @@ export default function RootLayout({
   return (
     <html lang="bs" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{__html: `try{const t=localStorage.getItem('diurna-theme')||'light';document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}`}} />
+        {/* CRITICAL: must be first script — runs synchronously before first paint */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className={`${jakarta.variable} ${jetbrains.variable} ${instrumentSerif.variable} ${dmSerif.variable} ${ibmSans.variable} ${ibmMono.variable} antialiased`}>
         <GoogleAnalytics />
