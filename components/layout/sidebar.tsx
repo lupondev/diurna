@@ -13,48 +13,47 @@ const sections: NavSection[] = [
   {
     label: 'Main',
     items: [
-      { label: 'Newsroom', icon: '\ud83d\udcf0', href: '/newsroom' },
-      { label: 'Editor', icon: '\u270d\ufe0f', href: '/editor', exact: true },
-      { label: 'Calendar', icon: '\ud83d\udcc5', href: '/calendar' },
-      { label: 'Articles', icon: '\ud83d\udcc4', href: '/articles' },
+      { label: 'Newsroom', icon: '📰', href: '/newsroom' },
+      { label: 'Editor', icon: '✍️', href: '/editor', exact: true },
+      { label: 'Calendar', icon: '📅', href: '/calendar' },
+      { label: 'Articles', icon: '📄', href: '/articles' },
     ],
   },
   {
     label: 'Intelligence',
     items: [
-      { label: 'AI Co-Pilot', icon: '\ud83e\udd16', href: '/copilot' },
-      { label: 'Analytics', icon: '\ud83d\udcca', href: '/analytics' },
+      { label: 'AI Co-Pilot', icon: '🤖', href: '/copilot' },
+      { label: 'Analytics', icon: '📊', href: '/analytics' },
     ],
   },
   {
     label: 'Sport',
     items: [
-      // exact: true so /football/fixtures doesn't also highlight Football Hub
-      { label: 'Football Hub', icon: '\u26bd', href: '/football', exact: true },
-      { label: 'Fixtures', icon: '\ud83d\udd22', href: '/football/fixtures' },
-      { label: 'Leagues & Tables', icon: '\ud83c\udfc6', href: '/football/leagues' },
+      { label: 'Football Hub', icon: '⚽', href: '/football', exact: true },
+      { label: 'Fixtures', icon: '🔢', href: '/football/fixtures' },
+      { label: 'Leagues & Tables', icon: '🏆', href: '/football/leagues' },
     ],
   },
   {
     label: 'Content',
     items: [
-      { label: 'Widgets', icon: '\ud83e\udde9', href: '/widgets' },
-      { label: 'Widget Creator', icon: '\ud83d\udee0\ufe0f', href: '/widget-creator' },
-      { label: 'Media', icon: '\ud83d\uddbc\ufe0f', href: '/media' },
+      { label: 'Widgets', icon: '🧩', href: '/widgets' },
+      { label: 'Widget Creator', icon: '🛠️', href: '/widget-creator' },
+      { label: 'Media', icon: '🖼️', href: '/media' },
     ],
   },
   {
     label: 'Templates',
     items: [
-      { label: 'Midnight Pro', icon: '\ud83c\udf19', href: '/templates/midnight' },
-      { label: 'Clean Editorial', icon: '\ud83d\udcf0', href: '/templates/editorial' },
+      { label: 'Midnight Pro', icon: '🌙', href: '/templates/midnight' },
+      { label: 'Clean Editorial', icon: '📰', href: '/templates/editorial' },
     ],
   },
   {
     label: 'Admin',
     roles: ['OWNER', 'ADMIN'],
     items: [
-      { label: 'Settings', icon: '\u2699\ufe0f', href: '/settings' },
+      { label: 'Settings', icon: '⚙️', href: '/settings' },
     ],
   },
 ]
@@ -77,7 +76,6 @@ export function Sidebar() {
 
   function isActive(item: NavItem): boolean {
     if (item.exact) return pathname === item.href
-    // Editor sub-pages like /editor/[id] should keep editor highlighted
     return pathname.startsWith(item.href)
   }
 
@@ -89,12 +87,12 @@ export function Sidebar() {
 
       <div className="ss">
         <div className="ss-row">
-          <div className="ss-icon">\u26bd</div>
+          <div className="ss-icon">⚽</div>
           <div>
             <div className="ss-name">Diurna</div>
             <div className="ss-url">Publishing Platform</div>
           </div>
-          <span style={{ color: 'var(--g400)', fontSize: 12, marginLeft: 'auto' }}>\u25bc</span>
+          <span style={{ color: 'var(--g400)', fontSize: 12, marginLeft: 'auto' }}>▼</span>
         </div>
       </div>
 
@@ -149,7 +147,7 @@ export function Sidebar() {
               e.currentTarget.style.color = 'var(--g400)'
             }}
           >
-            \u21aa
+            ↪
           </button>
         </div>
       </div>
