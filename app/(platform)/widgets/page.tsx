@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import './widgets.css'
 
@@ -231,12 +231,25 @@ function H2HPreview() {
     </div>
   )
 }
+
+/* Stable fake vote counts — seeded so they don't change on re-render */
+function seededInt(seed: number, min: number, max: number): number {
+  const s = (seed * 1664525 + 1013904223) & 0x7fffffff
+  return min + (s % (max - min + 1))
+}
+
 function PollPreview({ data }: { data?: PollData }) {
   const [voted, setVoted] = useState<number | null>(null)
   const question = data?.question || 'Who will win El Clasico?'
   const options = data?.options || ['Real Madrid', 'Barcelona', 'Draw']
-  const fakeVotes = options.map(() => Math.floor(Math.random() * 5000) + 1000)
+
+  // Stable vote counts derived from option text — no Math.random() in render
+  const fakeVotes = useMemo(
+    () => options.map((opt, i) => seededInt(opt.charCodeAt(0) * 31 + i * 97, 1000, 6000)),
+    [options]
+  )
   const totalVotes = fakeVotes.reduce((a, b) => a + b, 0)
+
   return (
     <div className="wg-poll">
       <div className="wg-poll-header">Fan Poll</div>
@@ -387,7 +400,7 @@ function QuizPreview({ data }: { data?: QuizData }) {
 
   const defaultQuestions: QuizQuestion[] = [
     { question: 'Who won the 2022 World Cup?', options: ['Brazil', 'France', 'Argentina', 'Germany'], correct: 2 },
-    { question: 'How many Ballon d\'Ors has Messi won?', options: ['6', '7', '8', '5'], correct: 2 },
+    { question: "How many Ballon d'Ors has Messi won?", options: ['6', '7', '8', '5'], correct: 2 },
     { question: 'Which club has won the most Champions League titles?', options: ['AC Milan', 'Barcelona', 'Bayern Munich', 'Real Madrid'], correct: 3 },
   ]
   const questions = data?.questions || defaultQuestions

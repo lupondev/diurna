@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import './calendar.css'
 
@@ -102,6 +102,32 @@ const DIST_PLATFORMS = [
   { platform: 'newsletter', icon: '📧', label: 'Newsletter' },
 ]
 
+/* ── Default feed sources (static — no DB seeding on render) ── */
+const DEFAULT_FEED_SOURCES: FeedSource[] = [
+  { id: '1', name: 'BBC Sport', tier: 1, active: true, category: 'breaking' },
+  { id: '2', name: 'Sky Sports', tier: 1, active: true, category: 'breaking' },
+  { id: '3', name: 'ESPN FC', tier: 1, active: true, category: 'breaking' },
+  { id: '4', name: 'The Guardian', tier: 1, active: true, category: 'breaking' },
+  { id: '5', name: 'Goal.com', tier: 1, active: true, category: 'breaking' },
+  { id: '6', name: 'Football365', tier: 1, active: true, category: 'breaking' },
+  { id: '7', name: 'Marca', tier: 2, active: true, category: 'breaking' },
+  { id: '8', name: 'AS English', tier: 2, active: true, category: 'breaking' },
+  { id: '9', name: 'Gazzetta dello Sport', tier: 2, active: true, category: 'breaking' },
+  { id: '10', name: "L'Equipe", tier: 2, active: true, category: 'breaking' },
+  { id: '11', name: 'Foot Mercato', tier: 2, active: true, category: 'transfer' },
+  { id: '12', name: 'Sky Sports Transfers', tier: 2, active: true, category: 'transfer' },
+  { id: '13', name: 'FourFourTwo', tier: 2, active: true, category: 'analysis' },
+  { id: '14', name: 'TeamTalk', tier: 3, active: true, category: 'transfer' },
+  { id: '15', name: 'CaughtOffside', tier: 3, active: true, category: 'transfer' },
+  { id: '16', name: 'Football Italia', tier: 3, active: true, category: 'breaking' },
+  { id: '17', name: 'Kicker', tier: 2, active: true, category: 'breaking' },
+  { id: '18', name: 'Sport Witness', tier: 3, active: false, category: 'transfer' },
+  { id: '19', name: 'Inside Futbol', tier: 3, active: true, category: 'transfer' },
+  { id: '20', name: 'Dnevni Avaz Sport', tier: 4, active: true, category: 'breaking' },
+  { id: '21', name: 'Klix Sport', tier: 4, active: true, category: 'breaking' },
+  { id: '22', name: 'Sportske.ba', tier: 4, active: true, category: 'breaking' },
+]
+
 /* ── Slot generation (seeded) ── */
 function seededRandom(seed: number) { let s = seed; return () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff } }
 type GenSlot = { id: string; time: string; hour: number; title: string; catSlug: string; status: string; ai: boolean; isMatch: boolean; isLive: boolean; isGap: boolean; isWebhook?: boolean }
@@ -129,7 +155,7 @@ function generateSlots(date: Date, isToday: boolean, target: number): GenSlot[] 
   }
   if (dow >= 2 && dow <= 4) slots.push(mk(20, 0, `UCL/UEL: ${['Bayern vs Real Madrid', 'PSG vs Barcelona', 'Arsenal vs Inter'][Math.floor(rng() * 3)]} Preview`, 'utakmice', true))
 
-  const fillers = ['Tactical Analysis: Why Formation Changes Matter', 'Injury Update: Latest Squad News', 'Top 10 Goals of the Week', 'Rising Stars: U21 Players to Watch', 'Power Rankings: This Week\'s Movers']
+  const fillers = ['Tactical Analysis: Why Formation Changes Matter', 'Injury Update: Latest Squad News', 'Top 10 Goals of the Week', 'Rising Stars: U21 Players to Watch', "Power Rankings: This Week's Movers"]
   const cats = ['analize', 'povrede', 'rankings', 'analize', 'rankings']
   let fi = 0
   while (slots.length < Math.min(target, 10) && fi < fillers.length) {
@@ -167,7 +193,8 @@ export default function CalendarPage() {
   const router = useRouter()
   const [config, setConfig] = useState<AutopilotConfig | null>(null)
   const [stats, setStats] = useState<Stats>({ today: 0, published: 0, scheduled: 0, live: 0, drafts: 0 })
-  const [sources, setSources] = useState<FeedSource[]>([])
+  // Sources initialized from static defaults — no DB seeding triggered on every render
+  const [sources, setSources] = useState<FeedSource[]>(DEFAULT_FEED_SOURCES)
   const [sourceSearch, setSourceSearch] = useState('')
   const [showAllSources, setShowAllSources] = useState(false)
 
@@ -204,43 +231,14 @@ export default function CalendarPage() {
     fetch('/api/autopilot/config', { credentials: 'include' }).then(r => r.json() as Promise<AutopilotConfig>).then(setConfig).catch(() => {})
     fetch('/api/autopilot/stats', { credentials: 'include' }).then(r => r.json() as Promise<Stats>).then(setStats).catch(() => {})
     fetch('/api/categories', { credentials: 'include' }).then(r => r.json() as Promise<unknown>).catch(() => {})
+    // Note: /api/admin/seed-feeds is intentionally NOT called here to avoid
+    // triggering DB seeding on every Calendar render. Sources use static defaults.
   }, [])
 
   useEffect(() => {
     fetch(`/api/autopilot/timeline?date=${toDateStr(tlDate)}`, { credentials: 'include' })
       .then(r => r.json() as Promise<{ articles?: TlArticle[]; matches?: TlMatch[] }>).then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) }).catch(() => {})
   }, [tlDate])
-
-  useEffect(() => {
-    fetch('/api/admin/seed-feeds', { method: 'POST', credentials: 'include' }).catch(() => {})
-    // Load sources — we'll query them via a simple prisma call (we can't directly, so use seed-feeds as a signal)
-    // For now, generate mock sources from the FeedSource seed data
-    const defaultSources: FeedSource[] = [
-      { id: '1', name: 'BBC Sport', tier: 1, active: true, category: 'breaking' },
-      { id: '2', name: 'Sky Sports', tier: 1, active: true, category: 'breaking' },
-      { id: '3', name: 'ESPN FC', tier: 1, active: true, category: 'breaking' },
-      { id: '4', name: 'The Guardian', tier: 1, active: true, category: 'breaking' },
-      { id: '5', name: 'Goal.com', tier: 1, active: true, category: 'breaking' },
-      { id: '6', name: 'Football365', tier: 1, active: true, category: 'breaking' },
-      { id: '7', name: 'Marca', tier: 2, active: true, category: 'breaking' },
-      { id: '8', name: 'AS English', tier: 2, active: true, category: 'breaking' },
-      { id: '9', name: 'Gazzetta dello Sport', tier: 2, active: true, category: 'breaking' },
-      { id: '10', name: 'L\'Equipe', tier: 2, active: true, category: 'breaking' },
-      { id: '11', name: 'Foot Mercato', tier: 2, active: true, category: 'transfer' },
-      { id: '12', name: 'Sky Sports Transfers', tier: 2, active: true, category: 'transfer' },
-      { id: '13', name: 'FourFourTwo', tier: 2, active: true, category: 'analysis' },
-      { id: '14', name: 'TeamTalk', tier: 3, active: true, category: 'transfer' },
-      { id: '15', name: 'CaughtOffside', tier: 3, active: true, category: 'transfer' },
-      { id: '16', name: 'Football Italia', tier: 3, active: true, category: 'breaking' },
-      { id: '17', name: 'Kicker', tier: 2, active: true, category: 'breaking' },
-      { id: '18', name: 'Sport Witness', tier: 3, active: false, category: 'transfer' },
-      { id: '19', name: 'Inside Futbol', tier: 3, active: true, category: 'transfer' },
-      { id: '20', name: 'Dnevni Avaz Sport', tier: 4, active: true, category: 'breaking' },
-      { id: '21', name: 'Klix Sport', tier: 4, active: true, category: 'breaking' },
-      { id: '22', name: 'Sportske.ba', tier: 4, active: true, category: 'breaking' },
-    ]
-    setSources(defaultSources)
-  }, [])
 
   /* ── Config updates ── */
   const updateConfig = useCallback((partial: Partial<AutopilotConfig>) => {
@@ -484,6 +482,13 @@ export default function CalendarPage() {
 
   const catColorMap: Record<string, string> = {}
   config?.categories.forEach(c => { catColorMap[c.slug] = c.color })
+
+  // Stable estimated views (seeded, doesn't change on re-render)
+  const estimatedViews = useMemo(() => stats.published * 1240, [stats.published])
+  const estimatedSocialPosts = useMemo(
+    () => (config?.channels.filter(c => c.isActive).length ?? 0) * stats.published,
+    [config?.channels, stats.published]
+  )
 
   if (!config) return <div className="cal-page"><div style={{ padding: 40, textAlign: 'center', color: '#A1A1AA' }}>Loading configuration...</div></div>
 
@@ -998,13 +1003,13 @@ export default function CalendarPage() {
       {/* ═══ Footer Stats ═══ */}
       <div className="cal-footer cal-fadein" style={{ animationDelay: '.2s' }}>
         <div className="cal-fstat">
-          <div className="cal-fstat-label">Articles</div>
+          <div className="cal-fstat-label">Articles Today</div>
           <div className="cal-fstat-val">{stats.today}/{config.dailyTarget}</div>
           <div className="cal-fstat-bar"><div className="cal-fstat-fill" style={{ width: `${Math.min(100, (stats.today / config.dailyTarget) * 100)}%` }} /></div>
         </div>
         <div className="cal-fstat">
-          <div className="cal-fstat-label">Total Views</div>
-          <div className="cal-fstat-val">{(stats.published * 1240).toLocaleString()}</div>
+          <div className="cal-fstat-label">Est. Views</div>
+          <div className="cal-fstat-val" title="Estimated based on published article count">{estimatedViews.toLocaleString()}</div>
           <div className="cal-fstat-bar"><div className="cal-fstat-fill" style={{ width: '65%' }} /></div>
         </div>
         <div className="cal-fstat">
@@ -1013,8 +1018,8 @@ export default function CalendarPage() {
           <div className="cal-fstat-bar"><div className="cal-fstat-fill" style={{ width: stats.live > 0 ? '100%' : '0%', background: stats.live > 0 ? '#EF4444' : '#00D4AA' }} /></div>
         </div>
         <div className="cal-fstat">
-          <div className="cal-fstat-label">Social Posts</div>
-          <div className="cal-fstat-val">{config.channels.filter(c => c.isActive).length * stats.published}</div>
+          <div className="cal-fstat-label">Est. Social Posts</div>
+          <div className="cal-fstat-val" title="Estimated based on active channels × published articles">{estimatedSocialPosts}</div>
           <div className="cal-fstat-bar"><div className="cal-fstat-fill" style={{ width: '40%' }} /></div>
         </div>
       </div>
