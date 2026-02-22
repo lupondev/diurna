@@ -3,6 +3,22 @@ import { prisma } from '@/lib/prisma'
 import Parser from 'rss-parser'
 import crypto from 'crypto'
 
+// ── Auth helper ───────────────────────────────────────────────────────────────
+function isCronAuthorized(req: Request): boolean {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return true // not configured → allow (dev mode)
+
+  // Vercel cron passes Authorization: Bearer <secret>
+  const authHeader = req.headers.get('authorization')
+  if (authHeader === `Bearer ${secret}`) return true
+
+  // Also accept x-cron-secret header (used by newsroom "Fetch now" button)
+  const cronHeader = req.headers.get('x-cron-secret')
+  if (cronHeader === secret) return true
+
+  return false
+}
+
 const parser = new Parser({
   timeout: 5000,
   headers: { 'User-Agent': 'Diurna/1.0 Sports Newsroom Bot' },
@@ -82,6 +98,11 @@ function getCategory(feedCategory: string, title: string): string {
 }
 
 export async function GET(req: Request) {
+  // Security: reject unauthorized requests
+  if (!isCronAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const url = new URL(req.url)
   const tierParam = url.searchParams.get('tier')
 

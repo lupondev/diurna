@@ -5,6 +5,20 @@ import { systemLog } from '@/lib/system-log'
 
 export const dynamic = 'force-dynamic'
 
+// ── Auth helper ───────────────────────────────────────────────────────────────
+function isCronAuthorized(req: Request): boolean {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return true // not configured → allow (dev mode)
+
+  const authHeader = req.headers.get('authorization')
+  if (authHeader === `Bearer ${secret}`) return true
+
+  const cronHeader = req.headers.get('x-cron-secret')
+  if (cronHeader === secret) return true
+
+  return false
+}
+
 const EVENT_TYPE_KEYWORDS: Record<string, string[]> = {
   TRANSFER: ['transfer', 'sign', 'signing', 'deal', 'bid', 'loan', 'fee', 'move', 'target', 'interested', 'approach', 'offer', 'swap', 'departure', 'arrival', 'replacement'],
   INJURY: ['injury', 'injured', 'out', 'ruled out', 'doubtful', 'hamstring', 'knee', 'ankle', 'setback', 'surgery', 'recovery', 'return date', 'sidelined', 'fitness'],
@@ -272,6 +286,11 @@ function generateDeterministicSummary(
 }
 
 export async function GET(req: Request) {
+  // Security: reject unauthorized requests
+  if (!isCronAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const startTime = Date.now()
 
   try {
@@ -422,7 +441,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // ── Breaking news webhook: auto-generate articles for DIS > 70 ──
+    // Breaking news webhook
     let breakingTriggered = 0
     if (process.env.CRON_SECRET) {
       const breakingClusters = await prisma.storyCluster.findMany({
@@ -436,7 +455,6 @@ export async function GET(req: Request) {
       startOfDay.setHours(0, 0, 0, 0)
 
       for (const bc of breakingClusters) {
-        // Check if already covered today
         const alreadyCovered = await prisma.article.findFirst({
           where: {
             aiPrompt: { contains: bc.id },
@@ -445,7 +463,6 @@ export async function GET(req: Request) {
         })
         if (alreadyCovered) continue
 
-        // Fire-and-forget webhook call
         const baseUrl = process.env.NEXTAUTH_URL || 'https://diurna.vercel.app'
         fetch(`${baseUrl}/api/webhooks/breaking-news`, {
           method: 'POST',
@@ -453,11 +470,7 @@ export async function GET(req: Request) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${process.env.CRON_SECRET}`,
           },
-          body: JSON.stringify({
-            clusterId: bc.id,
-            title: bc.title,
-            dis: bc.dis,
-          }),
+          body: JSON.stringify({ clusterId: bc.id, title: bc.title, dis: bc.dis }),
         }).catch(err => {
           console.error('[Cluster Engine] Breaking webhook failed:', err)
           systemLog('error', 'webhook', `Breaking webhook call failed: ${err instanceof Error ? err.message : 'Unknown'}`, { clusterId: bc.id, dis: bc.dis }).catch(() => {})

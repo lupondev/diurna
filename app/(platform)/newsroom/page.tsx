@@ -140,9 +140,8 @@ export default function NewsroomPage() {
     fetch('/api/site?all=true')
       .then(r => r.json() as Promise<{ sites?: SiteInfo[] }>)
       .then(data => {
-        const usableSites = ((data.sites || []) as SiteInfo[]).filter(
-          (s: SiteInfo) => s.domain || (s.articleCount ?? 0) > 5
-        )
+        // Bug fix: show all sites with any content, not just those with domain
+        const usableSites = (data.sites || []) as SiteInfo[]
         setSites(usableSites)
         const defaultSite = usableSites.find((s: SiteInfo) => s.domain) ?? usableSites[0]
         setSelectedSiteId(defaultSite?.id ?? null)
@@ -187,12 +186,16 @@ export default function NewsroomPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // Manual fetch
+  // Manual fetch — uses x-cron-secret header so the cron endpoint accepts the request
   async function triggerFetch() {
     setFetching(true)
+    const cronSecret = process.env.NEXT_PUBLIC_CRON_SECRET
+    const headers: Record<string, string> = {}
+    if (cronSecret) headers['x-cron-secret'] = cronSecret
+
     try {
-      await fetch('/api/cron/fetch-feeds')
-      await fetch('/api/cron/cluster-engine')
+      await fetch('/api/cron/fetch-feeds', { headers })
+      await fetch('/api/cron/cluster-engine', { headers })
       await loadClusters()
       toast.success('Feeds refreshed')
     } catch {
