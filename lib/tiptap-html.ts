@@ -134,6 +134,10 @@ function renderWidgetBlockquote(node: TiptapNode, widget: { type: string; attrs:
   return `<blockquote>${renderChildren(node)}</blockquote>`
 }
 
+function isWidgetPlaceholder(text: string): boolean {
+  return /^\{\{WIDGET:[A-Z_]+\}\}$/.test(text.trim())
+}
+
 function renderNode(node: TiptapNode): string {
   switch (node.type) {
     case 'text':
@@ -142,6 +146,8 @@ function renderNode(node: TiptapNode): string {
     case 'paragraph': {
       const text = getNodeText(node).trim()
       if (text.match(/^<!--\/?widget.*-->$/)) return ''
+      // Skip legacy widget placeholder paragraphs entirely
+      if (isWidgetPlaceholder(text)) return ''
       return `<p>${renderChildren(node)}</p>`
     }
 

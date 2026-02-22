@@ -138,11 +138,12 @@ function removeLeadingTitle(html: string, title: string): string {
 
 function getCategoryFallback(slug?: string): string {
   const map: Record<string, string> = {
-    transferi: '/images/fallback/transfer.svg',
-    utakmice: '/images/fallback/match.svg',
-    povrede: '/images/fallback/injury.svg',
+    transferi: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=1080&q=80',
+    utakmice: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1080&q=80',
+    povrede: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?w=1080&q=80',
+    vijesti: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1080&q=80',
   }
-  return map[slug || ''] || '/images/fallback/news.svg'
+  return map[slug || ''] || 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1080&q=80'
 }
 
 export function ArticlePage({ data }: { data: ArticleData }) {
@@ -209,7 +210,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
               src={article.featuredImage || getCategoryFallback(categorySlug)}
               alt={article.title}
               className="sba-featured-img-real"
-              style={{ width: '100%', height: 'auto', borderRadius: 12, display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12, display: 'block' }}
             />
           </div>
 
