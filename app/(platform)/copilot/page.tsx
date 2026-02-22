@@ -34,14 +34,13 @@ type AutopilotRule = {
   slots: { type: string; timing: string; template: string }[]
 }
 
-type FixtureData = {
+type AutopilotLeague = {
   id: string
-  home: string
-  away: string
-  league: string
-  date: string
-  time: string
-  articles: { type: string; timing: string }[]
+  name: string
+  flag?: string | null
+  weight: number
+  isActive: boolean
+  apiFootballId?: number | null
 }
 
 type AutopilotStats = {
@@ -92,12 +91,6 @@ const DEFAULT_RULES: AutopilotRule[] = [
   },
 ]
 
-const DEFAULT_FIXTURES: FixtureData[] = [
-  { id: 'f1', home: 'Arsenal', away: 'Chelsea', league: 'Premier League', date: 'Sat, Feb 21', time: '17:30', articles: [{ type: 'Preview', timing: '-24h' }, { type: 'Starting XI', timing: '-2h' }, { type: 'Recap', timing: '+15min' }, { type: 'Ratings', timing: '+2h' }] },
-  { id: 'f2', home: 'Real Madrid', away: 'Barcelona', league: 'La Liga', date: 'Sun, Feb 22', time: '21:00', articles: [{ type: 'Preview', timing: '-24h' }, { type: 'Starting XI', timing: '-2h' }, { type: 'Recap', timing: '+15min' }, { type: 'Ratings', timing: '+2h' }] },
-  { id: 'f3', home: 'Liverpool', away: 'Man City', league: 'Premier League', date: 'Sun, Feb 22', time: '16:30', articles: [{ type: 'Preview', timing: '-24h' }, { type: 'Starting XI', timing: '-2h' }, { type: 'Recap', timing: '+15min' }, { type: 'Ratings', timing: '+2h' }] },
-]
-
 const PEAK_TIME_OPTIONS = ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00']
 const MIX_COLORS = ['var(--mint)', 'var(--gold)', '#8B5CF6', 'var(--coral)']
 const MIX_LABELS = ['Match Coverage', 'Transfer News', 'Analysis', 'Fan Content']
@@ -131,11 +124,11 @@ export default function CopilotPage() {
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [strategy, setStrategy] = useState<ContentStrategy>(DEFAULT_STRATEGY)
   const [rules, setRules] = useState<AutopilotRule[]>(DEFAULT_RULES)
-  const [fixtures] = useState<FixtureData[]>(DEFAULT_FIXTURES)
-  const [expandedFixture, setExpandedFixture] = useState<string | null>(null)
+  const [leagues, setLeagues] = useState<AutopilotLeague[]>([])
+  const [leaguesLoading, setLeaguesLoading] = useState(true)
+  const [expandedLeague, setExpandedLeague] = useState<string | null>(null)
   const [showAddRule, setShowAddRule] = useState(false)
   const [saveFlash, setSaveFlash] = useState(false)
-  // Bug A: fetch real stats from autopilot API
   const [apStats, setApStats] = useState<AutopilotStats | null>(null)
 
   const [newRuleName, setNewRuleName] = useState('')
@@ -149,11 +142,20 @@ export default function CopilotPage() {
     setStrategy(loadJSON('copilot-strategy', DEFAULT_STRATEGY))
     setRules(loadJSON('copilot-rules', DEFAULT_RULES))
 
-    // Bug A fix: load real autopilot stats from API
+    // Fetch real autopilot stats
     fetch('/api/autopilot/stats')
       .then(r => r.ok ? r.json() as Promise<AutopilotStats> : null)
       .then(data => { if (data) setApStats(data) })
       .catch(() => {})
+
+    // Fetch real leagues from autopilot config
+    fetch('/api/autopilot/config')
+      .then(r => r.ok ? r.json() as Promise<{ leagues?: AutopilotLeague[] }> : null)
+      .then(data => {
+        if (data?.leagues) setLeagues(data.leagues)
+      })
+      .catch(() => {})
+      .finally(() => setLeaguesLoading(false))
   }, [])
 
   const changeMode = useCallback((m: CopilotMode) => {
@@ -216,9 +218,7 @@ export default function CopilotPage() {
         next[k] = Math.max(0, Math.round((prev[k] / oldTotal) * remaining))
       })
       const total = next.mixMatch + next.mixTransfer + next.mixAnalysis + next.mixFan
-      if (total !== 100) {
-        next[others[0]] += 100 - total
-      }
+      if (total !== 100) next[others[0]] += 100 - total
       return next
     })
   }, [])
@@ -227,7 +227,6 @@ export default function CopilotPage() {
     saveJSON('copilot-strategy', strategy)
     saveJSON('copilot-rules', rules)
     localStorage.setItem('cal-daily-target', String(strategy.dailyTarget))
-    // Also persist dailyTarget to autopilot config API
     fetch('/api/autopilot/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -273,9 +272,7 @@ export default function CopilotPage() {
   const pendingQueue = queue.filter(q => q.status === 'pending')
   const approvedCount = queue.filter(q => q.status === 'approved').length
 
-  // Bug B fix: use real stats from API when available, no Math.random()
   const planned = apStats?.dailyTarget ?? strategy.dailyTarget
-  // Bug B fix: use real articlesWrittenToday from API
   const published = apStats?.articlesWrittenToday ?? approvedCount
   const inReview = pendingQueue.length
   const completed = Math.min(published, planned)
@@ -287,7 +284,6 @@ export default function CopilotPage() {
           <h1>\ud83e\udd16 AI Co-Pilot</h1>
           <p>Your AI-powered editorial brain — configure, queue, and automate content</p>
         </div>
-        {/* Show autopilot live status */}
         {apStats && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
@@ -309,11 +305,7 @@ export default function CopilotPage() {
           { id: 'hybrid' as const, icon: '\ud83d\udd04', name: 'Hybrid', desc: 'AI generates articles, you review + approve before publishing.' },
           { id: 'manual' as const, icon: '\u270f\ufe0f', name: 'Manual', desc: 'You write everything. AI only suggests trending topics.' },
         ]).map(m => (
-          <div
-            key={m.id}
-            className={`cop-mode${mode === m.id ? ' active' : ''}`}
-            onClick={() => changeMode(m.id)}
-          >
+          <div key={m.id} className={`cop-mode${mode === m.id ? ' active' : ''}`} onClick={() => changeMode(m.id)}>
             <div className="cop-mode-icon">{m.icon}</div>
             <div className="cop-mode-name">{m.name}</div>
             <div className="cop-mode-desc">{m.desc}</div>
@@ -359,7 +351,6 @@ export default function CopilotPage() {
                 <button className="cop-q-btn" onClick={approveAll}>\u2705 Approve All ({pendingQueue.length})</button>
               )}
             </div>
-
             {queue.map(item => (
               <div key={item.id} className="cop-q-item" style={{ opacity: item.status === 'rejected' ? 0.4 : 1 }}>
                 <div className="cop-q-conf" style={{ background: confBg(item.confidence), color: confColor(item.confidence) }}>
@@ -373,10 +364,7 @@ export default function CopilotPage() {
                     <span className="cop-q-cat">{item.category}</span>
                     <span>\ud83d\udd50 {item.suggestedTime}</span>
                     {item.status !== 'pending' && (
-                      <span style={{
-                        fontWeight: 700, fontSize: 10,
-                        color: item.status === 'approved' ? 'var(--suc)' : 'var(--coral)',
-                      }}>
+                      <span style={{ fontWeight: 700, fontSize: 10, color: item.status === 'approved' ? 'var(--suc)' : 'var(--coral)' }}>
                         {item.status === 'approved' ? '\u2705 Approved' : '\u274c Rejected'}
                       </span>
                     )}
@@ -391,7 +379,6 @@ export default function CopilotPage() {
                 )}
               </div>
             ))}
-
             {queue.length === 0 && (
               <div className="cop-q-empty">No articles in queue. AI will generate content based on your strategy settings.</div>
             )}
@@ -406,30 +393,19 @@ export default function CopilotPage() {
             <div className="cop-field">
               <label className="cop-lbl">Articles per Day</label>
               <div className="cop-slider-row">
-                <input
-                  type="range" min={1} max={10} value={strategy.dailyTarget}
-                  onChange={e => updateStrategy({ dailyTarget: Number(e.target.value) })}
-                  className="cop-slider-input"
-                />
+                <input type="range" min={1} max={10} value={strategy.dailyTarget}
+                  onChange={e => updateStrategy({ dailyTarget: Number(e.target.value) })} className="cop-slider-input" />
                 <span className="cop-slider-val">{strategy.dailyTarget}</span>
               </div>
             </div>
-
             <div className="cop-field">
               <label className="cop-lbl">Peak Publish Times</label>
               <div className="cop-chips">
                 {PEAK_TIME_OPTIONS.map(t => (
-                  <button
-                    key={t}
-                    className={`cop-chip${strategy.peakTimes.includes(t) ? ' sel' : ''}`}
-                    onClick={() => togglePeakTime(t)}
-                  >
-                    {t}
-                  </button>
+                  <button key={t} className={`cop-chip${strategy.peakTimes.includes(t) ? ' sel' : ''}`} onClick={() => togglePeakTime(t)}>{t}</button>
                 ))}
               </div>
             </div>
-
             <div className="cop-field">
               <label className="cop-lbl">Default Article Length</label>
               <div className="cop-radios">
@@ -438,17 +414,10 @@ export default function CopilotPage() {
                   { value: 'medium' as const, label: 'Medium (600w)' },
                   { value: 'long' as const, label: 'Long (1200w)' },
                 ]).map(opt => (
-                  <button
-                    key={opt.value}
-                    className={`cop-radio${strategy.articleLength === opt.value ? ' sel' : ''}`}
-                    onClick={() => updateStrategy({ articleLength: opt.value })}
-                  >
-                    {opt.label}
-                  </button>
+                  <button key={opt.value} className={`cop-radio${strategy.articleLength === opt.value ? ' sel' : ''}`} onClick={() => updateStrategy({ articleLength: opt.value })}>{opt.label}</button>
                 ))}
               </div>
             </div>
-
             <div className="cop-field">
               <label className="cop-lbl">Default Tone</label>
               <div className="cop-radios">
@@ -458,34 +427,20 @@ export default function CopilotPage() {
                   { value: 'casual' as const, label: 'Casual' },
                   { value: 'data-heavy' as const, label: 'Data-Heavy' },
                 ]).map(opt => (
-                  <button
-                    key={opt.value}
-                    className={`cop-radio${strategy.tone === opt.value ? ' sel' : ''}`}
-                    onClick={() => updateStrategy({ tone: opt.value })}
-                  >
-                    {opt.label}
-                  </button>
+                  <button key={opt.value} className={`cop-radio${strategy.tone === opt.value ? ' sel' : ''}`} onClick={() => updateStrategy({ tone: opt.value })}>{opt.label}</button>
                 ))}
               </div>
             </div>
           </div>
-
           <div>
             <label className="cop-lbl">Content Mix</label>
-
             <div className="cop-mix-bar">
-              {([
-                { key: 'mixMatch' as const, color: MIX_COLORS[0] },
-                { key: 'mixTransfer' as const, color: MIX_COLORS[1] },
-                { key: 'mixAnalysis' as const, color: MIX_COLORS[2] },
-                { key: 'mixFan' as const, color: MIX_COLORS[3] },
-              ]).map(m => (
-                <div key={m.key} className="cop-mix-seg" style={{ width: `${strategy[m.key]}%`, background: m.color }}>
-                  {strategy[m.key] >= 10 ? `${strategy[m.key]}%` : ''}
+              {(['mixMatch', 'mixTransfer', 'mixAnalysis', 'mixFan'] as const).map((key, i) => (
+                <div key={key} className="cop-mix-seg" style={{ width: `${strategy[key]}%`, background: MIX_COLORS[i] }}>
+                  {strategy[key] >= 10 ? `${strategy[key]}%` : ''}
                 </div>
               ))}
             </div>
-
             <div className="cop-mix-legend" style={{ marginBottom: 16 }}>
               {MIX_LABELS.map((label, i) => (
                 <div key={label} className="cop-mix-leg-item">
@@ -494,29 +449,19 @@ export default function CopilotPage() {
                 </div>
               ))}
             </div>
-
-            {([
-              { key: 'mixMatch' as const, label: 'Match Coverage' },
-              { key: 'mixTransfer' as const, label: 'Transfer News' },
-              { key: 'mixAnalysis' as const, label: 'Analysis' },
-              { key: 'mixFan' as const, label: 'Fan Content' },
-            ]).map((m, i) => (
-              <div key={m.key} className="cop-slider-row">
+            {(['mixMatch', 'mixTransfer', 'mixAnalysis', 'mixFan'] as const).map((key, i) => (
+              <div key={key} className="cop-slider-row">
                 <span className="cop-slider-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span className="cop-mix-dot" style={{ background: MIX_COLORS[i] }} />
-                  {m.label}
+                  {MIX_LABELS[i]}
                 </span>
-                <input
-                  type="range" min={0} max={100} value={strategy[m.key]}
-                  onChange={e => updateMix(m.key, Number(e.target.value))}
-                  className="cop-slider-input"
-                />
-                <span className="cop-slider-val">{strategy[m.key]}%</span>
+                <input type="range" min={0} max={100} value={strategy[key]}
+                  onChange={e => updateMix(key, Number(e.target.value))} className="cop-slider-input" />
+                <span className="cop-slider-val">{strategy[key]}%</span>
               </div>
             ))}
           </div>
         </div>
-
         <button className={`cop-save${saveFlash ? ' saved' : ''}`} onClick={saveStrategy}>
           {saveFlash ? '\u2705 Saved!' : '\ud83d\udcbe Save Strategy'}
         </button>
@@ -557,129 +502,91 @@ export default function CopilotPage() {
       ) : (
         <div className="cop-add-rule">
           <div className="cop-sec" style={{ marginBottom: 16 }}>New Autopilot Rule</div>
-
           <div className="cop-form-row">
             <div>
               <label className="cop-lbl">Rule Name</label>
-              <input
-                className="cop-input"
-                value={newRuleName}
-                onChange={e => setNewRuleName(e.target.value)}
-                placeholder="e.g. Derby Match"
-              />
+              <input className="cop-input" value={newRuleName} onChange={e => setNewRuleName(e.target.value)} placeholder="e.g. Derby Match" />
             </div>
             <div>
               <label className="cop-lbl">Team Filter</label>
-              <select
-                className="cop-select"
-                value={newRuleFilter}
-                onChange={e => setNewRuleFilter(e.target.value as 'top6' | 'all' | 'specific')}
-              >
+              <select className="cop-select" value={newRuleFilter} onChange={e => setNewRuleFilter(e.target.value as 'top6' | 'all' | 'specific')}>
                 <option value="top6">Top 6 Teams</option>
                 <option value="all">All Teams</option>
                 <option value="specific">Specific Teams</option>
               </select>
             </div>
           </div>
-
           {newRuleFilter === 'specific' && (
             <div style={{ marginBottom: 12 }}>
               <label className="cop-lbl">Teams (comma-separated)</label>
-              <input
-                className="cop-input"
-                value={newRuleTeams}
-                onChange={e => setNewRuleTeams(e.target.value)}
-                placeholder="e.g. Arsenal, Chelsea, Liverpool"
-              />
+              <input className="cop-input" value={newRuleTeams} onChange={e => setNewRuleTeams(e.target.value)} placeholder="e.g. Arsenal, Chelsea" />
             </div>
           )}
-
           <label className="cop-lbl">Article Slots</label>
           {newRuleSlots.map((slot, i) => (
-            <div key={i} className="cop-slot-row" style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <select
-                className="cop-select" style={{ flex: 1, minWidth: 120 }}
-                value={slot.type}
-                onChange={e => updateNewRuleSlot(i, 'type', e.target.value)}
-              >
-                {['Preview', 'Starting XI', 'Live Updates', 'Match Recap', 'Player Ratings', 'Analysis', 'Fan Reaction'].map(t =>
-                  <option key={t} value={t}>{t}</option>
-                )}
+            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <select className="cop-select" style={{ flex: 1, minWidth: 120 }} value={slot.type} onChange={e => updateNewRuleSlot(i, 'type', e.target.value)}>
+                {['Preview', 'Starting XI', 'Live Updates', 'Match Recap', 'Player Ratings', 'Analysis', 'Fan Reaction'].map(t => <option key={t} value={t}>{t}</option>)}
               </select>
-              <select
-                className="cop-select" style={{ width: 120 }}
-                value={slot.timing}
-                onChange={e => updateNewRuleSlot(i, 'timing', e.target.value)}
-              >
-                {['-24h', '-12h', '-4h', '-2h', '-1h', '-30min', 'KO', '+15min', '+30min', '+1h', '+2h', '+4h'].map(t =>
-                  <option key={t} value={t}>{t}</option>
-                )}
+              <select className="cop-select" style={{ width: 120 }} value={slot.timing} onChange={e => updateNewRuleSlot(i, 'timing', e.target.value)}>
+                {['-24h', '-12h', '-4h', '-2h', '-1h', '-30min', 'KO', '+15min', '+30min', '+1h', '+2h', '+4h'].map(t => <option key={t} value={t}>{t}</option>)}
               </select>
-              <input
-                className="cop-input" style={{ flex: 2, minWidth: 150 }}
-                value={slot.template}
-                onChange={e => updateNewRuleSlot(i, 'template', e.target.value)}
-                placeholder="Template description"
-              />
+              <input className="cop-input" style={{ flex: 2, minWidth: 150 }} value={slot.template} onChange={e => updateNewRuleSlot(i, 'template', e.target.value)} placeholder="Template description" />
               {newRuleSlots.length > 1 && (
-                <button
-                  onClick={() => removeSlotFromNewRule(i)}
-                  style={{ background: 'var(--coral-l)', border: 'none', borderRadius: 'var(--r)', padding: '6px 10px', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', fontWeight: 700 }}
-                >
-                  \u2715
-                </button>
+                <button onClick={() => removeSlotFromNewRule(i)} style={{ background: 'var(--coral-l)', border: 'none', borderRadius: 'var(--r)', padding: '6px 10px', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', fontWeight: 700 }}>\u2715</button>
               )}
             </div>
           ))}
-
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button className="cop-add-rule-btn" onClick={addSlotToNewRule}>+ Add Slot</button>
-            <button
-              className="cop-save"
-              onClick={addRule}
-              style={{ opacity: newRuleName.trim() ? 1 : 0.5, cursor: newRuleName.trim() ? 'pointer' : 'not-allowed' }}
-            >
-              Save Rule
-            </button>
-            <button
-              onClick={() => setShowAddRule(false)}
-              style={{ padding: '10px 20px', fontSize: 12, fontWeight: 600, background: 'var(--g100)', border: 'none', borderRadius: 'var(--rm)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--g500)' }}
-            >
-              Cancel
-            </button>
+            <button className="cop-save" onClick={addRule} style={{ opacity: newRuleName.trim() ? 1 : 0.5, cursor: newRuleName.trim() ? 'pointer' : 'not-allowed' }}>Save Rule</button>
+            <button onClick={() => setShowAddRule(false)} style={{ padding: '10px 20px', fontSize: 12, fontWeight: 600, background: 'var(--g100)', border: 'none', borderRadius: 'var(--rm)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--g500)' }}>Cancel</button>
           </div>
         </div>
       )}
 
-      <div className="cop-sec" style={{ marginTop: 28 }}>\u26bd Upcoming Fixtures</div>
+      {/* Leagues section — real data from AutopilotConfig */}
+      <div className="cop-sec" style={{ marginTop: 28 }}>\u26bd Configured Leagues</div>
       <div className="cop-fixtures">
-        {fixtures.map(fix => (
-          <div key={fix.id} className="cop-fix">
-            <div className="cop-fix-row" onClick={() => setExpandedFixture(expandedFixture === fix.id ? null : fix.id)}>
-              <span className={`cop-fix-arrow${expandedFixture === fix.id ? ' open' : ''}`}>\u25b6</span>
-              <span className="cop-fix-teams">{fix.home} vs {fix.away}</span>
-              <span className="cop-fix-league">{fix.league}</span>
-              <span className="cop-fix-date">{fix.date} \u00b7 {fix.time}</span>
-              <span className="cop-fix-count">{fix.articles.length} articles</span>
-            </div>
-            {expandedFixture === fix.id && (
-              <div className="cop-fix-detail">
-                {fix.articles.map((a, i) => (
-                  <div key={i} className="cop-fix-slot">
-                    <span className="cop-fix-slot-type">{a.type}</span>
-                    <span style={{ flex: 1, fontSize: 10, color: 'var(--g400)' }}>
-                      {a.type === 'Preview' ? 'Full preview with stats & predictions' :
-                       a.type === 'Starting XI' ? 'Lineup analysis & tactical preview' :
-                       a.type === 'Recap' ? 'Full match report with key moments' :
-                       'Individual player ratings & analysis'}
-                    </span>
-                    <span className="cop-fix-slot-time">{a.timing}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+        {leaguesLoading ? (
+          <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--g400)' }}>Loading leagues...</div>
+        ) : leagues.length === 0 ? (
+          <div style={{ padding: '20px', textAlign: 'center', fontSize: 13, color: 'var(--g400)' }}>
+            No leagues configured. <a href="/settings#autopilot" style={{ color: 'var(--elec)' }}>Add leagues in Settings</a>.
           </div>
-        ))}
+        ) : (
+          leagues.filter(l => l.isActive).map(league => (
+            <div key={league.id} className="cop-fix">
+              <div className="cop-fix-row" onClick={() => setExpandedLeague(expandedLeague === league.id ? null : league.id)}>
+                <span className={`cop-fix-arrow${expandedLeague === league.id ? ' open' : ''}`}>\u25b6</span>
+                <span className="cop-fix-teams">{league.flag} {league.name}</span>
+                <span className="cop-fix-league" style={{ color: 'var(--g400)', fontSize: 11 }}>weight: {league.weight}</span>
+                <span className="cop-fix-count">
+                  {rules.reduce((sum, r) => sum + r.slots.length, 0)} articles/match
+                </span>
+              </div>
+              {expandedLeague === league.id && (
+                <div className="cop-fix-detail">
+                  <div style={{ padding: '8px 12px', fontSize: 11, color: 'var(--g500)', borderBottom: '1px solid var(--brd)' }}>
+                    Autopilot will apply your rules to every match in this league.
+                  </div>
+                  {rules.flatMap(rule =>
+                    rule.slots.map((slot, i) => (
+                      <div key={`${rule.id}-${i}`} className="cop-fix-slot">
+                        <span className="cop-fix-slot-type">{rule.name}: {slot.type}</span>
+                        <span style={{ flex: 1, fontSize: 10, color: 'var(--g400)' }}>{slot.template}</span>
+                        <span className="cop-fix-slot-time">{slot.timing}</span>
+                      </div>
+                    ))
+                  )}
+                  <div style={{ padding: '8px 12px 4px', fontSize: 11, color: 'var(--g400)' }}>
+                    Live fixtures will appear here once API-Football is configured.
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   )

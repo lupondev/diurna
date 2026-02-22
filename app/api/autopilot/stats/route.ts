@@ -9,58 +9,57 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const site = await prisma.site.findFirst({
-    where: { organizationId: session.user.organizationId },
-  })
+  const orgId = session.user.organizationId
 
-  if (!site) {
-    return NextResponse.json({ today: 0, published: 0, scheduled: 0, live: 0, drafts: 0 })
-  }
+  const [site, config] = await Promise.all([
+    prisma.site.findFirst({ where: { organizationId: orgId } }),
+    prisma.autopilotConfig.findUnique({ where: { orgId } }),
+  ])
 
   const startOfDay = new Date()
   startOfDay.setHours(0, 0, 0, 0)
   const endOfDay = new Date()
   endOfDay.setHours(23, 59, 59, 999)
 
-  const [published, scheduled, drafts, todayTotal] = await Promise.all([
-    prisma.article.count({
-      where: {
-        siteId: site.id,
-        status: 'PUBLISHED',
-        publishedAt: { gte: startOfDay, lte: endOfDay },
-      },
-    }),
-    prisma.article.count({
-      where: {
-        siteId: site.id,
-        status: 'SCHEDULED',
-        scheduledAt: { gte: startOfDay, lte: endOfDay },
-      },
-    }),
-    prisma.article.count({
-      where: {
-        siteId: site.id,
-        status: 'DRAFT',
-        createdAt: { gte: startOfDay, lte: endOfDay },
-      },
-    }),
-    prisma.article.count({
-      where: {
-        siteId: site.id,
-        OR: [
-          { publishedAt: { gte: startOfDay, lte: endOfDay } },
-          { scheduledAt: { gte: startOfDay, lte: endOfDay } },
-          { status: 'DRAFT', createdAt: { gte: startOfDay, lte: endOfDay } },
-        ],
-      },
-    }),
-  ])
+  let published = 0
+  let scheduled = 0
+  let drafts = 0
+  let todayTotal = 0
+
+  if (site) {
+    ;[published, scheduled, drafts, todayTotal] = await Promise.all([
+      prisma.article.count({
+        where: { siteId: site.id, status: 'PUBLISHED', publishedAt: { gte: startOfDay, lte: endOfDay } },
+      }),
+      prisma.article.count({
+        where: { siteId: site.id, status: 'SCHEDULED', scheduledAt: { gte: startOfDay, lte: endOfDay } },
+      }),
+      prisma.article.count({
+        where: { siteId: site.id, status: 'DRAFT', createdAt: { gte: startOfDay, lte: endOfDay } },
+      }),
+      prisma.article.count({
+        where: {
+          siteId: site.id,
+          OR: [
+            { publishedAt: { gte: startOfDay, lte: endOfDay } },
+            { scheduledAt: { gte: startOfDay, lte: endOfDay } },
+            { status: 'DRAFT', createdAt: { gte: startOfDay, lte: endOfDay } },
+          ],
+        },
+      }),
+    ])
+  }
 
   return NextResponse.json({
+    // Legacy fields
     today: todayTotal,
     published,
     scheduled,
     live: 0,
     drafts,
+    // Fields expected by copilot page
+    articlesWrittenToday: published,
+    isActive: config?.isActive ?? false,
+    dailyTarget: config?.dailyTarget ?? 10,
   })
 }
