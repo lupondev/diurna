@@ -41,6 +41,21 @@ model Site {
   wpSiteUrl      String?
   wpApiKey       String?
   competitorFeeds String[]    @default([])
+
+  // Publication identity
+  description    String?
+
+  // SEO defaults
+  metaTitle      String?
+  metaDescription String?
+  ogImage        String?
+
+  // Social links
+  twitterHandle  String?
+  facebookUrl    String?
+  instagramHandle String?
+  youtubeUrl     String?
+
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?
