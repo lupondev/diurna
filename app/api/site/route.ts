@@ -15,6 +15,17 @@ const UpdateSiteSchema = z.object({
   wpSiteUrl: z.string().max(500).optional().nullable(),
   wpApiKey: z.string().max(500).optional().nullable(),
   competitorFeeds: z.array(z.string().url().max(500)).max(10).optional(),
+  // Publication identity
+  description: z.string().max(500).optional().nullable(),
+  // SEO defaults
+  metaTitle: z.string().max(200).optional().nullable(),
+  metaDescription: z.string().max(500).optional().nullable(),
+  ogImage: z.string().max(500).optional().nullable(),
+  // Social links
+  twitterHandle: z.string().max(100).optional().nullable(),
+  facebookUrl: z.string().max(500).optional().nullable(),
+  instagramHandle: z.string().max(100).optional().nullable(),
+  youtubeUrl: z.string().max(500).optional().nullable(),
 })
 
 const CreateSiteSchema = z.object({
@@ -98,6 +109,14 @@ export async function GET(req: NextRequest) {
       wpSiteUrl: site.wpSiteUrl,
       wpApiKey: site.wpApiKey,
       competitorFeeds: site.competitorFeeds,
+      description: site.description,
+      metaTitle: site.metaTitle,
+      metaDescription: site.metaDescription,
+      ogImage: site.ogImage,
+      twitterHandle: site.twitterHandle,
+      facebookUrl: site.facebookUrl,
+      instagramHandle: site.instagramHandle,
+      youtubeUrl: site.youtubeUrl,
       categories: categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
     })
   } catch (error) {
@@ -140,10 +159,7 @@ export async function POST(req: NextRequest) {
       .replace(/^-|-$/g, '')
 
     const existing = await prisma.site.findFirst({
-      where: {
-        organizationId: orgId,
-        slug,
-      },
+      where: { organizationId: orgId, slug },
     })
     if (existing) {
       return NextResponse.json({ error: 'A site with this name already exists' }, { status: 409 })
@@ -223,6 +239,14 @@ export async function PATCH(req: NextRequest) {
         ...(data.wpSiteUrl !== undefined && { wpSiteUrl: data.wpSiteUrl || null }),
         ...(data.wpApiKey !== undefined && { wpApiKey: data.wpApiKey || null }),
         ...(data.competitorFeeds !== undefined && { competitorFeeds: data.competitorFeeds }),
+        ...(data.description !== undefined && { description: data.description || null }),
+        ...(data.metaTitle !== undefined && { metaTitle: data.metaTitle || null }),
+        ...(data.metaDescription !== undefined && { metaDescription: data.metaDescription || null }),
+        ...(data.ogImage !== undefined && { ogImage: data.ogImage || null }),
+        ...(data.twitterHandle !== undefined && { twitterHandle: data.twitterHandle || null }),
+        ...(data.facebookUrl !== undefined && { facebookUrl: data.facebookUrl || null }),
+        ...(data.instagramHandle !== undefined && { instagramHandle: data.instagramHandle || null }),
+        ...(data.youtubeUrl !== undefined && { youtubeUrl: data.youtubeUrl || null }),
       },
     })
 
@@ -238,6 +262,14 @@ export async function PATCH(req: NextRequest) {
       wpSiteUrl: updated.wpSiteUrl,
       wpApiKey: updated.wpApiKey,
       competitorFeeds: updated.competitorFeeds,
+      description: updated.description,
+      metaTitle: updated.metaTitle,
+      metaDescription: updated.metaDescription,
+      ogImage: updated.ogImage,
+      twitterHandle: updated.twitterHandle,
+      facebookUrl: updated.facebookUrl,
+      instagramHandle: updated.instagramHandle,
+      youtubeUrl: updated.youtubeUrl,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
