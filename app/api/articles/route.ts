@@ -33,7 +33,16 @@ export async function POST(req: NextRequest) {
 
     const mcpSecret = req.headers.get('x-mcp-secret')
     if (mcpSecret && mcpSecret === process.env.MCP_SECRET) {
-      userId = req.headers.get('x-user-id') || undefined
+      const headerUserId = req.headers.get('x-user-id')
+      if (headerUserId) {
+        userId = headerUserId
+      } else {
+        const firstOrg = await prisma.organization.findFirst()
+        if (firstOrg) {
+          const membership = await prisma.userOnOrganization.findFirst({ where: { organizationId: firstOrg.id } })
+          userId = membership?.userId
+        }
+      }
     } else {
       const session = await getServerSession(authOptions)
       if (!session?.user?.id) {
@@ -94,7 +103,13 @@ export async function GET(req: NextRequest) {
 
     const mcpSecret = req.headers.get('x-mcp-secret')
     if (mcpSecret && mcpSecret === process.env.MCP_SECRET) {
-      orgId = req.headers.get('x-org-id') || undefined
+      const headerOrgId = req.headers.get('x-org-id')
+      if (headerOrgId) {
+        orgId = headerOrgId
+      } else {
+        const firstOrg = await prisma.organization.findFirst()
+        orgId = firstOrg?.id
+      }
     } else {
       const session = await getServerSession(authOptions)
       if (!session?.user?.organizationId) {

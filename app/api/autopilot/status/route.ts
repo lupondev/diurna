@@ -8,7 +8,13 @@ export async function GET(request: NextRequest) {
 
   const mcpSecret = request.headers.get('x-mcp-secret')
   if (mcpSecret && mcpSecret === process.env.MCP_SECRET) {
-    orgId = request.headers.get('x-org-id') || undefined
+    const headerOrgId = request.headers.get('x-org-id')
+    if (headerOrgId) {
+      orgId = headerOrgId
+    } else {
+      const firstOrg = await prisma.organization.findFirst()
+      orgId = firstOrg?.id
+    }
   } else {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id || !session.user.organizationId) {
