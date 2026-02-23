@@ -16,6 +16,7 @@ import {
 import { MetaBar } from '@/components/public/sportba/meta-bar'
 import { Reactions } from '@/components/public/sportba/reactions'
 import { NewsletterForm } from '@/components/public/sportba/newsletter-form'
+import { canonicalUrl, toAbsUrl } from '@/lib/seo'
 
 export async function fetchArticle(slug: string, categorySlug?: string) {
   const site = await getDefaultSite()
@@ -45,7 +46,8 @@ export async function fetchArticle(slug: string, categorySlug?: string) {
 
   if (!article) return null
 
-  let authorName = `Redakcija ${site?.name || 'Diurna'}`
+  // Use site.name as author org — never hardcode 'Diurna'
+  let authorName = `Redakcija ${site.name || 'Sport'}`
   if (article.authorId && !article.aiGenerated) {
     const author = await prisma.user.findUnique({
       where: { id: article.authorId },
@@ -91,26 +93,42 @@ export async function buildArticleMetadata(slug: string, categorySlug?: string):
   if (!result) return { title: 'Not Found' }
 
   const { article, site } = result
-  const siteName = site?.name || 'Diurna'
+  // Use site.name as display name — NEVER hardcode platform name
+  const siteName = site?.name || process.env.NEXT_PUBLIC_SITE_NAME || 'TodayFootballMatch'
   const title = article.metaTitle || article.title
   const description = article.metaDescription || article.excerpt || undefined
-  const imageUrl = article.featuredImage || '/images/og-default.svg'
+  const imageUrl = article.featuredImage
+    ? toAbsUrl(article.featuredImage)
+    : toAbsUrl('/og-default.jpg')
+
+  // canonical path = /vijesti/{slug} — the Bosnian path is always canonical
+  const canonicalPath = `/vijesti/${article.slug}`
+  const canonical = canonicalUrl(canonicalPath)
+
+  const pubDate = (article.publishedAt || article.createdAt).toISOString()
+  const modDate = article.updatedAt.toISOString()
 
   return {
     title: `${title} | ${siteName}`,
     description,
+    // REQUIRED: canonical tag on every article page
+    alternates: { canonical },
     openGraph: {
-      title,
+      title: `${title} | ${siteName}`,
       description,
-      images: [imageUrl],
+      url: canonical,
+      siteName,           // site.name — never 'Diurna'
+      images: imageUrl ? [{ url: imageUrl, width: 1200, height: 630 }] : [],
       type: 'article',
-      publishedTime: (article.publishedAt || article.createdAt).toISOString(),
-    },
+      publishedTime: pubDate,
+      modifiedTime: modDate,
+      ...(article.category?.name ? { section: article.category.name } : {}),
+    } as Metadata['openGraph'],
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: `${title} | ${siteName}`,
       description,
-      images: [imageUrl],
+      images: imageUrl ? [imageUrl] : [],
     },
   }
 }
@@ -148,7 +166,9 @@ function getCategoryFallback(slug?: string): string {
 
 export function ArticlePage({ data }: { data: ArticleData }) {
   const { article, authorName, related, trending, site } = data
-  const siteName = site?.name || 'Diurna'
+  // Use site.name — never hardcode platform branding
+  const siteName = site?.name || process.env.NEXT_PUBLIC_SITE_NAME || 'TodayFootballMatch'
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://todayfootballmatch.com').replace(/\/$/, '')
   const rawHtml = tiptapToHtml(article.content)
   const bodyHtml = removeLeadingTitle(rawHtml, article.title)
   const wordCount = bodyHtml.replace(/<[^>]*>/g, '').split(/\s+/).length
@@ -156,9 +176,12 @@ export function ArticlePage({ data }: { data: ArticleData }) {
   const categoryName = article.category?.name || 'Vijesti'
   const categorySlug = article.category?.slug || 'vijesti'
   const pubDate = article.publishedAt || article.createdAt
+  const articleUrl = canonicalUrl(`/vijesti/${article.slug}`)
+  const imageUrl = article.featuredImage || getCategoryFallback(categorySlug)
 
   return (
     <main className="sba-article">
+      {/* JSON-LD: NewsArticle with full required fields for Google News */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -167,11 +190,19 @@ export function ArticlePage({ data }: { data: ArticleData }) {
             '@type': 'NewsArticle',
             headline: article.title,
             description: article.metaDescription || article.excerpt || '',
+            url: articleUrl,
+            mainEntityOfPage: { '@type': 'WebPage', '@id': articleUrl },
+            image: toAbsUrl(imageUrl),
             datePublished: pubDate.toISOString(),
             dateModified: article.updatedAt.toISOString(),
-            author: { '@type': 'Person', name: authorName },
-            publisher: { '@type': 'Organization', name: siteName },
+            author: { '@type': 'Organization', name: siteName },
+            publisher: {
+              '@type': 'Organization',
+              name: siteName,
+              logo: { '@type': 'ImageObject', url: `${siteUrl}/logo.png` },
+            },
             articleSection: categoryName,
+            inLanguage: 'bs',
           }),
         }}
       />
@@ -185,7 +216,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
       <div className="sba-article-layout">
         <article className="sba-article-main">
           <nav className="sba-breadcrumb" aria-label="Breadcrumb">
-            <Link href="/">Početna</Link>
+            <Link href="/">Po\u010detna</Link>
             <span className="sba-breadcrumb-sep">/</span>
             <Link href={`/${categorySlug}`}>{categoryName}</Link>
           </nav>
@@ -207,7 +238,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
           <div className="sba-featured-img">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={article.featuredImage || getCategoryFallback(categorySlug)}
+              src={imageUrl}
               alt={article.title}
               className="sba-featured-img-real"
               style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12, display: 'block' }}
@@ -233,7 +264,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
           {related.length > 0 && (
             <section className="sba-related">
               <div className="sba-section-head">
-                <h2 className="sba-section-title">Povezani članci</h2>
+                <h2 className="sba-section-title">Povezani \u010dlanci</h2>
               </div>
               <div className="sba-related-grid">
                 {related.map((r) => (
@@ -285,7 +316,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
                       <div className="sba-trending-body">
                         <span className="sba-trending-title">{t.title}</span>
                         <span className="sba-trending-meta">
-                          {t.category?.name || 'Vijesti'}{t.publishedAt ? ` · ${timeAgo(t.publishedAt)}` : ''}
+                          {t.category?.name || 'Vijesti'}{t.publishedAt ? ` \u00b7 ${timeAgo(t.publishedAt)}` : ''}
                         </span>
                       </div>
                     </Link>

@@ -43,39 +43,34 @@ const ibmMono = IBM_Plex_Mono({
   display: 'swap',
 })
 
+// metadataBase is REQUIRED — without it Next.js renders relative canonical/og:image URLs
+// which break in ISR, edge, and some crawlers.
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://todayfootballmatch.com'),
   title: {
-    default: 'Diurna — AI-Powered Sports Publishing',
-    template: '%s | Diurna',
+    // Template used by all pages via generateMetadata(). "%s" = pageTitle.
+    // Fallback (home page if generateMetadata not present) = first entry below.
+    default: 'TodayFootballMatch — Sportske vijesti i rezultati',
+    template: '%s | TodayFootballMatch',
   },
-  description: 'The publishing platform for modern sports newsrooms. Powered by Lupon Media.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://diurna.io'),
+  description: 'Najnovije vijesti, live rezultati, transferi i tabele iz vodećih europskih liga.',
   openGraph: {
     type: 'website',
-    siteName: 'Diurna',
-    title: 'Diurna — AI-Powered Sports Publishing',
-    description: 'The publishing platform for modern sports newsrooms. Powered by Lupon Media.',
+    siteName: 'TodayFootballMatch', // NEVER 'Diurna'
+    title: 'TodayFootballMatch — Sportske vijesti i rezultati',
+    description: 'Najnovije vijesti, live rezultati, transferi i tabele iz vodećih europskih liga.',
+    images: [{ url: '/og-default.jpg', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
+    site: '@todayfootballmatch',
   },
   alternates: {
     types: { 'application/rss+xml': '/feed' },
-    languages: {
-      'en': '/',
-      'bs': '/?lang=bs',
-      'hr': '/?lang=hr',
-      'sr': '/?lang=sr',
-      'de': '/?lang=de',
-      'tr': '/?lang=tr',
-      'ar': '/?lang=ar',
-      'x-default': '/',
-    },
   },
 }
 
 // Inline script that runs BEFORE any paint — eliminates dark mode FOUC completely.
-// Sets .dark class AND background-color on <html> synchronously from localStorage.
 const themeScript = `
 try {
   var t = localStorage.getItem('diurna-theme');

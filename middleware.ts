@@ -7,10 +7,35 @@ const ROLE_ACCESS: Record<string, string[]> = {
   '/calendar': ['OWNER', 'ADMIN', 'EDITOR'],
 }
 
-export async function middleware(req: NextRequest) {
-  const host = req.headers.get('host') || ''
-  const { pathname } = req.nextUrl
+// Paths that should skip lowercase normalization (non-HTML assets and internals)
+function shouldSkipNormalization(pathname: string): boolean {
+  if (pathname.startsWith('/_next')) return true
+  if (pathname.startsWith('/api')) return true
+  if (pathname.startsWith('/sitemap')) return true
+  if (pathname === '/robots.txt') return true
+  if (pathname === '/favicon.ico') return true
+  if (/\.[a-z0-9]{1,6}$/i.test(pathname)) return true // static files
+  return false
+}
 
+export async function middleware(req: NextRequest) {
+  const url = req.nextUrl
+  const { pathname } = url
+  const host = req.headers.get('host') || ''
+
+  // ── SEO: Lowercase normalization (308) ─────────────────────────────────
+  // Runs BEFORE auth check so /VIJESTI gets lowercased before alias redirect fires.
+  // Trailing slash handled by trailingSlash:false in next.config.mjs.
+  if (!shouldSkipNormalization(pathname)) {
+    const lower = pathname.toLowerCase()
+    if (lower !== pathname) {
+      const next = url.clone()
+      next.pathname = lower
+      return NextResponse.redirect(next, 308)
+    }
+  }
+
+  // ── Auth: route protection ──────────────────────────────────────────────
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/onboarding')
   const isMarketingPage = pathname === '/landing'
   const isEmbedRoute = pathname.startsWith('/api/embed')
@@ -59,6 +84,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // ── Tenant: org slug resolution ─────────────────────────────────────────
   let orgSlug: string | null = null
 
   if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
@@ -76,9 +102,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const requestHeaders = new Headers(req.headers)
-  if (orgSlug) {
-    requestHeaders.set('x-org-slug', orgSlug)
-  }
+  if (orgSlug) requestHeaders.set('x-org-slug', orgSlug)
   requestHeaders.delete('x-org-id')
 
   return NextResponse.next({
