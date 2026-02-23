@@ -72,21 +72,32 @@ export interface MetaInput {
 
 /**
  * Single source of truth for all page metadata.
+ *
+ * TITLE STRATEGY: uses { absolute } to bypass root layout template ("%s | SiteName").
+ * Without this, every page would get double suffix:
+ *   buildMetadata returns "Arsenal vs Chelsea | TodayFootballMatch"
+ *   template appends "| TodayFootballMatch"
+ *   result: "Arsenal vs Chelsea | TodayFootballMatch | TodayFootballMatch" ❌
+ *
+ * Using { absolute } bypasses the template entirely:
+ *   result: "Arsenal vs Chelsea | TodayFootballMatch" ✓
+ *
  * Guarantees: entity-specific title, canonical on every page,
- * og:site_name = siteName (NEVER platform branding),
+ * og:site_name = SITE_NAME (NEVER platform branding),
  * absolute canonical + og:image URLs.
  */
 export function buildMetadata(input: MetaInput): Metadata {
   const canonical = canonicalUrl(input.canonicalPath)
-  const title = `${input.pageTitle} | ${SITE_NAME}`
+  const fullTitle = `${input.pageTitle} | ${SITE_NAME}`
   const ogImage = toAbsUrl(input.ogImage) ?? toAbsUrl(DEFAULT_OG_IMAGE)!
 
   const meta: Metadata = {
-    title,
+    // { absolute } bypasses the root layout title template — prevents double suffix
+    title: { absolute: fullTitle },
     description: input.description,
     alternates: { canonical },
     openGraph: {
-      title,
+      title: fullTitle,
       description: input.description,
       url: canonical,
       siteName: SITE_NAME,
@@ -99,7 +110,7 @@ export function buildMetadata(input: MetaInput): Metadata {
     } as Metadata['openGraph'],
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: fullTitle,
       description: input.description,
       images: [ogImage],
       site: TWITTER_HANDLE,

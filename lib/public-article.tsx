@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
 import { tiptapToHtml } from '@/lib/tiptap-html'
@@ -16,7 +15,7 @@ import {
 import { MetaBar } from '@/components/public/sportba/meta-bar'
 import { Reactions } from '@/components/public/sportba/reactions'
 import { NewsletterForm } from '@/components/public/sportba/newsletter-form'
-import { canonicalUrl, toAbsUrl } from '@/lib/seo'
+import { canonicalUrl, toAbsUrl, buildMetadata } from '@/lib/seo'
 
 export async function fetchArticle(slug: string, categorySlug?: string) {
   const site = await getDefaultSite()
@@ -46,7 +45,7 @@ export async function fetchArticle(slug: string, categorySlug?: string) {
 
   if (!article) return null
 
-  // Use site.name as author org — never hardcode 'Diurna'
+  // Use site.name — NEVER hardcode platform name
   let authorName = `Redakcija ${site.name || 'Sport'}`
   if (article.authorId && !article.aiGenerated) {
     const author = await prisma.user.findUnique({
@@ -92,45 +91,23 @@ export async function buildArticleMetadata(slug: string, categorySlug?: string):
   const result = await fetchArticle(slug, categorySlug)
   if (!result) return { title: 'Not Found' }
 
-  const { article, site } = result
-  // Use site.name as display name — NEVER hardcode platform name
-  const siteName = site?.name || process.env.NEXT_PUBLIC_SITE_NAME || 'TodayFootballMatch'
+  const { article } = result
   const title = article.metaTitle || article.title
   const description = article.metaDescription || article.excerpt || undefined
-  const imageUrl = article.featuredImage
-    ? toAbsUrl(article.featuredImage)
-    : toAbsUrl('/og-default.jpg')
 
-  // canonical path = /vijesti/{slug} — the Bosnian path is always canonical
+  // canonical path = /vijesti/{slug} — Bosnian path is always canonical
   const canonicalPath = `/vijesti/${article.slug}`
-  const canonical = canonicalUrl(canonicalPath)
 
-  const pubDate = (article.publishedAt || article.createdAt).toISOString()
-  const modDate = article.updatedAt.toISOString()
-
-  return {
-    title: `${title} | ${siteName}`,
-    description,
-    // REQUIRED: canonical tag on every article page
-    alternates: { canonical },
-    openGraph: {
-      title: `${title} | ${siteName}`,
-      description,
-      url: canonical,
-      siteName,           // site.name — never 'Diurna'
-      images: imageUrl ? [{ url: imageUrl, width: 1200, height: 630 }] : [],
-      type: 'article',
-      publishedTime: pubDate,
-      modifiedTime: modDate,
-      ...(article.category?.name ? { section: article.category.name } : {}),
-    } as Metadata['openGraph'],
-    twitter: {
-      card: 'summary_large_image',
-      title: `${title} | ${siteName}`,
-      description,
-      images: imageUrl ? [imageUrl] : [],
-    },
-  }
+  return buildMetadata({
+    pageTitle: title,
+    description: description || '',
+    canonicalPath,
+    ogType: 'article',
+    ogImage: article.featuredImage,
+    publishedTime: (article.publishedAt || article.createdAt).toISOString(),
+    modifiedTime: article.updatedAt.toISOString(),
+    section: article.category?.name,
+  })
 }
 
 function timeAgo(date: Date): string {
@@ -166,7 +143,6 @@ function getCategoryFallback(slug?: string): string {
 
 export function ArticlePage({ data }: { data: ArticleData }) {
   const { article, authorName, related, trending, site } = data
-  // Use site.name — never hardcode platform branding
   const siteName = site?.name || process.env.NEXT_PUBLIC_SITE_NAME || 'TodayFootballMatch'
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://todayfootballmatch.com').replace(/\/$/, '')
   const rawHtml = tiptapToHtml(article.content)
@@ -216,7 +192,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
       <div className="sba-article-layout">
         <article className="sba-article-main">
           <nav className="sba-breadcrumb" aria-label="Breadcrumb">
-            <Link href="/">Po\u010detna</Link>
+            <Link href="/">Početna</Link>
             <span className="sba-breadcrumb-sep">/</span>
             <Link href={`/${categorySlug}`}>{categoryName}</Link>
           </nav>
@@ -264,7 +240,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
           {related.length > 0 && (
             <section className="sba-related">
               <div className="sba-section-head">
-                <h2 className="sba-section-title">Povezani \u010dlanci</h2>
+                <h2 className="sba-section-title">Povezani članci</h2>
               </div>
               <div className="sba-related-grid">
                 {related.map((r) => (
@@ -316,7 +292,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
                       <div className="sba-trending-body">
                         <span className="sba-trending-title">{t.title}</span>
                         <span className="sba-trending-meta">
-                          {t.category?.name || 'Vijesti'}{t.publishedAt ? ` \u00b7 ${timeAgo(t.publishedAt)}` : ''}
+                          {t.category?.name || 'Vijesti'}{t.publishedAt ? ` · ${timeAgo(t.publishedAt)}` : ''}
                         </span>
                       </div>
                     </Link>

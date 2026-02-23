@@ -4,17 +4,17 @@ import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
 import { getArticleUrl } from '@/lib/article-url'
 import { AdSlot } from '@/components/public/sportba'
+import { buildMetadata } from '@/lib/seo'
 import '../category.css'
 
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata(): Promise<Metadata> {
-  const site = await getDefaultSite()
-  const siteName = site?.name || 'Diurna'
-  return {
-    title: `Vijesti \u2014 ${siteName}`,
+  return buildMetadata({
+    pageTitle: 'Vijesti',
     description: 'Najnovije sportske vijesti iz svijeta fudbala, košarke i ostalih sportova.',
-  }
+    canonicalPath: '/vijesti',
+  })
 }
 
 const GRADIENTS = [
