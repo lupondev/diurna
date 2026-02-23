@@ -48,6 +48,39 @@ export interface ApiFixture {
   goals: { home: number | null; away: number | null }
 }
 
+/**
+ * Full match data returned by /fixtures?id=N
+ * Includes venue + full fixture details needed for SportsEvent JSON-LD.
+ */
+export interface ApiMatchFull {
+  fixture: {
+    id: number
+    date: string
+    timestamp: number
+    status: { short: string; long: string; elapsed: number | null }
+    venue: { id: number | null; name: string | null; city: string | null }
+    referee: string | null
+  }
+  league: {
+    id: number
+    name: string
+    logo: string
+    country: string
+    round?: string
+  }
+  teams: {
+    home: { id: number; name: string; logo: string; winner: boolean | null }
+    away: { id: number; name: string; logo: string; winner: boolean | null }
+  }
+  goals: { home: number | null; away: number | null }
+  score: {
+    halftime: { home: number | null; away: number | null }
+    fulltime: { home: number | null; away: number | null }
+    extratime: { home: number | null; away: number | null }
+    penalty: { home: number | null; away: number | null }
+  }
+}
+
 export interface ApiStanding {
   rank: number
   team: { id: number; name: string; logo: string }
@@ -181,6 +214,33 @@ export async function getLiveMatches(): Promise<LiveMatch[]> {
     minute: f.fixture.status.elapsed ?? undefined,
     time: formatTime(f.fixture.date),
   }))
+}
+
+/**
+ * Fetch a single match by fixture ID.
+ * Used by utakmica/[id]/layout.tsx for generateMetadata() + SportsEvent JSON-LD.
+ *
+ * Cache strategy:
+ * - Live match (status in 1H/2H/HT/ET/P/BT): 60s TTL → always fresh score
+ * - Finished / scheduled: 5min TTL → stable data, no need to hammer API
+ *
+ * Returns null if: API key missing, fixture not found, or API error.
+ */
+export async function getMatch(fixtureId: number): Promise<ApiMatchFull | null> {
+  const data = await apiFootball<ApiMatchFull>(`/fixtures?id=${fixtureId}`, CACHE_TTL.FIXTURES_TODAY)
+  const match = data[0] ?? null
+  if (!match) return null
+
+  // For live matches, use shorter TTL via a separate cache key
+  const status = match.fixture.status.short
+  const isLive = ['1H', '2H', 'HT', 'ET', 'P', 'LIVE', 'BT'].includes(status)
+  if (isLive) {
+    // Re-fetch with live TTL (overrides the cached value above)
+    const live = await apiFootball<ApiMatchFull>(`/fixtures?id=${fixtureId}`, CACHE_TTL.LIVE)
+    return live[0] ?? match
+  }
+
+  return match
 }
 
 export async function getFixturesByDate(date: string): Promise<ApiFixture[]> {
