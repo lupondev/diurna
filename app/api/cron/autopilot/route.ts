@@ -25,12 +25,23 @@ const MAX_HOURLY_CAP = 6
 async function authenticate(
   req: NextRequest
 ): Promise<{ ok: true; orgId?: string } | { ok: false; response: NextResponse }> {
-  const authHeader = req.headers.get('authorization')
-  if (authHeader === `Bearer ${process.env.CRON_SECRET}`) return { ok: true }
+  const secret = process.env.CRON_SECRET
 
-  const secretParam = req.nextUrl.searchParams.get('secret')
-  if (secretParam && secretParam === process.env.CRON_SECRET) return { ok: true }
+  if (secret) {
+    // Method 1: Bearer header (Vercel cron)
+    const authHeader = req.headers.get('authorization')
+    if (authHeader === `Bearer ${secret}`) return { ok: true }
 
+    // Method 2: x-cron-secret header (QStash via Upstash-Forward-x-cron-secret)
+    const cronHeader = req.headers.get('x-cron-secret')
+    if (cronHeader === secret) return { ok: true }
+
+    // Method 3: ?secret= query param (fallback / manual trigger)
+    const secretParam = req.nextUrl.searchParams.get('secret')
+    if (secretParam && secretParam === secret) return { ok: true }
+  }
+
+  // Method 4: Session cookie (manual trigger from admin UI)
   const session = await getServerSession(authOptions)
   if (
     session?.user?.organizationId &&
@@ -236,14 +247,12 @@ export async function GET(req: NextRequest) {
         continue
       }
 
-      // ── Hourly quota — FIXED: cap + force bypass already handled above ──
-      // Uses is24h=true → schedEndHour=24, remainingHours never goes below 1
+      // ── Hourly quota ──
       const currentHour = new Date().getHours()
       const schedEndRaw = config.scheduleEnd || '00:00'
       const schedEndHour = schedEndRaw === '00:00' ? 24 : parseInt(schedEndRaw.split(':')[0])
       const remainingHours = Math.max(1, schedEndHour - currentHour)
       const hourlyTargetRaw = Math.ceil(remaining / remainingHours)
-      // Cap: never demand more than MAX_HOURLY_CAP per hour regardless of remaining/hours math
       const hourlyTarget = Math.min(hourlyTargetRaw, MAX_HOURLY_CAP)
 
       const startOfHour = new Date()
