@@ -19,23 +19,18 @@ import { systemLog } from '@/lib/system-log'
 
 export const maxDuration = 60
 
+// Max articles per hour — prevents end-of-day explosion when remainingHours → 1
+const MAX_HOURLY_CAP = 6
+
 async function authenticate(
   req: NextRequest
 ): Promise<{ ok: true; orgId?: string } | { ok: false; response: NextResponse }> {
-  // Method 1: Bearer token header (cron jobs with Authorization header)
   const authHeader = req.headers.get('authorization')
-  if (authHeader === `Bearer ${process.env.CRON_SECRET}`) {
-    return { ok: true }
-  }
+  if (authHeader === `Bearer ${process.env.CRON_SECRET}`) return { ok: true }
 
-  // Method 2: Query param secret — cron-job.org doesn't support custom headers on free plan
-  // Usage: /api/cron/autopilot?secret=YOUR_CRON_SECRET
   const secretParam = req.nextUrl.searchParams.get('secret')
-  if (secretParam && secretParam === process.env.CRON_SECRET) {
-    return { ok: true }
-  }
+  if (secretParam && secretParam === process.env.CRON_SECRET) return { ok: true }
 
-  // Method 3: Session cookie (admin UI "Run Now" button)
   const session = await getServerSession(authOptions)
   if (
     session?.user?.organizationId &&
@@ -54,7 +49,6 @@ export async function GET(req: NextRequest) {
   const force = req.nextUrl.searchParams.get('force') === 'true'
 
   try {
-    // If session-based, only process the user's org
     const where: { isActive: boolean; orgId?: string } = { isActive: true }
     if (auth.orgId) where.orgId = auth.orgId
 
@@ -83,10 +77,7 @@ export async function GET(req: NextRequest) {
         continue
       }
 
-      const site = await prisma.site.findFirst({
-        where: { organizationId: config.orgId },
-      })
-
+      const site = await prisma.site.findFirst({ where: { organizationId: config.orgId } })
       if (!site) {
         results.push({ orgId: config.orgId, action: 'skipped', reason: 'No site configured' })
         continue
@@ -95,23 +86,13 @@ export async function GET(req: NextRequest) {
       const startOfDay = new Date()
       startOfDay.setHours(0, 0, 0, 0)
       const todayCount = await prisma.article.count({
-        where: {
-          siteId: site.id,
-          aiGenerated: true,
-          createdAt: { gte: startOfDay },
-        },
+        where: { siteId: site.id, aiGenerated: true, createdAt: { gte: startOfDay } },
       })
 
-      // ── Force mode: fetch top 5 unprocessed stories and generate for each ──
+      // ── Force mode ──
       if (force) {
-        // Get cluster IDs already covered today
         const coveredToday = await prisma.article.findMany({
-          where: {
-            siteId: site.id,
-            aiGenerated: true,
-            createdAt: { gte: startOfDay },
-            aiPrompt: { not: null },
-          },
+          where: { siteId: site.id, aiGenerated: true, createdAt: { gte: startOfDay }, aiPrompt: { not: null } },
           select: { aiPrompt: true },
         })
         const coveredClusterIds = new Set<string>()
@@ -126,290 +107,193 @@ export async function GET(req: NextRequest) {
           }
         }
 
-        // Fetch top cluster by DIS, exclude already covered (1 per invocation to fit in timeout)
         const topCluster = await prisma.storyCluster.findFirst({
           where: {
             latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
             dis: { gte: 15 },
-            ...(coveredClusterIds.size > 0
-              ? { id: { notIn: Array.from(coveredClusterIds) } }
-              : {}),
+            ...(coveredClusterIds.size > 0 ? { id: { notIn: Array.from(coveredClusterIds) } } : {}),
           },
           orderBy: { dis: 'desc' },
         })
 
         if (!topCluster) {
-          results.push({
-            orgId: config.orgId,
-            action: 'skipped',
-            reason: 'No news items or clusters available — run Feed Fetch first',
-          })
+          results.push({ orgId: config.orgId, action: 'skipped', reason: 'No clusters available — run Feed Fetch first' })
           continue
         }
 
-        {
-          const newsItems = await prisma.newsItem.findMany({
-            where: { clusterId: topCluster.id },
-            orderBy: { pubDate: 'desc' },
-            take: 5,
-          })
+        const newsItems = await prisma.newsItem.findMany({
+          where: { clusterId: topCluster.id },
+          orderBy: { pubDate: 'desc' },
+          take: 5,
+        })
 
-          const catConfig = config.categories[0]
-          const taskCategorySlug = catConfig?.slug || 'vijesti'
-          const taskCategory = catConfig?.name || 'Vijesti'
+        const catConfig = config.categories[0]
+        const taskCategorySlug = catConfig?.slug || 'vijesti'
+        const taskCategory = catConfig?.name || 'Vijesti'
 
-          const promptData = buildPromptContext(
-            {
-              title: topCluster.title,
-              eventType: topCluster.eventType,
-              entities: topCluster.entities as string[],
-              dis: topCluster.dis,
-            },
-            newsItems.map((n) => ({
-              title: n.title,
-              source: n.source,
-              content: n.content || undefined,
-            })),
-            config
-          )
+        const promptData = buildPromptContext(
+          { title: topCluster.title, eventType: topCluster.eventType, entities: topCluster.entities as string[], dis: topCluster.dis },
+          newsItems.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
+          config
+        )
 
-          const maxTokens = Math.min(4000, Math.max(500, Math.round(config.defaultLength * 2.5)))
-          let ai
-          try {
-            await systemLog('info', 'autopilot', `Force mode: AI call starting for cluster "${topCluster.title}"`, { dis: topCluster.dis, sources: newsItems.length, maxTokens })
-            ai = await generateContent({
-              system: promptData.system,
-              prompt: promptData.prompt,
-              maxTokens,
-              temperature: 0.3,
-            })
-            await systemLog('info', 'autopilot', `AI call success: ${ai.model}`, { tokensIn: ai.tokensIn, tokensOut: ai.tokensOut })
-          } catch (aiErr) {
-            const errMsg = aiErr instanceof Error ? aiErr.message : 'unknown'
-            console.error(`[Autopilot] AI call failed:`, errMsg)
-            await systemLog('error', 'autopilot', `AI call failed: ${errMsg}`)
-            results.push({ orgId: config.orgId, action: 'error', reason: `AI call failed: ${errMsg}` })
-            continue
-          }
-
-          let parsed: {
-            title?: string; content?: string; excerpt?: string
-            seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }
-            tags?: string[]
-          }
-          try {
-            let cleaned = ai.text.trim()
-            if (cleaned.startsWith('```')) {
-              cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
-            }
-            parsed = JSON.parse(cleaned)
-          } catch {
-            results.push({ orgId: config.orgId, action: 'error', reason: `Failed to parse AI response for: ${topCluster.title}` })
-            continue
-          }
-
-          const title = parsed.title || topCluster.title
-
-          // Deduplication: skip only if exact slug already exists
-          const candidateSlug = parsed.seo?.slug || slugify(title)
-          const existingDupe = await prisma.article.findFirst({
-            where: { siteId: site.id, slug: candidateSlug },
-          })
-          if (existingDupe) {
-            results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Duplicate slug: "${candidateSlug}"` })
-            continue
-          }
-
-          const htmlContent = parsed.content || ''
-
-          let verification: { score: number; issues: string[] } | null = null
-          if (process.env.OPENAI_API_KEY) {
-            try {
-              verification = await verifyArticle(htmlContent)
-              await systemLog('info', 'autopilot', `Verification score: ${verification.score}`, { issues: verification.issues })
-              if (verification.score < 60) {
-                await systemLog('warn', 'autopilot', `Article skipped — verification score ${verification.score}/100`, { title, issues: verification.issues })
-                results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Verification score too low: ${verification.score}/100` })
-                continue
-              }
-            } catch (verifyErr) {
-              await systemLog('warn', 'autopilot', `Verification failed, proceeding without: ${verifyErr instanceof Error ? verifyErr.message : 'unknown'}`)
-            }
-          }
-
-          let tiptapContent = htmlToTiptap(htmlContent)
-
-          if (catConfig) {
-            tiptapContent = injectWidgets(tiptapContent, catConfig)
-          }
-
-          let category = await prisma.category.findFirst({
-            where: { siteId: site.id, slug: taskCategorySlug },
-          })
-          if (!category) {
-            category = await prisma.category.create({
-              data: { siteId: site.id, name: taskCategory, slug: taskCategorySlug },
-            })
-          }
-
-          const baseSlug = parsed.seo?.slug || slugify(title)
-          let slug = baseSlug
-          let slugSuffix = 1
-          while (await prisma.article.findFirst({ where: { siteId: site.id, slug } })) {
-            slug = `${baseSlug}-${slugSuffix++}`
-          }
-
-          const featuredImage = await fetchUnsplashImage(title)
-
-          const article = await prisma.article.create({
-            data: {
-              siteId: site.id,
-              title,
-              slug,
-              content: tiptapContent as unknown as Prisma.InputJsonValue,
-              excerpt: parsed.excerpt || '',
-              featuredImage,
-              status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
-              publishedAt: config.autoPublish ? new Date() : null,
-              categoryId: category.id,
-              aiGenerated: true,
-              aiModel: ai.model,
-              aiPrompt: JSON.stringify({
-                priority: 'top_story',
-                clusterId: topCluster.id,
-                sources: newsItems.map((n) => n.title),
-              }),
-              aiVerificationScore: verification?.score ?? null,
-              aiVerificationIssues: verification?.issues.join(', ') ?? null,
-              metaTitle: parsed.seo?.metaTitle || title,
-              metaDescription: parsed.seo?.metaDescription || parsed.excerpt || '',
-            },
-          })
-
-          if (parsed.tags && parsed.tags.length > 0) {
-            for (const tagName of parsed.tags.slice(0, 5)) {
-              const tagSlug = slugify(tagName)
-              if (!tagSlug) continue
-              let tag = await prisma.tag.findFirst({
-                where: { siteId: site.id, slug: tagSlug },
-              })
-              if (!tag) {
-                tag = await prisma.tag.create({
-                  data: { siteId: site.id, name: tagName, slug: tagSlug },
-                })
-              }
-              await prisma.articleTag
-                .create({ data: { articleId: article.id, tagId: tag.id } })
-                .catch(() => {})
-            }
-          }
-
-          results.push({
-            orgId: config.orgId,
-            action: 'generated',
-            articleId: article.id,
-            title,
-            category: taskCategory,
-            status: config.autoPublish ? 'published' : 'draft',
-            reason: `top_story: DIS ${topCluster.dis} — ${topCluster.title} (verified: ${verification?.score ?? 'n/a'})`,
-          })
+        const maxTokens = Math.min(4000, Math.max(500, Math.round(config.defaultLength * 2.5)))
+        let ai
+        try {
+          await systemLog('info', 'autopilot', `Force: AI starting for "${topCluster.title}"`, { dis: topCluster.dis, sources: newsItems.length })
+          ai = await generateContent({ system: promptData.system, prompt: promptData.prompt, maxTokens, temperature: 0.3 })
+          await systemLog('info', 'autopilot', `Force: AI success ${ai.model}`, { tokensIn: ai.tokensIn, tokensOut: ai.tokensOut })
+        } catch (aiErr) {
+          const errMsg = aiErr instanceof Error ? aiErr.message : 'unknown'
+          await systemLog('error', 'autopilot', `Force: AI failed: ${errMsg}`)
+          results.push({ orgId: config.orgId, action: 'error', reason: `AI failed: ${errMsg}` })
+          continue
         }
-        continue
-      }
 
-      // ── Hourly quota check ──
-      const remaining = config.dailyTarget - todayCount
-      if (remaining <= 0) {
+        let parsed: { title?: string; content?: string; excerpt?: string; seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }; tags?: string[] }
+        try {
+          let cleaned = ai.text.trim()
+          if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+          parsed = JSON.parse(cleaned)
+        } catch {
+          results.push({ orgId: config.orgId, action: 'error', reason: `Failed to parse AI response for: ${topCluster.title}` })
+          continue
+        }
+
+        const title = parsed.title || topCluster.title
+        const candidateSlug = parsed.seo?.slug || slugify(title)
+        const existingDupe = await prisma.article.findFirst({ where: { siteId: site.id, slug: candidateSlug } })
+        if (existingDupe) {
+          results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Duplicate slug: "${candidateSlug}"` })
+          continue
+        }
+
+        const htmlContent = parsed.content || ''
+        let verification: { score: number; issues: string[] } | null = null
+        if (process.env.OPENAI_API_KEY) {
+          try {
+            verification = await verifyArticle(htmlContent)
+            if (verification.score < 60) {
+              await systemLog('warn', 'autopilot', `Force: verification score ${verification.score}/100 — skipped`, { title })
+              results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Verification score too low: ${verification.score}/100` })
+              continue
+            }
+          } catch { /* proceed without verification */ }
+        }
+
+        let tiptapContent = htmlToTiptap(htmlContent)
+        if (catConfig) tiptapContent = injectWidgets(tiptapContent, catConfig)
+
+        let category = await prisma.category.findFirst({ where: { siteId: site.id, slug: taskCategorySlug } })
+        if (!category) {
+          category = await prisma.category.create({ data: { siteId: site.id, name: taskCategory, slug: taskCategorySlug } })
+        }
+
+        const baseSlug = parsed.seo?.slug || slugify(title)
+        let slug = baseSlug
+        let slugSuffix = 1
+        while (await prisma.article.findFirst({ where: { siteId: site.id, slug } })) slug = `${baseSlug}-${slugSuffix++}`
+
+        const featuredImage = await fetchUnsplashImage(title)
+        const article = await prisma.article.create({
+          data: {
+            siteId: site.id, title, slug,
+            content: tiptapContent as unknown as Prisma.InputJsonValue,
+            excerpt: parsed.excerpt || '', featuredImage,
+            status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
+            publishedAt: config.autoPublish ? new Date() : null,
+            categoryId: category.id, aiGenerated: true, aiModel: ai.model,
+            aiPrompt: JSON.stringify({ priority: 'top_story', clusterId: topCluster.id, sources: newsItems.map((n) => n.title) }),
+            aiVerificationScore: verification?.score ?? null,
+            aiVerificationIssues: verification?.issues.join(', ') ?? null,
+            metaTitle: parsed.seo?.metaTitle || title,
+            metaDescription: parsed.seo?.metaDescription || parsed.excerpt || '',
+          },
+        })
+
+        if (parsed.tags?.length) {
+          for (const tagName of parsed.tags.slice(0, 5)) {
+            const tagSlug = slugify(tagName)
+            if (!tagSlug) continue
+            let tag = await prisma.tag.findFirst({ where: { siteId: site.id, slug: tagSlug } })
+            if (!tag) tag = await prisma.tag.create({ data: { siteId: site.id, name: tagName, slug: tagSlug } })
+            await prisma.articleTag.create({ data: { articleId: article.id, tagId: tag.id } }).catch(() => {})
+          }
+        }
+
         results.push({
-          orgId: config.orgId,
-          action: 'skipped',
-          reason: `Daily target reached (${todayCount}/${config.dailyTarget})`,
+          orgId: config.orgId, action: 'generated', articleId: article.id, title,
+          category: taskCategory, status: config.autoPublish ? 'published' : 'draft',
+          reason: `force: DIS ${topCluster.dis} — ${topCluster.title}`,
         })
         continue
       }
 
-      // Calculate hourly pacing
+      // ── Normal mode: daily target check ──
+      const remaining = config.dailyTarget - todayCount
+      if (remaining <= 0) {
+        results.push({ orgId: config.orgId, action: 'skipped', reason: `Daily target reached (${todayCount}/${config.dailyTarget})` })
+        continue
+      }
+
+      // ── Hourly quota — FIXED: cap + force bypass already handled above ──
+      // Uses is24h=true → schedEndHour=24, remainingHours never goes below 1
       const currentHour = new Date().getHours()
       const schedEndRaw = config.scheduleEnd || '00:00'
       const schedEndHour = schedEndRaw === '00:00' ? 24 : parseInt(schedEndRaw.split(':')[0])
       const remainingHours = Math.max(1, schedEndHour - currentHour)
-      const hourlyTarget = Math.ceil(remaining / remainingHours)
+      const hourlyTargetRaw = Math.ceil(remaining / remainingHours)
+      // Cap: never demand more than MAX_HOURLY_CAP per hour regardless of remaining/hours math
+      const hourlyTarget = Math.min(hourlyTargetRaw, MAX_HOURLY_CAP)
 
       const startOfHour = new Date()
       startOfHour.setMinutes(0, 0, 0)
       const articlesThisHour = await prisma.article.count({
-        where: {
-          siteId: site.id,
-          aiGenerated: true,
-          createdAt: { gte: startOfHour },
-        },
+        where: { siteId: site.id, aiGenerated: true, createdAt: { gte: startOfHour } },
       })
 
       if (articlesThisHour >= hourlyTarget) {
         results.push({
           orgId: config.orgId,
           action: 'skipped',
-          reason: `Hourly quota met (${articlesThisHour}/${hourlyTarget} this hour, ${todayCount}/${config.dailyTarget} today)`,
+          reason: `Hourly quota met: ${articlesThisHour}/${hourlyTarget} this hour (raw: ${hourlyTargetRaw}, cap: ${MAX_HOURLY_CAP}), ${todayCount}/${config.dailyTarget} today, ${remainingHours}h remaining`,
         })
         continue
       }
 
-      // ── Normal mode: single task via priority system ──
+      // ── Normal mode: priority task selection ──
       const task = await getNextTask(config, site.id, todayCount, false)
 
       if (!task) {
         results.push({
           orgId: config.orgId,
           action: 'skipped',
-          reason: `No matching stories found (${todayCount}/${config.dailyTarget} today, ${remaining} remaining)`,
+          reason: `No stories found (${todayCount}/${config.dailyTarget} today, ${remaining} remaining, ${articlesThisHour}/${hourlyTarget} this hour)`,
         })
         continue
       }
 
-      // Build prompt from cluster data or task title
+      await systemLog('info', 'autopilot', `Normal: task selected — priority=${task.priority} title="${task.title}"`, { category: task.categorySlug, sources: task.sources.length })
+
       const cluster = task.clusterId
         ? await prisma.storyCluster.findUnique({ where: { id: task.clusterId } })
         : null
 
       const promptData = buildPromptContext(
-        cluster || {
-          title: task.title,
-          eventType: task.priority,
-          entities: [],
-          dis: 50,
-        },
+        cluster || { title: task.title, eventType: task.priority, entities: [], dis: 50 },
         task.sources,
         config
       )
 
       const maxTokens = Math.min(4000, Math.max(500, Math.round(task.wordCount * 2.5)))
-      await systemLog('info', 'autopilot', `Normal mode: AI call starting for task "${task.title}"`, { priority: task.priority, maxTokens })
-      const ai = await generateContent({
-        system: promptData.system,
-        prompt: promptData.prompt,
-        maxTokens,
-        temperature: 0.3,
-      })
-      await systemLog('info', 'autopilot', `AI call success: ${ai.model}`, { tokensIn: ai.tokensIn, tokensOut: ai.tokensOut })
+      await systemLog('info', 'autopilot', `Normal: AI starting for "${task.title}"`, { priority: task.priority, maxTokens })
+      const ai = await generateContent({ system: promptData.system, prompt: promptData.prompt, maxTokens, temperature: 0.3 })
+      await systemLog('info', 'autopilot', `Normal: AI success ${ai.model}`, { tokensIn: ai.tokensIn, tokensOut: ai.tokensOut })
 
-      // Parse AI JSON response
-      let parsed: {
-        title?: string
-        content?: string
-        excerpt?: string
-        seo?: {
-          slug?: string
-          metaTitle?: string
-          metaDescription?: string
-          keywords?: string[]
-        }
-        tags?: string[]
-      }
+      let parsed: { title?: string; content?: string; excerpt?: string; seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }; tags?: string[] }
       try {
         let cleaned = ai.text.trim()
-        if (cleaned.startsWith('```')) {
-          cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
-        }
+        if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
         parsed = JSON.parse(cleaned)
       } catch {
         results.push({ orgId: config.orgId, action: 'error', reason: 'Failed to parse AI response' })
@@ -417,84 +301,53 @@ export async function GET(req: NextRequest) {
       }
 
       const title = parsed.title || task.title
-
-      // Deduplication: skip only if exact slug already exists
       const candidateSlug = parsed.seo?.slug || slugify(title)
-      const existingDupe = await prisma.article.findFirst({
-        where: { siteId: site.id, slug: candidateSlug },
-      })
+      const existingDupe = await prisma.article.findFirst({ where: { siteId: site.id, slug: candidateSlug } })
       if (existingDupe) {
         results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Duplicate slug: "${candidateSlug}"` })
         continue
       }
 
       const htmlContent = parsed.content || ''
-
       let verification: { score: number; issues: string[] } | null = null
       if (process.env.OPENAI_API_KEY) {
         try {
           verification = await verifyArticle(htmlContent)
-          await systemLog('info', 'autopilot', `Verification score: ${verification.score}`, { issues: verification.issues })
+          await systemLog('info', 'autopilot', `Verification: ${verification.score}/100`, { issues: verification.issues })
           if (verification.score < 60) {
-            await systemLog('warn', 'autopilot', `Article skipped — verification score ${verification.score}/100`, { title, issues: verification.issues })
+            await systemLog('warn', 'autopilot', `Skipped — verification score ${verification.score}/100`, { title })
             results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Verification score too low: ${verification.score}/100` })
             continue
           }
         } catch (verifyErr) {
-          await systemLog('warn', 'autopilot', `Verification failed, proceeding without: ${verifyErr instanceof Error ? verifyErr.message : 'unknown'}`)
+          await systemLog('warn', 'autopilot', `Verification failed, proceeding: ${verifyErr instanceof Error ? verifyErr.message : 'unknown'}`)
         }
       }
 
       let tiptapContent = htmlToTiptap(htmlContent)
-
       const catConfig = config.categories.find((c) => c.slug === task.categorySlug)
-      if (catConfig) {
-        tiptapContent = injectWidgets(tiptapContent, catConfig)
-      }
+      if (catConfig) tiptapContent = injectWidgets(tiptapContent, catConfig)
 
-      // Find or create category in site
-      let category = await prisma.category.findFirst({
-        where: { siteId: site.id, slug: task.categorySlug },
-      })
+      let category = await prisma.category.findFirst({ where: { siteId: site.id, slug: task.categorySlug } })
       if (!category) {
-        category = await prisma.category.create({
-          data: {
-            siteId: site.id,
-            name: task.category,
-            slug: task.categorySlug,
-          },
-        })
+        category = await prisma.category.create({ data: { siteId: site.id, name: task.category, slug: task.categorySlug } })
       }
 
-      // Ensure unique slug
       const baseSlug = parsed.seo?.slug || slugify(title)
       let slug = baseSlug
       let slugSuffix = 1
-      while (await prisma.article.findFirst({ where: { siteId: site.id, slug } })) {
-        slug = `${baseSlug}-${slugSuffix++}`
-      }
+      while (await prisma.article.findFirst({ where: { siteId: site.id, slug } })) slug = `${baseSlug}-${slugSuffix++}`
 
       const featuredImage = await fetchUnsplashImage(title)
-
       const article = await prisma.article.create({
         data: {
-          siteId: site.id,
-          title,
-          slug,
+          siteId: site.id, title, slug,
           content: tiptapContent as unknown as Prisma.InputJsonValue,
-          excerpt: parsed.excerpt || '',
-          featuredImage,
+          excerpt: parsed.excerpt || '', featuredImage,
           status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
           publishedAt: config.autoPublish ? new Date() : null,
-          categoryId: category.id,
-          aiGenerated: true,
-          aiModel: ai.model,
-          aiPrompt: JSON.stringify({
-            priority: task.priority,
-            clusterId: task.clusterId,
-            matchId: task.matchId,
-            sources: task.sources.map((s) => s.title),
-          }),
+          categoryId: category.id, aiGenerated: true, aiModel: ai.model,
+          aiPrompt: JSON.stringify({ priority: task.priority, clusterId: task.clusterId, matchId: task.matchId, sources: task.sources.map((s) => s.title) }),
           aiVerificationScore: verification?.score ?? null,
           aiVerificationIssues: verification?.issues.join(', ') ?? null,
           metaTitle: parsed.seo?.metaTitle || title,
@@ -502,41 +355,26 @@ export async function GET(req: NextRequest) {
         },
       })
 
-      // Create tags
-      if (parsed.tags && parsed.tags.length > 0) {
+      if (parsed.tags?.length) {
         for (const tagName of parsed.tags.slice(0, 5)) {
           const tagSlug = slugify(tagName)
           if (!tagSlug) continue
-          let tag = await prisma.tag.findFirst({
-            where: { siteId: site.id, slug: tagSlug },
-          })
-          if (!tag) {
-            tag = await prisma.tag.create({
-              data: { siteId: site.id, name: tagName, slug: tagSlug },
-            })
-          }
-          await prisma.articleTag
-            .create({ data: { articleId: article.id, tagId: tag.id } })
-            .catch(() => {})
+          let tag = await prisma.tag.findFirst({ where: { siteId: site.id, slug: tagSlug } })
+          if (!tag) tag = await prisma.tag.create({ data: { siteId: site.id, name: tagName, slug: tagSlug } })
+          await prisma.articleTag.create({ data: { articleId: article.id, tagId: tag.id } }).catch(() => {})
         }
       }
 
       results.push({
-        orgId: config.orgId,
-        action: 'generated',
-        articleId: article.id,
-        title,
-        category: task.category,
-        status: config.autoPublish ? 'published' : 'draft',
-        reason: `${task.priority}: ${task.category} (${task.categorySlug}) (verified: ${verification?.score ?? 'n/a'})`,
+        orgId: config.orgId, action: 'generated', articleId: article.id, title,
+        category: task.category, status: config.autoPublish ? 'published' : 'draft',
+        reason: `${task.priority}: ${task.category} (verified: ${verification?.score ?? 'n/a'})`,
       })
     }
 
-    // Return structured response
     const generated = results.filter(r => r.action === 'generated')
     const skipped = results.filter(r => r.action === 'skipped')
 
-    // Revalidate public pages so new articles appear immediately
     if (generated.length > 0) {
       try {
         revalidatePath('/', 'layout')
@@ -547,9 +385,7 @@ export async function GET(req: NextRequest) {
     }
 
     const action = generated.length > 0 ? 'generated' : 'skipped'
-    const reason = generated.length > 0
-      ? generated[0].reason
-      : skipped[0]?.reason || 'No active configs'
+    const reason = generated.length > 0 ? generated[0].reason : skipped[0]?.reason || 'No active configs'
 
     await systemLog(
       generated.length > 0 ? 'info' : 'warn',
@@ -562,12 +398,7 @@ export async function GET(req: NextRequest) {
       success: true,
       processed: configs.length,
       action,
-      article: generated[0] ? {
-        id: generated[0].articleId,
-        title: generated[0].title,
-        category: generated[0].category,
-        status: generated[0].status,
-      } : undefined,
+      article: generated[0] ? { id: generated[0].articleId, title: generated[0].title, category: generated[0].category, status: generated[0].status } : undefined,
       reason,
       results,
     })
@@ -575,8 +406,7 @@ export async function GET(req: NextRequest) {
     console.error('Autopilot cron error:', error)
     await systemLog('error', 'autopilot', error instanceof Error ? error.message : 'Unknown error')
     return NextResponse.json({
-      success: false,
-      action: 'error',
+      success: false, action: 'error',
       reason: error instanceof Error ? error.message : 'Internal server error',
     }, { status: 500 })
   }

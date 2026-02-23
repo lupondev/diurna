@@ -49,6 +49,8 @@ export type ArticlePriority =
   | 'category_fill'
   | 'gap_fill'
   | 'post_match'
+  | 'fallback'
+  | 'force_fallback'
 
 export type GenerationTask = {
   priority: ArticlePriority
@@ -108,6 +110,29 @@ export const CATEGORY_PROMPTS: Record<string, string> = {
   'nauka': 'This is a SCIENCE news story. Reference the research source/journal. Explain methodology briefly. Avoid overstating findings.',
   'transferi': 'This is a TRANSFER story. Include fee (if known), contract length, and selling/buying club context. Reference player stats from previous season.',
   'vijesti': 'This is a general NEWS story. Write in a balanced, informative tone.',
+  'utakmice': 'This is a MATCH story. Include teams, league context, and relevant stats. Cover preview, live, or post-match angle as appropriate.',
+  'analize': 'This is a TACTICAL/ANALYTICAL story. Focus on patterns, formations, and strategic insights. Back claims with observable facts from matches.',
+  'povrede': 'This is an INJURY/SQUAD NEWS story. Include player name, injury type if known, expected return timeline, and squad impact.',
+  'rankings': 'This is a RANKINGS/STATS story. Include relevant numbers, league table context, and historical comparison where available.',
+}
+
+// ══════════════════════════════════
+// EVENTTYPE → CATEGORY MAPPING
+// Maps StoryCluster.eventType values to category slugs
+// eventType values from clustering: transfer, injury, match, general, news, analysis, preview, report
+// ══════════════════════════════════
+
+const CATEGORY_EVENT_TYPE_MAP: Record<string, string[]> = {
+  vijesti:   ['news', 'general'],
+  transferi: ['transfer', 'transfers'],
+  utakmice:  ['match', 'matches', 'preview', 'report'],
+  povrede:   ['injury', 'injuries'],
+  analize:   ['analysis', 'opinion', 'tactical'],
+  rankings:  ['ranking', 'stats', 'table'],
+  // football/sport catch-all — matches any football event
+  football:  ['match', 'preview', 'report', 'transfer', 'injury', 'general'],
+  sport:     ['match', 'transfer', 'injury', 'general', 'news'],
+  breaking:  ['breaking', 'news', 'general'],
 }
 
 // ══════════════════════════════════
@@ -222,7 +247,6 @@ export function htmlToTiptap(html: string): Record<string, unknown> {
       })
     } else if (tag === 'p') {
       if (inner) {
-        // Preserve inline formatting by converting to text with marks
         const textContent = parseInlineMarks(inner)
         if (textContent.length > 0) {
           content.push({ type: 'paragraph', content: textContent })
@@ -265,10 +289,8 @@ export function htmlToTiptap(html: string): Record<string, unknown> {
   return { type: 'doc', content }
 }
 
-// Parse inline HTML marks (<strong>, <em>, <a>) into Tiptap mark objects
 function parseInlineMarks(html: string): Record<string, unknown>[] {
   const nodes: Record<string, unknown>[] = []
-  // Simple regex-based parser for common inline tags
   const parts = html.split(/(<strong>.*?<\/strong>|<em>.*?<\/em>|<b>.*?<\/b>|<i>.*?<\/i>|<a[^>]*>.*?<\/a>)/gi)
 
   for (const part of parts) {
@@ -312,7 +334,6 @@ export function injectWidgets(
 
   const widgets: Record<string, unknown>[] = []
 
-  // Use proper Tiptap widget nodes instead of placeholder text
   if (categoryConfig.widgetPoll) {
     widgets.push({ type: 'poll', attrs: { question: '', options: [] } })
   }
@@ -338,7 +359,6 @@ export function injectWidgets(
 // SLUG GENERATOR
 // ══════════════════════════════════
 
-// Words that lead Unsplash to return non-football images
 const UNSPLASH_NOISE_WORDS = [
   'wolf', 'wolves', 'eagle', 'eagles', 'fox', 'foxes', 'bear', 'bears',
   'lion', 'lions', 'tiger', 'tigers', 'robin', 'robin hood', 'swan', 'swans',
@@ -440,21 +460,21 @@ export async function getNextTask(
   const now = new Date()
 
   // ── Priority 1: Breaking news ──
+  // FIXED: removed trend gate (trend is a signal, not a blocker)
+  // FIXED: window 2h → 6h
   if (config.breakingNews) {
     const breakingCluster = await prisma.storyCluster.findFirst({
       where: {
         dis: { gte: config.breakingThreshold },
-        trend: { in: ['SPIKING', 'RISING'] },
-        latestItem: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+        latestItem: { gte: new Date(Date.now() - 6 * 60 * 60 * 1000) },
       },
-      orderBy: { dis: 'desc' },
+      orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
     })
 
     if (breakingCluster) {
       const alreadyCovered = await prisma.article.findFirst({
         where: { siteId, aiPrompt: { contains: breakingCluster.id }, createdAt: { gte: startOfDay } },
       })
-
       if (!alreadyCovered) {
         const newsItems = await prisma.newsItem.findMany({
           where: { clusterId: breakingCluster.id },
@@ -484,12 +504,10 @@ export async function getNextTask(
       },
       orderBy: { matchDate: 'asc' },
     })
-
     if (upcomingMatch) {
       const alreadyCovered = await prisma.article.findFirst({
         where: { siteId, aiPrompt: { contains: upcomingMatch.id }, createdAt: { gte: startOfDay } },
       })
-
       if (!alreadyCovered) {
         const teamNews = await prisma.newsItem.findMany({
           where: {
@@ -502,12 +520,12 @@ export async function getNextTask(
           orderBy: { pubDate: 'desc' },
           take: 5,
         })
-        const catConfig = config.categories.find((c) => c.slug === 'matches' || c.slug === 'football') || config.categories[0]
+        const catConfig = config.categories.find((c) => c.slug === 'utakmice' || c.slug === 'matches' || c.slug === 'football') || config.categories[0]
         return {
           priority: 'match_preview',
           title: `${upcomingMatch.homeTeam} vs ${upcomingMatch.awayTeam} — Match Preview`,
-          category: catConfig?.name || 'Football',
-          categorySlug: catConfig?.slug || 'football',
+          category: catConfig?.name || 'Utakmice',
+          categorySlug: catConfig?.slug || 'utakmice',
           sources: teamNews.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
           matchId: upcomingMatch.id,
           wordCount: config.defaultLength,
@@ -517,6 +535,7 @@ export async function getNextTask(
   }
 
   // ── Priority 3: Topic-triggered ──
+  // FIXED: window 12h → 24h
   for (const topic of config.topics.filter((t) => t.isActive)) {
     const keywordConditions = topic.keywords.map((kw) => ({
       title: { contains: kw, mode: 'insensitive' as const },
@@ -524,10 +543,13 @@ export async function getNextTask(
     if (keywordConditions.length === 0) continue
 
     const topicCluster = await prisma.storyCluster.findFirst({
-      where: { OR: keywordConditions, latestItem: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) }, dis: { gte: 30 } },
-      orderBy: { dis: 'desc' },
+      where: {
+        OR: keywordConditions,
+        latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        dis: { gte: 30 },
+      },
+      orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
     })
-
     if (topicCluster) {
       const alreadyCovered = await prisma.article.findFirst({
         where: { siteId, aiPrompt: { contains: topicCluster.id }, createdAt: { gte: startOfDay } },
@@ -553,20 +575,28 @@ export async function getNextTask(
   }
 
   // ── Priority 4: Category fill ──
-  for (const cat of config.categories.sort((a, b) => b.percentage - a.percentage)) {
+  // FIXED: eventType string contains → mapping table
+  // FIXED: window 12h → 24h
+  const sortedCats = [...config.categories].sort((a, b) => b.percentage - a.percentage)
+  for (const cat of sortedCats) {
     const expectedCount = Math.ceil(config.dailyTarget * (cat.percentage / 100))
     const currentCount = await prisma.article.count({
       where: { siteId, category: { slug: cat.slug }, createdAt: { gte: startOfDay } },
     })
 
     if (currentCount < expectedCount) {
+      const mappedEventTypes = CATEGORY_EVENT_TYPE_MAP[cat.slug] || []
+
       const cluster = await prisma.storyCluster.findFirst({
         where: {
-          eventType: { contains: cat.slug, mode: 'insensitive' },
-          latestItem: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) },
+          // If mapping exists, filter by eventType; otherwise take any cluster (category has no mapping)
+          ...(mappedEventTypes.length > 0
+            ? { OR: mappedEventTypes.map((t) => ({ eventType: { contains: t, mode: 'insensitive' as const } })) }
+            : {}),
+          latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
           dis: { gte: 20 },
         },
-        orderBy: { dis: 'desc' },
+        orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
       })
 
       if (cluster) {
@@ -594,6 +624,8 @@ export async function getNextTask(
   }
 
   // ── Priority 5: Gap fill ──
+  // FIXED: window 6h → 24h
+  // NOTE: only fires if gapDetection is on AND gap exists — not a general fallback
   if (config.gapDetection) {
     const lastArticle = await prisma.article.findFirst({
       where: { siteId, aiGenerated: true },
@@ -604,8 +636,11 @@ export async function getNextTask(
 
     if (hasGap) {
       const cluster = await prisma.storyCluster.findFirst({
-        where: { latestItem: { gte: new Date(Date.now() - 6 * 60 * 60 * 1000) }, dis: { gte: 15 } },
-        orderBy: { dis: 'desc' },
+        where: {
+          latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          dis: { gte: 15 },
+        },
+        orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
       })
       if (cluster) {
         const alreadyCovered = await prisma.article.findFirst({
@@ -659,12 +694,12 @@ export async function getNextTask(
         })
         const score = completedMatch.homeScore != null && completedMatch.awayScore != null
           ? `${completedMatch.homeScore}-${completedMatch.awayScore}` : ''
-        const catConfig = config.categories.find((c) => c.slug === 'matches' || c.slug === 'football') || config.categories[0]
+        const catConfig = config.categories.find((c) => c.slug === 'utakmice' || c.slug === 'matches' || c.slug === 'football') || config.categories[0]
         return {
           priority: 'post_match',
           title: `${completedMatch.homeTeam} ${score} ${completedMatch.awayTeam} — Match Report`,
-          category: catConfig?.name || 'Football',
-          categorySlug: catConfig?.slug || 'football',
+          category: catConfig?.name || 'Utakmice',
+          categorySlug: catConfig?.slug || 'utakmice',
           sources: teamNews.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
           matchId: completedMatch.id,
           wordCount: config.defaultLength,
@@ -673,13 +708,19 @@ export async function getNextTask(
     }
   }
 
-  // ── Priority 7 (force only): Latest news fallback ──
-  if (force) {
-    const anyCluster = await prisma.storyCluster.findFirst({
-      where: { latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-      orderBy: { dis: 'desc' },
+  // ── Priority 7: ALWAYS-ON fallback ──
+  // FIXED: was inside if(force) in route.ts — now always runs
+  // Guarantees: if any cluster exists in last 24h, autopilot will NOT return null
+  const anyCluster = await prisma.storyCluster.findFirst({
+    where: { latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
+  })
+
+  if (anyCluster) {
+    const alreadyCovered = await prisma.article.findFirst({
+      where: { siteId, aiPrompt: { contains: anyCluster.id }, createdAt: { gte: startOfDay } },
     })
-    if (anyCluster) {
+    if (!alreadyCovered) {
       const newsItems = await prisma.newsItem.findMany({
         where: { clusterId: anyCluster.id },
         orderBy: { pubDate: 'desc' },
@@ -687,31 +728,32 @@ export async function getNextTask(
       })
       const catConfig = config.categories[0]
       return {
-        priority: 'category_fill',
+        priority: force ? 'force_fallback' : 'fallback',
         title: anyCluster.title,
         category: catConfig?.name || 'Vijesti',
         categorySlug: catConfig?.slug || 'vijesti',
         sources: newsItems.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
         clusterId: anyCluster.id,
-        wordCount: config.defaultLength,
+        wordCount: Math.min(config.defaultLength, 500),
       }
     }
+  }
 
-    const latestNews = await prisma.newsItem.findMany({
-      where: { pubDate: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-      orderBy: { pubDate: 'desc' },
-      take: 5,
-    })
-    if (latestNews.length > 0) {
-      const catConfig = config.categories[0]
-      return {
-        priority: 'category_fill',
-        title: latestNews[0].title,
-        category: catConfig?.name || 'Vijesti',
-        categorySlug: catConfig?.slug || 'vijesti',
-        sources: latestNews.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
-        wordCount: config.defaultLength,
-      }
+  // Last resort: raw news items without cluster
+  const latestNews = await prisma.newsItem.findMany({
+    where: { pubDate: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    orderBy: { pubDate: 'desc' },
+    take: 5,
+  })
+  if (latestNews.length > 0) {
+    const catConfig = config.categories[0]
+    return {
+      priority: 'fallback',
+      title: latestNews[0].title,
+      category: catConfig?.name || 'Vijesti',
+      categorySlug: catConfig?.slug || 'vijesti',
+      sources: latestNews.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
+      wordCount: Math.min(config.defaultLength, 500),
     }
   }
 
