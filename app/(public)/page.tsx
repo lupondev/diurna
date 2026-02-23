@@ -11,17 +11,20 @@ import { ClubLogoStrip } from '@/components/public/ClubLogoStrip'
 import { FixturesTicker } from '@/components/public/FixturesTicker'
 import { VideoSection } from '@/components/public/VideoSection'
 import { LegendsWidget } from '@/components/public/LegendsWidget'
+import { buildMetadata } from '@/lib/seo'
 import './home.css'
 
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata(): Promise<Metadata> {
-  const site = await getDefaultSite()
-  const siteName = site?.name || 'Diurna'
-  return {
-    title: `${siteName} \u2014 Sportske vijesti, transferi i rezultati`,
+  // Use { absolute } via buildMetadata to prevent double suffix from root layout template.
+  // Do NOT do: `${siteName} — Sportske...` because that goes through '%s | TodayFootballMatch'
+  // resulting in "TodayFootballMatch — Sportske... | TodayFootballMatch".
+  return buildMetadata({
+    pageTitle: 'Sportske vijesti, transferi i rezultati',
     description: 'Najnovije sportske vijesti, transferi, rezultati uživo i analize iz svijeta fudbala.',
-  }
+    canonicalPath: '/',
+  })
 }
 
 const GRADIENTS = [
@@ -228,7 +231,7 @@ export default async function HomePage() {
                 {transferItems.map((t, i) => (
                   <Link key={i} href={t.href} className="sba-transfer-card" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <span className={`sba-transfer-badge sba-transfer-badge--${t.badge}`}>
-                      {t.badge === 'hot' ? '🔥 HOT' : t.badge === 'confirmed' ? '✅ POTVRĐENO' : '💬 GLASINA'}
+                      {t.badge === 'hot' ? '\uD83D\uDD25 HOT' : t.badge === 'confirmed' ? '\u2705 POTVRĐENO' : '\uD83D\uDCAC GLASINA'}
                     </span>
                     <span className="sba-transfer-player">{t.title}</span>
                     <span className="sba-transfer-fee">{t.time}</span>
