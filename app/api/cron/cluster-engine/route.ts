@@ -10,11 +10,20 @@ function isCronAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET
   if (!secret) return true // not configured → allow (dev mode)
 
+  // Method 1: Bearer header (Vercel cron)
   const authHeader = req.headers.get('authorization')
   if (authHeader === `Bearer ${secret}`) return true
 
+  // Method 2: x-cron-secret header (QStash via Upstash-Forward-x-cron-secret)
   const cronHeader = req.headers.get('x-cron-secret')
   if (cronHeader === secret) return true
+
+  // Method 3: ?secret= query param (fallback / manual trigger)
+  try {
+    const url = new URL(req.url)
+    const secretParam = url.searchParams.get('secret')
+    if (secretParam && secretParam === secret) return true
+  } catch {}
 
   return false
 }
@@ -286,7 +295,6 @@ function generateDeterministicSummary(
 }
 
 export async function GET(req: Request) {
-  // Security: reject unauthorized requests
   if (!isCronAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
