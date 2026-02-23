@@ -7,6 +7,19 @@ const ROLE_ACCESS: Record<string, string[]> = {
   '/calendar': ['OWNER', 'ADMIN', 'EDITOR'],
 }
 
+/**
+ * HARD BYPASS — must run before EVERYTHING (auth, normalization, tenant).
+ * These paths must always be publicly accessible, no exceptions.
+ * robots.txt and sitemaps behind auth = Googlebot blocked = P0 SEO incident.
+ */
+function isAlwaysPublic(pathname: string): boolean {
+  if (pathname === '/robots.txt') return true
+  if (pathname === '/favicon.ico') return true
+  if (pathname.startsWith('/sitemap')) return true   // /sitemap.xml, /sitemap/news.xml, etc.
+  if (pathname.startsWith('/.well-known')) return true
+  return false
+}
+
 // Paths that should skip lowercase normalization (non-HTML assets and internals)
 function shouldSkipNormalization(pathname: string): boolean {
   if (pathname.startsWith('/_next')) return true
@@ -22,6 +35,24 @@ export async function middleware(req: NextRequest) {
   const url = req.nextUrl
   const { pathname } = url
   const host = req.headers.get('host') || ''
+
+  // ── HARD BYPASS: robots.txt / sitemaps / .well-known ───────────────────
+  // Must come before EVERYTHING. These must never hit auth logic.
+  if (isAlwaysPublic(pathname)) {
+    const requestHeaders = new Headers(req.headers)
+    // Still resolve org slug for potential sitemap use
+    let orgSlug: string | null = null
+    if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
+      const parts = host.split('.')
+      orgSlug = (parts.length > 1 && !parts[0].startsWith('localhost')) ? parts[0] : (process.env.DEFAULT_ORG_SLUG || null)
+    } else {
+      const subdomain = host.split('.')[0]
+      if (subdomain !== 'www' && subdomain !== 'app') orgSlug = subdomain
+    }
+    if (orgSlug) requestHeaders.set('x-org-slug', orgSlug)
+    requestHeaders.delete('x-org-id')
+    return NextResponse.next({ request: { headers: requestHeaders } })
+  }
 
   // ── SEO: Lowercase normalization (308) ─────────────────────────────────
   // Runs BEFORE auth check so /VIJESTI gets lowercased before alias redirect fires.
@@ -55,12 +86,15 @@ export async function middleware(req: NextRequest) {
   const isStaticPage = ['/o-nama', '/impressum', '/privatnost', '/uslovi', '/kontakt', '/marketing'].includes(pathname)
   const isCategoryPage = ['/vijesti', '/transferi', '/utakmice', '/povrede', '/video', '/igraci', '/tabela'].includes(pathname)
   const isMatchCenter = pathname.startsWith('/utakmica/')
+  const isPlayerPage = pathname.startsWith('/igraci/')
+  // Liga/league pages — must be public for SEO crawl
+  const isLigaPage = pathname.startsWith('/lige/') || pathname.startsWith('/premier-league') || pathname.startsWith('/la-liga') || pathname.startsWith('/serie-a') || pathname.startsWith('/bundesliga') || pathname.startsWith('/ligue-1') || pathname.startsWith('/liga-prvaka') || pathname.startsWith('/champions-league')
   const isMcpRoute = req.headers.get('x-mcp-secret') === process.env.MCP_SECRET && (
     pathname.startsWith('/api/autopilot') ||
     pathname.startsWith('/api/articles') ||
     pathname.startsWith('/api/site')
   )
-  const isPublicRoute = isHomepage || isStaticPage || isCategoryPage || isMatchCenter || pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isCronRoute || isSeedRoute || isNewsroomPublic || isSetupRoute || isDashboardStats || isCategoriesRoute || isPublicArticle || isHealthRoute || isWebhookRoute || isAdminApiWithBearer || isMcpRoute
+  const isPublicRoute = isHomepage || isStaticPage || isCategoryPage || isMatchCenter || isPlayerPage || isLigaPage || pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isCronRoute || isSeedRoute || isNewsroomPublic || isSetupRoute || isDashboardStats || isCategoriesRoute || isPublicArticle || isHealthRoute || isWebhookRoute || isAdminApiWithBearer || isMcpRoute
 
   if (!isPublicRoute) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })

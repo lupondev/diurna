@@ -3,6 +3,15 @@
 import { useState, useEffect, useRef } from 'react'
 
 /* ═══════════════════════════════════════════════════════════
+   NOTE: This page is 'use client' (interactive tabs/animations).
+   generateMetadata() CANNOT be used in 'use client' components.
+
+   SEO metadata for /utakmica/[id] is handled by the parent
+   layout at app/(public)/utakmica/[id]/layout.tsx which is a
+   server component and exports generateMetadata().
+   ═══════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════
    MOCK DATA
    ═══════════════════════════════════════════════════════════ */
 

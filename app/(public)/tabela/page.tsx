@@ -3,14 +3,22 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { AdSlot } from '@/components/public/sportba'
 import { getStandings, LEAGUES, LEAGUE_META, type ApiStanding } from '@/lib/api-football'
+import { buildMetadata } from '@/lib/seo'
 import '../category.css'
 
-export const metadata: Metadata = {
-  title: 'Tabela — Diurna',
-  description: 'Tabele vodećih evropskih liga: Premier League, La Liga, Serie A, Bundesliga, Ligue 1 i Liga prvaka.',
-}
-
 export const revalidate = 3600
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ league?: string }> }): Promise<Metadata> {
+  const params = await searchParams
+  const leagueId = params.league ? Number(params.league) : LEAGUES.PL
+  const meta = LEAGUE_META[leagueId]
+  const leagueName = meta?.name || 'Fudbalska liga'
+  return buildMetadata({
+    pageTitle: `Tabela — ${leagueName}`,
+    description: `Tabela ${leagueName}. Poredak klubova, bodovi, pobjede i forma sezone.`,
+    canonicalPath: '/tabela',
+  })
+}
 
 const LEAGUE_TABS = [
   { id: LEAGUES.PL, label: 'PL' },

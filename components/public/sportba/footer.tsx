@@ -29,6 +29,11 @@ function parseLogo(name: string) {
   return { main: name.toUpperCase(), suffix: '' }
 }
 
+// Controlled via NEXT_PUBLIC_SHOW_POWERED_BY env var.
+// Default: hidden in production (tenant branding must be clean).
+// Set NEXT_PUBLIC_SHOW_POWERED_BY=true only on internal/demo deployments.
+const SHOW_POWERED_BY = process.env.NEXT_PUBLIC_SHOW_POWERED_BY === 'true'
+
 export function Footer({ siteName = 'TodayFootballMatch' }: { siteName?: string }) {
   const logo = parseLogo(siteName)
 
@@ -50,11 +55,7 @@ export function Footer({ siteName = 'TodayFootballMatch' }: { siteName?: string 
           <h3 className="sba-footer-heading">Kategorije</h3>
           <div className="sba-footer-links">
             {CATEGORIES.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="sba-footer-link"
-              >
+              <Link key={item.href} href={item.href} className="sba-footer-link">
                 {item.label}
               </Link>
             ))}
@@ -65,11 +66,7 @@ export function Footer({ siteName = 'TodayFootballMatch' }: { siteName?: string 
           <h3 className="sba-footer-heading">Lige</h3>
           <div className="sba-footer-links">
             {LEAGUES.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="sba-footer-link"
-              >
+              <Link key={item.href} href={item.href} className="sba-footer-link">
                 {item.label}
               </Link>
             ))}
@@ -80,11 +77,7 @@ export function Footer({ siteName = 'TodayFootballMatch' }: { siteName?: string 
           <h3 className="sba-footer-heading">Ostalo</h3>
           <div className="sba-footer-links">
             {OTHER.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="sba-footer-link"
-              >
+              <Link key={item.href} href={item.href} className="sba-footer-link">
                 {item.label}
               </Link>
             ))}
@@ -93,7 +86,8 @@ export function Footer({ siteName = 'TodayFootballMatch' }: { siteName?: string 
       </div>
 
       <div className="sba-footer-bottom">
-        &copy; {new Date().getFullYear()} {siteName} &middot; Powered by Diurna &middot; Lupon Media
+        &copy; {new Date().getFullYear()} {siteName}
+        {SHOW_POWERED_BY && <> &middot; Powered by Diurna &middot; Lupon Media</>}
       </div>
     </footer>
   )

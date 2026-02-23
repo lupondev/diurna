@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPlayer, getTeamFixtures, mapStatus } from '@/lib/api-football'
 import { prisma } from '@/lib/prisma'
+import { buildMetadata } from '@/lib/seo'
 import '../../category.css'
 
 export const revalidate = 300
@@ -21,11 +22,31 @@ function positionLabel(pos: string | null): string {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
   const player = await getPlayer(Number(id))
-  if (!player) return { title: 'Igrač — Diurna' }
-  return {
-    title: `${player.player.name} — Diurna`,
-    description: `Profil i statistike za ${player.player.name}`,
+  if (!player) {
+    return buildMetadata({
+      pageTitle: 'Igrač',
+      description: 'Profil i statistike fudbalskog igrača.',
+      canonicalPath: `/igraci/${id}`,
+    })
   }
+  const p = player.player
+  const stat = player.statistics[0]
+  const position = positionLabel(stat?.games.position ?? null)
+  const club = stat?.team.name || ''
+  // Title: "Cody Gakpo | Napadač | Liverpool | TodayFootballMatch"
+  const pageTitle = club
+    ? `${p.name} | ${position} | ${club}`
+    : `${p.name} | ${position}`
+  const description = `Profil i sezonske statistike za ${p.name}${
+    club ? ` (${club})` : ''
+  }. Golovi, asistencije, minuti i ocjene za sezonu.`
+
+  return buildMetadata({
+    pageTitle,
+    description,
+    canonicalPath: `/igraci/${id}`,
+    ogImage: p.photo,
+  })
 }
 
 export default async function PlayerPage({ params }: { params: Promise<{ id: string }> }) {
