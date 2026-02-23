@@ -4,29 +4,35 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-async function authenticate(
-  req: NextRequest
-): Promise<boolean> {
-  // Method 1: Bearer token header
+function isCronAuthorized(req: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return true
+
+  // Method 1: Bearer header (Vercel cron)
   const authHeader = req.headers.get('authorization')
-  if (authHeader === `Bearer ${process.env.CRON_SECRET}`) return true
+  if (authHeader === `Bearer ${secret}`) return true
 
-  // Method 2: Query param — for cron-job.org free plan
+  // Method 2: x-cron-secret header (QStash via Upstash-Forward-x-cron-secret)
+  const cronHeader = req.headers.get('x-cron-secret')
+  if (cronHeader === secret) return true
+
+  // Method 3: ?secret= query param (fallback / manual trigger)
   const secretParam = req.nextUrl.searchParams.get('secret')
-  if (secretParam && secretParam === process.env.CRON_SECRET) return true
-
-  // Method 3: Session cookie (manual trigger from admin UI)
-  const session = await getServerSession(authOptions)
-  if (
-    session?.user?.organizationId &&
-    (session.user.role === 'ADMIN' || session.user.role === 'OWNER')
-  ) return true
+  if (secretParam && secretParam === secret) return true
 
   return false
 }
 
+async function isSessionAuthorized(req: NextRequest): Promise<boolean> {
+  const session = await getServerSession(authOptions)
+  return !!(
+    session?.user?.organizationId &&
+    (session.user.role === 'ADMIN' || session.user.role === 'OWNER')
+  )
+}
+
 export async function GET(req: NextRequest) {
-  const ok = await authenticate(req)
+  const ok = isCronAuthorized(req) || await isSessionAuthorized(req)
   if (!ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -56,7 +62,6 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    // Revalidate public site so articles appear immediately
     try {
       revalidatePath('/', 'layout')
     } catch {
