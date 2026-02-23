@@ -120,6 +120,8 @@ export const CATEGORY_PROMPTS: Record<string, string> = {
 // EVENTTYPE → CATEGORY MAPPING
 // Maps StoryCluster.eventType values to category slugs
 // eventType values from clustering: transfer, injury, match, general, news, analysis, preview, report
+// If a category slug is NOT in this map, P4 will skip it (continue to next category)
+// rather than falling back to "match any cluster" which pollutes category content.
 // ══════════════════════════════════
 
 const CATEGORY_EVENT_TYPE_MAP: Record<string, string[]> = {
@@ -577,22 +579,23 @@ export async function getNextTask(
   // ── Priority 4: Category fill ──
   // FIXED: eventType string contains → mapping table
   // FIXED: window 12h → 24h
+  // FIXED: skip category if no mapping (instead of "match any cluster")
   const sortedCats = [...config.categories].sort((a, b) => b.percentage - a.percentage)
   for (const cat of sortedCats) {
+    const mappedEventTypes = CATEGORY_EVENT_TYPE_MAP[cat.slug] || []
+
+    // Skip categories with no eventType mapping — avoids polluting category with unrelated content
+    if (mappedEventTypes.length === 0) continue
+
     const expectedCount = Math.ceil(config.dailyTarget * (cat.percentage / 100))
     const currentCount = await prisma.article.count({
       where: { siteId, category: { slug: cat.slug }, createdAt: { gte: startOfDay } },
     })
 
     if (currentCount < expectedCount) {
-      const mappedEventTypes = CATEGORY_EVENT_TYPE_MAP[cat.slug] || []
-
       const cluster = await prisma.storyCluster.findFirst({
         where: {
-          // If mapping exists, filter by eventType; otherwise take any cluster (category has no mapping)
-          ...(mappedEventTypes.length > 0
-            ? { OR: mappedEventTypes.map((t) => ({ eventType: { contains: t, mode: 'insensitive' as const } })) }
-            : {}),
+          OR: mappedEventTypes.map((t) => ({ eventType: { contains: t, mode: 'insensitive' as const } })),
           latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
           dis: { gte: 20 },
         },
