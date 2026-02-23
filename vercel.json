@@ -1,22 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/cron/fetch-feeds",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/cluster-engine",
-      "schedule": "*/20 * * * *"
-    },
-    {
-      "path": "/api/cron/autopilot",
-      "schedule": "*/30 * * * *"
-    },
-    {
-      "path": "/api/cron/publish",
-      "schedule": "*/5 * * * *"
-    },
-    {
       "path": "/api/cron/sync-data",
       "schedule": "0 4 * * *"
     },
