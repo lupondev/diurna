@@ -8,11 +8,19 @@ function isCronAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET
   if (!secret) return true // not configured → allow (dev mode)
 
-  // Vercel cron passes Authorization: Bearer <secret>
+  // Method 1: Vercel cron / cron-job.org with Authorization header
   const authHeader = req.headers.get('authorization')
   if (authHeader === `Bearer ${secret}`) return true
 
-  // Also accept x-cron-secret header (used by newsroom "Fetch now" button)
+  // Method 2: Query param — cron-job.org free plan fallback
+  // Usage: /api/cron/fetch-feeds?secret=YOUR_CRON_SECRET
+  try {
+    const url = new URL(req.url)
+    const secretParam = url.searchParams.get('secret')
+    if (secretParam && secretParam === secret) return true
+  } catch {}
+
+  // Method 3: x-cron-secret header (used by newsroom "Fetch now" button)
   const cronHeader = req.headers.get('x-cron-secret')
   if (cronHeader === secret) return true
 
