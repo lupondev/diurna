@@ -29,6 +29,12 @@ function formatMatchDate(dateStr: string): string {
   }
 }
 
+function eventStatusUrl(status: 'live' | 'ft' | 'scheduled'): string {
+  if (status === 'live') return 'https://schema.org/EventMovedOnline'
+  if (status === 'ft') return 'https://schema.org/EventPostponed'
+  return 'https://schema.org/EventScheduled'
+}
+
 export async function generateMetadata(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<Metadata> {
@@ -72,9 +78,7 @@ export async function generateMetadata(
     ogType: 'article',
   })
 
-  // Inject SportsEvent JSON-LD as additionalMetadata is not supported;
-  // we add it via the layout's <head> using Next.js script injection.
-  // The JSON-LD is rendered in the layout JSX below.
+  // Inject SportsEvent JSON-LD
   ;(metadata as Record<string, unknown>).__sportsEventJsonLd = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'SportsEvent',
@@ -90,11 +94,7 @@ export async function generateMetadata(
     homeTeam: { '@type': 'SportsTeam', name: home },
     awayTeam: { '@type': 'SportsTeam', name: away },
     organizer: { '@type': 'Organization', name: league },
-    eventStatus: status === 'live'
-      ? 'https://schema.org/EventMovedOnline'
-      : status === 'finished'
-      ? 'https://schema.org/EventPostponed'
-      : 'https://schema.org/EventScheduled',
+    eventStatus: eventStatusUrl(status),
     ...(hasScore ? {
       subEvent: [{
         '@type': 'Event',
@@ -161,11 +161,7 @@ export default async function MatchLayout(
       name: SITE_NAME,
       url: SITE_URL,
     },
-    eventStatus: status === 'live'
-      ? 'https://schema.org/EventMovedOnline'
-      : status === 'finished'
-      ? 'https://schema.org/EventPostponed'
-      : 'https://schema.org/EventScheduled',
+    eventStatus: eventStatusUrl(status),
     ...(hasScore ? {
       subEvent: [{
         '@type': 'Event',
