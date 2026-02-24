@@ -64,6 +64,13 @@ export type GenerationTask = {
 }
 
 // ══════════════════════════════════
+// FOOTBALL CONTENT FILTER
+// Only clusters with these entity types are considered football content
+// ══════════════════════════════════
+
+const FOOTBALL_ENTITY_TYPES = ['PLAYER', 'CLUB', 'MANAGER', 'MATCH', 'LEAGUE', 'ORGANIZATION']
+
+// ══════════════════════════════════
 // SCHEDULE HELPERS
 // ══════════════════════════════════
 
@@ -118,10 +125,6 @@ export const CATEGORY_PROMPTS: Record<string, string> = {
 
 // ══════════════════════════════════
 // EVENTTYPE → CATEGORY MAPPING
-// Maps StoryCluster.eventType values to category slugs
-// eventType values from clustering: transfer, injury, match, general, news, analysis, preview, report
-// If a category slug is NOT in this map, P4 will skip it (continue to next category)
-// rather than falling back to "match any cluster" which pollutes category content.
 // ══════════════════════════════════
 
 const CATEGORY_EVENT_TYPE_MAP: Record<string, string[]> = {
@@ -131,7 +134,6 @@ const CATEGORY_EVENT_TYPE_MAP: Record<string, string[]> = {
   povrede:   ['injury', 'injuries'],
   analize:   ['analysis', 'opinion', 'tactical'],
   rankings:  ['ranking', 'stats', 'table'],
-  // football/sport catch-all — matches any football event
   football:  ['match', 'preview', 'report', 'transfer', 'injury', 'general'],
   sport:     ['match', 'transfer', 'injury', 'general', 'news'],
   breaking:  ['breaking', 'news', 'general'],
@@ -461,14 +463,16 @@ export async function getNextTask(
   startOfDay.setHours(0, 0, 0, 0)
   const now = new Date()
 
+  // Football-only base filter for cluster queries
+  const footballFilter = { primaryEntityType: { in: FOOTBALL_ENTITY_TYPES } }
+
   // ── Priority 1: Breaking news ──
-  // FIXED: removed trend gate (trend is a signal, not a blocker)
-  // FIXED: window 2h → 6h
   if (config.breakingNews) {
     const breakingCluster = await prisma.storyCluster.findFirst({
       where: {
         dis: { gte: config.breakingThreshold },
         latestItem: { gte: new Date(Date.now() - 6 * 60 * 60 * 1000) },
+        ...footballFilter,
       },
       orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
     })
@@ -537,7 +541,6 @@ export async function getNextTask(
   }
 
   // ── Priority 3: Topic-triggered ──
-  // FIXED: window 12h → 24h
   for (const topic of config.topics.filter((t) => t.isActive)) {
     const keywordConditions = topic.keywords.map((kw) => ({
       title: { contains: kw, mode: 'insensitive' as const },
@@ -549,6 +552,7 @@ export async function getNextTask(
         OR: keywordConditions,
         latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
         dis: { gte: 30 },
+        ...footballFilter,
       },
       orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
     })
@@ -577,14 +581,9 @@ export async function getNextTask(
   }
 
   // ── Priority 4: Category fill ──
-  // FIXED: eventType string contains → mapping table
-  // FIXED: window 12h → 24h
-  // FIXED: skip category if no mapping (instead of "match any cluster")
   const sortedCats = [...config.categories].sort((a, b) => b.percentage - a.percentage)
   for (const cat of sortedCats) {
     const mappedEventTypes = CATEGORY_EVENT_TYPE_MAP[cat.slug] || []
-
-    // Skip categories with no eventType mapping — avoids polluting category with unrelated content
     if (mappedEventTypes.length === 0) continue
 
     const expectedCount = Math.ceil(config.dailyTarget * (cat.percentage / 100))
@@ -598,6 +597,7 @@ export async function getNextTask(
           OR: mappedEventTypes.map((t) => ({ eventType: { contains: t, mode: 'insensitive' as const } })),
           latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
           dis: { gte: 20 },
+          ...footballFilter,
         },
         orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
       })
@@ -627,8 +627,6 @@ export async function getNextTask(
   }
 
   // ── Priority 5: Gap fill ──
-  // FIXED: window 6h → 24h
-  // NOTE: only fires if gapDetection is on AND gap exists — not a general fallback
   if (config.gapDetection) {
     const lastArticle = await prisma.article.findFirst({
       where: { siteId, aiGenerated: true },
@@ -642,6 +640,7 @@ export async function getNextTask(
         where: {
           latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
           dis: { gte: 15 },
+          ...footballFilter,
         },
         orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
       })
@@ -712,10 +711,11 @@ export async function getNextTask(
   }
 
   // ── Priority 7: ALWAYS-ON fallback ──
-  // FIXED: was inside if(force) in route.ts — now always runs
-  // Guarantees: if any cluster exists in last 24h, autopilot will NOT return null
   const anyCluster = await prisma.storyCluster.findFirst({
-    where: { latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    where: {
+      latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      ...footballFilter,
+    },
     orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
   })
 
@@ -742,23 +742,7 @@ export async function getNextTask(
     }
   }
 
-  // Last resort: raw news items without cluster
-  const latestNews = await prisma.newsItem.findMany({
-    where: { pubDate: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-    orderBy: { pubDate: 'desc' },
-    take: 5,
-  })
-  if (latestNews.length > 0) {
-    const catConfig = config.categories[0]
-    return {
-      priority: 'fallback',
-      title: latestNews[0].title,
-      category: catConfig?.name || 'Vijesti',
-      categorySlug: catConfig?.slug || 'vijesti',
-      sources: latestNews.map((n) => ({ title: n.title, source: n.source, content: n.content || undefined })),
-      wordCount: Math.min(config.defaultLength, 500),
-    }
-  }
-
+  // Last resort: skip — no football content available
+  // (removed raw newsItem fallback that could pick non-football items)
   return null
 }
