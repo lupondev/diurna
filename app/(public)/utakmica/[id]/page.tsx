@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, use } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 /* ── Types ── */
 interface MatchTeam { id: number; name: string; logo: string; winner: boolean | null }
@@ -111,14 +111,13 @@ function MiniSpinner() {
 
 /* ═══ MAIN COMPONENT ═══ */
 
-export default function MatchPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function MatchPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const [match, setMatch] = useState<MatchBase | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState(0)
 
-  // Lazy-loaded tab data
   const [statistics, setStatistics] = useState<Stat[] | null>(null)
   const [lineups, setLineups] = useState<{ home: Lineup | null; away: Lineup | null } | null>(null)
   const [h2h, setH2h] = useState<H2HMatch[] | null>(null)
@@ -129,7 +128,6 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
   const statsRef = useRef<HTMLDivElement>(null)
   const pitchRef = useRef<HTMLDivElement>(null)
 
-  // Fetch base match data (fixture + events) — 2 API calls
   const fetchMatch = useCallback(async () => {
     try {
       const res = await fetch(`/api/match/${id}`)
@@ -141,14 +139,12 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
 
   useEffect(() => { fetchMatch() }, [fetchMatch])
 
-  // Live polling for base data only
   useEffect(() => {
     if (!match || match.status !== 'live') return
     const iv = setInterval(fetchMatch, 30000)
     return () => clearInterval(iv)
   }, [match?.status, fetchMatch])
 
-  // Lazy fetch tab data on tab switch — 1 API call each
   useEffect(() => {
     if (!match) return
 
@@ -156,7 +152,7 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
       setTabLoading(true)
       fetch(`/api/match/${id}?section=stats`)
         .then(r => r.json())
-        .then((d) => setStatistics((d as Record<string, typeof statistics>).statistics ?? []))
+        .then((d: Record<string, Stat[]>) => setStatistics(d.statistics ?? []))
         .catch(() => setStatistics([]))
         .finally(() => setTabLoading(false))
     }
@@ -165,7 +161,7 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
       setTabLoading(true)
       fetch(`/api/match/${id}?section=lineups`)
         .then(r => r.json())
-        .then((d) => setLineups((d as Record<string, typeof lineups>).lineups ?? { home: null, away: null }))
+        .then((d: Record<string, { home: Lineup | null; away: Lineup | null }>) => setLineups(d.lineups ?? { home: null, away: null }))
         .catch(() => setLineups({ home: null, away: null }))
         .finally(() => setTabLoading(false))
     }
@@ -174,13 +170,12 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
       setTabLoading(true)
       fetch(`/api/match/${id}?section=h2h`)
         .then(r => r.json())
-        .then((d) => setH2h((d as Record<string, typeof h2h>).h2h ?? []))
+        .then((d: Record<string, H2HMatch[]>) => setH2h(d.h2h ?? []))
         .catch(() => setH2h([]))
         .finally(() => setTabLoading(false))
     }
   }, [tab, match, id, statistics, lineups, h2h])
 
-  // Intersection observer for animations
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setStatsVisible(true); setPitchVisible(true); return }
@@ -228,7 +223,6 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
           </nav>
           <div className="mc-layout">
             <div className="mc-main">
-              {/* Score Header */}
               <div className="mc-hdr">
                 <div className="mc-comp">
                   <span className="mc-comp-name">{league.name}{roundStr ? ` · ${roundStr}` : ''}</span>
@@ -252,13 +246,11 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
                 </div>
               </div>
 
-              {/* Tabs + Panels */}
               <div className="mc-content">
                 <div className="mc-tabs" role="tablist">
                   {TABS.map((label, i) => <button key={label} className="mc-tab" role="tab" aria-selected={tab===i} onClick={()=>setTab(i)}>{label}</button>)}
                 </div>
 
-                {/* PREGLED — loaded with base data, no extra API call */}
                 {tab === 0 && <div className="mc-pnl" role="tabpanel" key="pregled">
                   {events.length > 0 ? <>
                     <div className="mc-ev-title">Ključni događaji</div>
@@ -268,7 +260,6 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
                   </> : <div className="mc-empty">{status === 'scheduled' ? `Utakmica počinje ${dateStr} u ${timeStr}` : 'Nema dostupnih događaja'}</div>}
                 </div>}
 
-                {/* STATISTIKA — lazy loaded on tab click */}
                 {tab === 1 && <div className="mc-pnl" role="tabpanel" key="stats" ref={statsRef}>
                   {tabLoading && !statistics ? <MiniSpinner /> : statistics && statistics.length > 0 ? <>
                     <div className="mc-stats-hdr"><span className="mc-stats-team">{home.name}</span><span className="mc-stats-team">{away.name}</span></div>
@@ -290,7 +281,6 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
                   </> : <div className="mc-empty">Statistika nije dostupna</div>}
                 </div>}
 
-                {/* POSTAVE — lazy loaded on tab click */}
                 {tab === 2 && <div className="mc-pnl" role="tabpanel" key="lineups">
                   {tabLoading && !lineups ? <MiniSpinner /> : lineups?.home && lineups?.away ? <>
                     <div className="mc-form-hdr">
@@ -329,7 +319,6 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
                   </> : <div className="mc-empty">Postave nisu dostupne</div>}
                 </div>}
 
-                {/* H2H — lazy loaded on tab click */}
                 {tab === 3 && <div className="mc-pnl" role="tabpanel" key="h2h">
                   {tabLoading && !h2h ? <MiniSpinner /> : h2h && h2h.length > 0 ? <>
                     <div className="mc-h2h-bar">
