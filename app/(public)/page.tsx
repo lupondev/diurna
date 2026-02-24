@@ -17,9 +17,6 @@ import './home.css'
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata(): Promise<Metadata> {
-  // Use { absolute } via buildMetadata to prevent double suffix from root layout template.
-  // Do NOT do: `${siteName} — Sportske...` because that goes through '%s | TodayFootballMatch'
-  // resulting in "TodayFootballMatch — Sportske... | TodayFootballMatch".
   return buildMetadata({
     pageTitle: 'Sportske vijesti, transferi i rezultati',
     description: 'Najnovije sportske vijesti, transferi, rezultati uživo i analize iz svijeta fudbala.',
@@ -37,6 +34,21 @@ const GRADIENTS = [
   'linear-gradient(135deg,#2d2d00,#141400)',
   'linear-gradient(135deg,#2d1b69,#11052c)',
 ]
+
+// Transfer keyword detection — matches titles about transfers regardless of category
+const TRANSFER_KEYWORDS = [
+  'transfer', 'potpisao', 'potpis', 'pojačanje', 'prelaz', 'posudio',
+  'posudba', 'produžio', 'ugovor', 'produžen', 'napušta', 'odlazi',
+  'dolazi', 'prelazi', 'želi', 'nudi', 'ponuda', 'pregovori',
+  'dovodi', 'prodaje', 'kupuje', 'zamjena', 'razmjena',
+  'sign', 'deal', 'loan', 'bid', 'offer', 'target', 'swap',
+  'move', 'departure', 'arrival', 'contract', 'extension', 'renewal',
+]
+
+function isTransferArticle(title: string, excerpt: string): boolean {
+  const combined = (title + ' ' + excerpt).toLowerCase()
+  return TRANSFER_KEYWORDS.some(kw => combined.includes(kw))
+}
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
@@ -79,14 +91,15 @@ export default async function HomePage() {
       take: 20,
     })
 
-    // Transfer articles for Transfer Radar
-    const transferArticles = await prisma.article.findMany({
+    // Transfer Radar: find transfer articles by keyword detection across ALL categories
+    // (autopilot puts everything in "vijesti", so category-based filtering won't work)
+    const recentArticles = await prisma.article.findMany({
       where: {
         siteId: site.id,
         status: 'PUBLISHED',
         deletedAt: null,
         isTest: false,
-        category: { slug: 'transferi' },
+        publishedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
       },
       select: {
         id: true,
@@ -97,8 +110,12 @@ export default async function HomePage() {
         category: { select: { name: true, slug: true } },
       },
       orderBy: { publishedAt: 'desc' },
-      take: 5,
+      take: 50,
     })
+
+    const transferArticles = recentArticles
+      .filter(a => isTransferArticle(a.title, a.excerpt || ''))
+      .slice(0, 5)
 
     transferItems = transferArticles.map((a) => {
       const titleLower = a.title.toLowerCase()
