@@ -65,7 +65,6 @@ export type GenerationTask = {
 
 // ══════════════════════════════════
 // FOOTBALL CONTENT FILTER
-// Only clusters with these entity types are considered football content
 // ══════════════════════════════════
 
 const FOOTBALL_ENTITY_TYPES = ['PLAYER', 'CLUB', 'MANAGER', 'MATCH', 'LEAGUE', 'ORGANIZATION']
@@ -319,12 +318,15 @@ function parseInlineMarks(html: string): Record<string, unknown>[] {
 }
 
 // ══════════════════════════════════
-// WIDGET INJECTION
+// WIDGET INJECTION (DISABLED)
 // ══════════════════════════════════
 
+// DISABLED: Widgets were injected with empty attrs (no question, no options, no stats data)
+// which rendered as broken placeholder boxes on the frontend.
+// TODO: Re-enable when AI prompt generates actual widget content (poll questions, stats rows, etc.)
 export function injectWidgets(
   tiptapContent: Record<string, unknown>,
-  categoryConfig: {
+  _categoryConfig: {
     widgetPoll: boolean
     widgetQuiz: boolean
     widgetStats: boolean
@@ -333,30 +335,7 @@ export function injectWidgets(
     widgetGallery: boolean
   }
 ): Record<string, unknown> {
-  const doc = tiptapContent as { type: string; content: Record<string, unknown>[] }
-  if (!doc.content || doc.content.length < 3) return tiptapContent
-
-  const widgets: Record<string, unknown>[] = []
-
-  if (categoryConfig.widgetPoll) {
-    widgets.push({ type: 'poll', attrs: { question: '', options: [] } })
-  }
-  if (categoryConfig.widgetStats) {
-    widgets.push({ type: 'statsTable', attrs: { title: '', homeLabel: 'Home', awayLabel: 'Away', rows: [] } })
-  }
-  if (categoryConfig.widgetPlayer) {
-    widgets.push({ type: 'playerCard', attrs: { playerName: '' } })
-  }
-  if (categoryConfig.widgetVideo) {
-    widgets.push({ type: 'video', attrs: { url: '', caption: '' } })
-  }
-
-  if (widgets.length > 0) {
-    const insertIdx = Math.min(2, doc.content.length - 1)
-    doc.content.splice(insertIdx + 1, 0, ...widgets)
-  }
-
-  return doc
+  return tiptapContent
 }
 
 // ══════════════════════════════════
@@ -743,6 +722,5 @@ export async function getNextTask(
   }
 
   // Last resort: skip — no football content available
-  // (removed raw newsItem fallback that could pick non-football items)
   return null
 }
