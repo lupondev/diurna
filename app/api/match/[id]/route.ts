@@ -28,6 +28,23 @@ function mapStatus(short: string): 'live' | 'ft' | 'scheduled' {
   return 'scheduled'
 }
 
+/**
+ * GET /api/match/[id]?section=...
+ *
+ * Sections (lazy loading to save API quota):
+ *   (none)      → fixture + events only (default tab = Pregled)
+ *   stats       → statistics
+ *   lineups     → lineups
+ *   h2h         → head-to-head (last 5)
+ *
+ * API calls per section:
+ *   default: 2 calls (fixture + events)  — was 5!
+ *   stats:   1 call
+ *   lineups: 1 call
+ *   h2h:     1 call
+ *
+ * All cached via DB (cachedFetch). Live=60s, finished/scheduled=5min, H2H=1hr.
+ */
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -38,6 +55,9 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid fixture ID' }, { status: 400 })
   }
 
+  const section = req.nextUrl.searchParams.get('section') || ''
+
+  // Always need fixture data first
   const fixtures = await apiFetch<any>(`/fixtures?id=${fixtureId}`, CACHE_TTL.FIXTURES_TODAY)
   const fixture = fixtures[0]
   if (!fixture) {
@@ -46,16 +66,57 @@ export async function GET(
 
   const status = mapStatus(fixture.fixture.status.short)
   const ttl = status === 'live' ? CACHE_TTL.LIVE : CACHE_TTL.FIXTURES_TODAY
-
   const homeTeamId = fixture.teams.home.id
   const awayTeamId = fixture.teams.away.id
 
-  const [eventsRaw, lineupsRaw, statsRaw, h2hRaw] = await Promise.all([
-    apiFetch<any>(`/fixtures/events?fixture=${fixtureId}`, ttl),
-    apiFetch<any>(`/fixtures/lineups?fixture=${fixtureId}`, ttl),
-    apiFetch<any>(`/fixtures/statistics?fixture=${fixtureId}`, ttl),
-    apiFetch<any>(`/fixtures/headtohead?h2h=${homeTeamId}-${awayTeamId}&last=5`, CACHE_TTL.FIXTURES_TODAY),
-  ])
+  // ── Section: stats ──
+  if (section === 'stats') {
+    const statsRaw = await apiFetch<any>(`/fixtures/statistics?fixture=${fixtureId}`, ttl)
+    const homeStats = statsRaw.find((s: any) => s.team?.id === homeTeamId)
+    const awayStats = statsRaw.find((s: any) => s.team?.id === awayTeamId)
+    return NextResponse.json({ statistics: formatStatistics(homeStats, awayStats) }, {
+      headers: { 'Cache-Control': cacheHeader(status) },
+    })
+  }
+
+  // ── Section: lineups ──
+  if (section === 'lineups') {
+    const lineupsRaw = await apiFetch<any>(`/fixtures/lineups?fixture=${fixtureId}`, ttl)
+    const homeLineup = lineupsRaw.find((l: any) => l.team?.id === homeTeamId)
+    const awayLineup = lineupsRaw.find((l: any) => l.team?.id === awayTeamId)
+    return NextResponse.json({
+      lineups: {
+        home: homeLineup ? formatLineup(homeLineup) : null,
+        away: awayLineup ? formatLineup(awayLineup) : null,
+      },
+    }, { headers: { 'Cache-Control': cacheHeader(status) } })
+  }
+
+  // ── Section: h2h ──
+  if (section === 'h2h') {
+    // H2H doesn't change often — cache 1 hour
+    const h2hRaw = await apiFetch<any>(
+      `/fixtures/headtohead?h2h=${homeTeamId}-${awayTeamId}&last=5`,
+      CACHE_TTL.STANDINGS, // 1 hour
+    )
+    const h2h = h2hRaw.map((m: any) => ({
+      date: new Date(m.fixture.date).toLocaleDateString('bs-BA', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      comp: m.league?.name ?? '',
+      home: m.teams.home.name,
+      away: m.teams.away.name,
+      homeScore: m.goals.home ?? 0,
+      awayScore: m.goals.away ?? 0,
+      homeId: m.teams.home.id,
+      awayId: m.teams.away.id,
+    }))
+    return NextResponse.json({ h2h }, {
+      headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=300' },
+    })
+  }
+
+  // ── Default: fixture + events (for Pregled tab) ──
+  // 2 API calls total (fixture already fetched above + events)
+  const eventsRaw = await apiFetch<any>(`/fixtures/events?fixture=${fixtureId}`, ttl)
 
   const events = eventsRaw.map((e: any) => ({
     min: e.time?.elapsed ?? 0,
@@ -64,29 +125,6 @@ export async function GET(
     player: e.player?.name ?? '',
     detail: formatEventDetail(e.type, e.detail, e.assist?.name),
     team: e.team?.id === homeTeamId ? 'home' : 'away',
-  }))
-
-  const homeLineup = lineupsRaw.find((l: any) => l.team?.id === homeTeamId)
-  const awayLineup = lineupsRaw.find((l: any) => l.team?.id === awayTeamId)
-
-  const lineups = {
-    home: homeLineup ? formatLineup(homeLineup) : null,
-    away: awayLineup ? formatLineup(awayLineup) : null,
-  }
-
-  const homeStats = statsRaw.find((s: any) => s.team?.id === homeTeamId)
-  const awayStats = statsRaw.find((s: any) => s.team?.id === awayTeamId)
-  const statistics = formatStatistics(homeStats, awayStats)
-
-  const h2h = h2hRaw.map((m: any) => ({
-    date: new Date(m.fixture.date).toLocaleDateString('bs-BA', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-    comp: m.league?.name ?? '',
-    home: m.teams.home.name,
-    away: m.teams.away.name,
-    homeScore: m.goals.home ?? 0,
-    awayScore: m.goals.away ?? 0,
-    homeId: m.teams.home.id,
-    awayId: m.teams.away.id,
   }))
 
   const match = {
@@ -123,18 +161,17 @@ export async function GET(
     },
     score: fixture.score ?? null,
     events,
-    lineups,
-    statistics,
-    h2h,
   }
 
   return NextResponse.json(match, {
-    headers: {
-      'Cache-Control': status === 'live'
-        ? 'public, s-maxage=30, stale-while-revalidate=15'
-        : 'public, s-maxage=300, stale-while-revalidate=60',
-    },
+    headers: { 'Cache-Control': cacheHeader(status) },
   })
+}
+
+function cacheHeader(status: string): string {
+  return status === 'live'
+    ? 'public, s-maxage=30, stale-while-revalidate=15'
+    : 'public, s-maxage=300, stale-while-revalidate=60'
 }
 
 function mapEventType(type: string, detail: string): string {
