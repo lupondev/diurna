@@ -156,7 +156,7 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
       setTabLoading(true)
       fetch(`/api/match/${id}?section=stats`)
         .then(r => r.json())
-        .then(d => setStatistics(d.statistics ?? []))
+        .then((d) => setStatistics((d as Record<string, typeof statistics>).statistics ?? []))
         .catch(() => setStatistics([]))
         .finally(() => setTabLoading(false))
     }
@@ -165,7 +165,7 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
       setTabLoading(true)
       fetch(`/api/match/${id}?section=lineups`)
         .then(r => r.json())
-        .then(d => setLineups(d.lineups ?? { home: null, away: null }))
+        .then((d) => setLineups((d as Record<string, typeof lineups>).lineups ?? { home: null, away: null }))
         .catch(() => setLineups({ home: null, away: null }))
         .finally(() => setTabLoading(false))
     }
@@ -174,7 +174,7 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
       setTabLoading(true)
       fetch(`/api/match/${id}?section=h2h`)
         .then(r => r.json())
-        .then(d => setH2h(d.h2h ?? []))
+        .then((d) => setH2h((d as Record<string, typeof h2h>).h2h ?? []))
         .catch(() => setH2h([]))
         .finally(() => setTabLoading(false))
     }

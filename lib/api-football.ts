@@ -295,4 +295,8 @@ export async function getTeamFixtures(teamId: number, last = 5): Promise<ApiFixt
   return apiFootball<ApiFixture>(`/fixtures?team=${teamId}&last=${last}&season=${CURRENT_SEASON}`, CACHE_TTL.FIXTURES_TODAY)
 }
 
+export async function getHeadToHead(team1: number, team2: number, last = 10): Promise<ApiFixture[]> {
+  return apiFootball<ApiFixture>(`/fixtures/headtohead?h2h=${team1}-${team2}&last=${last}`, CACHE_TTL.FIXTURES_TODAY)
+}
+
 export { formatTime, todayStr, dateOffsetStr, mapStatus }
