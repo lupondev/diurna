@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
-import { getArticleUrl } from '@/lib/article-url'
+import { getArticleUrl, normalizeCategoryName } from '@/lib/article-url'
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     const matchedTeam = teams.find(t => a.title.toLowerCase().includes(t.toLowerCase())) || teams[0]
     return {
       title: a.title,
-      cat: (a.category?.name || 'Vijesti').toUpperCase(),
+      cat: normalizeCategoryName(a.category?.name).toUpperCase(),
       time: a.publishedAt ? timeAgo(a.publishedAt) : 'Novo',
       href: getArticleUrl(a),
       team: matchedTeam,
