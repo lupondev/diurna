@@ -27,6 +27,7 @@ export function FixturesTicker() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const animRef = useRef<number | null>(null)
   const pausedRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchFixtures = useCallback(async () => {
     try {
@@ -42,42 +43,32 @@ export function FixturesTicker() {
     }
   }, [])
 
+  // Single polling effect — no duplicates
   useEffect(() => {
     fetchFixtures()
 
-    // Dynamic polling: faster when live matches exist
-    let timer: ReturnType<typeof setInterval>
+    const scheduleNext = () => {
+      // Use current fixtures state via ref-like approach
+      const hasLive = fixtures.some((f) => f.status === 'live')
+      const interval = hasLive ? LIVE_POLL_MS : IDLE_POLL_MS
 
-    const startPolling = () => {
-      timer = setInterval(() => {
-        const hasLive = fixtures.some((f) => f.status === 'live')
-        // Clear and restart with appropriate interval
-        clearInterval(timer)
-        fetchFixtures()
-        timer = setInterval(fetchFixtures, hasLive ? LIVE_POLL_MS : IDLE_POLL_MS)
-      }, fixtures.some((f) => f.status === 'live') ? LIVE_POLL_MS : IDLE_POLL_MS)
+      timerRef.current = setTimeout(async () => {
+        await fetchFixtures()
+        scheduleNext()
+      }, interval)
     }
 
-    startPolling()
+    scheduleNext()
 
-    return () => clearInterval(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchFixtures])
-
-  // Re-start polling with correct interval when live status changes
-  useEffect(() => {
-    const hasLive = fixtures.some((f) => f.status === 'live')
-    const interval = hasLive ? LIVE_POLL_MS : IDLE_POLL_MS
-
-    const timer = setInterval(fetchFixtures, interval)
-    return () => clearInterval(timer)
-  }, [fixtures, fetchFixtures])
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [fetchFixtures, fixtures])
 
   // Auto-scroll animation
   const animate = useCallback(() => {
     if (scrollRef.current && !pausedRef.current) {
       scrollRef.current.scrollLeft += 0.5
-      // Reset to start when near the end
       if (
         scrollRef.current.scrollLeft >=
         scrollRef.current.scrollWidth - scrollRef.current.clientWidth - 1
