@@ -9,13 +9,14 @@ interface LineupPlayer { id: number; name: string; number: number; pos: string; 
 interface Lineup { formation: string; startXI: LineupPlayer[]; substitutes: LineupPlayer[]; coach: { name: string; photo: string } | null }
 interface Stat { label: string; home: number; away: number; pct: boolean }
 interface H2HMatch { date: string; comp: string; home: string; away: string; homeScore: number; awayScore: number; homeId: number; awayId: number }
-interface MatchData {
+
+interface MatchBase {
   id: number; status: 'live' | 'ft' | 'scheduled'; statusShort: string; elapsed: number | null; date: string
   venue: string | null; city: string | null; referee: string | null
   league: { id: number; name: string; round: string | null; logo: string | null; country: string | null }
   home: MatchTeam; away: MatchTeam; goals: { home: number | null; away: number | null }
   score: { halftime: { home: number | null; away: number | null }; fulltime: { home: number | null; away: number | null } } | null
-  events: MatchEvent[]; lineups: { home: Lineup | null; away: Lineup | null }; statistics: Stat[]; h2h: H2HMatch[]
+  events: MatchEvent[]
 }
 
 const TABS = ['Pregled', 'Statistika', 'Postave', 'H2H'] as const
@@ -104,19 +105,31 @@ function SidebarCard({ info, dateStr, timeStr }: { info: { icon: string; label: 
   )
 }
 
+function MiniSpinner() {
+  return <div className="mc-empty"><div className="mc-spinner" style={{ width: 24, height: 24, borderWidth: 2 }} /></div>
+}
+
 /* ═══ MAIN COMPONENT ═══ */
 
 export default function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const [match, setMatch] = useState<MatchData | null>(null)
+  const [match, setMatch] = useState<MatchBase | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState(0)
+
+  // Lazy-loaded tab data
+  const [statistics, setStatistics] = useState<Stat[] | null>(null)
+  const [lineups, setLineups] = useState<{ home: Lineup | null; away: Lineup | null } | null>(null)
+  const [h2h, setH2h] = useState<H2HMatch[] | null>(null)
+  const [tabLoading, setTabLoading] = useState(false)
+
   const [statsVisible, setStatsVisible] = useState(false)
   const [pitchVisible, setPitchVisible] = useState(false)
   const statsRef = useRef<HTMLDivElement>(null)
   const pitchRef = useRef<HTMLDivElement>(null)
 
+  // Fetch base match data (fixture + events) — 2 API calls
   const fetchMatch = useCallback(async () => {
     try {
       const res = await fetch(`/api/match/${id}`)
@@ -127,12 +140,47 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
   }, [id])
 
   useEffect(() => { fetchMatch() }, [fetchMatch])
+
+  // Live polling for base data only
   useEffect(() => {
     if (!match || match.status !== 'live') return
     const iv = setInterval(fetchMatch, 30000)
     return () => clearInterval(iv)
   }, [match?.status, fetchMatch])
 
+  // Lazy fetch tab data on tab switch — 1 API call each
+  useEffect(() => {
+    if (!match) return
+
+    if (tab === 1 && statistics === null) {
+      setTabLoading(true)
+      fetch(`/api/match/${id}?section=stats`)
+        .then(r => r.json())
+        .then(d => setStatistics(d.statistics ?? []))
+        .catch(() => setStatistics([]))
+        .finally(() => setTabLoading(false))
+    }
+
+    if (tab === 2 && lineups === null) {
+      setTabLoading(true)
+      fetch(`/api/match/${id}?section=lineups`)
+        .then(r => r.json())
+        .then(d => setLineups(d.lineups ?? { home: null, away: null }))
+        .catch(() => setLineups({ home: null, away: null }))
+        .finally(() => setTabLoading(false))
+    }
+
+    if (tab === 3 && h2h === null) {
+      setTabLoading(true)
+      fetch(`/api/match/${id}?section=h2h`)
+        .then(r => r.json())
+        .then(d => setH2h(d.h2h ?? []))
+        .catch(() => setH2h([]))
+        .finally(() => setTabLoading(false))
+    }
+  }, [tab, match, id, statistics, lineups, h2h])
+
+  // Intersection observer for animations
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setStatsVisible(true); setPitchVisible(true); return }
@@ -142,19 +190,19 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
     if (statsRef.current) obs.observe(statsRef.current)
     if (pitchRef.current) obs.observe(pitchRef.current)
     return () => obs.disconnect()
-  }, [tab])
+  }, [tab, statistics, lineups])
 
   if (loading) return <main className="mc"><div className="mc-wrap" style={{padding:'80px 16px',textAlign:'center'}}><div className="mc-spinner"/></div><style>{STYLES}</style></main>
   if (error || !match) return <main className="mc"><div className="mc-wrap" style={{padding:'80px 16px',textAlign:'center'}}><p style={{color:'var(--sba-text-3)',fontSize:16}}>{error||'Utakmica nije pronađena'}</p><a href="/utakmice" style={{color:'var(--sba-accent)',marginTop:12,display:'inline-block'}}>← Nazad na utakmice</a></div><style>{STYLES}</style></main>
 
-  const { home, away, goals, events, lineups, statistics, h2h, league, status, elapsed, score, venue, referee } = match
+  const { home, away, goals, events, league, status, elapsed, score, venue, referee } = match
   const homeAbbr = abbr(home.name), awayAbbr = abbr(away.name)
   const firstHalf = events.filter(e => e.min <= 45), secondHalf = events.filter(e => e.min > 45)
   const htScore = score?.halftime
   const htStr = htScore && htScore.home !== null ? `${htScore.home} — ${htScore.away}` : null
   const roundStr = league.round ? league.round.replace('Regular Season - ', 'Kolo ') : ''
 
-  const h2hStats = h2h.reduce((acc, m) => {
+  const h2hStats = (h2h ?? []).reduce((acc, m) => {
     const hw = m.homeScore > m.awayScore, aw = m.awayScore > m.homeScore, ih = m.homeId === home.id
     if ((hw && ih) || (aw && !ih)) acc.wins++; else if ((hw && !ih) || (aw && ih)) acc.losses++; else acc.draws++
     return acc
@@ -210,7 +258,7 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
                   {TABS.map((label, i) => <button key={label} className="mc-tab" role="tab" aria-selected={tab===i} onClick={()=>setTab(i)}>{label}</button>)}
                 </div>
 
-                {/* PREGLED */}
+                {/* PREGLED — loaded with base data, no extra API call */}
                 {tab === 0 && <div className="mc-pnl" role="tabpanel" key="pregled">
                   {events.length > 0 ? <>
                     <div className="mc-ev-title">Ključni događaji</div>
@@ -220,9 +268,9 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
                   </> : <div className="mc-empty">{status === 'scheduled' ? `Utakmica počinje ${dateStr} u ${timeStr}` : 'Nema dostupnih događaja'}</div>}
                 </div>}
 
-                {/* STATISTIKA */}
+                {/* STATISTIKA — lazy loaded on tab click */}
                 {tab === 1 && <div className="mc-pnl" role="tabpanel" key="stats" ref={statsRef}>
-                  {statistics.length > 0 ? <>
+                  {tabLoading && !statistics ? <MiniSpinner /> : statistics && statistics.length > 0 ? <>
                     <div className="mc-stats-hdr"><span className="mc-stats-team">{home.name}</span><span className="mc-stats-team">{away.name}</span></div>
                     {statistics.map((s, idx) => {
                       const total = s.home + s.away, hPct = total > 0 ? (s.home/total)*100 : 50, aPct = total > 0 ? (s.away/total)*100 : 50
@@ -242,9 +290,9 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
                   </> : <div className="mc-empty">Statistika nije dostupna</div>}
                 </div>}
 
-                {/* POSTAVE */}
+                {/* POSTAVE — lazy loaded on tab click */}
                 {tab === 2 && <div className="mc-pnl" role="tabpanel" key="lineups">
-                  {lineups.home && lineups.away ? <>
+                  {tabLoading && !lineups ? <MiniSpinner /> : lineups?.home && lineups?.away ? <>
                     <div className="mc-form-hdr">
                       <span className="mc-form-tag mc-form-tag--home"><span>{homeAbbr}</span> <span>{lineups.home.formation}</span></span>
                       <span className="mc-form-tag mc-form-tag--away"><span>{awayAbbr}</span> <span>{lineups.away.formation}</span></span>
@@ -281,9 +329,9 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
                   </> : <div className="mc-empty">Postave nisu dostupne</div>}
                 </div>}
 
-                {/* H2H */}
+                {/* H2H — lazy loaded on tab click */}
                 {tab === 3 && <div className="mc-pnl" role="tabpanel" key="h2h">
-                  {h2h.length > 0 ? <>
+                  {tabLoading && !h2h ? <MiniSpinner /> : h2h && h2h.length > 0 ? <>
                     <div className="mc-h2h-bar">
                       {h2hStats.wins > 0 && <div className="mc-h2h-seg mc-h2h-seg--w" style={{width:`${(h2hStats.wins/h2h.length)*100}%`}}>{h2hStats.wins}</div>}
                       {h2hStats.draws > 0 && <div className="mc-h2h-seg mc-h2h-seg--d" style={{width:`${(h2hStats.draws/h2h.length)*100}%`}}>{h2hStats.draws}</div>}
