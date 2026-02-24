@@ -22,6 +22,18 @@ export const maxDuration = 60
 // Max articles per hour — prevents end-of-day explosion when remainingHours → 1
 const MAX_HOURLY_CAP = 6
 
+// All autopilot articles go to "vijesti" — ensures frontend routing works
+const FORCED_CATEGORY_SLUG = 'vijesti'
+const FORCED_CATEGORY_NAME = 'Vijesti'
+
+async function getOrCreateCategory(siteId: string) {
+  let category = await prisma.category.findFirst({ where: { siteId, slug: FORCED_CATEGORY_SLUG } })
+  if (!category) {
+    category = await prisma.category.create({ data: { siteId, name: FORCED_CATEGORY_NAME, slug: FORCED_CATEGORY_SLUG } })
+  }
+  return category
+}
+
 async function authenticate(
   req: NextRequest
 ): Promise<{ ok: true; orgId?: string } | { ok: false; response: NextResponse }> {
@@ -97,6 +109,9 @@ export async function GET(req: NextRequest) {
         continue
       }
 
+      // Get the forced category for this site
+      const forcedCategory = await getOrCreateCategory(site.id)
+
       const startOfDay = new Date()
       startOfDay.setHours(0, 0, 0, 0)
       const todayCount = await prisma.article.count({
@@ -142,8 +157,6 @@ export async function GET(req: NextRequest) {
         })
 
         const catConfig = config.categories[0]
-        const taskCategorySlug = catConfig?.slug || 'vijesti'
-        const taskCategory = catConfig?.name || 'Vijesti'
 
         const promptData = buildPromptContext(
           { title: topCluster.title, eventType: topCluster.eventType, entities: topCluster.entities as string[], dis: topCluster.dis },
@@ -198,11 +211,6 @@ export async function GET(req: NextRequest) {
         let tiptapContent = htmlToTiptap(htmlContent)
         if (catConfig) tiptapContent = injectWidgets(tiptapContent, catConfig)
 
-        let category = await prisma.category.findFirst({ where: { siteId: site.id, slug: taskCategorySlug } })
-        if (!category) {
-          category = await prisma.category.create({ data: { siteId: site.id, name: taskCategory, slug: taskCategorySlug } })
-        }
-
         const baseSlug = parsed.seo?.slug || slugify(title)
         let slug = baseSlug
         let slugSuffix = 1
@@ -216,7 +224,7 @@ export async function GET(req: NextRequest) {
             excerpt: parsed.excerpt || '', featuredImage,
             status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
             publishedAt: config.autoPublish ? new Date() : null,
-            categoryId: category.id, aiGenerated: true, aiModel: ai.model,
+            categoryId: forcedCategory.id, aiGenerated: true, aiModel: ai.model,
             aiPrompt: JSON.stringify({ priority: 'top_story', clusterId: topCluster.id, sources: newsItems.map((n) => n.title) }),
             aiVerificationScore: verification?.score ?? null,
             aiVerificationIssues: verification?.issues.join(', ') ?? null,
@@ -237,7 +245,7 @@ export async function GET(req: NextRequest) {
 
         results.push({
           orgId: config.orgId, action: 'generated', articleId: article.id, title,
-          category: taskCategory, status: config.autoPublish ? 'published' : 'draft',
+          category: FORCED_CATEGORY_NAME, status: config.autoPublish ? 'published' : 'draft',
           reason: `force: DIS ${topCluster.dis} — ${topCluster.title}`,
         })
         continue
@@ -340,11 +348,6 @@ export async function GET(req: NextRequest) {
       const catConfig = config.categories.find((c) => c.slug === task.categorySlug)
       if (catConfig) tiptapContent = injectWidgets(tiptapContent, catConfig)
 
-      let category = await prisma.category.findFirst({ where: { siteId: site.id, slug: task.categorySlug } })
-      if (!category) {
-        category = await prisma.category.create({ data: { siteId: site.id, name: task.category, slug: task.categorySlug } })
-      }
-
       const baseSlug = parsed.seo?.slug || slugify(title)
       let slug = baseSlug
       let slugSuffix = 1
@@ -358,7 +361,7 @@ export async function GET(req: NextRequest) {
           excerpt: parsed.excerpt || '', featuredImage,
           status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
           publishedAt: config.autoPublish ? new Date() : null,
-          categoryId: category.id, aiGenerated: true, aiModel: ai.model,
+          categoryId: forcedCategory.id, aiGenerated: true, aiModel: ai.model,
           aiPrompt: JSON.stringify({ priority: task.priority, clusterId: task.clusterId, matchId: task.matchId, sources: task.sources.map((s) => s.title) }),
           aiVerificationScore: verification?.score ?? null,
           aiVerificationIssues: verification?.issues.join(', ') ?? null,
@@ -379,8 +382,8 @@ export async function GET(req: NextRequest) {
 
       results.push({
         orgId: config.orgId, action: 'generated', articleId: article.id, title,
-        category: task.category, status: config.autoPublish ? 'published' : 'draft',
-        reason: `${task.priority}: ${task.category} (verified: ${verification?.score ?? 'n/a'})`,
+        category: FORCED_CATEGORY_NAME, status: config.autoPublish ? 'published' : 'draft',
+        reason: `${task.priority}: ${FORCED_CATEGORY_NAME} (verified: ${verification?.score ?? 'n/a'})`,
       })
     }
 
