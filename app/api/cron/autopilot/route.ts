@@ -19,14 +19,11 @@ import { systemLog } from '@/lib/system-log'
 
 export const maxDuration = 60
 
-// Max articles per hour — prevents end-of-day explosion when remainingHours → 1
 const MAX_HOURLY_CAP = 6
 
-// All autopilot articles go to "vijesti" — ensures frontend routing works
 const FORCED_CATEGORY_SLUG = 'vijesti'
 const FORCED_CATEGORY_NAME = 'Vijesti'
 
-// Football-only filter: only allow clusters with recognized football entity types
 const FOOTBALL_ENTITY_TYPES = ['PLAYER', 'CLUB', 'MANAGER', 'MATCH', 'LEAGUE', 'ORGANIZATION']
 
 async function getOrCreateCategory(siteId: string) {
@@ -37,26 +34,45 @@ async function getOrCreateCategory(siteId: string) {
   return category
 }
 
+// Safe article creation with retry on unique constraint violation (race condition protection)
+async function createArticleSafe(data: Parameters<typeof prisma.article.create>[0]['data'], siteId: string, baseSlug: string) {
+  let slug = baseSlug
+  let attempts = 0
+  const MAX_ATTEMPTS = 5
+
+  while (attempts < MAX_ATTEMPTS) {
+    try {
+      return await prisma.article.create({ data: { ...data, slug } })
+    } catch (err) {
+      // P2002 = unique constraint violation (slug already exists)
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        attempts++
+        slug = `${baseSlug}-${attempts}`
+        await systemLog('warn', 'autopilot', `Slug collision "${baseSlug}", retrying as "${slug}" (attempt ${attempts})`)
+        continue
+      }
+      throw err
+    }
+  }
+  throw new Error(`Failed to create article after ${MAX_ATTEMPTS} attempts — all slugs taken for "${baseSlug}"`)
+}
+
 async function authenticate(
   req: NextRequest
 ): Promise<{ ok: true; orgId?: string } | { ok: false; response: NextResponse }> {
   const secret = process.env.CRON_SECRET
 
   if (secret) {
-    // Method 1: Bearer header (Vercel cron)
     const authHeader = req.headers.get('authorization')
     if (authHeader === `Bearer ${secret}`) return { ok: true }
 
-    // Method 2: x-cron-secret header (QStash via Upstash-Forward-x-cron-secret)
     const cronHeader = req.headers.get('x-cron-secret')
     if (cronHeader === secret) return { ok: true }
 
-    // Method 3: ?secret= query param (fallback / manual trigger)
     const secretParam = req.nextUrl.searchParams.get('secret')
     if (secretParam && secretParam === secret) return { ok: true }
   }
 
-  // Method 4: Session cookie (manual trigger from admin UI)
   const session = await getServerSession(authOptions)
   if (
     session?.user?.organizationId &&
@@ -103,7 +119,6 @@ export async function GET(req: NextRequest) {
         continue
       }
 
-      // Pick the primary site: prefer site with a domain, fall back to first site
       const site = await prisma.site.findFirst({
         where: { organizationId: config.orgId, domain: { not: null } },
       }) || await prisma.site.findFirst({ where: { organizationId: config.orgId } })
@@ -112,7 +127,6 @@ export async function GET(req: NextRequest) {
         continue
       }
 
-      // Get the forced category for this site
       const forcedCategory = await getOrCreateCategory(site.id)
 
       const startOfDay = new Date()
@@ -192,12 +206,6 @@ export async function GET(req: NextRequest) {
         }
 
         const title = parsed.title || topCluster.title
-        const candidateSlug = parsed.seo?.slug || slugify(title)
-        const existingDupe = await prisma.article.findFirst({ where: { siteId: site.id, slug: candidateSlug } })
-        if (existingDupe) {
-          results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Duplicate slug: "${candidateSlug}"` })
-          continue
-        }
 
         const htmlContent = parsed.content || ''
         let verification: { score: number; issues: string[] } | null = null
@@ -216,26 +224,21 @@ export async function GET(req: NextRequest) {
         if (catConfig) tiptapContent = injectWidgets(tiptapContent, catConfig)
 
         const baseSlug = parsed.seo?.slug || slugify(title)
-        let slug = baseSlug
-        let slugSuffix = 1
-        while (await prisma.article.findFirst({ where: { siteId: site.id, slug } })) slug = `${baseSlug}-${slugSuffix++}`
-
         const featuredImage = await fetchUnsplashImage(title)
-        const article = await prisma.article.create({
-          data: {
-            siteId: site.id, title, slug,
-            content: tiptapContent as unknown as Prisma.InputJsonValue,
-            excerpt: parsed.excerpt || '', featuredImage,
-            status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
-            publishedAt: config.autoPublish ? new Date() : null,
-            categoryId: forcedCategory.id, aiGenerated: true, aiModel: ai.model,
-            aiPrompt: JSON.stringify({ priority: 'top_story', clusterId: topCluster.id, sources: newsItems.map((n) => n.title) }),
-            aiVerificationScore: verification?.score ?? null,
-            aiVerificationIssues: verification?.issues.join(', ') ?? null,
-            metaTitle: parsed.seo?.metaTitle || title,
-            metaDescription: parsed.seo?.metaDescription || parsed.excerpt || '',
-          },
-        })
+
+        const article = await createArticleSafe({
+          siteId: site.id, title, slug: baseSlug,
+          content: tiptapContent as unknown as Prisma.InputJsonValue,
+          excerpt: parsed.excerpt || '', featuredImage,
+          status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
+          publishedAt: config.autoPublish ? new Date() : null,
+          categoryId: forcedCategory.id, aiGenerated: true, aiModel: ai.model,
+          aiPrompt: JSON.stringify({ priority: 'top_story', clusterId: topCluster.id, sources: newsItems.map((n) => n.title) }),
+          aiVerificationScore: verification?.score ?? null,
+          aiVerificationIssues: verification?.issues.join(', ') ?? null,
+          metaTitle: parsed.seo?.metaTitle || title,
+          metaDescription: parsed.seo?.metaDescription || parsed.excerpt || '',
+        }, site.id, baseSlug)
 
         if (parsed.tags?.length) {
           for (const tagName of parsed.tags.slice(0, 5)) {
@@ -325,12 +328,6 @@ export async function GET(req: NextRequest) {
       }
 
       const title = parsed.title || task.title
-      const candidateSlug = parsed.seo?.slug || slugify(title)
-      const existingDupe = await prisma.article.findFirst({ where: { siteId: site.id, slug: candidateSlug } })
-      if (existingDupe) {
-        results.push({ orgId: config.orgId, action: 'skipped', title, reason: `Duplicate slug: "${candidateSlug}"` })
-        continue
-      }
 
       const htmlContent = parsed.content || ''
       let verification: { score: number; issues: string[] } | null = null
@@ -353,26 +350,21 @@ export async function GET(req: NextRequest) {
       if (catConfig) tiptapContent = injectWidgets(tiptapContent, catConfig)
 
       const baseSlug = parsed.seo?.slug || slugify(title)
-      let slug = baseSlug
-      let slugSuffix = 1
-      while (await prisma.article.findFirst({ where: { siteId: site.id, slug } })) slug = `${baseSlug}-${slugSuffix++}`
-
       const featuredImage = await fetchUnsplashImage(title)
-      const article = await prisma.article.create({
-        data: {
-          siteId: site.id, title, slug,
-          content: tiptapContent as unknown as Prisma.InputJsonValue,
-          excerpt: parsed.excerpt || '', featuredImage,
-          status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
-          publishedAt: config.autoPublish ? new Date() : null,
-          categoryId: forcedCategory.id, aiGenerated: true, aiModel: ai.model,
-          aiPrompt: JSON.stringify({ priority: task.priority, clusterId: task.clusterId, matchId: task.matchId, sources: task.sources.map((s) => s.title) }),
-          aiVerificationScore: verification?.score ?? null,
-          aiVerificationIssues: verification?.issues.join(', ') ?? null,
-          metaTitle: parsed.seo?.metaTitle || title,
-          metaDescription: parsed.seo?.metaDescription || parsed.excerpt || '',
-        },
-      })
+
+      const article = await createArticleSafe({
+        siteId: site.id, title, slug: baseSlug,
+        content: tiptapContent as unknown as Prisma.InputJsonValue,
+        excerpt: parsed.excerpt || '', featuredImage,
+        status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
+        publishedAt: config.autoPublish ? new Date() : null,
+        categoryId: forcedCategory.id, aiGenerated: true, aiModel: ai.model,
+        aiPrompt: JSON.stringify({ priority: task.priority, clusterId: task.clusterId, matchId: task.matchId, sources: task.sources.map((s) => s.title) }),
+        aiVerificationScore: verification?.score ?? null,
+        aiVerificationIssues: verification?.issues.join(', ') ?? null,
+        metaTitle: parsed.seo?.metaTitle || title,
+        metaDescription: parsed.seo?.metaDescription || parsed.excerpt || '',
+      }, site.id, baseSlug)
 
       if (parsed.tags?.length) {
         for (const tagName of parsed.tags.slice(0, 5)) {
