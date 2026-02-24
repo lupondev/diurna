@@ -17,6 +17,10 @@ type TickerFixture = {
   league: string
 }
 
+// Poll every 30s when there are live matches, every 120s otherwise
+const LIVE_POLL_MS = 30_000
+const IDLE_POLL_MS = 120_000
+
 export function FixturesTicker() {
   const [fixtures, setFixtures] = useState<TickerFixture[]>([])
   const [loading, setLoading] = useState(true)
@@ -24,15 +28,50 @@ export function FixturesTicker() {
   const animRef = useRef<number | null>(null)
   const pausedRef = useRef(false)
 
-  useEffect(() => {
-    fetch('/api/fixtures/ticker')
-      .then((r) => r.json() as Promise<{ fixtures?: TickerFixture[] }>)
-      .then((data) => {
-        setFixtures(data.fixtures || [])
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+  const fetchFixtures = useCallback(async () => {
+    try {
+      const r = await fetch('/api/fixtures/ticker', { cache: 'no-store' })
+      const data = (await r.json()) as { fixtures?: TickerFixture[] }
+      if (data.fixtures && data.fixtures.length > 0) {
+        setFixtures(data.fixtures)
+      }
+    } catch {
+      // silently fail — keep showing stale data
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => {
+    fetchFixtures()
+
+    // Dynamic polling: faster when live matches exist
+    let timer: ReturnType<typeof setInterval>
+
+    const startPolling = () => {
+      timer = setInterval(() => {
+        const hasLive = fixtures.some((f) => f.status === 'live')
+        // Clear and restart with appropriate interval
+        clearInterval(timer)
+        fetchFixtures()
+        timer = setInterval(fetchFixtures, hasLive ? LIVE_POLL_MS : IDLE_POLL_MS)
+      }, fixtures.some((f) => f.status === 'live') ? LIVE_POLL_MS : IDLE_POLL_MS)
+    }
+
+    startPolling()
+
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchFixtures])
+
+  // Re-start polling with correct interval when live status changes
+  useEffect(() => {
+    const hasLive = fixtures.some((f) => f.status === 'live')
+    const interval = hasLive ? LIVE_POLL_MS : IDLE_POLL_MS
+
+    const timer = setInterval(fetchFixtures, interval)
+    return () => clearInterval(timer)
+  }, [fixtures, fetchFixtures])
 
   // Auto-scroll animation
   const animate = useCallback(() => {
@@ -70,7 +109,7 @@ export function FixturesTicker() {
         {fixtures.map((f) => (
           <Link
             key={f.id}
-            href="/utakmice"
+            href={`/utakmica/${f.id}`}
             className="ftk-card"
           >
             {f.status === 'live' && <span className="ftk-live-dot" />}
