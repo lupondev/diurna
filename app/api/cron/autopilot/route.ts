@@ -26,6 +26,9 @@ const MAX_HOURLY_CAP = 6
 const FORCED_CATEGORY_SLUG = 'vijesti'
 const FORCED_CATEGORY_NAME = 'Vijesti'
 
+// Football-only filter: only allow clusters with recognized football entity types
+const FOOTBALL_ENTITY_TYPES = ['PLAYER', 'CLUB', 'MANAGER', 'MATCH', 'LEAGUE', 'ORGANIZATION']
+
 async function getOrCreateCategory(siteId: string) {
   let category = await prisma.category.findFirst({ where: { siteId, slug: FORCED_CATEGORY_SLUG } })
   if (!category) {
@@ -140,13 +143,14 @@ export async function GET(req: NextRequest) {
           where: {
             latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
             dis: { gte: 15 },
+            primaryEntityType: { in: FOOTBALL_ENTITY_TYPES },
             ...(coveredClusterIds.size > 0 ? { id: { notIn: Array.from(coveredClusterIds) } } : {}),
           },
           orderBy: { dis: 'desc' },
         })
 
         if (!topCluster) {
-          results.push({ orgId: config.orgId, action: 'skipped', reason: 'No clusters available — run Feed Fetch first' })
+          results.push({ orgId: config.orgId, action: 'skipped', reason: 'No football clusters available — run Feed Fetch first' })
           continue
         }
 
