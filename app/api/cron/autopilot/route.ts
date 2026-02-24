@@ -88,7 +88,10 @@ export async function GET(req: NextRequest) {
         continue
       }
 
-      const site = await prisma.site.findFirst({ where: { organizationId: config.orgId } })
+      // Pick the primary site: prefer site with a domain, fall back to first site
+      const site = await prisma.site.findFirst({
+        where: { organizationId: config.orgId, domain: { not: null } },
+      }) || await prisma.site.findFirst({ where: { organizationId: config.orgId } })
       if (!site) {
         results.push({ orgId: config.orgId, action: 'skipped', reason: 'No site configured' })
         continue
