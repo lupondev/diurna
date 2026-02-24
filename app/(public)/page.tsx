@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
-import { getArticleUrl } from '@/lib/article-url'
+import { getArticleUrl, normalizeCategoryName } from '@/lib/article-url'
 import { AdSlot } from '@/components/public/sportba'
 import { MatchOfDay } from '@/components/public/sportba/match-of-day'
 import { StandingsTable } from '@/components/public/sportba/standings-table'
@@ -92,7 +92,6 @@ export default async function HomePage() {
     })
 
     // Transfer Radar: find transfer articles by keyword detection across ALL categories
-    // (autopilot puts everything in "vijesti", so category-based filtering won't work)
     const recentArticles = await prisma.article.findMany({
       where: {
         siteId: site.id,
@@ -137,19 +136,22 @@ export default async function HomePage() {
 
     if (articles.length > 0) {
       const heroArticles = articles.slice(0, 4)
-      heroItems = heroArticles.map((a, i) => ({
-        title: a.title,
-        cat: a.category?.name || 'Vijesti',
-        href: getArticleUrl(a),
-        meta: `${a.publishedAt ? timeAgo(a.publishedAt) : 'Novo'} \u00b7 ${a.category?.name || 'Vijesti'}`,
-        bg: a.featuredImage
-          ? `url(${a.featuredImage}) center/cover no-repeat`
-          : GRADIENTS[i % GRADIENTS.length],
-      }))
+      heroItems = heroArticles.map((a, i) => {
+        const catName = normalizeCategoryName(a.category?.name)
+        return {
+          title: a.title,
+          cat: catName,
+          href: getArticleUrl(a),
+          meta: `${a.publishedAt ? timeAgo(a.publishedAt) : 'Novo'} \u00b7 ${catName}`,
+          bg: a.featuredImage
+            ? `url(${a.featuredImage}) center/cover no-repeat`
+            : GRADIENTS[i % GRADIENTS.length],
+        }
+      })
 
       const newsArticles = articles.slice(4)
       newsItems = newsArticles.map((a, i) => ({
-        cat: (a.category?.name || 'Vijesti').toUpperCase(),
+        cat: normalizeCategoryName(a.category?.name).toUpperCase(),
         title: a.title,
         time: a.publishedAt ? timeAgo(a.publishedAt) : 'Novo',
         href: getArticleUrl(a),
@@ -159,7 +161,7 @@ export default async function HomePage() {
 
       trendingItems = articles.slice(0, 5).map((a) => ({
         title: a.title,
-        meta: `${a.category?.name || 'Vijesti'} \u00b7 ${a.publishedAt ? timeAgo(a.publishedAt) : 'Novo'}`,
+        meta: `${normalizeCategoryName(a.category?.name)} \u00b7 ${a.publishedAt ? timeAgo(a.publishedAt) : 'Novo'}`,
         href: getArticleUrl(a),
       }))
     }
