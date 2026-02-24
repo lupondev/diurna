@@ -29,9 +29,20 @@ function formatMatchDate(dateStr: string): string {
   }
 }
 
+/**
+ * Schema.org EventStatusType for SportsEvent.
+ * Per spec, eventStatus only describes abnormal situations:
+ * - EventScheduled = normal (default for live, finished, and upcoming)
+ * - EventCancelled = match cancelled
+ * - EventPostponed = match postponed to unknown date
+ * - EventRescheduled = match moved to a different date
+ *
+ * There is NO "in progress" or "completed" status in schema.org.
+ * All normal matches use EventScheduled regardless of current state.
+ */
 function eventStatusUrl(status: 'live' | 'ft' | 'scheduled'): string {
-  if (status === 'live') return 'https://schema.org/EventMovedOnline'
-  if (status === 'ft') return 'https://schema.org/EventPostponed'
+  // All normal match states use EventScheduled
+  // Only cancelled/postponed would use different values (not applicable here)
   return 'https://schema.org/EventScheduled'
 }
 
