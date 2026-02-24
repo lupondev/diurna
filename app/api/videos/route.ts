@@ -41,6 +41,18 @@ function isGambling(title: string): boolean {
   return GAMBLING_KEYWORDS.some(kw => lower.includes(kw))
 }
 
+/** Decode common XML/HTML entities that YouTube RSS feeds return */
+function decodeXmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+}
+
 async function fetchFromRSS(channelId: string, channelKey: string, channelName: string): Promise<YTVideo[]> {
   const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, {
     headers: { 'User-Agent': 'Diurna/1.0' },
@@ -51,7 +63,7 @@ async function fetchFromRSS(channelId: string, channelKey: string, channelName: 
 
   // Parse videoId and title from RSS XML
   const videoIds = Array.from(xml.matchAll(/<yt:videoId>([^<]+)<\/yt:videoId>/g)).map(m => m[1])
-  const titles = Array.from(xml.matchAll(/<media:title>([^<]+)<\/media:title>/g)).map(m => m[1])
+  const titles = Array.from(xml.matchAll(/<media:title>([^<]+)<\/media:title>/g)).map(m => decodeXmlEntities(m[1]))
   const dates = Array.from(xml.matchAll(/<published>([^<]+)<\/published>/g)).map(m => m[1])
   // First <published> is the feed itself, skip it
   const pubDates = dates.slice(1)
