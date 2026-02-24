@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const BASE_URL = process.env.NEXTAUTH_URL || 'https://diurna.vercel.app'
-const AUTH = process.env.CRON_SECRET || process.env.FOOTBALL_API_KEY || ''
+// Use NEXTAUTH_URL which should point to todayfootballmatch.com in production
+const BASE_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://todayfootballmatch.com'
+const AUTH = process.env.CRON_SECRET || ''
 
 async function callInternal(path: string) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -13,7 +14,10 @@ async function callInternal(path: string) {
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronHeader = req.headers.get('x-cron-secret')
+  const secret = process.env.CRON_SECRET
+
+  if (secret && authHeader !== `Bearer ${secret}` && cronHeader !== secret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
