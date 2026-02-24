@@ -217,6 +217,11 @@ export function generateNewsArticleSchema(article: {
   }
 }
 
+/**
+ * Generate SportsEvent JSON-LD schema.
+ * Per schema.org spec, eventStatus only describes abnormal situations.
+ * All normal matches (scheduled, live, finished) use EventScheduled.
+ */
 export function generateSportEventSchema(match: {
   homeTeam: string; awayTeam: string; league: string;
   date: string; venue?: string; status?: string;
@@ -232,8 +237,7 @@ export function generateSportEventSchema(match: {
     location: match.venue ? { '@type': 'Place', name: match.venue } : undefined,
     homeTeam: { '@type': 'SportsTeam', name: match.homeTeam },
     awayTeam: { '@type': 'SportsTeam', name: match.awayTeam },
-    eventStatus: match.status === 'live'
-      ? 'https://schema.org/EventMovedOnline'
-      : 'https://schema.org/EventScheduled',
+    // All normal match states use EventScheduled — only cancelled/postponed differ
+    eventStatus: 'https://schema.org/EventScheduled',
   }
 }
