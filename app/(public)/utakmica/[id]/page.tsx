@@ -501,7 +501,8 @@ const STYLES = `
 .mc-content{background:var(--sba-bg-1);border:1px solid var(--sba-border);border-radius:var(--sba-radius);overflow:hidden}
 .mc-tabs{display:flex;border-bottom:1px solid var(--sba-border);overflow-x:auto;scrollbar-width:none;scroll-snap-type:x mandatory}
 .mc-tabs::-webkit-scrollbar{display:none}
-.mc-tab{flex:1;min-width:0;padding:12px 8px;font-family:var(--sba-sans);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;text-align:center;color:var(--sba-text-3);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;scroll-snap-align:center;transition:color .15s,border-color .15s}
+.mc-tab{flex:1;min-width:0;min-height:44px;padding:12px 8px;font-family:var(--sba-sans);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;text-align:center;color:var(--sba-text-3);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;scroll-snap-align:center;transition:color .15s,border-color .15s}
+@media(max-width:479px){.mc-tabs{position:sticky;bottom:0;z-index:50;background:var(--sba-bg-1);border-top:1px solid var(--sba-border);border-bottom:none}}
 .mc-tab:hover{color:var(--sba-text-0)}
 .mc-tab[aria-selected='true']{color:var(--sba-accent);border-bottom-color:var(--sba-accent)}
 .mc-pnl{padding:20px;animation:mc-fade .25s ease}

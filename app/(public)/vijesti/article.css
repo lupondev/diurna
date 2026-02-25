@@ -431,6 +431,11 @@
 }
 
 /* ── Article Body ── */
+.sba-article-body,
+.pub-article-body {
+  max-width: 680px;
+}
+
 .sba-article-body {
   font-family: var(--sba-serif);
   font-size: 18px;

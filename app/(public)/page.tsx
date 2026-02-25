@@ -58,11 +58,24 @@ function timeAgo(date: Date): string {
   return `${Math.floor(seconds / 86400)}d`
 }
 
+function categoryBadgeClass(catSlug: string | undefined): string {
+  const map: Record<string, string> = {
+    vijesti: 'sba-feed-cat--vijesti',
+    transferi: 'sba-feed-cat--transferi',
+    analiza: 'sba-feed-cat--analiza',
+    misljenje: 'sba-feed-cat--misljenje',
+    povrede: 'sba-feed-cat--povrede',
+    utakmice: 'sba-feed-cat--utakmice',
+    video: 'sba-feed-cat--video',
+  }
+  return map[catSlug || ''] || 'sba-feed-cat--default'
+}
+
 export default async function HomePage() {
   const site = await getDefaultSite()
 
   type HeroItem = { title: string; cat: string; href: string; meta: string; bg: string }
-  type NewsItem = { cat: string; title: string; time: string; href: string; bg: string; image: string | null }
+  type NewsItem = { cat: string; catSlug: string; title: string; time: string; href: string; bg: string; image: string | null }
   type TrendingItem = { title: string; meta: string; href: string }
   type TransferItem = { title: string; href: string; badge: 'hot' | 'confirmed' | 'rumour'; time: string }
 
@@ -160,6 +173,7 @@ export default async function HomePage() {
       const newsArticles = articles.slice(4)
       newsItems = newsArticles.map((a, i) => ({
         cat: normalizeCategoryName(a.category?.name).toUpperCase(),
+        catSlug: a.category?.slug || 'vijesti',
         title: a.title,
         time: a.publishedAt ? timeAgo(a.publishedAt) : 'Novo',
         href: getArticleUrl(a),
@@ -243,7 +257,7 @@ export default async function HomePage() {
                         )}
                       </div>
                       <div className="sba-feed-body">
-                        <span className="sba-feed-cat">{n.cat}</span>
+                        <span className={`sba-feed-cat ${categoryBadgeClass(n.catSlug)}`}>{n.cat}</span>
                         <span className="sba-feed-title">{n.title}</span>
                         <span className="sba-feed-meta">{n.time}</span>
                       </div>
@@ -266,7 +280,7 @@ export default async function HomePage() {
                       )}
                     </div>
                     <div className="sba-feed-body">
-                      <span className="sba-feed-cat">{n.cat}</span>
+                      <span className={`sba-feed-cat ${categoryBadgeClass(n.catSlug)}`}>{n.cat}</span>
                       <span className="sba-feed-title">{n.title}</span>
                       <span className="sba-feed-meta">{n.time}</span>
                     </div>

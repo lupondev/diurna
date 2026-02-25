@@ -22,7 +22,7 @@ export default async function PublicLayout({ children }: { children: React.React
 
   return (
     <ThemeProvider>
-      <a href="#main-content" className="skip-link">Preskoči na sadržaj</a>
+      <a href="#main-content" className="skip-link sba-skip-link">Preskoči na sadržaj</a>
       {gaId && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="afterInteractive" />
