@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { formatDateTime } from '@/lib/utils'
 import './analytics.css'
 
 const PERIODS = [
@@ -225,7 +226,7 @@ export default function AnalyticsPage() {
                     <div className="an-article">{a.title}</div>
                     <div style={{ color: 'var(--g500)', fontSize: 11 }}>{a.category?.name || '—'}</div>
                     <div style={{ color: 'var(--g400)', fontSize: 11, fontFamily: 'monospace' }}>
-                      {a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                      {a.publishedAt ? formatDateTime(a.publishedAt) : '—'}
                     </div>
                     <div>
                       <span className={`an-badge ${a.aiGenerated ? 'ai' : 'manual'}`}>

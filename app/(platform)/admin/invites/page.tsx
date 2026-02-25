@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import toast from 'react-hot-toast'
+import { formatDateTime } from '@/lib/utils'
 
 type InviteRow = {
   id: string
@@ -54,8 +56,9 @@ export default function AdminInvitesPage() {
         setEmail('')
         setRole('JOURNALIST')
         fetchInvites()
+        toast.success('Invite created')
       } else {
-        alert(data.error || 'Error creating invite')
+        toast.error(data.error || 'Error creating invite')
       }
     } finally {
       setSubmitting(false)
@@ -111,10 +114,10 @@ export default function AdminInvitesPage() {
                     <td><span className={`adm-badge ${inv.role.toLowerCase()}`}>{inv.role}</span></td>
                     <td><span className={`adm-badge ${status.cls}`}>{status.label}</span></td>
                     <td style={{ fontSize: 12, color: 'var(--g400)', fontFamily: 'var(--mono)' }}>
-                      {new Date(inv.createdAt).toLocaleDateString('en-US')}
+                      {formatDateTime(inv.createdAt)}
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--g400)', fontFamily: 'var(--mono)' }}>
-                      {new Date(inv.expiresAt).toLocaleDateString('en-US')}
+                      {formatDateTime(inv.expiresAt)}
                     </td>
                   </tr>
                 )

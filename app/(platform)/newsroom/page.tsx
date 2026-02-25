@@ -155,10 +155,11 @@ export default function NewsroomPage() {
     return getCategoriesForSite(site?.domain)
   }, [site?.domain, mode])
 
-  // Load clusters
+  // Load clusters (pass siteId so source/site tabs filter data)
   const loadClusters = useCallback(async () => {
     try {
       const params = new URLSearchParams({ limit: '80', timeFilter })
+      if (site?.id) params.set('siteId', site.id)
       const res = await fetch(`/api/newsroom/clusters?${params}`)
       const data = await res.json() as { clusters?: Cluster[]; count?: number }
       setClusters(data.clusters || [])
@@ -166,7 +167,7 @@ export default function NewsroomPage() {
       setLastFetch(new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }))
     } catch { setClusters([]) }
     finally { setLoading(false) }
-  }, [timeFilter])
+  }, [timeFilter, site?.id])
 
   useEffect(() => {
     loadClusters()
@@ -206,8 +207,14 @@ export default function NewsroomPage() {
   // Filter clusters
   const searchLower = search.toLowerCase()
 
+  const footballCategorySlugs = useMemo(() => new Set(FOOTBALL_CATEGORIES.map(c => c.slug)), [])
+
   const filtered = useMemo(() => {
     let result = [...clusters]
+
+    if (mode === 'football') {
+      result = result.filter(c => footballCategorySlugs.has(getClusterCategory(c)))
+    }
 
     if (categoryFilter !== 'sve' && categoryFilter !== 'napisano' && categoryFilter !== 'ceka') {
       result = result.filter(c => getClusterCategory(c) === categoryFilter)
@@ -227,22 +234,27 @@ export default function NewsroomPage() {
     }
 
     return result.sort((a, b) => b.dis - a.dis)
-  }, [clusters, categoryFilter, search, searchLower])
+  }, [clusters, categoryFilter, search, searchLower, mode, footballCategorySlugs])
 
-  // Category counts
+  // Category counts (when mode=football, only count football-category clusters)
+  const baseClusters = useMemo(() => {
+    if (mode !== 'football') return clusters
+    return clusters.filter(c => footballCategorySlugs.has(getClusterCategory(c)))
+  }, [clusters, mode, footballCategorySlugs])
+
   const getCategoryCount = useCallback((slug: string): number => {
-    if (slug === 'sve') return clusters.length
-    if (slug === 'napisano') return clusters.filter(c => (c.articles?.length || 0) > 0).length
-    if (slug === 'ceka') return clusters.filter(c => (c.articles?.length || 0) === 0).length
-    return clusters.filter(c => getClusterCategory(c) === slug).length
-  }, [clusters])
+    if (slug === 'sve') return baseClusters.length
+    if (slug === 'napisano') return baseClusters.filter(c => (c.articles?.length || 0) > 0).length
+    if (slug === 'ceka') return baseClusters.filter(c => (c.articles?.length || 0) === 0).length
+    return baseClusters.filter(c => getClusterCategory(c) === slug).length
+  }, [baseClusters])
 
   const isHotCategory = useCallback((slug: string): boolean => {
-    return clusters.some(c =>
+    return baseClusters.some(c =>
       getClusterCategory(c) === slug &&
       (c.trend === 'SPIKING' || c.dis > 60)
     )
-  }, [clusters])
+  }, [baseClusters])
 
   // Navigation
   function writeArticle(cluster: Cluster) {

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { formatDateTime } from '@/lib/utils'
 import { getTodayMatches, type FixtureResponse } from '@/lib/football-api'
 
 /* ── Helpers ── */
@@ -244,7 +245,7 @@ export default async function DashboardPage() {
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--g400)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
                           {article.category?.name && <span>{article.category.name}</span>}
-                          <span>{timeAgo(article.updatedAt)}</span>
+                          <span>{formatDateTime(article.updatedAt)}</span>
                         </div>
                       </div>
                       <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--mono)', padding: '3px 8px', borderRadius: 6, background: st.bg, color: st.color, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{st.label}</span>

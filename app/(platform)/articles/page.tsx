@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { formatDateTime } from '@/lib/utils'
 
 type Article = {
   id: string
@@ -334,13 +335,19 @@ export default function ArticlesPage() {
                   <td style={{ padding: '12px 12px' }}>{statusBadge(a.status)}</td>
                   <td style={{ padding: '12px 12px', color: '#64748b', fontSize: 12 }}>{a.category?.name || '-'}</td>
                   <td style={{ padding: '12px 12px', color: '#94a3b8', fontSize: 11, fontFamily: 'var(--mono)' }}>
-                    {new Date(a.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    {formatDateTime(a.createdAt)}
                   </td>
                   <td style={{ padding: '12px 12px', color: '#94a3b8', fontSize: 11, fontFamily: 'var(--mono)' }}>
-                    {a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '-'}
+                    {a.publishedAt ? formatDateTime(a.publishedAt) : '-'}
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <button
+                        onClick={() => router.push(`/editor/${a.id}`)}
+                        style={{ fontSize: 10, padding: '4px 8px', borderRadius: 4, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
+                      >
+                        Edit
+                      </button>
                       {a.status !== 'PUBLISHED' && (
                         <button
                           onClick={() => quickAction(a.id, 'publish', a)}

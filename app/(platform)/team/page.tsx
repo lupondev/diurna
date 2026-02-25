@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { formatDateTime } from '@/lib/utils'
 import './team.css'
 
 type Member = {
@@ -93,11 +94,6 @@ export default function TeamPage() {
     return '?'
   }
 
-  function formatDate(date: string) {
-    return new Date(date).toLocaleDateString('en-US', {
-      day: 'numeric', month: 'short', year: 'numeric',
-    })
-  }
 
   function handleRoleChange(memberId: string, newRole: string) {
     setMembers((prev) =>
@@ -254,7 +250,7 @@ export default function TeamPage() {
                       </select>
                     )}
                   </div>
-                  <div className="ml-joined">{formatDate(m.joinedAt)}</div>
+                  <div className="ml-joined">{formatDateTime(m.joinedAt)}</div>
                   <div className="ml-actions">
                     {isSelf ? (
                       <button className="ml-act" title="Settings">{'\u2699\uFE0F'}</button>

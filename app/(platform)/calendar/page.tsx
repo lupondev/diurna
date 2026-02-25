@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import './calendar.css'
 
 /* ── Types ── */
@@ -192,6 +193,18 @@ export default function CalendarPage() {
   }, [])
 
   useEffect(() => {
+    fetch('/api/newsroom/feed/sources', { credentials: 'include' })
+      .then(r => r.json())
+      .then((data: unknown) => {
+        const arr = Array.isArray(data) ? data as { id: string; name: string; tier: number; active: boolean; category?: string }[] : []
+        if (arr.length > 0) {
+          setSources(arr.map(s => ({ id: s.id, name: s.name, tier: s.tier, active: s.active, category: s.category || 'breaking' })))
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
     fetch(`/api/autopilot/timeline?date=${toDateStr(tlDate)}`, { credentials: 'include' })
       .then(r => r.json() as Promise<{ articles?: TlArticle[]; matches?: TlMatch[] }>)
       .then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) })
@@ -350,12 +363,28 @@ export default function CalendarPage() {
     })
   }, [])
 
-  const addSource = useCallback(() => {
+  const addSource = useCallback(async () => {
     if (!newSource.name || !newSource.url) return
-    const id = `src-${Date.now()}`
-    setSources(prev => [...prev, { id, name: newSource.name, tier: newSource.tier, active: true, category: 'breaking' }])
-    setNewSource({ name: '', url: '', tier: 2 })
-    setAddingSource(false)
+    try {
+      const res = await fetch('/api/newsroom/feed/sources', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newSource.name, url: newSource.url, tier: newSource.tier }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error || 'Failed to save')
+      }
+      const saved = (await res.json()) as { id: string; name: string; tier: number; active: boolean; category?: string }
+      setSources(prev => [...prev, { id: saved.id, name: saved.name, tier: saved.tier, active: true, category: saved.category || 'breaking' }])
+      setNewSource({ name: '', url: '', tier: 2 })
+      setAddingSource(false)
+      toast.success('Source added')
+    } catch (err) {
+      console.error('Failed to add source:', err)
+      toast.error(err instanceof Error ? err.message : 'Failed to save source')
+    }
   }, [newSource])
 
   const toggleLang = useCallback((code: string) => {
@@ -548,11 +577,28 @@ export default function CalendarPage() {
           <div className="cal-stat"><div className="cal-stat-val">{stats.drafts}</div><div className="cal-stat-lbl">Drafts</div></div>
         </div>
         <button
+          type="button"
+          onClick={() => setConfigOpen(true)}
+          style={{
+            marginLeft: 'auto',
+            padding: '6px 12px',
+            fontSize: 11,
+            fontWeight: 600,
+            border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: 6,
+            cursor: 'pointer',
+            background: 'transparent',
+            color: 'rgba(255,255,255,0.9)',
+          }}
+        >
+          ⚙️ Configure Autopilot
+        </button>
+        <button
           className="cal-run-now"
           onClick={runAutopilotNow}
           disabled={runningNow}
           style={{
-            marginLeft: 'auto',
+            marginLeft: 8,
             padding: '6px 16px',
             fontSize: 12,
             fontWeight: 700,
@@ -774,7 +820,15 @@ export default function CalendarPage() {
                         <span className={`cfg-src-tier ${tierCls}`}>{tierLabel}</span>
                         {tierSrcs.map(s => (
                           <div key={s.id} className="cfg-src-row">
-                            <Toggle checked={s.active} onChange={v => setSources(prev => prev.map(x => x.id === s.id ? { ...x, active: v } : x))} />
+                            <Toggle checked={s.active} onChange={v => {
+                              setSources(prev => prev.map(x => x.id === s.id ? { ...x, active: v } : x))
+                              fetch(`/api/newsroom/feed/sources/${s.id}`, {
+                                method: 'PATCH',
+                                credentials: 'include',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ active: v }),
+                              }).catch(() => {})
+                            }} />
                             <span className="cfg-src-name">{s.name}</span>
                             <div className="cfg-src-bar"><div className="cfg-src-fill" style={{ width: `${tier === 1 ? 95 : tier === 2 ? 75 : tier === 3 ? 55 : 40}%`, background: barColor }} /></div>
                           </div>

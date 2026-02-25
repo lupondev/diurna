@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { formatDateTime } from '@/lib/utils'
 import './media.css'
 
 type MediaItem = {
@@ -177,7 +178,7 @@ export default function MediaPage() {
                 <div className="ml-item-name" title={item.filename}>{item.filename}</div>
                 <div className="ml-item-meta">
                   <span>{formatSize(item.size)}</span>
-                  <span>{new Date(item.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                  <span>{formatDateTime(item.createdAt)}</span>
                 </div>
               </div>
               {deleteConfirmId === item.id ? (

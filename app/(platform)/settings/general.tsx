@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
+import toast from 'react-hot-toast'
+import { formatDateTime } from '@/lib/utils'
 import { SUPPORTED_LANGUAGES, setClientLanguage, LANG_CHANGE_EVENT, type LangCode } from '@/lib/languages'
 
 interface FbPage {
@@ -253,8 +255,13 @@ export default function GeneralTab() {
         setDirty(false)
         setSaved(true)
         setTimeout(() => setSaved(false), 2000)
+        toast.success('Settings saved')
+      } else {
+        const err = await res.json().catch(() => ({})) as { error?: string }
+        toast.error(err.error || 'Failed to save settings')
       }
     } catch {
+      toast.error('Failed to save settings')
     } finally {
       setSaving(false)
     }
@@ -702,7 +709,7 @@ export default function GeneralTab() {
                       <div className="st-nl-sub-info">
                         <div className="st-nl-sub-email">{sub.email}</div>
                         <div className="st-nl-sub-date">
-                          {new Date(sub.subscribedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {formatDateTime(sub.subscribedAt)}
                         </div>
                       </div>
                       <span className={`st-nl-sub-badge ${sub.isActive ? 'active' : 'inactive'}`}>

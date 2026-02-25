@@ -29,10 +29,12 @@ export async function GET(req: NextRequest) {
   const articles = await prisma.article.findMany({
     where: {
       siteId: site.id,
+      deletedAt: null,
+      isTest: false,
       OR: [
         { publishedAt: { gte: startOfDay, lte: endOfDay } },
         { scheduledAt: { gte: startOfDay, lte: endOfDay } },
-        { status: 'DRAFT', createdAt: { gte: startOfDay, lte: endOfDay } },
+        { status: { in: ['DRAFT', 'IN_REVIEW', 'SCHEDULED'] }, createdAt: { gte: startOfDay, lte: endOfDay } },
       ],
     },
     select: {

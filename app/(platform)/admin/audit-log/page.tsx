@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { formatDateTime } from '@/lib/utils'
 
 type LogEntry = {
   id: string
@@ -80,7 +81,7 @@ export default function AdminAuditLogPage() {
                     <div style={{ fontSize: 11, color: 'var(--g400)', marginTop: 2 }}>{entry.detail}</div>
                   )}
                   <div className="adm-log-time">
-                    {new Date(entry.createdAt).toLocaleString('en-US')}
+                    {formatDateTime(entry.createdAt)}
                   </div>
                 </div>
               </div>

@@ -178,10 +178,34 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
     }
   }, [editor])
 
+  const PLACEHOLDERS: Record<string, string> = {
+    preview: 'Write match preview for [Team A] vs [Team B], [Competition], [Date]',
+    report: 'Write match report for [Team A] [score] [Team B], [Competition]',
+    transfer: 'Write transfer article about [Player] moving from [Club A] to [Club B]',
+    analysis: 'Write tactical analysis of [Team/Match/Player]',
+    rankings: 'Write rankings of [Top 10 what? e.g. strikers in Premier League 2025/26]',
+    profile: 'Write player profile for [Player Name], [Club], [Position]',
+  }
+
   function handleTemplateClick(t: typeof TEMPLATES[0]) {
     setSelectedTemplate(t.articleType)
-    setPrompt(t.prompt)
+    const editorText = editor?.getText()?.substring(0, 500) || ''
+    const titleEl = typeof document !== 'undefined' ? document.querySelector('.ed-title-input') : null
+    const title = (titleEl as HTMLInputElement | null)?.value?.trim() || ''
+    if (title || editorText) {
+      const contextSnippet = editorText.substring(0, 300)
+      setPrompt(`${t.prompt} based on: "${title || 'article'}". Context: ${contextSnippet || '—'}`)
+    } else {
+      setPrompt(PLACEHOLDERS[t.articleType] ?? t.prompt)
+    }
   }
+
+  useEffect(() => {
+    if (!editor) return
+    const updateHandler = () => detectContext()
+    editor.on('update', updateHandler)
+    return () => { editor.off('update', updateHandler) }
+  }, [editor, detectContext])
 
   return (
     <div className="ai-sb">

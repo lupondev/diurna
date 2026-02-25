@@ -77,6 +77,25 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
   const [recoveryData, setRecoveryData] = useState<{ title: string; subtitle: string; content: Record<string, unknown>; categoryId: string } | null>(null)
   const [loading, setLoading] = useState(!!initialArticleId)
 
+  const [isDark, setIsDark] = useState(false)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('editor-theme')
+      setIsDark(stored === 'dark')
+    } catch {
+      // localStorage unavailable
+    }
+  }, [])
+  const toggleEditorTheme = useCallback(() => {
+    const next = !isDark
+    setIsDark(next)
+    try {
+      localStorage.setItem('editor-theme', next ? 'dark' : 'light')
+    } catch {
+      // ignore
+    }
+  }, [isDark])
+
   const editorRef = useRef<unknown>(null)
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savingRef = useRef(false)
@@ -540,7 +559,7 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
   }
 
   return (
-    <div className="editor-layout">
+    <div className={`editor-layout ${isDark ? 'ed-dark' : 'ed-light'}`}>
       <div className="ed-top">
         <button className="ed-back" onClick={handleBack}>
           {articleIdRef.current ? '← Articles' : '← Back'}
@@ -569,6 +588,15 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           💾 {saving ? 'Saving...' : (articleIdRef.current ? 'Save' : 'Save Draft')}
         </button>
         <button className="ed-btn ed-btn-secondary" onClick={() => setShowSchedule(true)}>📅 Schedule</button>
+        <button
+          type="button"
+          className="ed-btn ed-btn-secondary"
+          onClick={toggleEditorTheme}
+          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          style={{ minWidth: 36, padding: '6px 10px' }}
+        >
+          {isDark ? '□' : '■'}
+        </button>
         <label className="ed-nl-check">
           <input type="checkbox" checked={sendNewsletter} onChange={(e) => setSendNewsletter(e.target.checked)} />
           <span>📧</span>
