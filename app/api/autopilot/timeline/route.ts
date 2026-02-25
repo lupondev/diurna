@@ -11,18 +11,25 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const dateStr = searchParams.get('date') || new Date().toISOString().split('T')[0]
-  const date = new Date(dateStr)
 
-  const startOfDay = new Date(date)
-  startOfDay.setHours(0, 0, 0, 0)
-  const endOfDay = new Date(date)
-  endOfDay.setHours(23, 59, 59, 999)
+  const startOfDay = new Date(`${dateStr}T00:00:00.000Z`)
+  const endOfDay = new Date(`${dateStr}T23:59:59.999Z`)
 
-  const site = await prisma.site.findFirst({
+  let site = await prisma.site.findFirst({
     where: { organizationId: session.user.organizationId },
+    select: { id: true },
   })
 
   if (!site) {
+    const org = await prisma.organization.findFirst({
+      where: { id: session.user.organizationId },
+      include: { sites: { select: { id: true }, take: 1 } },
+    })
+    site = org?.sites?.[0] ?? null
+  }
+
+  if (!site) {
+    console.error('Timeline: No site found for org:', session.user.organizationId)
     return NextResponse.json({ articles: [], matches: [] })
   }
 
@@ -35,6 +42,7 @@ export async function GET(req: NextRequest) {
         { publishedAt: { gte: startOfDay, lte: endOfDay } },
         { scheduledAt: { gte: startOfDay, lte: endOfDay } },
         { status: { in: ['DRAFT', 'IN_REVIEW', 'SCHEDULED'] }, createdAt: { gte: startOfDay, lte: endOfDay } },
+        { status: 'PUBLISHED', publishedAt: null, createdAt: { gte: startOfDay, lte: endOfDay } },
       ],
     },
     select: {

@@ -138,6 +138,7 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
     const text = editor.state.doc.textBetween(from, to)
     if (!text.trim()) {
       setError('Select some text first to use this action.')
+      setTimeout(() => setError(null), 3000)
       return
     }
     setFactCheckResult(null)
@@ -189,12 +190,16 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
 
   function handleTemplateClick(t: typeof TEMPLATES[0]) {
     setSelectedTemplate(t.articleType)
+
     const editorText = editor?.getText()?.substring(0, 500) || ''
-    const titleEl = typeof document !== 'undefined' ? document.querySelector('.ed-title-input') : null
-    const title = (titleEl as HTMLInputElement | null)?.value?.trim() || ''
-    if (title || editorText) {
-      const contextSnippet = editorText.substring(0, 300)
-      setPrompt(`${t.prompt} based on: "${title || 'article'}". Context: ${contextSnippet || '—'}`)
+    const titleEl = typeof document !== 'undefined' ? document.querySelector<HTMLInputElement>('.ed-title-input') : null
+    const articleTitle = titleEl?.value?.trim() || ''
+
+    if (articleTitle || editorText.length > 20) {
+      const context = articleTitle
+        ? `about: "${articleTitle}"${editorText.length > 50 ? `. Context: ${editorText.substring(0, 300)}` : ''}`
+        : `based on: ${editorText.substring(0, 300)}`
+      setPrompt(`${t.prompt} ${context}`)
     } else {
       setPrompt(PLACEHOLDERS[t.articleType] ?? t.prompt)
     }
@@ -263,7 +268,7 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
             ))}
           </div>
         ) : (
-          <div className="ai-sb-empty" onClick={detectContext}>Click to detect entities from content</div>
+          <div className="ai-sb-empty">Start writing to detect entities automatically</div>
         )}
       </div>
 

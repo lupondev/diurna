@@ -528,3 +528,203 @@
 .fi-modal-loading { text-align: center; padding: 32px; color: var(--g400); font-size: 14px; }
 .fi-url-tab { display: flex; flex-direction: column; gap: 12px; }
 .fi-url-tab .ed-btn { align-self: flex-start; }
+
+/* ═══════════════════════════════════════════════ */
+/* DARK THEME (complete)                           */
+/* ═══════════════════════════════════════════════ */
+
+.ed-dark .ed-form {
+  background: #1a1a2e;
+  border-color: #2a2a3e;
+}
+
+.ed-dark .ed-title-input {
+  color: #f0f0f5;
+  background: transparent;
+}
+
+.ed-dark .ed-title-input::placeholder {
+  color: #6b6b80;
+}
+
+.ed-dark .ed-subtitle-input {
+  color: #c0c0d0;
+  background: transparent;
+}
+
+.ed-dark .ed-subtitle-input::placeholder {
+  color: #5a5a70;
+}
+
+.ed-dark .ed-meta {
+  background: #1e1e32;
+  border-color: #2a2a3e;
+}
+
+.ed-dark .ed-select {
+  background: #252540;
+  color: #d0d0e0;
+  border-color: #3a3a50;
+}
+
+.ed-dark .ed-slug-input,
+.ed-dark .ed-tag-input {
+  background: #252540;
+  color: #d0d0e0;
+  border-color: #3a3a50;
+}
+
+.ed-dark .ed-slug-label {
+  color: #8888a0;
+}
+
+.ed-dark .ed-tag {
+  background: #2a2a45;
+  color: #c0c0d8;
+  border-color: #3a3a55;
+}
+
+/* Featured image zone */
+.ed-dark .fi-placeholder,
+.ed-dark .fi-dropzone {
+  background: #1e1e32;
+  border-color: #3a3a50;
+  color: #8888a0;
+}
+
+/* TipTap editor area */
+.ed-dark .ProseMirror {
+  background: #1a1a2e;
+  color: #e0e0f0;
+}
+
+.ed-dark .ProseMirror p.is-editor-empty:first-child::before {
+  color: #5a5a70;
+}
+
+.ed-dark .ProseMirror h1,
+.ed-dark .ProseMirror h2,
+.ed-dark .ProseMirror h3 {
+  color: #f0f0f5;
+}
+
+.ed-dark .ProseMirror a {
+  color: #00D4AA;
+}
+
+.ed-dark .ProseMirror blockquote {
+  border-left-color: #3a3a55;
+  color: #a0a0b8;
+}
+
+.ed-dark .ProseMirror code {
+  background: #252540;
+  color: #e0e0f0;
+}
+
+.ed-dark .ProseMirror pre {
+  background: #151528;
+  color: #d0d0e0;
+}
+
+.ed-dark .ProseMirror hr {
+  border-color: #2a2a3e;
+}
+
+.ed-dark .ProseMirror img {
+  border-color: #2a2a3e;
+}
+
+/* Toolbar */
+.ed-dark .te-toolbar {
+  background: #1e1e32;
+  border-color: #2a2a3e;
+}
+
+.ed-dark .te-toolbar button {
+  color: #a0a0b8;
+}
+
+.ed-dark .te-toolbar button:hover {
+  background: #252540;
+  color: #e0e0f0;
+}
+
+.ed-dark .te-toolbar button.is-active {
+  background: #2a2a45;
+  color: #00D4AA;
+}
+
+/* Slash menu */
+.ed-dark .slash-menu {
+  background: #1e1e32;
+  border-color: #2a2a3e;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.ed-dark .slash-menu-item {
+  color: #d0d0e0;
+}
+
+.ed-dark .slash-menu-item:hover,
+.ed-dark .slash-menu-item.selected {
+  background: #252540;
+}
+
+/* SEO panel */
+.ed-dark .ed-seo-panel {
+  background: #1e1e32;
+  border-color: #2a2a3e;
+}
+
+.ed-dark .ed-seo-panel input,
+.ed-dark .ed-seo-panel textarea {
+  background: #252540;
+  color: #d0d0e0;
+  border-color: #3a3a50;
+}
+
+.ed-dark .ed-seo-panel label {
+  color: #a0a0b8;
+}
+
+.ed-dark .ed-serp-preview {
+  background: #151528;
+}
+
+.ed-dark .ed-serp-title {
+  color: #8ab4f8;
+}
+
+.ed-dark .ed-serp-url {
+  color: #00D4AA;
+}
+
+.ed-dark .ed-serp-desc {
+  color: #a0a0b8;
+}
+
+/* Tag suggestions dropdown */
+.ed-dark .ed-tag-suggestions {
+  background: #1e1e32;
+  border-color: #2a2a3e;
+}
+
+.ed-dark .ed-tag-suggestion:hover {
+  background: #252540;
+}
+
+/* Bubble menu */
+.ed-dark .tippy-box {
+  background: #1e1e32;
+}
+
+/* Block nodes (polls, quizzes, stats tables, etc.) */
+.ed-dark [data-type="poll"],
+.ed-dark [data-type="quiz"],
+.ed-dark [data-type="statsTable"],
+.ed-dark [data-type="playerCard"] {
+  background: #1e1e32;
+  border-color: #2a2a3e;
+  color: #d0d0e0;
+}
