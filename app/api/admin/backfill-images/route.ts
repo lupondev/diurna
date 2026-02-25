@@ -10,8 +10,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const orgId = req.headers.get('x-org-id')
+  if (!orgId) {
+    return NextResponse.json({ error: 'x-org-id header required for tenant isolation' }, { status: 400 })
+  }
+
   const articles = await prisma.article.findMany({
     where: {
+      site: { organizationId: orgId },
       status: 'PUBLISHED',
       deletedAt: null,
       featuredImage: null,

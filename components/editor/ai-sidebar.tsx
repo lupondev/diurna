@@ -172,7 +172,8 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
       } else if (!res.ok) {
         setError('AI action failed. Try again.')
       }
-    } catch {
+    } catch (e) {
+      console.error('AI action failed:', e)
       setError('AI action failed. Try again.')
     } finally {
       setAiLoading(null)
@@ -207,6 +208,7 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
 
   useEffect(() => {
     if (!editor) return
+    detectContext()
     const updateHandler = () => detectContext()
     editor.on('update', updateHandler)
     return () => { editor.off('update', updateHandler) }

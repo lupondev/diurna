@@ -21,7 +21,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ articles: [] })
   }
 
-  const site = await getDefaultSite()
+  let organizationId: string | undefined
+  const orgSlug = req.headers.get('x-org-slug')
+  if (orgSlug) {
+    const org = await prisma.organization.findUnique({
+      where: { slug: orgSlug },
+      select: { id: true },
+    })
+    organizationId = org?.id ?? undefined
+  }
+  const site = await getDefaultSite(organizationId)
   if (!site) {
     return NextResponse.json({ articles: [] })
   }

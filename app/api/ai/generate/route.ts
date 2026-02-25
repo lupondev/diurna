@@ -3,11 +3,13 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateContent } from '@/lib/ai/client'
 import { validateOrigin } from '@/lib/csrf'
+import { rateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const DAILY_LIMIT = 10
 const MAX_RATE_LIMIT_ENTRIES = 1000
+const perMinuteLimiter = rateLimit({ interval: 60_000 })
 
 function evictExpiredEntries() {
   const now = Date.now()
@@ -164,6 +166,12 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    try {
+      await perMinuteLimiter.check(5, session.user.id)
+    } catch {
+      return NextResponse.json({ error: 'Rate limit exceeded. Please wait a minute.' }, { status: 429 })
     }
 
     if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {

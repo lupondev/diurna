@@ -95,7 +95,7 @@ export function assertCanonicalForSitemap(path: string): void {
       ? ` Canonical form: "${suggestion}".`
       : ' Requires smart route handler + DB lookup.'
     const msg = `[canonical-registry] Non-canonical path in sitemap: "${path}".${hint}`
-    if (process.env.NODE_ENV === 'production') console.warn(msg)
+    if (process.env.NODE_ENV === 'production') console.error(msg)
     else throw new Error(msg)
   }
 }

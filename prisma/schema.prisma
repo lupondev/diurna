@@ -12,13 +12,13 @@ datasource db {
 // ══════════════════════════════════
 
 model Organization {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
-  slug      String   @unique
+  slug      String    @unique
   logo      String?
-  plan      Plan     @default(FREE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  plan      Plan      @default(FREE)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
   sites     Site[]
@@ -28,37 +28,37 @@ model Organization {
 }
 
 model Site {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name           String
-  slug           String
-  domain         String?
-  gaId           String?
-  language       String       @default("bs")
-  timezone       String       @default("Europe/Sarajevo")
-  theme          String       @default("editorial")
-  wpSiteUrl      String?
-  wpApiKey       String?
-  competitorFeeds String[]    @default([])
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  slug            String
+  domain          String?
+  gaId            String?
+  language        String       @default("bs")
+  timezone        String       @default("Europe/Sarajevo")
+  theme           String       @default("editorial")
+  wpSiteUrl       String?
+  wpApiKey        String?
+  competitorFeeds String[]     @default([])
 
   // Publication identity
-  description    String?
+  description String?
 
   // SEO defaults
-  metaTitle      String?
+  metaTitle       String?
   metaDescription String?
-  ogImage        String?
+  ogImage         String?
 
   // Social links
-  twitterHandle  String?
-  facebookUrl    String?
+  twitterHandle   String?
+  facebookUrl     String?
   instagramHandle String?
-  youtubeUrl     String?
+  youtubeUrl      String?
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  deletedAt      DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   articles          Article[]
   widgets           Widget[]
@@ -72,15 +72,15 @@ model Site {
 }
 
 model SocialConnection {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   siteId       String
-  site         Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site         Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
   provider     String
   accessToken  String
   refreshToken String?
   expiresAt    DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   pages SocialPage[]
 
@@ -173,28 +173,28 @@ model VerificationToken {
 // ══════════════════════════════════
 
 model Article {
-  id        String        @id @default(cuid())
-  siteId    String
-  site      Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  title     String
-  slug      String
-  content   Json
-  excerpt   String?
-  status    ArticleStatus @default(DRAFT)
-  authorId  String?
+  id       String        @id @default(cuid())
+  siteId   String
+  site     Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title    String
+  slug     String
+  content  Json
+  excerpt  String?
+  status   ArticleStatus @default(DRAFT)
+  authorId String?
 
-  isTest       Boolean  @default(false)
-  aiGenerated          Boolean  @default(false)
+  isTest               Boolean          @default(false)
+  aiGenerated          Boolean          @default(false)
   aiModel              String?
   aiPrompt             String?
   aiVerificationScore  Int?
   aiVerificationIssues String?
-  aiRevisions  AIRevision[]
-  versions     ArticleVersion[]
-  tags         ArticleTag[]
+  aiRevisions          AIRevision[]
+  versions             ArticleVersion[]
+  tags                 ArticleTag[]
 
-  publishedAt  DateTime?
-  scheduledAt  DateTime?
+  publishedAt DateTime?
+  scheduledAt DateTime?
 
   featuredImage      String?
   metaTitle          String?
@@ -204,8 +204,8 @@ model Article {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
   @@unique([siteId, slug])
@@ -217,9 +217,9 @@ model Article {
 }
 
 model AIRevision {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   articleId String
-  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
   version   Int
   content   Json
   prompt    String
@@ -304,13 +304,13 @@ model ArticleVersion {
 }
 
 model Tag {
-  id        String       @id @default(cuid())
+  id        String   @id @default(cuid())
   siteId    String
   name      String
   slug      String
-  createdAt DateTime     @default(now())
+  createdAt DateTime @default(now())
 
-  articles  ArticleTag[]
+  articles ArticleTag[]
 
   @@unique([siteId, slug])
   @@index([siteId])
@@ -499,12 +499,12 @@ model Player {
   jerseyNumber     Int?
   injured          Boolean   @default(false)
 
-  salary           Int?
-  salaryNet        Int?
-  salaryAnnual     Int?
-  contractExpiry   DateTime?
-  contractStart    DateTime?
-  marketValue      String?
+  salary         Int?
+  salaryNet      Int?
+  salaryAnnual   Int?
+  contractExpiry DateTime?
+  contractStart  DateTime?
+  marketValue    String?
 
   capologySlug     String?
   lastSyncedAt     DateTime?
@@ -524,44 +524,44 @@ model Player {
 }
 
 model PlayerSeason {
-  id            String @id @default(cuid())
-  playerId      String
-  player        Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  season        Int
-  leagueId      Int?
-  leagueName    String?
-  teamId        Int?
-  teamName      String?
+  id         String  @id @default(cuid())
+  playerId   String
+  player     Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  season     Int
+  leagueId   Int?
+  leagueName String?
+  teamId     Int?
+  teamName   String?
 
-  appearances   Int    @default(0)
-  lineups       Int    @default(0)
-  minutes       Int    @default(0)
+  appearances Int @default(0)
+  lineups     Int @default(0)
+  minutes     Int @default(0)
 
-  goals         Int    @default(0)
-  assists       Int    @default(0)
-  shots         Int    @default(0)
-  shotsOnTarget Int    @default(0)
+  goals         Int @default(0)
+  assists       Int @default(0)
+  shots         Int @default(0)
+  shotsOnTarget Int @default(0)
 
-  totalPasses   Int    @default(0)
-  keyPasses     Int    @default(0)
-  passAccuracy  Float?
+  totalPasses  Int    @default(0)
+  keyPasses    Int    @default(0)
+  passAccuracy Float?
 
-  tackles       Int    @default(0)
-  blocks        Int    @default(0)
-  interceptions Int    @default(0)
+  tackles       Int @default(0)
+  blocks        Int @default(0)
+  interceptions Int @default(0)
 
-  dribbleAttempts Int  @default(0)
-  dribbleSuccess  Int  @default(0)
+  dribbleAttempts Int @default(0)
+  dribbleSuccess  Int @default(0)
 
-  yellowCards    Int   @default(0)
-  redCards       Int   @default(0)
-  foulsCommitted Int   @default(0)
-  foulsDrawn     Int   @default(0)
+  yellowCards    Int @default(0)
+  redCards       Int @default(0)
+  foulsCommitted Int @default(0)
+  foulsDrawn     Int @default(0)
 
-  saves          Int?
-  goalsConceded  Int?
-  cleanSheets    Int?
-  penaltySaved   Int?
+  saves         Int?
+  goalsConceded Int?
+  cleanSheets   Int?
+  penaltySaved  Int?
 
   rating Float?
 
@@ -605,11 +605,11 @@ model Injury {
 }
 
 model ClubFinancials {
-  id            String  @id @default(cuid())
-  teamName      String
-  teamId        Int?
-  leagueName    String?
-  season        Int
+  id         String  @id @default(cuid())
+  teamName   String
+  teamId     Int?
+  leagueName String?
+  season     Int
 
   totalPayroll  Int?
   highestPaid   String?
@@ -636,42 +636,43 @@ model ClubFinancials {
 }
 
 model StoryCluster {
-  id              String   @id @default(cuid())
-  key             String   @unique
-  title           String
-  eventType       String
-  primaryEntity   String
+  id                String    @id @default(cuid())
+  key               String    @unique
+  title             String
+  eventType         String
+  primaryEntity     String
   primaryEntityType String
-  entities        String[]
-  sourceCount     Int      @default(0)
-  tier1Count      Int      @default(0)
-  tier2Count      Int      @default(0)
-  tier3Count      Int      @default(0)
-  hasConflicts    Boolean  @default(false)
-  velocity30m     Int      @default(0)
-  velocityPrev30m Int      @default(0)
-  acceleration    Float    @default(1.0)
-  trend           String   @default("STABLE")
-  consistency     Float    @default(1.0)
-  dis             Int      @default(0)
-  peakDis         Int      @default(0)
-  peakAt          DateTime?
-  firstSeen       DateTime
-  latestItem      DateTime
-  siteId          String?
-  category        String?   @default("vijesti")
-  categoryBadge   String?
-  newsItems       String[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  entities          String[]
+  sourceCount       Int       @default(0)
+  tier1Count        Int       @default(0)
+  tier2Count        Int       @default(0)
+  tier3Count        Int       @default(0)
+  hasConflicts      Boolean   @default(false)
+  velocity30m       Int       @default(0)
+  velocityPrev30m   Int       @default(0)
+  acceleration      Float     @default(1.0)
+  trend             String    @default("STABLE")
+  consistency       Float     @default(1.0)
+  dis               Int       @default(0)
+  peakDis           Int       @default(0)
+  peakAt            DateTime?
+  firstSeen         DateTime
+  latestItem        DateTime
+  siteId            String?
+  category          String?   @default("vijesti")
+  categoryBadge     String?
+  newsItems         String[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  summary         ClusterSummary?
+  summary ClusterSummary?
 
   @@index([dis])
   @@index([eventType])
   @@index([trend])
   @@index([primaryEntity])
   @@index([siteId, category])
+  @@index([siteId, dis])
 }
 
 model ClusterSummary {
@@ -705,106 +706,106 @@ model MatchResult {
 }
 
 model AutopilotConfig {
-  id              String   @id @default(cuid())
-  orgId           String   @unique
+  id    String @id @default(cuid())
+  orgId String @unique
 
-  dailyTarget     Int      @default(10)
-  defaultLength   Int      @default(800)
-  scheduleStart   String   @default("08:00")
-  scheduleEnd     String   @default("00:00")
-  is24h           Boolean  @default(false)
+  dailyTarget   Int     @default(10)
+  defaultLength Int     @default(800)
+  scheduleStart String  @default("08:00")
+  scheduleEnd   String  @default("00:00")
+  is24h         Boolean @default(false)
 
-  autoPublish     Boolean  @default(true)
+  autoPublish       Boolean @default(true)
   matchAutoCoverage Boolean @default(true)
-  liveArticles    Boolean  @default(true)
-  breakingNews    Boolean  @default(true)
-  breakingThreshold Int    @default(70)
-  gapDetection    Boolean  @default(true)
-  gapHours        Int      @default(2)
+  liveArticles      Boolean @default(true)
+  breakingNews      Boolean @default(true)
+  breakingThreshold Int     @default(70)
+  gapDetection      Boolean @default(true)
+  gapHours          Int     @default(2)
 
-  contentStyle    String   @default("signal_only")
-  translateLang   String   @default("bs")
-  translateLanguages String[] @default(["bs"])
-  alwaysCreditSources Boolean @default(true)
-  linkOriginal    Boolean  @default(true)
-  addSourceTag    Boolean  @default(true)
-  tone            String   @default("neutral")
+  contentStyle        String   @default("signal_only")
+  translateLang       String   @default("bs")
+  translateLanguages  String[] @default(["bs"])
+  alwaysCreditSources Boolean  @default(true)
+  linkOriginal        Boolean  @default(true)
+  addSourceTag        Boolean  @default(true)
+  tone                String   @default("neutral")
 
-  isActive        Boolean  @default(true)
+  isActive Boolean @default(true)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  categories      AutopilotCategory[]
-  leagues         AutopilotLeague[]
-  topics          AutopilotTopic[]
-  channels        DistributionChannel[]
+  categories AutopilotCategory[]
+  leagues    AutopilotLeague[]
+  topics     AutopilotTopic[]
+  channels   DistributionChannel[]
 }
 
 model AutopilotCategory {
-  id              String   @id @default(cuid())
-  configId        String
-  config          AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  id       String          @id @default(cuid())
+  configId String
+  config   AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 
-  name            String
-  slug            String
-  color           String
-  percentage      Int      @default(10)
+  name       String
+  slug       String
+  color      String
+  percentage Int    @default(10)
 
-  widgetPoll      Boolean  @default(false)
-  widgetQuiz      Boolean  @default(false)
-  widgetStats     Boolean  @default(false)
-  widgetPlayer    Boolean  @default(false)
-  widgetVideo     Boolean  @default(false)
-  widgetGallery   Boolean  @default(false)
+  widgetPoll    Boolean @default(false)
+  widgetQuiz    Boolean @default(false)
+  widgetStats   Boolean @default(false)
+  widgetPlayer  Boolean @default(false)
+  widgetVideo   Boolean @default(false)
+  widgetGallery Boolean @default(false)
 
-  sortOrder       Int      @default(0)
+  sortOrder Int @default(0)
 
   @@unique([configId, slug])
   @@index([configId])
 }
 
 model AutopilotLeague {
-  id              String   @id @default(cuid())
-  configId        String
-  config          AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  id       String          @id @default(cuid())
+  configId String
+  config   AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 
-  name            String
-  apiFootballId   Int?
-  flag            String?
-  weight          Int      @default(10)
-  isActive        Boolean  @default(true)
+  name          String
+  apiFootballId Int?
+  flag          String?
+  weight        Int     @default(10)
+  isActive      Boolean @default(true)
 
   @@unique([configId, apiFootballId])
   @@index([configId])
 }
 
 model AutopilotTopic {
-  id              String   @id @default(cuid())
-  configId        String
-  config          AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  id       String          @id @default(cuid())
+  configId String
+  config   AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 
-  name            String
-  icon            String?
-  keywords        String[]
-  isActive        Boolean  @default(true)
+  name     String
+  icon     String?
+  keywords String[]
+  isActive Boolean  @default(true)
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([configId])
 }
 
 model DistributionChannel {
-  id              String   @id @default(cuid())
-  configId        String
-  config          AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  id       String          @id @default(cuid())
+  configId String
+  config   AutopilotConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 
-  platform        String
-  accountName     String
-  accountId       String?
-  followers       String?
-  filter          String   @default("all")
-  isActive        Boolean  @default(true)
+  platform    String
+  accountName String
+  accountId   String?
+  followers   String?
+  filter      String  @default("all")
+  isActive    Boolean @default(true)
 
   @@index([configId])
 }
@@ -830,8 +831,8 @@ model ApiCache {
 
 model SystemLog {
   id        String   @id @default(cuid())
-  level     String   // 'error' | 'warn' | 'info'
-  service   String   // 'autopilot' | 'ai-engine' | 'webhook' | 'api-football' | 'unsplash'
+  level     String // 'error' | 'warn' | 'info'
+  service   String // 'autopilot' | 'ai-engine' | 'webhook' | 'api-football' | 'unsplash'
   message   String
   meta      Json?
   orgId     String?
@@ -848,97 +849,97 @@ model SystemLog {
 // ══════════════════════════════════
 
 model Athlete {
-  id              String    @id @default(cuid())
-  siteId          String
-  slug            String
+  id     String @id @default(cuid())
+  siteId String
+  slug   String
 
-  name            String
-  nickname        String?
-  sport           String
-  position        String?
-  nationality     String    @default("BA")
+  name        String
+  nickname    String?
+  sport       String
+  position    String?
+  nationality String  @default("BA")
 
-  birthDate       DateTime?
-  birthPlace      String?
-  height          Int?
-  strongerFoot    String?
+  birthDate    DateTime?
+  birthPlace   String?
+  height       Int?
+  strongerFoot String?
 
-  bioLead         String?   @db.Text
-  bioFull         String?   @db.Text
-  quotes          Json?
+  bioLead String? @db.Text
+  bioFull String? @db.Text
+  quotes  Json?
 
-  careerStart     Int?
-  careerEnd       Int?
-  clubs           Json?
-  timeline        Json?
-  trophies        Json?
+  careerStart Int?
+  careerEnd   Int?
+  clubs       Json?
+  timeline    Json?
+  trophies    Json?
 
-  totalApps       Int?
-  totalGoals      Int?
-  intApps         Int?
-  intGoals        Int?
-  careerYears     Int?
+  totalApps   Int?
+  totalGoals  Int?
+  intApps     Int?
+  intGoals    Int?
+  careerYears Int?
 
-  legendRank      Int?
-  isGoat          Boolean   @default(false)
+  legendRank Int?
+  isGoat     Boolean @default(false)
 
-  photo           String?
-  coverPhoto      String?
-  gallery         Json?
+  photo      String?
+  coverPhoto String?
+  gallery    Json?
 
   metaTitle       String?
   metaDescription String?
 
-  aiGenerated     Boolean   @default(false)
-  publishedAt     DateTime?
-  status          String    @default("draft")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  deletedAt       DateTime?
+  aiGenerated Boolean   @default(false)
+  publishedAt DateTime?
+  status      String    @default("draft")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   @@unique([siteId, slug])
   @@index([siteId, sport, legendRank])
 }
 
 model SportOrganization {
-  id            String    @id @default(cuid())
-  siteId        String
-  slug          String
+  id     String @id @default(cuid())
+  siteId String
+  slug   String
 
-  name          String
-  nameShort     String?
-  type          String
-  sport         String
-  level         String
-  entity        String?
-  city          String?
-  canton        String?
+  name      String
+  nameShort String?
+  type      String
+  sport     String
+  level     String
+  entity    String?
+  city      String?
+  canton    String?
 
-  founded       Int?
-  address       String?
-  website       String?
-  email         String?
-  phone         String?
+  founded Int?
+  address String?
+  website String?
+  email   String?
+  phone   String?
 
-  description   String?   @db.Text
-  history       String?   @db.Text
-  achievements  Json?
-  stats         Json?
+  description  String? @db.Text
+  history      String? @db.Text
+  achievements Json?
+  stats        Json?
 
-  logo          String?
-  cover         String?
+  logo  String?
+  cover String?
 
-  featured      Boolean   @default(false)
+  featured Boolean @default(false)
 
   metaTitle       String?
   metaDescription String?
 
-  aiGenerated   Boolean   @default(false)
-  status        String    @default("draft")
-  publishedAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime?
+  aiGenerated Boolean   @default(false)
+  status      String    @default("draft")
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   @@unique([siteId, slug])
   @@index([siteId, sport, type])

@@ -40,9 +40,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     try {
-      await limiter.check(10, `ai-smart:${session.user.id}`)
+      await limiter.check(5, `ai-smart:${session.user.id}`)
     } catch {
-      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+      return NextResponse.json({ error: 'Rate limit exceeded. Please wait a minute.' }, { status: 429 })
     }
 
     const body = await req.json()

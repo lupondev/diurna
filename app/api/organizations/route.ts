@@ -4,7 +4,16 @@ import { getDefaultSite } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
   try {
-    const site = await getDefaultSite()
+    let organizationId: string | undefined
+    const orgSlug = req.headers.get('x-org-slug')
+    if (orgSlug) {
+      const org = await prisma.organization.findUnique({
+        where: { slug: orgSlug },
+        select: { id: true },
+      })
+      organizationId = org?.id ?? undefined
+    }
+    const site = await getDefaultSite(organizationId)
     if (!site) return NextResponse.json({ error: 'Site not found' }, { status: 404 })
 
     const { searchParams } = req.nextUrl

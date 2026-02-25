@@ -1,1 +1,8 @@
-{"crons":[{"path":"/api/cron/sync-data","schedule":"0 4 * * *"},{"path":"/api/cron/cache-cleanup","schedule":"0 3 * * *"},{"path":"/api/cron/fetch-feeds","schedule":"*/30 * * * *"}]}
+{
+  "crons": [
+    { "path": "/api/cron/sync-data", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/cache-cleanup", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/fetch-feeds", "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/autopilot", "schedule": "*/15 * * * *" }
+  ]
+}

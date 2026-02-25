@@ -1,14 +1,32 @@
-import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const orgId = session.user.organizationId
+    const site = await prisma.site.findFirst({
+      where: { organizationId: orgId, deletedAt: null },
+      select: { id: true },
+    })
+    if (!site) {
+      return NextResponse.json({ error: 'No site found' }, { status: 404 })
+    }
+
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
-    const baseArticleWhere = { deletedAt: null, isTest: false }
+    const baseArticleWhere = { siteId: site.id, deletedAt: null, isTest: false }
+    const clusterWhere = { siteId: site.id }
+    const feedWhere = { siteId: site.id }
 
     const [
       totalArticles,
@@ -31,20 +49,21 @@ export async function GET() {
       prisma.article.count({ where: { ...baseArticleWhere, status: 'DRAFT' } }),
       prisma.article.count({ where: { ...baseArticleWhere, status: 'PUBLISHED', publishedAt: { gte: todayStart } } }),
       prisma.article.count({ where: { ...baseArticleWhere, createdAt: { gte: weekAgo } } }),
-      prisma.storyCluster.count(),
-      prisma.storyCluster.count({ where: { updatedAt: { gte: dayAgo } } }),
+      prisma.storyCluster.count({ where: clusterWhere }),
+      prisma.storyCluster.count({ where: { ...clusterWhere, updatedAt: { gte: dayAgo } } }),
       prisma.storyCluster.findMany({
+        where: clusterWhere,
         select: { dis: true, title: true, trend: true, entities: true },
         orderBy: { dis: 'desc' },
         take: 20,
       }),
       prisma.entity.count(),
-      prisma.feedSource.count(),
-      prisma.feedSource.count({ where: { active: true } }),
+      prisma.feedSource.count({ where: feedWhere }),
+      prisma.feedSource.count({ where: { ...feedWhere, active: true } }),
       prisma.newsItem.count(),
       prisma.newsItem.count({ where: { createdAt: { gte: todayStart } } }),
       prisma.category.findMany({
-        where: { deletedAt: null },
+        where: { siteId: site.id, deletedAt: null },
         include: { _count: { select: { articles: { where: { deletedAt: null } } } } },
         orderBy: { order: 'asc' },
       }),

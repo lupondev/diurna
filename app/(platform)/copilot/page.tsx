@@ -61,11 +61,7 @@ type AutopilotConfig = {
   leagues?: AutopilotLeague[]
 }
 
-const DEFAULT_QUEUE: QueueItem[] = [
-  { id: 'q1', title: 'Arsenal vs Chelsea: Complete Match Preview & Predictions', category: 'Premier League', suggestedTime: '14:00', confidence: 94, status: 'pending' },
-  { id: 'q2', title: 'Transfer Roundup: January Window — Top 10 Deals to Watch', category: 'Transfer News', suggestedTime: '10:30', confidence: 87, status: 'pending' },
-  { id: 'q3', title: 'Champions League QF Draw: Who Will Face Who?', category: 'Champions League', suggestedTime: '16:00', confidence: 91, status: 'pending' },
-]
+const DEFAULT_QUEUE: QueueItem[] = []
 
 const DEFAULT_STRATEGY: ContentStrategy = {
   dailyTarget: 5,
@@ -181,7 +177,6 @@ export default function CopilotPage() {
 
   useEffect(() => {
     setMode(loadJSON('copilot-mode', 'hybrid') as CopilotMode)
-    setQueue(loadJSON('copilot-queue', DEFAULT_QUEUE))
     setRules(loadJSON('copilot-rules', DEFAULT_RULES))
 
     fetch('/api/autopilot/config')
@@ -201,6 +196,11 @@ export default function CopilotPage() {
     fetch('/api/autopilot/stats')
       .then(r => r.ok ? r.json() as Promise<AutopilotStats> : null)
       .then(data => { if (data) setApStats(data) })
+      .catch(() => {})
+
+    fetch('/api/copilot/queue', { credentials: 'include' })
+      .then(r => r.ok ? r.json() as Promise<QueueItem[]> : null)
+      .then(data => { if (data) setQueue(data) })
       .catch(() => {})
   }, [])
 

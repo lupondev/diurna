@@ -185,7 +185,7 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           setTimeout(() => setSmartNotice(null), 6000)
           sessionStorage.removeItem('smartArticle')
         }
-      } catch {}
+      } catch { /* sessionStorage parse non-critical */ }
       return
     }
     if (searchParams.get('mode') === 'rewrite') {
@@ -198,7 +198,7 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           setShowAI(true)
           runAutoGenerate(data, 'rewrite')
         }
-      } catch {}
+      } catch { /* sessionStorage non-critical */ }
       return
     }
     if (searchParams.get('mode') === 'headline-only') {
@@ -211,7 +211,7 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           setShowAI(true)
           runAutoGenerate(data, 'headline-only')
         }
-      } catch {}
+      } catch { /* sessionStorage non-critical */ }
       return
     }
     if (searchParams.get('mode') === 'combined') {
@@ -226,7 +226,7 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
             runCombinedGenerate(sources)
           }
         }
-      } catch {}
+      } catch { /* sessionStorage non-critical */ }
       return
     }
     if (searchParams.get('clusterId') && searchParams.get('title')) {
@@ -253,7 +253,7 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           setShowRecovery(true)
         }
       }
-    } catch {}
+    } catch { /* localStorage backup parse non-critical */ }
   }, [initialArticleId, searchParams])
 
   function applyRecovery() {
@@ -296,7 +296,8 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
       setAiResult({ model: result.model, tokensIn: result.tokensIn, tokensOut: result.tokensOut })
       setSmartNotice(mode === 'rewrite' ? `Rewritten from ${data.domain || 'source'}` : 'Generated from headline — review carefully')
       setTimeout(() => setSmartNotice(null), 8000)
-    } catch {
+    } catch (e) {
+      console.error('Smart generate failed:', e)
       setTitle(data.title)
     }
   }
@@ -317,7 +318,9 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
       setAiResult({ model: data.model, tokensIn: data.tokensIn, tokensOut: data.tokensOut })
       setSmartNotice('Combined article generated — review before publishing')
       setTimeout(() => setSmartNotice(null), 6000)
-    } catch {}
+    } catch (e) {
+      console.error('Combined generate failed:', e)
+    }
   }
 
   useEffect(() => {
@@ -341,7 +344,9 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           tagIds: articleTags.map((t) => t.id),
         }),
       })
-    } catch {}
+    } catch (e) {
+      console.error('Auto-save failed:', e)
+    }
   }, [title, content, featuredImage, subtitle, slug, categoryId, articleTags])
 
   useEffect(() => {
@@ -355,7 +360,7 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
     if (title || Object.keys(content).length > 0) {
       try {
         localStorage.setItem('diurna_editor_backup', JSON.stringify({ title, subtitle, content, categoryId, timestamp: Date.now() }))
-      } catch {}
+      } catch { /* localStorage non-critical */ }
     }
   }, [title, subtitle, content, categoryId])
 
@@ -465,7 +470,8 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           toast.error('Greška pri kreiranju')
         }
       }
-    } catch {
+    } catch (e) {
+      console.error('Save failed:', e)
       toast.error('Greška — pokušaj ponovo')
     } finally {
       savingRef.current = false
@@ -508,7 +514,9 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
     try {
       const res = await fetch(`/api/articles/${articleIdRef.current}`, { method: 'DELETE' })
       if (res.ok) { router.push('/articles'); router.refresh() }
-    } catch {}
+    } catch (e) {
+      console.error('Delete article failed:', e)
+    }
   }
 
   function restoreVersion(v: Version) {
@@ -527,7 +535,9 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
       try {
         const res = await fetch('/api/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) })
         if (res.ok) { const tag = await res.json() as TagItem; setAllTags((prev) => [...prev, tag]); setArticleTags((prev) => [...prev, tag]) }
-      } catch {}
+      } catch (e) {
+        console.error('Add tag failed:', e)
+      }
     }
     setTagInput('')
     setShowTagSuggestions(false)

@@ -188,7 +188,7 @@ export async function POST(req: NextRequest) {
     try {
       revalidatePath('/', 'layout')
     } catch (e) {
-      console.warn('[Webhook] Revalidation failed:', e instanceof Error ? e.message : e)
+      console.error('[Webhook] Revalidation failed:', e instanceof Error ? e.message : e)
     }
 
     await systemLog('info', 'webhook', `Breaking article generated: ${title} (DIS: ${body.dis})`, { articleId: article.id, slug, dis: body.dis })

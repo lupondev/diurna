@@ -30,6 +30,6 @@ export function validateEnv() {
     }
   }
   if (warnings.length > 0 && process.env.NODE_ENV !== 'test') {
-    console.warn(`[Config] Optional env vars not set: ${warnings.join(', ')}`)
+    console.error(`[Config] Optional env vars not set: ${warnings.join(', ')}`)
   }
 }

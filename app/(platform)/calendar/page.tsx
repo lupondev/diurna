@@ -123,32 +123,6 @@ const DIST_PLATFORMS = [
   { platform: 'newsletter', icon: '📧', label: 'Newsletter' },
 ]
 
-/* ── Default feed sources (static) ── */
-const DEFAULT_FEED_SOURCES: FeedSource[] = [
-  { id: '1', name: 'BBC Sport', tier: 1, active: true, category: 'breaking' },
-  { id: '2', name: 'Sky Sports', tier: 1, active: true, category: 'breaking' },
-  { id: '3', name: 'ESPN FC', tier: 1, active: true, category: 'breaking' },
-  { id: '4', name: 'The Guardian', tier: 1, active: true, category: 'breaking' },
-  { id: '5', name: 'Goal.com', tier: 1, active: true, category: 'breaking' },
-  { id: '6', name: 'Football365', tier: 1, active: true, category: 'breaking' },
-  { id: '7', name: 'Marca', tier: 2, active: true, category: 'breaking' },
-  { id: '8', name: 'AS English', tier: 2, active: true, category: 'breaking' },
-  { id: '9', name: 'Gazzetta dello Sport', tier: 2, active: true, category: 'breaking' },
-  { id: '10', name: "L'Equipe", tier: 2, active: true, category: 'breaking' },
-  { id: '11', name: 'Foot Mercato', tier: 2, active: true, category: 'transfer' },
-  { id: '12', name: 'Sky Sports Transfers', tier: 2, active: true, category: 'transfer' },
-  { id: '13', name: 'FourFourTwo', tier: 2, active: true, category: 'analysis' },
-  { id: '14', name: 'TeamTalk', tier: 3, active: true, category: 'transfer' },
-  { id: '15', name: 'CaughtOffside', tier: 3, active: true, category: 'transfer' },
-  { id: '16', name: 'Football Italia', tier: 3, active: true, category: 'breaking' },
-  { id: '17', name: 'Kicker', tier: 2, active: true, category: 'breaking' },
-  { id: '18', name: 'Sport Witness', tier: 3, active: false, category: 'transfer' },
-  { id: '19', name: 'Inside Futbol', tier: 3, active: true, category: 'transfer' },
-  { id: '20', name: 'Dnevni Avaz Sport', tier: 4, active: true, category: 'breaking' },
-  { id: '21', name: 'Klix Sport', tier: 4, active: true, category: 'breaking' },
-  { id: '22', name: 'Sportske.ba', tier: 4, active: true, category: 'breaking' },
-]
-
 /* ════════════════════════════════════════════════ */
 /* ─── MAIN COMPONENT ─── */
 /* ════════════════════════════════════════════════ */
@@ -157,7 +131,7 @@ export default function CalendarPage() {
   const router = useRouter()
   const [config, setConfig] = useState<AutopilotConfig | null>(null)
   const [stats, setStats] = useState<Stats>({ today: 0, published: 0, scheduled: 0, live: 0, drafts: 0 })
-  const [sources, setSources] = useState<FeedSource[]>(DEFAULT_FEED_SOURCES)
+  const [sources, setSources] = useState<FeedSource[]>([])
   const [sourceSearch, setSourceSearch] = useState('')
   const [showAllSources, setShowAllSources] = useState(false)
 

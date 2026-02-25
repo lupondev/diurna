@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     var match = src.match(/[?&]article=([^&]+)/);
     if (match) articleId = match[1];
   }
-  if (!articleId) { console.warn('Diurna embed: no article ID'); return; }
+  if (!articleId) return;
 
   var container = document.createElement('div');
   container.className = 'diurna-embed';

@@ -1,11 +1,21 @@
 import { prisma } from '@/lib/prisma'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { detectCategoryFromTitle } from '@/lib/newsroom-categories'
+import { rateLimit } from '@/lib/rate-limit'
 
-export async function GET(req: Request) {
+const publicLimiter = rateLimit({ interval: 60_000 })
+
+export async function GET(req: NextRequest) {
   const mcpSecret = req.headers.get('x-mcp-secret')
   if (mcpSecret && mcpSecret !== process.env.MCP_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  try {
+    await publicLimiter.check(60, `public:${ip}`)
+  } catch {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
 
   const { searchParams } = new URL(req.url)

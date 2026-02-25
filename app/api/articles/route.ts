@@ -5,7 +5,10 @@ import { prisma } from '@/lib/prisma'
 import { distributeArticle } from '@/lib/distribution'
 import { slugify } from '@/lib/autopilot'
 import { validateOrigin } from '@/lib/csrf'
+import { rateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
+
+const articleCreateLimiter = rateLimit({ interval: 60_000 })
 
 const CreateArticleSchema = z.object({
   title: z.string().min(1).max(200).transform((v) => v.replace(/<[^>]*>/g, '').trim()),
@@ -56,6 +59,12 @@ export async function POST(req: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    try {
+      await articleCreateLimiter.check(20, userId)
+    } catch {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
     const body = await req.json()
