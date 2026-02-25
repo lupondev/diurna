@@ -39,7 +39,6 @@ interface TiptapEditorProps {
   onEditorReady?: (editor: ReturnType<typeof useEditor>) => void
   placeholder?: string
   editable?: boolean
-  targetWordCount?: number
 }
 
 interface UnsplashImage {
@@ -200,7 +199,6 @@ export default function TiptapEditor({
   onEditorReady,
   placeholder = 'Start writing your article...',
   editable = true,
-  targetWordCount,
 }: TiptapEditorProps) {
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
   const [showAddBlock, setShowAddBlock] = useState(false)
@@ -267,6 +265,7 @@ export default function TiptapEditor({
         return false
       },
     },
+    // Task 10: only emit JSON, skip HTML generation
     onUpdate: ({ editor: e }) => {
       onChange?.(e.getJSON() as Record<string, unknown>)
     },
@@ -277,6 +276,8 @@ export default function TiptapEditor({
 
   const wordCount = editor?.storage.characterCount?.words?.() ?? 0
   const charCount = editor?.storage.characterCount?.characters?.() ?? 0
+  // Task 11: reading time
+  const readingTime = Math.max(1, Math.ceil(wordCount / 200))
 
   // Slash command: show menu when paragraph starts with "/"
   useEffect(() => {
@@ -389,6 +390,16 @@ export default function TiptapEditor({
     setSlashOpen(false)
   }, [editor])
 
+  // Task 9: BubbleMenu link helper
+  const bubbleSetLink = useCallback(() => {
+    if (!editor) return
+    const prev = editor.getAttributes('link').href
+    const url = window.prompt('URL', prev || 'https://')
+    if (url === null) return
+    if (url === '') { editor.chain().focus().extendMarkRange('link').unsetLink().run(); return }
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+  }, [editor])
+
   if (!editor) return <div className="te-loading" />
 
   return (
@@ -398,23 +409,18 @@ export default function TiptapEditor({
 
         <div className="te-body">
           <div className="te-editor-area">
+            {/* Task 9: Enhanced BubbleMenu with Underline, Strike, H2, H3 */}
             <BubbleMenu editor={editor} tippyOptions={{ duration: 150, placement: 'top' }} className="te-bubble">
-              <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive('bold') ? 'active' : ''}>B</button>
-              <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive('italic') ? 'active' : ''}><em>I</em></button>
-              <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} className={editor.isActive('underline') ? 'active' : ''}><u>U</u></button>
-              <button type="button" onClick={() => editor.chain().focus().toggleStrike().run()} className={editor.isActive('strike') ? 'active' : ''}><s>S</s></button>
+              <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive('bold') ? 'active' : ''} title="Bold">B</button>
+              <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive('italic') ? 'active' : ''} title="Italic"><em>I</em></button>
+              <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} className={editor.isActive('underline') ? 'active' : ''} title="Underline"><u>U</u></button>
+              <button type="button" onClick={() => editor.chain().focus().toggleStrike().run()} className={editor.isActive('strike') ? 'active' : ''} title="Strikethrough"><s>S</s></button>
               <span className="te-bubble-sep" />
-              <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={editor.isActive('heading', { level: 2 }) ? 'active' : ''}>H2</button>
-              <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={editor.isActive('heading', { level: 3 }) ? 'active' : ''}>H3</button>
+              <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={editor.isActive('heading', { level: 2 }) ? 'active' : ''} title="Heading 2">H2</button>
+              <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={editor.isActive('heading', { level: 3 }) ? 'active' : ''} title="Heading 3">H3</button>
               <span className="te-bubble-sep" />
-              <button type="button" onClick={() => {
-                const prev = editor.getAttributes('link').href
-                const url = window.prompt('URL', prev || 'https://')
-                if (url === null) return
-                if (url === '') { editor.chain().focus().extendMarkRange('link').unsetLink().run(); return }
-                editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
-              }} className={editor.isActive('link') ? 'active' : ''}>🔗</button>
-              <button type="button" onClick={() => editor.chain().focus().toggleHighlight().run()} className={editor.isActive('highlight') ? 'active' : ''}>🖍</button>
+              <button type="button" onClick={bubbleSetLink} className={editor.isActive('link') ? 'active' : ''} title="Link">🔗</button>
+              <button type="button" onClick={() => editor.chain().focus().toggleHighlight().run()} className={editor.isActive('highlight') ? 'active' : ''} title="Highlight">🖍</button>
             </BubbleMenu>
             <EditorContent editor={editor} />
           </div>
@@ -437,17 +443,12 @@ export default function TiptapEditor({
           )}
         </div>
 
+        {/* Task 11: Reading time + word/char count */}
         {editor && (
           <div className="te-footer">
-            <span>
-              {wordCount} riječi · {charCount} znakova · ~{Math.max(1, Math.ceil(wordCount / 200))} min čitanja
+            <span className="te-footer-stats">
+              {wordCount} riječi · {charCount} znakova · ~{readingTime} min čitanja
             </span>
-            {targetWordCount != null && targetWordCount > 0 && (
-              <div className="te-wc-progress">
-                <div className="te-wc-bar" style={{ width: `${Math.min(100, (wordCount / targetWordCount) * 100)}%` }} />
-                <span>{Math.round((wordCount / targetWordCount) * 100)}%</span>
-              </div>
-            )}
           </div>
         )}
       </div>
