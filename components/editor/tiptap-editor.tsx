@@ -72,6 +72,17 @@ const BLOCK_TYPES = [
   { name: 'socialEmbed', icon: '🌐', label: 'Social Embed' },
 ]
 
+const BLOCK_DEFAULTS: Record<string, Record<string, unknown>> = {
+  poll: { question: 'Your question here?', options: ['Option A', 'Option B', 'Option C'] },
+  quiz: { questions: [{ q: 'Question?', options: ['Answer A', 'Answer B', 'Answer C', 'Answer D'], correct: 0 }] },
+  statsTable: {},
+  playerCard: {},
+  matchWidget: {},
+  video: {},
+  gallery: {},
+  socialEmbed: {},
+}
+
 function MediaLibraryModal({ onClose, onSelect }: {
   onClose: () => void
   onSelect: (url: string, alt: string) => void
@@ -191,6 +202,15 @@ export default function TiptapEditor({
 }: TiptapEditorProps) {
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
   const [showAddBlock, setShowAddBlock] = useState(false)
+  const [slashOpen, setSlashOpen] = useState(false)
+  const [slashFilter, setSlashFilter] = useState('')
+  const [slashCoords, setSlashCoords] = useState<{ top: number; left: number } | null>(null)
+  const [slashSelectedIndex, setSlashSelectedIndex] = useState(0)
+  const slashListRef = useRef<HTMLDivElement>(null)
+  const slashOpenRef = useRef(false)
+  const slashSelectedIndexRef = useRef(0)
+  slashOpenRef.current = slashOpen
+  slashSelectedIndexRef.current = slashSelectedIndex
 
   const editor = useEditor({
     extensions: [
@@ -217,7 +237,34 @@ export default function TiptapEditor({
     ],
     content: content || undefined,
     editable,
-    editorProps: { attributes: { class: 'te-prose' } },
+    editorProps: {
+      attributes: { class: 'te-prose' },
+      handleKeyDown: (_view, event) => {
+        if (!slashOpenRef.current) return false
+        if (event.key === 'Escape') {
+          setSlashOpen(false)
+          return true
+        }
+        if (event.key === 'ArrowDown') {
+          setSlashSelectedIndex((i) => {
+            const n = slashListRef.current?.querySelectorAll('[data-slash-item]').length ?? 1
+            return Math.min(i + 1, n - 1)
+          })
+          return true
+        }
+        if (event.key === 'ArrowUp') {
+          setSlashSelectedIndex((i) => Math.max(0, i - 1))
+          return true
+        }
+        if (event.key === 'Enter') {
+          const items = slashListRef.current?.querySelectorAll('[data-slash-item]')
+          const btn = items?.[slashSelectedIndexRef.current] as HTMLButtonElement | undefined
+          if (btn) { btn.click(); return true }
+          return false
+        }
+        return false
+      },
+    },
     onUpdate: ({ editor: e }) => {
       onChange?.(e.getJSON() as Record<string, unknown>, e.getHTML())
     },
@@ -228,6 +275,69 @@ export default function TiptapEditor({
 
   const wordCount = editor?.storage.characterCount?.words?.() ?? 0
   const charCount = editor?.storage.characterCount?.characters?.() ?? 0
+
+  // Slash command: show menu when paragraph starts with "/"
+  useEffect(() => {
+    if (!editor) return
+    const updateSlash = () => {
+      const { state, view } = editor
+      const { selection } = state
+      const { $from } = selection
+      const node = $from.parent
+      if (node.type.name !== 'paragraph' || !node.textContent) {
+        setSlashOpen(false)
+        return
+      }
+      const fromStart = $from.start()
+      const toCursor = selection.from
+      const textFromStart = state.doc.textBetween(fromStart, toCursor)
+      if (!textFromStart.startsWith('/')) {
+        setSlashOpen(false)
+        return
+      }
+      const filter = textFromStart.slice(1).toLowerCase()
+      try {
+        const coords = view.coordsAtPos(selection.from)
+        setSlashCoords({ top: coords.bottom + 4, left: coords.left })
+        setSlashFilter(filter)
+        setSlashSelectedIndex(0)
+        setSlashOpen(true)
+      } catch {
+        setSlashOpen(false)
+      }
+    }
+    editor.on('selectionUpdate', updateSlash)
+    editor.on('transaction', updateSlash)
+    return () => {
+      editor.off('selectionUpdate', updateSlash)
+      editor.off('transaction', updateSlash)
+    }
+  }, [editor])
+
+  const slashFiltered = BLOCK_TYPES.filter(
+    (b) =>
+      !slashFilter ||
+      b.name.toLowerCase().includes(slashFilter) ||
+      b.label.toLowerCase().includes(slashFilter)
+  )
+
+  useEffect(() => {
+    setSlashSelectedIndex((i) => Math.min(i, Math.max(0, slashFiltered.length - 1)))
+  }, [slashFiltered.length])
+
+  // Click outside to close slash menu
+  useEffect(() => {
+    if (!slashOpen) return
+    const close = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (slashListRef.current?.contains(target)) return
+      const editorEl = editor?.view.dom
+      if (editorEl?.contains(target)) return
+      setSlashOpen(false)
+    }
+    document.addEventListener('mousedown', close, true)
+    return () => document.removeEventListener('mousedown', close, true)
+  }, [slashOpen, editor])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -255,21 +365,26 @@ export default function TiptapEditor({
 
   const insertBlock = useCallback((type: string) => {
     if (!editor) return
-    const defaults: Record<string, Record<string, unknown>> = {
-      poll: { question: 'Your question here?', options: ['Option A', 'Option B', 'Option C'] },
-      quiz: { questions: [{ q: 'Question?', options: ['Answer A', 'Answer B', 'Answer C', 'Answer D'], correct: 0 }] },
-      statsTable: {},
-      playerCard: {},
-      matchWidget: {},
-      video: {},
-      gallery: {},
-      socialEmbed: {},
-    }
     editor.chain().focus().insertContent({
       type,
-      attrs: defaults[type] ?? {},
+      attrs: BLOCK_DEFAULTS[type] ?? {},
     }).run()
     setShowAddBlock(false)
+  }, [editor])
+
+  const insertBlockAtSlash = useCallback((type: string) => {
+    if (!editor) return
+    const { state } = editor
+    const { selection } = state
+    const { $from } = selection
+    if ($from.parent.type.name !== 'paragraph') return
+    const from = $from.before()
+    const to = $from.after()
+    editor.chain().focus()
+      .deleteRange({ from, to })
+      .insertContentAt(from, { type, attrs: BLOCK_DEFAULTS[type] ?? {} })
+      .run()
+    setSlashOpen(false)
   }, [editor])
 
   if (!editor) return <div className="te-loading" />
@@ -326,6 +441,37 @@ export default function TiptapEditor({
           onClose={() => setShowMediaLibrary(false)}
           onSelect={handleImageSelect}
         />
+      )}
+
+      {/* Slash command menu */}
+      {slashOpen && slashCoords && (
+        <div
+          ref={slashListRef}
+          className="te-slash-menu"
+          style={{ position: 'fixed', top: slashCoords.top, left: slashCoords.left, zIndex: 100 }}
+          role="listbox"
+        >
+          <div className="te-slash-menu-title">Insert block</div>
+          {slashFiltered.length === 0 ? (
+            <div className="te-slash-menu-empty">No matching blocks</div>
+          ) : (
+            slashFiltered.map((b, i) => (
+              <button
+                key={b.name}
+                type="button"
+                data-slash-item
+                role="option"
+                aria-selected={i === slashSelectedIndex}
+                className={`te-slash-menu-item ${i === slashSelectedIndex ? 'selected' : ''}`}
+                onClick={() => insertBlockAtSlash(b.name)}
+                onMouseEnter={() => setSlashSelectedIndex(i)}
+              >
+                <span>{b.icon}</span>
+                <span>{b.label}</span>
+              </button>
+            ))
+          )}
+        </div>
       )}
     </>
   )

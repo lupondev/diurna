@@ -251,10 +251,16 @@ export default function EditorPageInner() {
       await fetch(`/api/articles/${articleIdRef.current}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({
+          title,
+          content,
+          featuredImage: featuredImage || null,
+          subtitle: subtitle || undefined,
+          slug: slug || undefined,
+        }),
       })
     } catch {}
-  }, [title, content, saving])
+  }, [title, content, featuredImage, subtitle, slug, saving])
 
   useEffect(() => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)

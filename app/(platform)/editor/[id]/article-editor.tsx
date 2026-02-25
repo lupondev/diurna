@@ -110,10 +110,15 @@ export default function ArticleEditor({ id }: { id: string }) {
     try {
       await fetch(`/api/articles/${id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({
+          title,
+          content,
+          featuredImage: featuredImage ?? null,
+          slug: slug || undefined,
+        }),
       })
     } catch {}
-  }, [id, title, content, saving])
+  }, [id, title, content, featuredImage, slug, saving])
 
   useEffect(() => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
