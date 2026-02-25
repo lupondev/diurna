@@ -111,9 +111,6 @@ function MiniSpinner() {
 
 /* ═══ MAIN COMPONENT ═══ */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyJson = any
-
 export default function MatchPage({ params }: { params: { id: string } }) {
   const { id } = params
   const [match, setMatch] = useState<MatchBase | null>(null)
@@ -155,7 +152,7 @@ export default function MatchPage({ params }: { params: { id: string } }) {
       setTabLoading(true)
       fetch(`/api/match/${id}?section=stats`)
         .then(r => r.json())
-        .then((d: AnyJson) => setStatistics(d.statistics ?? []))
+        .then((d) => setStatistics(d.statistics ?? []))
         .catch(() => setStatistics([]))
         .finally(() => setTabLoading(false))
     }
@@ -164,7 +161,7 @@ export default function MatchPage({ params }: { params: { id: string } }) {
       setTabLoading(true)
       fetch(`/api/match/${id}?section=lineups`)
         .then(r => r.json())
-        .then((d: AnyJson) => setLineups(d.lineups ?? { home: null, away: null }))
+        .then((d) => setLineups(d.lineups ?? { home: null, away: null }))
         .catch(() => setLineups({ home: null, away: null }))
         .finally(() => setTabLoading(false))
     }
@@ -173,7 +170,7 @@ export default function MatchPage({ params }: { params: { id: string } }) {
       setTabLoading(true)
       fetch(`/api/match/${id}?section=h2h`)
         .then(r => r.json())
-        .then((d: AnyJson) => setH2h(d.h2h ?? []))
+        .then((d) => setH2h(d.h2h ?? []))
         .catch(() => setH2h([]))
         .finally(() => setTabLoading(false))
     }
