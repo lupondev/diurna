@@ -35,10 +35,11 @@ import { SocialEmbedBlock } from './blocks/social-embed-block'
 
 interface TiptapEditorProps {
   content?: Record<string, unknown>
-  onChange?: (json: Record<string, unknown>, html: string) => void
+  onChange?: (json: Record<string, unknown>) => void
   onEditorReady?: (editor: ReturnType<typeof useEditor>) => void
   placeholder?: string
   editable?: boolean
+  targetWordCount?: number
 }
 
 interface UnsplashImage {
@@ -199,6 +200,7 @@ export default function TiptapEditor({
   onEditorReady,
   placeholder = 'Start writing your article...',
   editable = true,
+  targetWordCount,
 }: TiptapEditorProps) {
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
   const [showAddBlock, setShowAddBlock] = useState(false)
@@ -266,7 +268,7 @@ export default function TiptapEditor({
       },
     },
     onUpdate: ({ editor: e }) => {
-      onChange?.(e.getJSON() as Record<string, unknown>, e.getHTML())
+      onChange?.(e.getJSON() as Record<string, unknown>)
     },
     onCreate: ({ editor: e }) => {
       onEditorReady?.(e as ReturnType<typeof useEditor>)
@@ -398,7 +400,13 @@ export default function TiptapEditor({
           <div className="te-editor-area">
             <BubbleMenu editor={editor} tippyOptions={{ duration: 150, placement: 'top' }} className="te-bubble">
               <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive('bold') ? 'active' : ''}>B</button>
-              <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive('italic') ? 'active' : ''}>I</button>
+              <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive('italic') ? 'active' : ''}><em>I</em></button>
+              <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} className={editor.isActive('underline') ? 'active' : ''}><u>U</u></button>
+              <button type="button" onClick={() => editor.chain().focus().toggleStrike().run()} className={editor.isActive('strike') ? 'active' : ''}><s>S</s></button>
+              <span className="te-bubble-sep" />
+              <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={editor.isActive('heading', { level: 2 }) ? 'active' : ''}>H2</button>
+              <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={editor.isActive('heading', { level: 3 }) ? 'active' : ''}>H3</button>
+              <span className="te-bubble-sep" />
               <button type="button" onClick={() => {
                 const prev = editor.getAttributes('link').href
                 const url = window.prompt('URL', prev || 'https://')
@@ -430,8 +438,16 @@ export default function TiptapEditor({
         </div>
 
         {editor && (
-          <div className="text-xs text-gray-400 text-right px-4 py-1 border-t">
-            {wordCount} riječi · {charCount} znakova
+          <div className="te-footer">
+            <span>
+              {wordCount} riječi · {charCount} znakova · ~{Math.max(1, Math.ceil(wordCount / 200))} min čitanja
+            </span>
+            {targetWordCount != null && targetWordCount > 0 && (
+              <div className="te-wc-progress">
+                <div className="te-wc-bar" style={{ width: `${Math.min(100, (wordCount / targetWordCount) * 100)}%` }} />
+                <span>{Math.round((wordCount / targetWordCount) * 100)}%</span>
+              </div>
+            )}
           </div>
         )}
       </div>

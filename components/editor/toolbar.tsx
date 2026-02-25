@@ -73,10 +73,18 @@ export function Toolbar({ editor, onOpenMediaLibrary }: { editor: Editor; onOpen
         <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
 
         {/* Group 6: Align */}
-        <button onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align left" className={tbBtn(editor.isActive({ textAlign: 'left' }))}>≡</button>
-        <button onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Align center" className={tbBtn(editor.isActive({ textAlign: 'center' }))}>≡</button>
-        <button onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Align right" className={tbBtn(editor.isActive({ textAlign: 'right' }))}>≡</button>
-        <button onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="Justify" className={tbBtn(editor.isActive({ textAlign: 'justify' }))}>≡</button>
+        <button onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align left" className={tbBtn(editor.isActive({ textAlign: 'left' }))}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M1 3h14M1 6h10M1 9h14M1 12h10" /></svg>
+        </button>
+        <button onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Align center" className={tbBtn(editor.isActive({ textAlign: 'center' }))}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M1 3h14M3 6h10M1 9h14M3 12h10" /></svg>
+        </button>
+        <button onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Align right" className={tbBtn(editor.isActive({ textAlign: 'right' }))}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M1 3h14M5 6h10M1 9h14M5 12h10" /></svg>
+        </button>
+        <button onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="Justify" className={tbBtn(editor.isActive({ textAlign: 'justify' }))}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M1 3h14M1 6h14M1 9h14M1 12h14" /></svg>
+        </button>
         <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
 
         {/* Group 7: Lists */}

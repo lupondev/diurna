@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
-import EditorPageInner from './editor-inner'
+import { EditorShell } from '@/components/editor/editor-shell'
+import './editor.css'
 
 export default function EditorPage() {
   return (
@@ -9,7 +10,7 @@ export default function EditorPage() {
         <div style={{ height: 400, background: 'var(--g50)', borderRadius: 'var(--rl)', animation: 'pulse 2s infinite' }} />
       </div>
     }>
-      <EditorPageInner />
+      <EditorShell />
     </Suspense>
   )
 }
