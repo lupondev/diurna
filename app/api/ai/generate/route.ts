@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateContent } from '@/lib/ai/client'
+import { validateOrigin } from '@/lib/csrf'
 import { z } from 'zod'
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -156,6 +157,9 @@ Target: ${wordTarget} words. End with TLDR.`
 }
 
 export async function POST(req: NextRequest) {
+  if (!validateOrigin(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {

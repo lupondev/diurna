@@ -94,7 +94,9 @@ export async function POST(req: NextRequest) {
         create: feed,
       })
       created++
-    } catch {}
+    } catch (err) {
+      console.error('Seed feed upsert:', err)
+    }
   }
   return NextResponse.json({ created, total: DEFAULT_FEEDS.length })
 }

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { distributeArticle } from '@/lib/distribution'
 import { slugify } from '@/lib/autopilot'
+import { validateOrigin } from '@/lib/csrf'
 import { z } from 'zod'
 
 const CreateArticleSchema = z.object({
@@ -24,6 +25,9 @@ const CreateArticleSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  if (!validateOrigin(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   try {
     let userId: string | undefined
     let orgId: string | undefined
@@ -161,7 +165,15 @@ export async function GET(req: NextRequest) {
     const [articles, total] = await Promise.all([
       prisma.article.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          status: true,
+          createdAt: true,
+          publishedAt: true,
+          aiGenerated: true,
+          updatedAt: true,
           category: { select: { name: true } },
           site: { select: { name: true } },
           tags: { include: { tag: { select: { id: true, name: true } } } },

@@ -1,3 +1,5 @@
+export const revalidate = 60
+
 /**
  * Server component layout for /utakmica/[id].
  *

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { resend } from '@/lib/resend'
+import { validateOrigin } from '@/lib/csrf'
 import crypto from 'crypto'
 
 function generateUnsubscribeToken(subscriberId: string): string {
@@ -62,6 +63,9 @@ function buildEmailHtml(opts: {
 }
 
 export async function POST(req: NextRequest) {
+  if (!validateOrigin(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {

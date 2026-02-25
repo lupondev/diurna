@@ -19,6 +19,7 @@ interface NewsletterStats {
 
 interface SiteData {
   name: string
+  slug: string
   domain: string
   description: string
   gaId: string
@@ -39,6 +40,7 @@ interface SiteData {
 
 const DEFAULT_SITE: SiteData = {
   name: '',
+  slug: '',
   domain: '',
   description: '',
   gaId: '',
@@ -74,6 +76,7 @@ export default function GeneralTab() {
   const serverData = useRef<SiteData>({ ...DEFAULT_SITE })
 
   const [siteName, setSiteName] = useState('')
+  const [siteSlug, setSiteSlug] = useState('')
   const [siteUrl, setSiteUrl] = useState('')
   const [description, setDescription] = useState('')
   const [language, setLanguage] = useState('bs')
@@ -102,6 +105,7 @@ export default function GeneralTab() {
         if (!data) return
         const loaded: SiteData = {
           name: data.name ?? '',
+          slug: data.slug ?? '',
           domain: data.domain ?? '',
           description: data.description ?? '',
           gaId: data.gaId ?? '',
@@ -121,6 +125,7 @@ export default function GeneralTab() {
         }
         serverData.current = loaded
         setSiteName(loaded.name)
+        setSiteSlug(loaded.slug)
         setSiteUrl(loaded.domain)
         setDescription(loaded.description)
         setGaId(loaded.gaId)
@@ -240,7 +245,7 @@ export default function GeneralTab() {
       })
       if (res.ok) {
         serverData.current = {
-          name: siteName, domain: siteUrl, description, gaId, language, timezone, theme,
+          name: siteName, slug: siteSlug, domain: siteUrl, description, gaId, language, timezone, theme,
           wpSiteUrl, wpApiKey, competitorFeeds,
           metaTitle, metaDescription: metaDesc, ogImage,
           twitterHandle: twitter, facebookUrl: facebook, instagramHandle: instagram, youtubeUrl: youtube,
@@ -259,6 +264,7 @@ export default function GeneralTab() {
   function handleDiscard() {
     const s = serverData.current
     setSiteName(s.name)
+    setSiteSlug(s.slug)
     setSiteUrl(s.domain)
     setDescription(s.description)
     setGaId(s.gaId)
@@ -298,8 +304,12 @@ export default function GeneralTab() {
             <input className="st-input" value={siteName} onChange={(e) => change(setSiteName)(e.target.value)} />
           </div>
           <div className="st-row">
+            <span className="st-label">Slug</span>
+            <input className="st-input mono" value={siteSlug} readOnly title="URL slug (read-only). Used in site URLs." />
+          </div>
+          <div className="st-row">
             <span className="st-label">Site URL</span>
-            <input className="st-input mono" value={siteUrl} onChange={(e) => change(setSiteUrl)(e.target.value)} />
+            <input className="st-input mono" value={siteUrl} onChange={(e) => change(setSiteUrl)(e.target.value)} placeholder="https://yoursite.com" />
           </div>
           <div className="st-row">
             <span className="st-label">Description</span>

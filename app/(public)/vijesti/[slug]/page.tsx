@@ -4,7 +4,7 @@ import { fetchArticle, buildArticleMetadata, ArticlePage } from '@/lib/public-ar
 import '../article.css'
 import '@/app/site/public.css'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 type Props = {
   params: { slug: string }

@@ -94,7 +94,9 @@ export async function GET() {
         }
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error('Health dashboard football quota fetch:', err)
+  }
 
   // Autopilot stats
   const now = new Date()

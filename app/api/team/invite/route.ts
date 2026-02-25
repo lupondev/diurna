@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { validateOrigin } from '@/lib/csrf'
+import { resend } from '@/lib/resend'
 import { z } from 'zod'
 import { randomBytes } from 'crypto'
 
@@ -15,6 +17,9 @@ const InviteSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  if (!validateOrigin(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.organizationId || !session?.user?.id) {
@@ -63,9 +68,21 @@ export async function POST(req: Request) {
       },
     })
 
-    // TODO: Send invite email via Resend (Phase 2 — Media CRM)
-    // For now, return the invite link so admin can share manually
-    const inviteUrl = `${process.env.NEXTAUTH_URL}/invite/${token}`
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+    const inviteUrl = `${baseUrl}/register?invite=${token}`
+
+    if (resend) {
+      const org = await prisma.organization.findUnique({
+        where: { id: session.user.organizationId },
+        select: { name: true },
+      })
+      await resend.emails.send({
+        from: process.env.RESEND_FROM || 'Diurna <noreply@example.com>',
+        to: data.email,
+        subject: `You're invited to join ${org?.name ?? 'the team'} on Diurna`,
+        html: `<p>You've been invited to join the team. Click <a href="${inviteUrl}">here</a> to accept and create your account.</p><p>This link expires in 7 days.</p>`,
+      }).catch((err) => console.error('Invite email send failed:', err))
+    }
 
     return NextResponse.json({
       success: true,

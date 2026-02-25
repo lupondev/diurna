@@ -118,7 +118,9 @@ function MediaLibraryModal({ onClose, onSelect }: {
         setSearchPage(page)
         setTotalPages(data.totalPages)
       }
-    } catch {} finally { setSearching(false) }
+    } catch (err) {
+      console.error('Unsplash search:', err)
+    } finally { setSearching(false) }
   }
 
   return (

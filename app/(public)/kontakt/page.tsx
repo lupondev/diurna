@@ -1,11 +1,15 @@
 import type { Metadata } from 'next'
 import { StaticNav } from '@/components/public/sportba/static-nav'
 import { ContactForm } from '@/components/public/sportba/contact-form'
+import { canonicalUrl } from '@/lib/seo'
 import '../static.css'
+
+export const revalidate = 86400
 
 export const metadata: Metadata = {
   title: 'Kontakt \u2014 Diurna',
   description: 'Kontaktirajte redakciju Diurna.',
+  alternates: { canonical: canonicalUrl('/kontakt') },
 }
 
 const EMAILS = [

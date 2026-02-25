@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
 import { generateWithGemini } from '@/lib/ai/client'
 import { rateLimit } from '@/lib/rate-limit'
+import { validateOrigin } from '@/lib/csrf'
 import { z } from 'zod'
 
 const limiter = rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 })
@@ -30,6 +31,9 @@ type ContextLevel = 'full' | 'combined' | 'headline-only'
 type FactWarning = { type: string; detail: string; severity: 'HIGH' | 'MEDIUM' | 'LOW' }
 
 export async function POST(req: NextRequest) {
+  if (!validateOrigin(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.organizationId) {
@@ -409,7 +413,9 @@ async function basicFactCheck(articleHtml: string, sourceContext: string, headli
           })
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error('Fact-check parse/walk:', err)
+    }
   }
 
   const minutePattern = /(\d{1,3})(?:st|nd|rd|th)?\s*(?:minute|min|')/g

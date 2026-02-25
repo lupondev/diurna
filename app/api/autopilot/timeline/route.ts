@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     const time = a.publishedAt || a.scheduledAt || a.createdAt
     let isWebhook = false
     if (typeof a.aiPrompt === 'string') {
-      try { isWebhook = JSON.parse(a.aiPrompt).priority === 'webhook_breaking' } catch {}
+      try { isWebhook = JSON.parse(a.aiPrompt).priority === 'webhook_breaking' } catch (_) { /* ignore invalid JSON */ }
     }
     return {
       id: a.id,

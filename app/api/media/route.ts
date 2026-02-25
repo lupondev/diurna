@@ -3,8 +3,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { put, del } from '@vercel/blob'
+import { validateOrigin } from '@/lib/csrf'
 
 export async function POST(req: NextRequest) {
+  if (!validateOrigin(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -102,7 +106,9 @@ export async function DELETE(req: NextRequest) {
     if (media.url.includes('.blob.vercel-storage.com')) {
       try {
         await del(media.url)
-      } catch {}
+      } catch (err) {
+        console.error('Blob delete error:', err)
+      }
     }
 
     await prisma.media.delete({ where: { id } })

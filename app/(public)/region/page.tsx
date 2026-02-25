@@ -4,9 +4,10 @@ import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
 import { getArticleUrl } from '@/lib/article-url'
 import { AdSlot } from '@/components/public/sportba'
+import { canonicalUrl } from '@/lib/seo'
 import '../category.css'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 120
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getDefaultSite()
@@ -14,6 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `Region — ${siteName}`,
     description: 'Najnovije vijesti iz regiona.',
+    alternates: { canonical: canonicalUrl('/region') },
   }
 }
 
@@ -68,8 +70,19 @@ export default async function RegionPage() {
   const featured = dbArticles[0]
   const grid = dbArticles.slice(1)
 
+  const categoryTitle = 'Region'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${categoryTitle} — SportBa`,
+    description: `Najnovije vijesti iz kategorije ${categoryTitle}`,
+    url: canonicalUrl('/region'),
+    isPartOf: { '@type': 'WebSite', name: 'SportBa', url: canonicalUrl('/') },
+  }
+
   return (
     <main className="sba-cat">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="sba-cat-header">
         <h1 className="sba-cat-title">Region</h1>
         <p className="sba-cat-desc">Najnovije vijesti iz regiona</p>

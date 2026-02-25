@@ -105,7 +105,9 @@ export function LiveMatches() {
             setMatches(sortMatches(todayData.response).slice(0, 6))
           }
         }
-      } catch {} finally {
+      } catch (err) {
+        console.error('Live matches fetch:', err)
+      } finally {
         setLoading(false)
       }
     }

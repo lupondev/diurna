@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
 import { StaticNav } from '@/components/public/sportba/static-nav'
+import { canonicalUrl } from '@/lib/seo'
 import '../static.css'
+
+export const revalidate = 86400
 
 export const metadata: Metadata = {
   title: 'Marketing i ogla\u0161avanje \u2014 Diurna',
   description: 'Ogla\u0161avajte se na Diurna \u2014 Lupon SSP, programmatic, premium formati.',
+  alternates: { canonical: canonicalUrl('/marketing') },
 }
 
 const AD_FORMATS = [

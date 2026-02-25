@@ -37,7 +37,9 @@ export function ForYou() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) setFollowed(JSON.parse(stored))
-    } catch {}
+    } catch (err) {
+      console.error('ForYou fetch:', err)
+    }
     setMounted(true)
   }, [])
 

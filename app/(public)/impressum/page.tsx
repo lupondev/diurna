@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
 import { StaticNav } from '@/components/public/sportba/static-nav'
+import { canonicalUrl } from '@/lib/seo'
 import '../static.css'
+
+export const revalidate = 86400
 
 export const metadata: Metadata = {
   title: 'Impressum \u2014 Diurna',
   description: 'Pravne informacije o izdava\u010du Diurna.',
+  alternates: { canonical: canonicalUrl('/impressum') },
 }
 
 const INFO = [

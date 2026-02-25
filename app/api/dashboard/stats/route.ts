@@ -4,15 +4,17 @@ import { NextResponse } from 'next/server'
 export async function GET() {
   try {
     const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+    const baseArticleWhere = { deletedAt: null, isTest: false }
 
     const [
       totalArticles,
       publishedArticles,
       draftArticles,
-      articlesToday,
+      publishedToday,
       articlesThisWeek,
       totalClusters,
       activeClusters,
@@ -24,11 +26,11 @@ export async function GET() {
       itemsToday,
       categories,
     ] = await Promise.all([
-      prisma.article.count({ where: { deletedAt: null } }),
-      prisma.article.count({ where: { status: 'PUBLISHED', deletedAt: null } }),
-      prisma.article.count({ where: { status: 'DRAFT', deletedAt: null } }),
-      prisma.article.count({ where: { createdAt: { gte: today }, deletedAt: null } }),
-      prisma.article.count({ where: { createdAt: { gte: weekAgo }, deletedAt: null } }),
+      prisma.article.count({ where: baseArticleWhere }),
+      prisma.article.count({ where: { ...baseArticleWhere, status: 'PUBLISHED' } }),
+      prisma.article.count({ where: { ...baseArticleWhere, status: 'DRAFT' } }),
+      prisma.article.count({ where: { ...baseArticleWhere, status: 'PUBLISHED', publishedAt: { gte: todayStart } } }),
+      prisma.article.count({ where: { ...baseArticleWhere, createdAt: { gte: weekAgo } } }),
       prisma.storyCluster.count(),
       prisma.storyCluster.count({ where: { updatedAt: { gte: dayAgo } } }),
       prisma.storyCluster.findMany({
@@ -40,7 +42,7 @@ export async function GET() {
       prisma.feedSource.count(),
       prisma.feedSource.count({ where: { active: true } }),
       prisma.newsItem.count(),
-      prisma.newsItem.count({ where: { createdAt: { gte: today } } }),
+      prisma.newsItem.count({ where: { createdAt: { gte: todayStart } } }),
       prisma.category.findMany({
         where: { deletedAt: null },
         include: { _count: { select: { articles: { where: { deletedAt: null } } } } },
@@ -79,7 +81,7 @@ export async function GET() {
       totalArticles,
       publishedArticles,
       draftArticles,
-      articlesToday,
+      publishedToday,
       articlesThisWeek,
       totalClusters,
       activeClusters,

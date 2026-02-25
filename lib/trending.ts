@@ -116,7 +116,9 @@ async function fetchGoogleTrends(geos: string[]): Promise<RawItem[]> {
           })
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error('Trending Google fetch:', err)
+    }
   }))
 
   return items
@@ -161,7 +163,9 @@ async function fetchCompetitorFeeds(organizationId: string): Promise<RawItem[]> 
           count++
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error('Trending competitor feed:', url, err)
+    }
   }))
 
   return items
@@ -189,7 +193,9 @@ async function fetchFootballTrends(): Promise<RawItem[]> {
         })
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error('Trending football fetch:', err)
+  }
   return items
 }
 

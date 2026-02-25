@@ -20,7 +20,9 @@ export async function GET(
       title = article.title
       category = article.category?.name || 'News'
     }
-  } catch {}
+  } catch (err) {
+    console.error('OG image article fetch:', err)
+  }
 
   return new ImageResponse(
     (

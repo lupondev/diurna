@@ -39,7 +39,9 @@ export async function GET(req: NextRequest) {
         if (legacyId && !legacyId.includes(':') && legacyId.length >= 20) {
           finalId = legacyId
         }
-      } catch {}
+      } catch (err) {
+        console.error('Unsubscribe legacy token decode:', err)
+      }
     }
 
     if (!finalId) {

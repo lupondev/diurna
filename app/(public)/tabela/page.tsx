@@ -6,7 +6,7 @@ import { getStandings, LEAGUES, LEAGUE_META, type ApiStanding } from '@/lib/api-
 import { buildMetadata } from '@/lib/seo'
 import '../category.css'
 
-export const revalidate = 3600
+export const revalidate = 300
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ league?: string }> }): Promise<Metadata> {
   const params = await searchParams

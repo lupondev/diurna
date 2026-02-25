@@ -19,6 +19,15 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;')
 }
 
+function sanitizeHref(href: string): string {
+  if (!href || typeof href !== 'string') return ''
+  const trimmed = href.trim().toLowerCase()
+  if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:') || trimmed.startsWith('vbscript:')) {
+    return ''
+  }
+  return href
+}
+
 function renderMarks(text: string, marks?: TiptapMark[]): string {
   if (!marks || marks.length === 0) return escapeHtml(text)
 
@@ -46,7 +55,7 @@ function renderMarks(text: string, marks?: TiptapMark[]): string {
         break
       }
       case 'link': {
-        const href = escapeHtml(String(mark.attrs?.href || ''))
+        const href = escapeHtml(sanitizeHref(String(mark.attrs?.href || '')))
         const target = mark.attrs?.target ? ` target="${escapeHtml(String(mark.attrs.target))}"` : ' target="_blank"'
         html = `<a href="${href}"${target} rel="noopener noreferrer">${html}</a>`
         break

@@ -23,7 +23,9 @@ function isCronAuthorized(req: Request): boolean {
     const url = new URL(req.url)
     const secretParam = url.searchParams.get('secret')
     if (secretParam && secretParam === secret) return true
-  } catch {}
+  } catch (err) {
+    console.error('Cron cluster-engine URL/secret check:', err)
+  }
 
   return false
 }

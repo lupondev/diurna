@@ -3,11 +3,13 @@ import Image from 'next/image'
 import type { Metadata } from 'next'
 import { AdSlot } from '@/components/public/sportba'
 import { getFixturesByDate, dateOffsetStr, LEAGUE_META, type ApiFixture, mapStatus, formatTime } from '@/lib/api-football'
+import { canonicalUrl } from '@/lib/seo'
 import '../category.css'
 
 export const metadata: Metadata = {
   title: 'Utakmice — Diurna',
   description: 'Najave utakmica, rezultati i analize iz najpopularnijih liga.',
+  alternates: { canonical: canonicalUrl('/utakmice') },
 }
 
 export const revalidate = 60
@@ -54,8 +56,19 @@ export default async function UtakmicePage({ searchParams }: { searchParams: Pro
     return order.indexOf(Number(a)) - order.indexOf(Number(b))
   })
 
+  const categoryTitle = 'Utakmice'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${categoryTitle} — SportBa`,
+    description: `Najnovije vijesti iz kategorije ${categoryTitle}`,
+    url: canonicalUrl('/utakmice'),
+    isPartOf: { '@type': 'WebSite', name: 'SportBa', url: canonicalUrl('/') },
+  }
+
   return (
     <main className="sba-cat">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="sba-cat-header">
         <h1 className="sba-cat-title">Utakmice</h1>
         <p className="sba-cat-desc">Najave, rezultati i analize utakmica</p>

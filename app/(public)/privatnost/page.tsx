@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
 import { StaticNav } from '@/components/public/sportba/static-nav'
+import { canonicalUrl } from '@/lib/seo'
 import '../static.css'
+
+export const revalidate = 86400
 
 export const metadata: Metadata = {
   title: 'Politika privatnosti \u2014 Diurna',
   description: 'Kako Diurna prikuplja, koristi i \u0161titi va\u0161e podatke.',
+  alternates: { canonical: canonicalUrl('/privatnost') },
 }
 
 export default function PrivacyPage() {

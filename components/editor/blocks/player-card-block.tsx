@@ -49,7 +49,9 @@ function PlayerCardComponent({ node, updateAttributes, deleteNode, selected }: {
         setPlayer(p)
         updateAttributes({ playerId: p.id, playerName: p.name })
       }
-    } catch {} finally { setLoading(false) }
+    } catch (err) {
+      console.error('Player card fetch:', err)
+    } finally { setLoading(false) }
   }
 
   return (

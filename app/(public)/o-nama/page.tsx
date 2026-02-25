@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
 import { StaticNav } from '@/components/public/sportba/static-nav'
+import { canonicalUrl } from '@/lib/seo'
 import '../static.css'
+
+export const revalidate = 86400
 
 export const metadata: Metadata = {
   title: 'O nama \u2014 Diurna',
   description: 'Upoznajte redakciju Diurna \u2014 najnovije sportske vijesti iz BiH i svijeta.',
+  alternates: { canonical: canonicalUrl('/o-nama') },
 }
 
 const TEAM = [

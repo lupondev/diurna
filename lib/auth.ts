@@ -79,7 +79,9 @@ export const authOptions: NextAuthOptions = {
               token.organizationId = dbUser.orgs[0].organizationId
             }
           }
-        } catch {}
+        } catch (err) {
+          console.error('Auth JWT callback db fetch:', err)
+        }
       }
 
       return token

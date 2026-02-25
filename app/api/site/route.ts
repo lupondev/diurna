@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getDefaultSite, getCategories } from '@/lib/db'
 import { prisma } from '@/lib/prisma'
+import { validateOrigin } from '@/lib/csrf'
 import { z } from 'zod'
 
 const UpdateSiteSchema = z.object({
@@ -195,6 +196,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  if (!validateOrigin(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   try {
     let orgId: string | undefined
 

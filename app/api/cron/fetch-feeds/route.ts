@@ -18,7 +18,9 @@ function isCronAuthorized(req: Request): boolean {
     const url = new URL(req.url)
     const secretParam = url.searchParams.get('secret')
     if (secretParam && secretParam === secret) return true
-  } catch {}
+  } catch (err) {
+    console.error('Cron fetch-feeds URL/secret check:', err)
+  }
 
   // Method 3: x-cron-secret header (used by newsroom "Fetch now" button)
   const cronHeader = req.headers.get('x-cron-secret')
@@ -187,7 +189,9 @@ export async function GET(req: Request) {
               },
             })
             newCount++
-          } catch {}
+          } catch (err) {
+            console.error('Feed item create (duplicate or error):', err)
+          }
         }
 
         await prisma.feedSource.update({

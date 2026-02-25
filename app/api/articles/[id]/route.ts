@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { postToMultiplePages } from '@/lib/facebook'
 import { distributeArticle } from '@/lib/distribution'
 import { systemLog } from '@/lib/system-log'
+import { validateOrigin } from '@/lib/csrf'
 import { z } from 'zod'
 
 const UpdateArticleSchema = z.object({
@@ -37,7 +38,11 @@ export async function GET(
       include: {
         category: true,
         site: true,
-        aiRevisions: { orderBy: { version: 'desc' }, take: 5 },
+        aiRevisions: {
+          orderBy: { version: 'desc' },
+          take: 5,
+          select: { id: true, version: true, prompt: true, model: true, tokensIn: true, tokensOut: true, createdAt: true },
+        },
         versions: { orderBy: { version: 'desc' }, take: 20 },
         tags: { include: { tag: true } },
       },
@@ -56,6 +61,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!validateOrigin(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.organizationId) {
@@ -165,9 +173,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!validateOrigin(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.organizationId) {

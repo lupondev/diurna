@@ -4,9 +4,10 @@ import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
 import { getArticleUrl } from '@/lib/article-url'
 import { AdSlot } from '@/components/public/sportba'
+import { canonicalUrl } from '@/lib/seo'
 import '../category.css'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 120
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getDefaultSite()
@@ -14,6 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `Aktuelno — ${siteName}`,
     description: 'Najnovije aktuelne vijesti i dešavanja.',
+    alternates: { canonical: canonicalUrl('/aktuelno') },
   }
 }
 
@@ -68,8 +70,19 @@ export default async function AktuelnoPage() {
   const featured = dbArticles[0]
   const grid = dbArticles.slice(1)
 
+  const categoryTitle = 'Aktuelno'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${categoryTitle} — SportBa`,
+    description: `Najnovije vijesti iz kategorije ${categoryTitle}`,
+    url: canonicalUrl('/aktuelno'),
+    isPartOf: { '@type': 'WebSite', name: 'SportBa', url: canonicalUrl('/') },
+  }
+
   return (
     <main className="sba-cat">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="sba-cat-header">
         <h1 className="sba-cat-title">Aktuelno</h1>
         <p className="sba-cat-desc">Najnovije aktuelne vijesti i dešavanja</p>

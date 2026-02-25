@@ -50,10 +50,12 @@ async function getDashboardData(orgId: string) {
   const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
   const prevMonthStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
 
-  const orgFilter = { site: { organizationId: orgId }, deletedAt: null as Date | null }
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const orgFilter = { site: { organizationId: orgId }, deletedAt: null as Date | null, isTest: false }
 
   const [
     totalArticles,
+    publishedToday,
     publishedThisWeek,
     aiArticles,
     articlesThisMonth,
@@ -63,6 +65,9 @@ async function getDashboardData(orgId: string) {
     gaConnected,
   ] = await Promise.all([
     prisma.article.count({ where: orgFilter }),
+    prisma.article.count({
+      where: { ...orgFilter, status: 'PUBLISHED', publishedAt: { gte: todayStart } },
+    }),
     prisma.article.count({
       where: { ...orgFilter, status: 'PUBLISHED', publishedAt: { gte: weekAgo } },
     }),
@@ -125,6 +130,7 @@ async function getDashboardData(orgId: string) {
 
   return {
     totalArticles,
+    publishedToday,
     publishedThisWeek,
     aiPercentage,
     monthTrend,

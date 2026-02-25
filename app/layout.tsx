@@ -61,6 +61,7 @@ export const metadata: Metadata = {
     description: 'Najnovije vijesti, live rezultati, transferi i tabele iz vodećih europskih liga.',
     images: [{ url: '/og-default.jpg', width: 1200, height: 630 }],
   },
+  themeColor: '#0a0a0a',
   twitter: {
     card: 'summary_large_image',
     site: '@todayfootballmatch',
@@ -85,7 +86,7 @@ try {
     document.documentElement.style.backgroundColor = '';
     document.documentElement.style.colorScheme = 'light';
   }
-} catch(e) {}
+} catch(e) { console.error(e); }
 `.trim()
 
 export default function RootLayout({

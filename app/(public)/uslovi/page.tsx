@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
 import { StaticNav } from '@/components/public/sportba/static-nav'
+import { canonicalUrl } from '@/lib/seo'
 import '../static.css'
+
+export const revalidate = 86400
 
 export const metadata: Metadata = {
   title: 'Uslovi kori\u0161tenja \u2014 Diurna',
   description: 'Uslovi kori\u0161tenja portala Diurna.',
+  alternates: { canonical: canonicalUrl('/uslovi') },
 }
 
 export default function TermsPage() {

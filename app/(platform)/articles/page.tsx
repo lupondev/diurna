@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 
 type Article = {
   id: string
@@ -28,6 +29,43 @@ export default function ArticlesPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+  const selectAll = () => {
+    if (selectedIds.size === articles.length) setSelectedIds(new Set())
+    else setSelectedIds(new Set(articles.map((a) => a.id)))
+  }
+
+  async function handleBulkStatus(status: string) {
+    if (!status || !confirm(`Change ${selectedIds.size} articles to ${status}?`)) return
+    const count = selectedIds.size
+    const promises = Array.from(selectedIds).map((id) =>
+      fetch(`/api/articles/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+    )
+    await Promise.all(promises)
+    setSelectedIds(new Set())
+    router.refresh()
+    fetchArticles(page, filter, search)
+    toast.success(`${count} articles updated`)
+  }
+
+  async function handleBulkDelete() {
+    if (!confirm(`Delete ${selectedIds.size} articles? This cannot be undone.`)) return
+    const count = selectedIds.size
+    const promises = Array.from(selectedIds).map((id) => fetch(`/api/articles/${id}`, { method: 'DELETE' }))
+    await Promise.all(promises)
+    setSelectedIds(new Set())
+    router.refresh()
+    fetchArticles(page, filter, search)
+    toast.success(`${count} articles deleted`)
+  }
 
   const fetchArticles = useCallback((p: number, status: StatusFilter, q: string) => {
     setLoading(true)
@@ -195,9 +233,76 @@ export default function ArticlesPage() {
         </div>
       ) : (
         <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+          {selectedIds.size > 0 && (
+            <div
+              className="bulk-actions-bar"
+              style={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 20,
+                background: 'var(--g800)',
+                color: '#fff',
+                padding: '8px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                borderRadius: 8,
+                margin: '8px 0',
+              }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 600 }}>{selectedIds.size} selected</span>
+              <select
+                onChange={(e) => handleBulkStatus(e.target.value)}
+                defaultValue=""
+                style={{ padding: '4px 8px', borderRadius: 6, fontSize: 12 }}
+              >
+                <option value="" disabled>Change status...</option>
+                <option value="DRAFT">Draft</option>
+                <option value="PUBLISHED">Published</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
+              <button
+                onClick={handleBulkDelete}
+                style={{
+                  padding: '4px 12px',
+                  background: '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Delete selected
+              </button>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                style={{
+                  padding: '4px 8px',
+                  background: 'none',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <th style={{ width: 40, padding: '10px 8px', textAlign: 'left' }}>
+                  <input
+                    type="checkbox"
+                    checked={articles.length > 0 && selectedIds.size === articles.length}
+                    onChange={selectAll}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </th>
                 <th style={{ textAlign: 'left', padding: '10px 16px', fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 }}>Title</th>
                 <th style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 }}>Status</th>
                 <th style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 }}>Category</th>
@@ -215,6 +320,13 @@ export default function ArticlesPage() {
                   onMouseLeave={(e) => { e.currentTarget.style.background = '#fff' }}
                   onClick={() => router.push(`/editor/${a.id}`)}
                 >
+                  <td style={{ padding: '12px 8px', width: 40 }} onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(a.id)}
+                      onChange={() => toggleSelect(a.id)}
+                    />
+                  </td>
                   <td style={{ padding: '12px 16px', fontWeight: 500, color: '#0f172a', maxWidth: 350, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {a.title}
                     {a.aiGenerated && <span style={{ fontSize: 9, background: '#ede9fe', color: '#6d28d9', padding: '2px 5px', borderRadius: 4, marginLeft: 6, fontWeight: 700 }}>AI</span>}
