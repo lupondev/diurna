@@ -4,6 +4,7 @@ import { getSiteBaseUrl } from '@/lib/site-url'
 export async function GET() {
   const baseUrl = await getSiteBaseUrl()
 
+  try {
   const site = await prisma.site.findFirst({
     where: { deletedAt: null },
     select: { name: true, language: true },
@@ -62,6 +63,22 @@ ${items}
       'Cache-Control': 'public, max-age=3600, s-maxage=3600',
     },
   })
+  } catch {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>${escapeXml('Diurna')} — AI-Powered Sports Publishing</title>
+    <link>${baseUrl}</link>
+    <description>The publishing platform for modern sports newsrooms.</description>
+    <language>en</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    <atom:link href="${baseUrl}/feed" rel="self" type="application/rss+xml"/>
+  </channel>
+</rss>`
+    return new Response(xml, {
+      headers: { 'Content-Type': 'application/rss+xml; charset=utf-8', 'Cache-Control': 'public, max-age=60' },
+    })
+  }
 }
 
 function escapeXml(str: string): string {

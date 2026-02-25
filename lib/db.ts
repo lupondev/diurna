@@ -68,25 +68,27 @@ export async function getCategories(siteId: string) {
 }
 
 export async function getDefaultSite(organizationId?: string) {
-  // Primary: find site with a domain (production site)
-  const siteWithDomain = await prisma.site.findFirst({
-    where: {
-      deletedAt: null,
-      domain: { not: null },
-      ...(organizationId && { organizationId }),
-    },
-    orderBy: { createdAt: 'asc' },
-  })
-  if (siteWithDomain) return siteWithDomain
+  try {
+    const siteWithDomain = await prisma.site.findFirst({
+      where: {
+        deletedAt: null,
+        domain: { not: null },
+        ...(organizationId && { organizationId }),
+      },
+      orderBy: { createdAt: 'asc' },
+    })
+    if (siteWithDomain) return siteWithDomain
 
-  // Fallback: oldest site without domain
-  return prisma.site.findFirst({
-    where: {
-      deletedAt: null,
-      ...(organizationId && { organizationId }),
-    },
-    orderBy: { createdAt: 'asc' },
-  })
+    return prisma.site.findFirst({
+      where: {
+        deletedAt: null,
+        ...(organizationId && { organizationId }),
+      },
+      orderBy: { createdAt: 'asc' },
+    })
+  } catch {
+    return null
+  }
 }
 
 export async function getTeamMembers(organizationId?: string) {

@@ -5,6 +5,7 @@ import { getSiteBaseUrl } from '@/lib/site-url'
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = await getSiteBaseUrl()
 
+  try {
   const articles = await prisma.article.findMany({
     where: { status: 'PUBLISHED', deletedAt: null, isTest: false },
     select: {
@@ -80,4 +81,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...athleteEntries,
     ...orgEntries,
   ]
+  } catch {
+    const staticPages: MetadataRoute.Sitemap = [
+      '/o-nama', '/impressum', '/privatnost', '/uslovi', '/kontakt', '/marketing',
+      '/igraci', '/tabela', '/legende', '/organizacije',
+      '/aktuelno', '/bih', '/svijet', '/region', '/tech', '/biznis',
+    ].map((path) => ({
+      url: `${baseUrl}${path}`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.5,
+    }))
+    return [
+      { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
+      ...staticPages,
+    ]
+  }
 }

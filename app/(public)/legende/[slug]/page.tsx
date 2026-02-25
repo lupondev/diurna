@@ -93,17 +93,21 @@ export async function generateMetadata(
 }
 
 export async function generateStaticParams() {
-  const site = await getDefaultSite()
-  if (!site) return []
+  try {
+    const site = await getDefaultSite()
+    if (!site) return []
 
-  const athletes = await prisma.athlete.findMany({
-    where: { siteId: site.id, status: 'published', deletedAt: null },
-    select: { slug: true },
-    orderBy: { legendRank: 'asc' },
-    take: 20,
-  })
+    const athletes = await prisma.athlete.findMany({
+      where: { siteId: site.id, status: 'published', deletedAt: null },
+      select: { slug: true },
+      orderBy: { legendRank: 'asc' },
+      take: 20,
+    })
 
-  return athletes.map((a) => ({ slug: a.slug }))
+    return athletes.map((a) => ({ slug: a.slug }))
+  } catch {
+    return []
+  }
 }
 
 export default async function AthleteProfilePage(
