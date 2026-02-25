@@ -11,6 +11,12 @@ export function formatDateTime(date: string | Date): string {
   return `${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}`
 }
 
+/** Format date for display; returns empty string for null/undefined */
+export function formatDate(date: string | Date | null | undefined): string {
+  if (date == null) return ''
+  return formatDateTime(date)
+}
+
 /** URL-safe slug from title (Balkan diacritics normalized) */
 export function slugify(text: string): string {
   return text
@@ -23,6 +29,7 @@ export function slugify(text: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .trim()
+    .replace(/-+$/, '') // trim trailing hyphens
     .slice(0, 100)
 }
 

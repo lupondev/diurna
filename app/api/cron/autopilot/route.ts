@@ -16,6 +16,7 @@ import {
 } from '@/lib/autopilot'
 import { verifyArticle } from '@/lib/model-router'
 import { systemLog } from '@/lib/system-log'
+import { captureApiError } from '@/lib/sentry'
 
 export const maxDuration = 60
 
@@ -414,7 +415,7 @@ export async function GET(req: NextRequest) {
       results,
     })
   } catch (error) {
-    console.error('Autopilot cron error:', error)
+    captureApiError(error, { route: '/api/cron/autopilot', method: 'POST' })
     await systemLog('error', 'autopilot', error instanceof Error ? error.message : 'Unknown error')
     return NextResponse.json({
       success: false, action: 'error',

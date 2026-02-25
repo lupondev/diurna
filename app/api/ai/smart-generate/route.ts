@@ -6,6 +6,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { generateWithGemini } from '@/lib/ai/client'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateOrigin } from '@/lib/csrf'
+import { captureApiError } from '@/lib/sentry'
 import { z } from 'zod'
 
 const limiter = rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 })
@@ -273,7 +274,7 @@ STRICT RULES FOR HEADLINE-ONLY GENERATION:
       tokensOut,
     })
   } catch (error) {
-    console.error('Smart generate error:', error)
+    captureApiError(error, { route: '/api/ai/smart-generate', method: 'POST' })
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 })
     }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { captureApiError } from '@/lib/sentry'
 import Parser from 'rss-parser'
 import crypto from 'crypto'
 
@@ -113,6 +114,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  try {
   const url = new URL(req.url)
   const tierParam = url.searchParams.get('tier')
 
@@ -247,6 +249,10 @@ export async function GET(req: Request) {
     deduplicated: dedupDeleted,
     timestamp: new Date().toISOString(),
   })
+  } catch (error) {
+    captureApiError(error, { route: '/api/cron/fetch-feeds', method: 'GET' })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
 async function crossSourceDedup(): Promise<number> {

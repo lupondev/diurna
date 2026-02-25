@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { generateContent } from '@/lib/ai/client'
 import { validateOrigin } from '@/lib/csrf'
 import { rateLimit } from '@/lib/rate-limit'
+import { captureApiError } from '@/lib/sentry'
 import { z } from 'zod'
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -230,7 +231,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 })
     }
-    console.error('AI generate error:', error)
+    captureApiError(error, { route: '/api/ai/generate', method: 'POST' })
     return NextResponse.json(
       { error: 'AI generation failed' },
       { status: 500 }

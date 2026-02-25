@@ -6,6 +6,7 @@ import { distributeArticle } from '@/lib/distribution'
 import { slugify } from '@/lib/autopilot'
 import { validateOrigin } from '@/lib/csrf'
 import { rateLimit } from '@/lib/rate-limit'
+import { captureApiError } from '@/lib/sentry'
 import { z } from 'zod'
 
 const articleCreateLimiter = rateLimit({ interval: 60_000 })
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 })
     }
-    console.error('Create article error:', error)
+    captureApiError(error, { route: '/api/articles', method: 'POST' })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -204,7 +205,7 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Get articles error:', error)
+    captureApiError(error, { route: '/api/articles', method: 'GET' })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -6,6 +6,7 @@ import { postToMultiplePages } from '@/lib/facebook'
 import { distributeArticle } from '@/lib/distribution'
 import { systemLog } from '@/lib/system-log'
 import { validateOrigin } from '@/lib/csrf'
+import { captureApiError } from '@/lib/sentry'
 import { z } from 'zod'
 
 const UpdateArticleSchema = z.object({
@@ -52,7 +53,7 @@ export async function GET(
     }
     return NextResponse.json(article)
   } catch (error) {
-    console.error('Get article error:', error)
+    captureApiError(error, { route: '/api/articles/[id]', method: 'GET' })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -167,7 +168,7 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 })
     }
-    console.error('Update article error:', error)
+    captureApiError(error, { route: '/api/articles/[id]', method: 'PATCH' })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -198,7 +199,7 @@ export async function DELETE(
     })
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Delete article error:', error)
+    captureApiError(error, { route: '/api/articles/[id]', method: 'DELETE' })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
