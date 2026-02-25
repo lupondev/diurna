@@ -18,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: { category: strin
   if (!cat) return new NextResponse('Category not found', { status: 404 })
 
   const articles = await prisma.article.findMany({
-    where: { siteId: site.id, categoryId: cat.id, status: 'PUBLISHED', deletedAt: null },
+    where: { siteId: site.id, categoryId: cat.id, status: 'PUBLISHED', deletedAt: null, isTest: false },
     include: { tags: { include: { tag: { select: { name: true } } } } },
     orderBy: { publishedAt: 'desc' },
     take: 50,

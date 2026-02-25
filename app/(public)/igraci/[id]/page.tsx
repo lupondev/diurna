@@ -67,6 +67,8 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     const articles = await prisma.article.findMany({
       where: {
         status: 'PUBLISHED',
+        deletedAt: null,
+        isTest: false,
         title: { contains: p.lastname || p.name, mode: 'insensitive' },
       },
       include: { category: true },

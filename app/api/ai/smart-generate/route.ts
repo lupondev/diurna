@@ -4,8 +4,10 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
 import { generateWithGemini } from '@/lib/ai/client'
+import { rateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
 
+const limiter = rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 })
 const client = new Anthropic()
 
 const schema = z.object({
@@ -32,6 +34,11 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    try {
+      await limiter.check(10, `ai-smart:${session.user.id}`)
+    } catch {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
     }
 
     const body = await req.json()

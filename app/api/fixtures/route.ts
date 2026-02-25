@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getFixturesByDate } from '@/lib/api-football'
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
+}
+
 const LIVE_STATUSES = ['1H', '2H', 'HT', 'ET', 'P', 'LIVE', 'BT']
 const FT_STATUSES = ['FT', 'AET', 'PEN']
 
@@ -35,10 +45,13 @@ export async function GET(req: NextRequest) {
     })
 
     return NextResponse.json({ fixtures: mapped }, {
-      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' },
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+        ...CORS_HEADERS,
+      },
     })
   } catch (e) {
     console.error('[Fixtures API]', e instanceof Error ? e.message : e)
-    return NextResponse.json({ fixtures: [] })
+    return NextResponse.json({ fixtures: [] }, { headers: CORS_HEADERS })
   }
 }

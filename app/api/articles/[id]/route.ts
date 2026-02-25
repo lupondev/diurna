@@ -8,7 +8,7 @@ import { systemLog } from '@/lib/system-log'
 import { z } from 'zod'
 
 const UpdateArticleSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
+  title: z.string().min(1).max(200).optional().transform((v) => (v == null ? undefined : v.replace(/<[^>]*>/g, '').trim())),
   content: z.any().optional(),
   excerpt: z.string().optional(),
   status: z.enum(['DRAFT', 'IN_REVIEW', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED']).optional(),
@@ -18,7 +18,7 @@ const UpdateArticleSchema = z.object({
   tagIds: z.array(z.string()).optional(),
   metaTitle: z.string().optional(),
   metaDescription: z.string().optional(),
-  featuredImage: z.string().url().optional().nullable(),
+  featuredImage: z.string().url().optional().nullable().or(z.literal('')).transform((v) => (v === '' ? null : v)),
   subtitle: z.string().optional(),
 })
 

@@ -14,6 +14,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       category: { select: { slug: true } },
     },
     orderBy: { publishedAt: 'desc' },
+    take: 5000,
   })
 
   const articleEntries: MetadataRoute.Sitemap = articles.map((a) => ({

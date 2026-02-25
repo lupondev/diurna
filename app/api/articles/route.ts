@@ -7,7 +7,7 @@ import { slugify } from '@/lib/autopilot'
 import { z } from 'zod'
 
 const CreateArticleSchema = z.object({
-  title: z.string().min(1).max(200),
+  title: z.string().min(1).max(200).transform((v) => v.replace(/<[^>]*>/g, '').trim()),
   content: z.any().default({}),
   excerpt: z.string().optional(),
   status: z.enum(['DRAFT', 'IN_REVIEW', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED']).default('DRAFT'),
@@ -16,7 +16,7 @@ const CreateArticleSchema = z.object({
   aiGenerated: z.boolean().default(false),
   aiModel: z.string().optional(),
   aiPrompt: z.string().optional(),
-  featuredImage: z.string().url().optional().nullable(),
+  featuredImage: z.string().url().optional().nullable().or(z.literal('')).transform((v) => (v === '' ? null : v)),
   subtitle: z.string().optional(),
   slug: z.string().optional(),
   metaTitle: z.string().optional(),

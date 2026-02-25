@@ -30,6 +30,7 @@ export async function GET() {
     const tags = await prisma.tag.findMany({
       where: siteId ? { siteId } : undefined,
       orderBy: { name: 'asc' },
+      take: 200,
       include: { _count: { select: { articles: true } } },
     })
 

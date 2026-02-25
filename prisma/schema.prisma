@@ -443,6 +443,7 @@ model NewsItem {
   @@index([pubDate])
   @@index([category])
   @@index([siteId, pubDate])
+  @@index([siteId, category, pubDate])
   @@index([clusterId])
 }
 
@@ -459,6 +460,8 @@ model FeedSource {
   errorCount Int       @default(0)
   siteId     String?
   createdAt  DateTime  @default(now())
+
+  @@index([siteId, active])
 }
 
 model Entity {

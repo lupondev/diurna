@@ -35,7 +35,7 @@ export default function PublicNotFound() {
             textDecoration: 'none',
           }}
         >
-          Početna
+          ← Nazad na početnu
         </Link>
         <Link
           href="/vijesti"

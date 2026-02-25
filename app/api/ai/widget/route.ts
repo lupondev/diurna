@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateContent } from '@/lib/ai/client'
+import { rateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
+
+const limiter = rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 })
 
 const WidgetGenerateSchema = z.object({
   type: z.enum(['poll', 'quiz', 'survey']),
@@ -44,6 +47,11 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    try {
+      await limiter.check(10, `ai-widget:${session.user.id}`)
+    } catch {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
     }
 
     const body = await req.json()

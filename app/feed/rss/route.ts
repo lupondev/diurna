@@ -13,7 +13,7 @@ export async function GET() {
   if (!site) return new NextResponse('Site not found', { status: 404 })
 
   const articles = await prisma.article.findMany({
-    where: { siteId: site.id, status: 'PUBLISHED', deletedAt: null },
+    where: { siteId: site.id, status: 'PUBLISHED', deletedAt: null, isTest: false },
     include: {
       category: { select: { name: true } },
       tags: { include: { tag: { select: { name: true } } } },
