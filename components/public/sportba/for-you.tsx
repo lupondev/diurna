@@ -66,7 +66,7 @@ export function ForYou() {
   }
 
   return (
-    <section>
+    <section className="sba-section-module">
       <div className="sba-section-head">
         <h2 className="sba-section-title">Za tebe</h2>
       </div>

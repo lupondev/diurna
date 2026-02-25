@@ -2,9 +2,10 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getDefaultSite } from '@/lib/db'
+import { getLiveMatches } from '@/lib/api-football'
 import { getArticleUrl, normalizeCategoryName } from '@/lib/article-url'
 import { AdSlot } from '@/components/public/sportba'
-import { MatchOfDay } from '@/components/public/sportba/match-of-day'
+import { MatchDayStrip } from '@/components/public/sportba/match-day-strip'
 import { StandingsTable } from '@/components/public/sportba/standings-table'
 import { ForYou } from '@/components/public/sportba/for-you'
 import { ClubLogoStrip } from '@/components/public/ClubLogoStrip'
@@ -69,6 +70,13 @@ export default async function HomePage() {
   let newsItems: NewsItem[] = []
   let trendingItems: TrendingItem[] = []
   let transferItems: TransferItem[] = []
+
+  let todayMatches: Awaited<ReturnType<typeof getLiveMatches>> = []
+  try {
+    todayMatches = await getLiveMatches()
+  } catch {
+    // API failure — show empty strip
+  }
 
   if (site) {
     const articles = await prisma.article.findMany({
@@ -167,8 +175,12 @@ export default async function HomePage() {
     }
   }
 
+  const latestForHero = heroItems.slice(1, 5)
+  const secondaryNews = newsItems.slice(0, 2)
+  const compactNews = newsItems.slice(2, 10)
+
   return (
-    <main className="sba-home">
+    <main id="main-content" className="sba-home" tabIndex={-1}>
       <ClubLogoStrip />
       <FixturesTicker />
 
@@ -177,51 +189,76 @@ export default async function HomePage() {
       </div>
 
       <div className="sba-home-layout">
-        {/* MAIN COLUMN */}
         <div className="sba-home-main">
-          {/* Hero Bento */}
           {heroItems.length > 0 && (
             <section className="sba-hero">
-              <Link href={heroItems[0].href} className="sba-hero-card sba-hero-main">
-                <div className="sba-hero-bg" style={{ background: heroItems[0].bg }} />
-                <div className="sba-hero-content">
-                  <span className="sba-hero-badge">{heroItems[0].cat}</span>
-                  <h1 className="sba-hero-title">{heroItems[0].title}</h1>
-                  <p className="sba-hero-meta">{heroItems[0].meta}</p>
-                </div>
-              </Link>
-              {heroItems.slice(1, 4).map((h, i) => (
-                <Link key={i} href={h.href} className="sba-hero-card sba-hero-side">
-                  <div className="sba-hero-bg" style={{ background: h.bg }} />
+              <div className="sba-hero-featured">
+                <Link href={heroItems[0].href} className="sba-hero-card">
+                  <div className="sba-hero-bg" style={{ background: heroItems[0].bg }} />
                   <div className="sba-hero-content">
-                    <span className="sba-hero-badge">{h.cat}</span>
-                    <h2 className="sba-hero-title">{h.title}</h2>
+                    <span className="sba-hero-badge">{heroItems[0].cat}</span>
+                    <h1 className="sba-hero-title">{heroItems[0].title}</h1>
+                    <p className="sba-hero-meta">{heroItems[0].meta}</p>
                   </div>
                 </Link>
-              ))}
+              </div>
+              <div className="sba-hero-latest">
+                <h2 className="sba-hero-latest-title">Najnovije</h2>
+                <div className="sba-hero-latest-list">
+                  {latestForHero.map((h, i) => (
+                    <Link key={i} href={h.href} className="sba-hero-latest-card">
+                      <span className="sba-hero-latest-thumb" style={{ background: h.bg }} />
+                      <span className="sba-hero-latest-card-body">
+                        <span className="sba-hero-latest-item-title">{h.title}</span>
+                        <span className="sba-hero-latest-item-meta">{h.meta}</span>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </section>
           )}
 
-          <MatchOfDay />
-          <StandingsTable />
-          <AdSlot variant="rectangle" />
+          <MatchDayStrip matches={todayMatches} />
 
-          {/* News Feed */}
           {newsItems.length > 0 && (
-            <section>
+            <section className="sba-section-module">
               <div className="sba-section-head">
-                <h2 className="sba-section-title">Najnovije vijesti</h2>
+                <h2 className="sba-section-title">Vijesti</h2>
                 <Link href="/vijesti" className="sba-section-more">Sve vijesti &rarr;</Link>
               </div>
+              {secondaryNews.length > 0 && (
+                <div className="sba-feed-secondary">
+                  {secondaryNews.map((n, i) => (
+                    <Link key={i} href={n.href} className="sba-feed-secondary-card">
+                      <div className="sba-feed-thumb">
+                        {n.image ? (
+                          <img
+                            src={n.image}
+                            alt=""
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                          />
+                        ) : (
+                          <div className="sba-feed-thumb-bg" style={{ background: n.bg }} />
+                        )}
+                      </div>
+                      <div className="sba-feed-body">
+                        <span className="sba-feed-cat">{n.cat}</span>
+                        <span className="sba-feed-title">{n.title}</span>
+                        <span className="sba-feed-meta">{n.time}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
               <div className="sba-feed">
-                {newsItems.slice(0, 8).map((n, i) => (
+                {compactNews.map((n, i) => (
                   <Link key={i} href={n.href} className="sba-feed-card">
                     <div className="sba-feed-thumb">
                       {n.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={n.image}
-                          alt={n.title}
+                          alt=""
                           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                         />
                       ) : (
@@ -239,9 +276,8 @@ export default async function HomePage() {
             </section>
           )}
 
-          {/* Transfer Radar */}
           {transferItems.length > 0 && (
-            <section>
+            <section className="sba-section-module">
               <div className="sba-section-head">
                 <h2 className="sba-section-title">Transfer radar</h2>
                 <Link href="/transferi" className="sba-section-more">Svi transferi &rarr;</Link>
@@ -260,14 +296,13 @@ export default async function HomePage() {
             </section>
           )}
 
-          {/* Video Section */}
+          <AdSlot variant="rectangle" />
           <VideoSection />
-
           <ForYou />
         </div>
 
-        {/* RIGHT RAIL */}
         <aside className="sba-home-rail">
+          <StandingsTable limit={6} />
           {trendingItems.length > 0 && (
             <div className="sba-rail-card">
               <div className="sba-rail-head">U trendu</div>
@@ -284,13 +319,15 @@ export default async function HomePage() {
               </div>
             </div>
           )}
-
           <LegendsWidget />
-
           <div className="sba-rail-sticky">
             <AdSlot variant="skyscraper" />
           </div>
         </aside>
+      </div>
+
+      <div className="sba-home-mobile-rail">
+        <StandingsTable />
       </div>
 
       <div className="sba-home-prefooter">

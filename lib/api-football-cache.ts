@@ -21,11 +21,13 @@ export async function cachedFetch<T>(
   fetcher: () => Promise<T>,
   ttlSeconds: number,
 ): Promise<{ data: T; fromCache: boolean }> {
-  // Check cache
+  // Check cache (do not serve cached empty arrays — avoids serving stale "no results" after API/rate-limit issues)
   try {
     const cached = await prisma.apiCache.findUnique({ where: { key: cacheKey } })
     if (cached && new Date(cached.expiresAt) > new Date()) {
-      return { data: cached.data as T, fromCache: true }
+      const data = cached.data as T
+      const isEmptyArray = Array.isArray(data) && data.length === 0
+      if (!isEmptyArray) return { data, fromCache: true }
     }
   } catch (e) {
     // Cache read failed, proceed to fetch
@@ -35,15 +37,18 @@ export async function cachedFetch<T>(
   // Fetch fresh data
   const data = await fetcher()
 
-  // Write to cache (fire-and-forget)
-  const expiresAt = new Date(Date.now() + ttlSeconds * 1000)
-  prisma.apiCache.upsert({
+  // Write to cache (fire-and-forget); do not cache empty arrays so we refetch next time
+  const isEmptyArray = Array.isArray(data) && data.length === 0
+  if (!isEmptyArray) {
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000)
+    prisma.apiCache.upsert({
     where: { key: cacheKey },
     update: { data: data as never, expiresAt },
     create: { key: cacheKey, data: data as never, expiresAt },
   }).catch((e) => {
     systemLog('warn', 'api-football', `Cache write error: ${e instanceof Error ? e.message : String(e)}`).catch(() => {})
   })
+  }
 
   // Log the API call for stats
   systemLog('info', 'api-football', `API call: ${cacheKey}`, { cacheKey }).catch(() => {})

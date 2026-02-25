@@ -11,6 +11,11 @@ const TiptapEditor = dynamic(() => import('@/components/editor/tiptap-editor'), 
   loading: () => <div className="te-loading" />,
 })
 
+const FeaturedImagePicker = dynamic(() => import('@/components/editor/featured-image-picker').then(m => ({ default: m.FeaturedImagePicker })), {
+  ssr: false,
+  loading: () => <div className="fi-placeholder" style={{ padding: 24, color: 'var(--g400)' }}>Loading...</div>,
+})
+
 const AISidebar = dynamic(() => import('@/components/editor/ai-sidebar').then(m => ({ default: m.AISidebar })), {
   ssr: false,
   loading: () => null,
@@ -42,6 +47,7 @@ export default function EditorPageInner() {
   const [metaTitle, setMetaTitle] = useState('')
   const [metaDesc, setMetaDesc] = useState('')
   const [slug, setSlug] = useState('')
+  const [featuredImage, setFeaturedImage] = useState<string | null>(null)
   const [scheduledAt, setScheduledAt] = useState('')
   const [showSchedule, setShowSchedule] = useState(false)
   const [smartNotice, setSmartNotice] = useState<string | null>(null)
@@ -285,13 +291,18 @@ export default function EditorPageInner() {
     setSaving(true)
     try {
       const body: Record<string, unknown> = {
-        title, content, siteId,
+        title,
+        content,
+        siteId,
         categoryId: categoryId || undefined,
         status,
         aiGenerated: !!aiResult,
         aiModel: aiResult?.model,
         metaTitle: metaTitle || undefined,
         metaDescription: metaDesc || undefined,
+        featuredImage: featuredImage || null,
+        subtitle: subtitle || undefined,
+        slug: slug || undefined,
       }
       if (status === 'SCHEDULED' && scheduledAt) body.scheduledAt = scheduledAt
 
@@ -422,6 +433,7 @@ export default function EditorPageInner() {
               value={title} onChange={(e) => { setTitle(e.target.value); setSlug(slugify(e.target.value)) }} />
             <input type="text" className="ed-subtitle-input" placeholder="Podnaslov (opcionalno)"
               value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
+            <FeaturedImagePicker value={featuredImage} onChange={setFeaturedImage} />
             <div className="ed-meta">
               <select className="ed-select" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
                 <option value="">No category</option>

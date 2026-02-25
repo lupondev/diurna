@@ -43,6 +43,9 @@ const nextConfig = {
       { source: '/news',       destination: '/vijesti',   permanent: true },
       { source: '/players',    destination: '/igraci',    permanent: true },
 
+      // ── RSS: /rss is linked in footer; feed lives at /feed (public)
+      { source: '/rss', destination: '/feed', permanent: true },
+
       // ── SEO: Safe ID-based prefix redirects (301) ──────────────────────
       // SAFE: numeric ID identity is guaranteed — no DB lookup needed.
       { source: '/players/:id*', destination: '/igraci/:id*',   permanent: true },

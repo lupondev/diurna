@@ -16,6 +16,11 @@ const CreateArticleSchema = z.object({
   aiGenerated: z.boolean().default(false),
   aiModel: z.string().optional(),
   aiPrompt: z.string().optional(),
+  featuredImage: z.string().url().optional().nullable(),
+  subtitle: z.string().optional(),
+  slug: z.string().optional(),
+  metaTitle: z.string().optional(),
+  metaDescription: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -61,7 +66,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let slug = slugify(data.title)
+    let slug = (data.slug && data.slug.trim()) ? data.slug.trim() : slugify(data.title)
     const existing = await prisma.article.findFirst({
       where: { siteId: data.siteId, slug },
     })
@@ -74,7 +79,7 @@ export async function POST(req: NextRequest) {
         title: data.title,
         slug,
         content: data.content,
-        excerpt: data.excerpt,
+        excerpt: data.excerpt ?? data.subtitle ?? null,
         status: data.status,
         siteId: data.siteId,
         categoryId: data.categoryId || null,
@@ -83,6 +88,9 @@ export async function POST(req: NextRequest) {
         aiModel: data.aiModel,
         aiPrompt: data.aiPrompt,
         publishedAt: data.status === 'PUBLISHED' ? new Date() : null,
+        featuredImage: data.featuredImage ?? null,
+        metaTitle: data.metaTitle ?? null,
+        metaDescription: data.metaDescription ?? null,
       },
     })
 

@@ -46,6 +46,7 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
   const [contextEntities, setContextEntities] = useState<string[]>([])
   const [lastResult, setLastResult] = useState<{ model?: string; tokensIn?: number; tokensOut?: number } | null>(null)
   const [didAutoGenerate, setDidAutoGenerate] = useState(false)
+  const [factCheckResult, setFactCheckResult] = useState<string | null>(null)
 
   // Detect context from editor content
   const detectContext = useCallback(() => {
@@ -136,10 +137,12 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
     const { from, to } = editor.state.selection
     const text = editor.state.doc.textBetween(from, to)
     if (!text.trim()) {
-      alert('Select some text first to use this action.')
+      setError('Select some text first to use this action.')
       return
     }
+    setFactCheckResult(null)
     setAiLoading(action.key)
+    setError(null)
     try {
       const res = await fetch('/api/ai/generate', {
         method: 'POST',
@@ -150,16 +153,27 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
           wordCount: action.key === 'extend' ? 300 : action.key === 'shorten' ? 50 : 150,
         }),
       })
-      const data = await res.json() as { content?: string }
-      const output = typeof data.content === 'string' ? data.content.replace(/^TLDR:.*$/gm, '').trim() : ''
+      const data = await res.json() as { content?: string; text?: string; result?: string }
+      const raw = typeof data.content === 'string'
+        ? data.content
+        : typeof data.text === 'string'
+          ? data.text
+          : typeof data.result === 'string'
+            ? data.result
+            : ''
+      const output = raw.replace(/^TLDR:.*$/gm, '').trim()
       if (output) {
         if (action.key === 'factcheck') {
-          alert(output)
+          setFactCheckResult(output)
         } else {
           editor.chain().focus().deleteSelection().insertContent(output).run()
         }
+      } else if (!res.ok) {
+        setError('AI action failed. Try again.')
       }
-    } catch {} finally {
+    } catch {
+      setError('AI action failed. Try again.')
+    } finally {
       setAiLoading(null)
     }
   }, [editor])
@@ -259,6 +273,17 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
           ))}
         </div>
       </div>
+
+      {/* Fact-check result panel */}
+      {factCheckResult !== null && (
+        <div className="ai-sb-section ai-sb-factcheck">
+          <div className="ai-sb-section-title">🔍 Fact Check</div>
+          <div className="ai-sb-factcheck-content">{factCheckResult}</div>
+          <button type="button" className="ai-sb-factcheck-close" onClick={() => setFactCheckResult(null)}>
+            Close
+          </button>
+        </div>
+      )}
 
       {/* AI Result info */}
       {lastResult && (

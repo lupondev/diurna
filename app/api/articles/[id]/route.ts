@@ -18,6 +18,8 @@ const UpdateArticleSchema = z.object({
   tagIds: z.array(z.string()).optional(),
   metaTitle: z.string().optional(),
   metaDescription: z.string().optional(),
+  featuredImage: z.string().url().optional().nullable(),
+  subtitle: z.string().optional(),
 })
 
 export async function GET(
@@ -109,7 +111,7 @@ export async function PATCH(
       }
     }
 
-    const { tagIds, scheduledAt: scheduledAtStr, slug: _slug, ...updateFields } = data
+    const { tagIds, scheduledAt: scheduledAtStr, slug: _slug, subtitle: _subtitle, ...updateFields } = data
 
     const article = await prisma.article.update({
       where: { id: params.id },
@@ -117,6 +119,8 @@ export async function PATCH(
         ...updateFields,
         ...(slugUpdate && { slug: slugUpdate }),
         ...(scheduledAtStr !== undefined && { scheduledAt: scheduledAtStr ? new Date(scheduledAtStr) : null }),
+        ...(data.featuredImage !== undefined && { featuredImage: data.featuredImage }),
+        ...(data.subtitle !== undefined && { excerpt: data.subtitle }),
         publishedAt: data.status === 'PUBLISHED' ? new Date() : undefined,
       },
       // Bug D fix: include versions in PATCH response so client doesn't need extra GET

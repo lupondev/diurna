@@ -11,6 +11,11 @@ const TiptapEditor = dynamic(() => import('@/components/editor/tiptap-editor'), 
   loading: () => <div className="te-loading" />,
 })
 
+const FeaturedImagePicker = dynamic(() => import('@/components/editor/featured-image-picker').then(m => ({ default: m.FeaturedImagePicker })), {
+  ssr: false,
+  loading: () => <div className="fi-placeholder" style={{ padding: 24, color: 'var(--g400)' }}>Loading...</div>,
+})
+
 const AISidebar = dynamic(() => import('@/components/editor/ai-sidebar').then(m => ({ default: m.AISidebar })), {
   ssr: false,
   loading: () => null,
@@ -52,6 +57,7 @@ export default function ArticleEditor({ id }: { id: string }) {
   const [showSEO, setShowSEO] = useState(false)
   const [metaTitle, setMetaTitle] = useState('')
   const [metaDesc, setMetaDesc] = useState('')
+  const [featuredImage, setFeaturedImage] = useState<string | null>(null)
   // Bug C fix: load and track categoryId
   const [categoryId, setCategoryId] = useState('')
   const [categories, setCategories] = useState<Category[]>([])
@@ -63,7 +69,7 @@ export default function ArticleEditor({ id }: { id: string }) {
       .then((r) => r.json() as Promise<{
         title?: string; content?: Record<string, unknown>; status?: string; slug?: string
         aiGenerated?: boolean; metaTitle?: string; metaDescription?: string; scheduledAt?: string
-        versions?: Version[]; tags?: ArticleTag[]; categoryId?: string | null
+        featuredImage?: string | null; versions?: Version[]; tags?: ArticleTag[]; categoryId?: string | null
       }>)
       .then((data) => {
         setTitle(data.title || '')
@@ -74,6 +80,7 @@ export default function ArticleEditor({ id }: { id: string }) {
         setAiGenerated(data.aiGenerated || false)
         setMetaTitle(data.metaTitle || '')
         setMetaDesc(data.metaDescription || '')
+        setFeaturedImage(data.featuredImage ?? null)
         if (data.scheduledAt) setScheduledAt(new Date(data.scheduledAt).toISOString().slice(0, 16))
         if (data.versions) setVersions(data.versions)
         if (data.tags) setArticleTags(data.tags.map((t: ArticleTag) => t.tag))
@@ -141,7 +148,7 @@ export default function ArticleEditor({ id }: { id: string }) {
         slug,
         metaTitle: metaTitle || undefined,
         metaDescription: metaDesc || undefined,
-        // Bug C fix: always send categoryId
+        featuredImage: featuredImage ?? null,
         categoryId: categoryId || null,
         tagIds: articleTags.map((t) => t.id),
       }
@@ -260,6 +267,8 @@ export default function ArticleEditor({ id }: { id: string }) {
           <div className="ed-form">
             <input type="text" className="ed-title-input" placeholder="Article title..."
               value={title} onChange={(e) => handleTitleChange(e.target.value)} />
+
+            <FeaturedImagePicker value={featuredImage} onChange={setFeaturedImage} />
 
             <div className="ed-meta">
               {/* Bug C fix: category selector */}

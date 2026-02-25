@@ -41,7 +41,7 @@ export function VideoSection() {
 
   return (
     <>
-      <section>
+      <section className="sba-section-module">
         <div className="sba-section-head">
           <h2 className="sba-section-title">Video</h2>
           <Link href="/video" className="sba-section-more">Pogledaj sve &rarr;</Link>

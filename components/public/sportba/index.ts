@@ -1,8 +1,10 @@
 export { ThemeProvider, useTheme } from './theme-provider'
+export { Skeleton, SkeletonText, SkeletonMatchCard, SkeletonTable, SkeletonPage } from '../Skeleton'
 export { Header } from './header'
 export { Footer } from './footer'
 export { LiveStrip } from './live-strip'
 export type { LiveMatch } from './live-strip'
+export { MatchDayStrip } from './match-day-strip'
 export { AdSlot } from './ad-slot'
 export {
   ReadingProgress,

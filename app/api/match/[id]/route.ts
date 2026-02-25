@@ -210,12 +210,14 @@ function formatLineup(lineup: any) {
       number: p.player?.number ?? 0,
       pos: p.player?.pos ?? '',
       grid: p.player?.grid ?? null,
+      photo: p.player?.photo ?? null,
     })),
     substitutes: (lineup.substitutes ?? []).map((p: any) => ({
       id: p.player?.id,
       name: p.player?.name ?? '',
       number: p.player?.number ?? 0,
       pos: p.player?.pos ?? '',
+      photo: p.player?.photo ?? null,
     })),
     coach: lineup.coach ? { name: lineup.coach.name, photo: lineup.coach.photo } : null,
   }

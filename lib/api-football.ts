@@ -139,7 +139,10 @@ async function apiFootballDirect<T>(endpoint: string): Promise<T[]> {
     return []
   }
 
-  const json = (await res.json()) as { response?: T[] }
+  const json = (await res.json()) as { response?: T[]; errors?: Record<string, unknown> }
+  if (json.errors && Object.keys(json.errors).length > 0) {
+    systemLog('warn', 'api-football', `API body errors for ${endpoint}`, { keys: Object.keys(json.errors) }).catch(() => {})
+  }
   return json.response ?? []
 }
 
@@ -193,26 +196,34 @@ function dateOffsetStr(days: number): string {
 
 /* ── Public API ── */
 
+function leagueIdInWhitelist(leagueId: number | string): boolean {
+  const id = typeof leagueId === 'number' ? leagueId : Number(leagueId)
+  return Number.isFinite(id) && LEAGUE_IDS.includes(id)
+}
+
 export async function getLiveMatches(): Promise<LiveMatch[]> {
   // Try live fixtures first (1 minute cache)
   let fixtures = await apiFootball<ApiFixture>('/fixtures?live=all', CACHE_TTL.LIVE)
-  fixtures = fixtures.filter((f) => LEAGUE_IDS.includes(f.league.id))
+  fixtures = fixtures.filter((f) => leagueIdInWhitelist(f.league.id))
 
   // Fallback to today's fixtures (5 minute cache)
   if (fixtures.length === 0) {
     const all = await apiFootball<ApiFixture>(`/fixtures?date=${todayStr()}&season=${CURRENT_SEASON}`, CACHE_TTL.FIXTURES_TODAY)
-    fixtures = all.filter((f) => LEAGUE_IDS.includes(f.league.id))
+    fixtures = all.filter((f) => leagueIdInWhitelist(f.league.id))
   }
 
   return fixtures.slice(0, 15).map((f) => ({
     id: f.fixture.id.toString(),
     home: f.teams.home.name,
     away: f.teams.away.name,
+    homeLogo: f.teams.home.logo,
+    awayLogo: f.teams.away.logo,
     homeScore: f.goals.home ?? undefined,
     awayScore: f.goals.away ?? undefined,
     status: mapStatus(f.fixture.status.short),
     minute: f.fixture.status.elapsed ?? undefined,
     time: formatTime(f.fixture.date),
+    league: f.league.name,
   }))
 }
 
@@ -247,7 +258,7 @@ export async function getFixturesByDate(date: string): Promise<ApiFixture[]> {
   const isToday = date === todayStr()
   const ttl = isToday ? CACHE_TTL.FIXTURES_TODAY : CACHE_TTL.FIXTURES_FUTURE
   const all = await apiFootball<ApiFixture>(`/fixtures?date=${date}&season=${CURRENT_SEASON}`, ttl)
-  return all.filter((f) => LEAGUE_IDS.includes(f.league.id))
+  return all.filter((f) => leagueIdInWhitelist(f.league.id))
 }
 
 export async function getFixturesRange(days: number): Promise<ApiFixture[]> {
@@ -257,11 +268,15 @@ export async function getFixturesRange(days: number): Promise<ApiFixture[]> {
 }
 
 export async function getStandings(leagueId: number): Promise<ApiStanding[]> {
-  const data = await apiFootball<{ league: { standings: ApiStanding[][] } }>(
+  const data = await apiFootball<{ league: { standings: ApiStanding[][] | ApiStanding[] } }>(
     `/standings?league=${leagueId}&season=${CURRENT_SEASON}`,
     CACHE_TTL.STANDINGS,
   )
-  return data[0]?.league?.standings?.[0] ?? []
+  const raw = data[0]?.league?.standings
+  if (!raw || !Array.isArray(raw)) return []
+  // API can return standings as array of groups [[...]] or single table [...]
+  const table = raw.length > 0 && Array.isArray(raw[0]) ? (raw as ApiStanding[][])[0] : (raw as ApiStanding[])
+  return table
 }
 
 export async function searchPlayers(params: {

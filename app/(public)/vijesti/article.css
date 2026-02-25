@@ -65,12 +65,14 @@
 .sba-article-leaderboard .sba-ad {
   max-width: 728px;
   height: 90px;
+  min-height: 90px;
 }
 
 @media (max-width: 767px) {
   .sba-article-leaderboard .sba-ad {
     max-width: 320px;
     height: 50px;
+    min-height: 50px;
   }
 }
 
@@ -142,7 +144,80 @@
   color: var(--sba-text-2);
 }
 
-/* ── Category Badge ── */
+/* ── Article Hero (audit #16): full-bleed 16:9 + overlay headline ── */
+.sba-article-hero {
+  position: relative;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+  border-radius: var(--sba-radius);
+  margin-bottom: 24px;
+}
+
+@media (min-width: 640px) {
+  .sba-article-hero {
+    aspect-ratio: 16/9;
+  }
+}
+
+.sba-article-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sba-article-hero-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 48px 24px 24px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+}
+
+@media (min-width: 640px) {
+  .sba-article-hero-overlay {
+    padding: 64px 32px 32px;
+  }
+}
+
+.sba-article-hero-badge {
+  font-family: var(--sba-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--sba-accent);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.sba-article-hero-title {
+  font-family: var(--sba-serif);
+  font-size: var(--type-h1, clamp(1.75rem, 4vw, 2.5rem));
+  line-height: 1.15;
+  color: #fff;
+  margin: 0 0 8px;
+}
+
+.sba-article-hero-excerpt {
+  font-family: var(--sba-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Category Badge (standalone, kept for reuse) ── */
 .sba-article-cat {
   font-family: var(--sba-mono);
   font-size: 10px;
@@ -674,6 +749,152 @@
 /* ── Related Articles Grid ── */
 .sba-related {
   padding: 32px 0;
+}
+
+/* ── Author card (audit #19) ── */
+.sba-author-card {
+  margin-top: var(--space-section, 32px);
+  padding-top: var(--space-section, 32px);
+  border-top: 1px solid var(--sba-border);
+}
+
+.sba-author-card-inner {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.sba-author-card-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.sba-author-card-avatar--fallback {
+  background: var(--sba-bg-2);
+  border: 1px solid var(--sba-border);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23888'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E");
+  background-size: 40%;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.sba-author-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sba-author-card-label {
+  font-family: var(--sba-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sba-text-3);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.sba-author-card-name {
+  font-family: var(--sba-serif);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--sba-text-0);
+  display: block;
+  margin-bottom: 12px;
+}
+
+.sba-author-card-more-label {
+  font-family: var(--sba-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sba-text-3);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.sba-author-card-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sba-author-card-links li {
+  margin-bottom: 6px;
+}
+
+.sba-author-card-link {
+  font-size: 0.9375rem;
+  color: var(--sba-text-1);
+  text-decoration: none;
+}
+
+.sba-author-card-link:hover {
+  color: var(--sba-accent);
+}
+
+.sba-author-card-link:focus-visible {
+  outline: 2px solid var(--sba-accent);
+  outline-offset: 2px;
+  border-radius: var(--sba-radius-sm);
+}
+
+/* ── Inline related (audit #17) ── */
+.sba-inline-related {
+  margin: 24px 0;
+  padding: 16px 20px;
+  border-left: 3px solid var(--sba-accent);
+  background: var(--sba-bg-2);
+  border-radius: 0 var(--sba-radius-sm) var(--sba-radius-sm) 0;
+}
+
+.sba-inline-related-label {
+  font-family: var(--sba-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sba-text-3);
+  margin: 0 0 8px;
+}
+
+.sba-inline-related-link {
+  text-decoration: none;
+  display: block;
+}
+
+.sba-inline-related-link:focus-visible {
+  outline: 2px solid var(--sba-accent);
+  outline-offset: 2px;
+  border-radius: var(--sba-radius-sm);
+}
+
+.sba-inline-related-cat {
+  font-family: var(--sba-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sba-accent);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.sba-inline-related-title {
+  font-family: var(--sba-serif);
+  font-size: 1rem;
+  line-height: 1.35;
+  color: var(--sba-text-0);
+}
+
+@media (hover: hover) {
+  .sba-inline-related-link:hover .sba-inline-related-title {
+    color: var(--sba-accent);
+  }
 }
 
 .sba-related-grid {

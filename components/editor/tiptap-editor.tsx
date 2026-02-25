@@ -255,7 +255,20 @@ export default function TiptapEditor({
 
   const insertBlock = useCallback((type: string) => {
     if (!editor) return
-    editor.chain().focus().insertContent({ type }).run()
+    const defaults: Record<string, Record<string, unknown>> = {
+      poll: { question: 'Your question here?', options: ['Option A', 'Option B', 'Option C'] },
+      quiz: { questions: [{ q: 'Question?', options: ['Answer A', 'Answer B', 'Answer C', 'Answer D'], correct: 0 }] },
+      statsTable: {},
+      playerCard: {},
+      matchWidget: {},
+      video: {},
+      gallery: {},
+      socialEmbed: {},
+    }
+    editor.chain().focus().insertContent({
+      type,
+      attrs: defaults[type] ?? {},
+    }).run()
     setShowAddBlock(false)
   }, [editor])
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { SkeletonMatchCard } from '@/components/public/Skeleton'
 
 type MatchData = {
   id: number
@@ -58,8 +59,8 @@ export function MatchOfDay() {
         <div className="sba-section-head">
           <h2 className="sba-section-title">Utakmica dana</h2>
         </div>
-        <div className="sba-motd" style={{ minHeight: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ color: 'var(--sba-text-3)', fontSize: 13, fontFamily: 'var(--sba-mono)' }}>Ucitavanje...</span>
+        <div className="sba-motd">
+          <SkeletonMatchCard />
         </div>
       </section>
     )

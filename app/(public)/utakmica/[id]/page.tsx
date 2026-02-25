@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 /* ── Types ── */
 interface MatchTeam { id: number; name: string; logo: string; winner: boolean | null }
 interface MatchEvent { min: number; extra: number | null; type: string; player: string; detail: string; team: 'home' | 'away' }
-interface LineupPlayer { id: number; name: string; number: number; pos: string; grid: string | null }
+interface LineupPlayer { id: number; name: string; number: number; pos: string; grid: string | null; photo?: string | null }
 interface Lineup { formation: string; startXI: LineupPlayer[]; substitutes: LineupPlayer[]; coach: { name: string; photo: string } | null }
 interface Stat { label: string; home: number; away: number; pct: boolean }
 interface H2HMatch { date: string; comp: string; home: string; away: string; homeScore: number; awayScore: number; homeId: number; awayId: number }
@@ -20,6 +20,7 @@ interface MatchBase {
 }
 
 const TABS = ['Pregled', 'Statistika', 'Postave', 'H2H'] as const
+const KEY_STAT_LABELS = ['Posjed lopte', 'xG', 'Udarci u okvir', 'Ukupno udaraca']
 
 function abbr(name: string): string {
   const map: Record<string, string> = {
@@ -67,6 +68,38 @@ function parseGrid(startXI: LineupPlayer[]): LineupPlayer[][] {
 }
 
 /* ── Sub-components ── */
+
+function MatchTimeline({ events, homeAbbr, awayAbbr }: { events: MatchEvent[]; homeAbbr: string; awayAbbr: string }) {
+  const toPct = (min: number, extra: number | null) => {
+    const m = min + (extra ?? 0)
+    if (m <= 45) return (m / 45) * 50
+    return 50 + ((m - 45) / 45) * 50
+  }
+  return (
+    <div className="mc-timeline" role="img" aria-label="Timeline događaja po minuti">
+      <div className="mc-timeline-track">
+        <span className="mc-timeline-marker mc-timeline-marker--0">0</span>
+        <span className="mc-timeline-marker mc-timeline-marker--45">45</span>
+        <span className="mc-timeline-marker mc-timeline-marker--ht">HT</span>
+        <span className="mc-timeline-marker mc-timeline-marker--90">90+</span>
+      </div>
+      <div className="mc-timeline-events">
+        {events.map((e, i) => {
+          const pct = toPct(e.min, e.extra)
+          const isGoal = e.type === 'goal' || e.type === 'goal-og'
+          return (
+            <div
+              key={i}
+              className={`mc-timeline-dot ${e.team === 'home' ? 'mc-timeline-dot--home' : 'mc-timeline-dot--away'} ${isGoal ? 'mc-timeline-dot--goal' : ''}`}
+              style={{ left: `${pct}%` }}
+              title={`${e.min}${e.extra ? `+${e.extra}` : ''}' ${e.team === 'home' ? homeAbbr : awayAbbr} – ${e.player}`}
+            />
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 function EventRow({ event: e, homeAbbr, awayAbbr }: { event: MatchEvent; homeAbbr: string; awayAbbr: string }) {
   const isGoal = e.type === 'goal' || e.type === 'goal-og'
@@ -122,28 +155,53 @@ export default function MatchPage({ params }: { params: { id: string } }) {
   const [lineups, setLineups] = useState<{ home: Lineup | null; away: Lineup | null } | null>(null)
   const [h2h, setH2h] = useState<H2HMatch[] | null>(null)
   const [tabLoading, setTabLoading] = useState(false)
+  const [todayFixtures, setTodayFixtures] = useState<{ id: number; homeTeam: string; awayTeam: string; homeLogo: string; awayLogo: string; homeScore: number | null; awayScore: number | null; time: string; status: string; league: string }[] | null>(null)
 
   const [statsVisible, setStatsVisible] = useState(false)
   const [pitchVisible, setPitchVisible] = useState(false)
   const statsRef = useRef<HTMLDivElement>(null)
   const pitchRef = useRef<HTMLDivElement>(null)
+  const touchStartX = useRef<number>(0)
 
   const fetchMatch = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
       const res = await fetch(`/api/match/${id}`)
       if (!res.ok) { setError('Utakmica nije pronađena'); return }
       setMatch(await res.json())
-      setError(null)
     } catch { setError('Greška pri učitavanju') } finally { setLoading(false) }
   }, [id])
 
   useEffect(() => { fetchMatch() }, [fetchMatch])
+
+  // Timeout: if still loading after 15s, show error so user can retry (avoids stuck "Učitavanje...")
+  useEffect(() => {
+    if (!loading) return
+    const t = setTimeout(() => {
+      setLoading(false)
+      setError('Učitavanje predugo traje. Pokušajte ponovo.')
+    }, 15000)
+    return () => clearTimeout(t)
+  }, [loading])
 
   useEffect(() => {
     if (!match || match.status !== 'live') return
     const iv = setInterval(fetchMatch, 30000)
     return () => clearInterval(iv)
   }, [match?.status, fetchMatch])
+
+  useEffect(() => {
+    if (!match) return
+    const dateStr = match.date.slice(0, 10)
+    fetch(`/api/fixtures?date=${dateStr}`)
+      .then((r) => r.json())
+      .then((d: unknown) => {
+        const res = d as { fixtures?: Array<{ id: number; homeTeam: string; awayTeam: string; homeLogo: string; awayLogo: string; homeScore: number | null; awayScore: number | null; time: string; status: string; league: string }> }
+        setTodayFixtures((res.fixtures ?? []).filter((f) => f.id !== Number(id)))
+      })
+      .catch(() => setTodayFixtures([]))
+  }, [match, id])
 
   useEffect(() => {
     if (!match) return
@@ -188,7 +246,18 @@ export default function MatchPage({ params }: { params: { id: string } }) {
   }, [tab, statistics, lineups])
 
   if (loading) return <main className="mc"><div className="mc-wrap" style={{padding:'80px 16px',textAlign:'center'}}><div className="mc-spinner"/></div><style>{STYLES}</style></main>
-  if (error || !match) return <main className="mc"><div className="mc-wrap" style={{padding:'80px 16px',textAlign:'center'}}><p style={{color:'var(--sba-text-3)',fontSize:16}}>{error||'Utakmica nije pronađena'}</p><a href="/utakmice" style={{color:'var(--sba-accent)',marginTop:12,display:'inline-block'}}>← Nazad na utakmice</a></div><style>{STYLES}</style></main>
+  if (error || !match) return (
+    <main className="mc">
+      <div className="mc-wrap" style={{padding:'80px 16px',textAlign:'center'}}>
+        <p style={{color:'var(--sba-text-3)',fontSize:16}}>{error||'Utakmica nije pronađena'}</p>
+        <div style={{marginTop:12,display:'flex',flexWrap:'wrap',gap:12,justifyContent:'center'}}>
+          {error && <button type="button" onClick={() => fetchMatch()} style={{padding:'8px 16px',fontSize:14,fontWeight:600,background:'var(--sba-accent)',color:'#fff',border:'none',borderRadius:8,cursor:'pointer'}}>Pokušaj ponovo</button>}
+          <a href="/utakmice" style={{color:'var(--sba-accent)',display:'inline-block'}}>← Nazad na utakmice</a>
+        </div>
+      </div>
+      <style>{STYLES}</style>
+    </main>
+  )
 
   const { home, away, goals, events, league, status, elapsed, score, venue, referee } = match
   const homeAbbr = abbr(home.name), awayAbbr = abbr(away.name)
@@ -235,7 +304,7 @@ export default function MatchPage({ params }: { params: { id: string } }) {
                     {home.logo ? <img src={home.logo} alt={home.name} className="mc-badge-img" /> : <div className="mc-badge" style={{background:teamGrad(home.name,'home')}}>{homeAbbr}</div>}
                     <span className="mc-tname">{home.name}</span>
                   </div>
-                  <div className="mc-sc">
+                  <div className="mc-sc" {...(status === 'live' ? { 'aria-live': 'polite' as const, 'aria-atomic': true } : {})}>
                     {goals.home !== null ? <span className="mc-sc-num">{goals.home} &ndash; {goals.away}</span> : <span className="mc-sc-num mc-sc-vs">vs</span>}
                     {status === 'live' && elapsed && <span className="mc-sc-min"><span className="mc-sc-min-dot" />{elapsed}&apos;</span>}
                   </div>
@@ -247,12 +316,23 @@ export default function MatchPage({ params }: { params: { id: string } }) {
               </div>
 
               <div className="mc-content">
-                <div className="mc-tabs" role="tablist">
+                <div
+                  className="mc-tabs"
+                  role="tablist"
+                  onTouchStart={(e) => { touchStartX.current = e.targetTouches[0].clientX }}
+                  onTouchEnd={(e) => {
+                    const dx = e.changedTouches[0].clientX - touchStartX.current
+                    if (Math.abs(dx) < 50) return
+                    if (dx < 0 && tab < TABS.length - 1) setTab(tab + 1)
+                    if (dx > 0 && tab > 0) setTab(tab - 1)
+                  }}
+                >
                   {TABS.map((label, i) => <button key={label} className="mc-tab" role="tab" aria-selected={tab===i} onClick={()=>setTab(i)}>{label}</button>)}
                 </div>
 
                 {tab === 0 && <div className="mc-pnl" role="tabpanel" key="pregled">
                   {events.length > 0 ? <>
+                    <MatchTimeline events={events} homeAbbr={homeAbbr} awayAbbr={awayAbbr} />
                     <div className="mc-ev-title">Ključni događaji</div>
                     {firstHalf.map((e, i) => <EventRow key={`1h-${i}`} event={e} homeAbbr={homeAbbr} awayAbbr={awayAbbr} />)}
                     {htStr && <div className="mc-ht"><div className="mc-ht-line" /><span className="mc-ht-lbl">Poluvrijeme · {htStr}</span><div className="mc-ht-line" /></div>}
@@ -263,21 +343,26 @@ export default function MatchPage({ params }: { params: { id: string } }) {
                 {tab === 1 && <div className="mc-pnl" role="tabpanel" key="stats" ref={statsRef}>
                   {tabLoading && !statistics ? <MiniSpinner /> : statistics && statistics.length > 0 ? <>
                     <div className="mc-stats-hdr"><span className="mc-stats-team">{home.name}</span><span className="mc-stats-team">{away.name}</span></div>
-                    {statistics.map((s, idx) => {
-                      const total = s.home + s.away, hPct = total > 0 ? (s.home/total)*100 : 50, aPct = total > 0 ? (s.away/total)*100 : 50
-                      const hl = s.home > s.away, al = s.away > s.home, t = s.home === s.away
-                      return <div className="mc-stat" key={s.label}>
-                        <div className="mc-stat-lbl">{s.label}</div>
-                        <div className="mc-stat-row">
-                          <span className={`mc-stat-val mc-stat-val--home ${hl||t?'mc-stat-val--lead':'mc-stat-val--trail'}`}>{s.home}{s.pct?'%':''}</span>
-                          <div className="mc-stat-bars">
-                            <div className={`mc-stat-fill mc-stat-fill--home ${hl||t?'mc-stat-fill--lead':'mc-stat-fill--trail'}`} style={{width:statsVisible?`${hPct}%`:'0%',transitionDelay:statsVisible?`${idx*50}ms`:'0ms'}} />
-                            <div className={`mc-stat-fill mc-stat-fill--away ${al||t?'mc-stat-fill--lead':'mc-stat-fill--trail'}`} style={{width:statsVisible?`${aPct}%`:'0%',transitionDelay:statsVisible?`${idx*50}ms`:'0ms'}} />
+                    {(() => {
+                      const keyStats = statistics.filter(s => KEY_STAT_LABELS.includes(s.label))
+                      const otherStats = statistics.filter(s => !KEY_STAT_LABELS.includes(s.label))
+                      const renderStat = (s: Stat, idx: number, isKey: boolean) => {
+                        const total = s.home + s.away, hPct = total > 0 ? (s.home/total)*100 : 50, aPct = total > 0 ? (s.away/total)*100 : 50
+                        const hl = s.home > s.away, al = s.away > s.home, t = s.home === s.away
+                        return <div className={`mc-stat ${isKey ? 'mc-stat--key' : ''}`} key={s.label}>
+                          <div className="mc-stat-lbl">{s.label}</div>
+                          <div className="mc-stat-row">
+                            <span className={`mc-stat-val mc-stat-val--home ${hl||t?'mc-stat-val--lead':'mc-stat-val--trail'}`}>{s.home}{s.pct?'%':''}</span>
+                            <div className="mc-stat-bars">
+                              <div className={`mc-stat-fill mc-stat-fill--home ${hl||t?'mc-stat-fill--lead':'mc-stat-fill--trail'}`} style={{width:statsVisible?`${hPct}%`:'0%',transitionDelay:statsVisible?`${idx*50}ms`:'0ms'}} />
+                              <div className={`mc-stat-fill mc-stat-fill--away ${al||t?'mc-stat-fill--lead':'mc-stat-fill--trail'}`} style={{width:statsVisible?`${aPct}%`:'0%',transitionDelay:statsVisible?`${idx*50}ms`:'0ms'}} />
+                            </div>
+                            <span className={`mc-stat-val mc-stat-val--away ${al||t?'mc-stat-val--lead':'mc-stat-val--trail'}`}>{s.away}{s.pct?'%':''}</span>
                           </div>
-                          <span className={`mc-stat-val mc-stat-val--away ${al||t?'mc-stat-val--lead':'mc-stat-val--trail'}`}>{s.away}{s.pct?'%':''}</span>
                         </div>
-                      </div>
-                    })}
+                      }
+                      return <><div className="mc-key-stats">{keyStats.map((s, i) => renderStat(s, i, true))}</div>{otherStats.length > 0 && <div className="mc-other-stats">{otherStats.map((s, i) => renderStat(s, keyStats.length + i, false))}</div>}</>
+                    })()}
                   </> : <div className="mc-empty">Statistika nije dostupna</div>}
                 </div>}
 
@@ -293,15 +378,17 @@ export default function MatchPage({ params }: { params: { id: string } }) {
                       <div className="mc-pitch-box mc-pitch-box--gl mc-pitch-box--gl-t" /><div className="mc-pitch-box mc-pitch-box--gl mc-pitch-box--gl-b" />
                       <div className="mc-pitch-half mc-pitch-half--home">
                         {parseGrid(lineups.home.startXI).map((row, ri) => <div key={ri} className="mc-row">
-                          {row.map((p, pi) => <div key={p.id||pi} className={`mc-player${pitchVisible?' mc-player-anim':''}`} style={{animationDelay:`${(ri*4+pi)*40}ms`}}>
-                            <div className="mc-pdot mc-pdot--home">{p.number}</div><span className="mc-pname">{p.name.split(' ').pop()}</span>
+                          {row.map((p, pi) => <div key={p.id||pi} className={`mc-player${pitchVisible?' mc-player-anim':''}`} style={{animationDelay:`${(ri*4+pi)*40}ms`}} title={`${p.name} · ${p.pos || '—'}`}>
+                            {p.photo ? <img src={p.photo} alt="" className="mc-pdot mc-pdot--photo" /> : <div className="mc-pdot mc-pdot--home">{p.number}</div>}
+                            <span className="mc-pname">{p.name.split(' ').pop()}</span>
                           </div>)}
                         </div>)}
                       </div>
                       <div className="mc-pitch-half mc-pitch-half--away">
                         {parseGrid(lineups.away.startXI).reverse().map((row, ri) => <div key={ri} className="mc-row">
-                          {row.map((p, pi) => <div key={p.id||pi} className={`mc-player${pitchVisible?' mc-player-anim':''}`} style={{animationDelay:`${(ri*4+pi+11)*40}ms`}}>
-                            <div className="mc-pdot mc-pdot--away">{p.number}</div><span className="mc-pname">{p.name.split(' ').pop()}</span>
+                          {row.map((p, pi) => <div key={p.id||pi} className={`mc-player${pitchVisible?' mc-player-anim':''}`} style={{animationDelay:`${(ri*4+pi+11)*40}ms`}} title={`${p.name} · ${p.pos || '—'}`}>
+                            {p.photo ? <img src={p.photo} alt="" className="mc-pdot mc-pdot--photo" /> : <div className="mc-pdot mc-pdot--away">{p.number}</div>}
+                            <span className="mc-pname">{p.name.split(' ').pop()}</span>
                           </div>)}
                         </div>)}
                       </div>
@@ -309,10 +396,10 @@ export default function MatchPage({ params }: { params: { id: string } }) {
                     <div className="mc-subs"><div className="mc-subs-title">Klupa</div>
                       <div className="mc-subs-grid">
                         <div><div className="mc-subs-col-title">{home.name}</div>
-                          {lineups.home.substitutes.slice(0,7).map(p => <div key={p.id||p.number} className="mc-sub"><div className="mc-sub-dot" style={{background:teamColor(home.name,'home')}}>{p.number}</div><span className="mc-sub-name">{p.name}</span></div>)}
+                          {lineups.home.substitutes.slice(0,7).map(p => <div key={p.id||p.number} className="mc-sub" title={`${p.name} · ${p.pos || '—'}`}>{p.photo ? <img src={p.photo} alt="" className="mc-sub-photo" /> : <div className="mc-sub-dot" style={{background:teamColor(home.name,'home')}}>{p.number}</div>}<span className="mc-sub-name">{p.name}</span></div>)}
                         </div>
                         <div><div className="mc-subs-col-title">{away.name}</div>
-                          {lineups.away.substitutes.slice(0,7).map(p => <div key={p.id||p.number} className="mc-sub"><div className="mc-sub-dot" style={{background:teamColor(away.name,'away')}}>{p.number}</div><span className="mc-sub-name">{p.name}</span></div>)}
+                          {lineups.away.substitutes.slice(0,7).map(p => <div key={p.id||p.number} className="mc-sub" title={`${p.name} · ${p.pos || '—'}`}>{p.photo ? <img src={p.photo} alt="" className="mc-sub-photo" /> : <div className="mc-sub-dot" style={{background:teamColor(away.name,'away')}}>{p.number}</div>}<span className="mc-sub-name">{p.name}</span></div>)}
                         </div>
                       </div>
                     </div>
@@ -337,7 +424,25 @@ export default function MatchPage({ params }: { params: { id: string } }) {
                 </div>}
               </div>
 
-              <div className="mc-side-mobile"><SidebarCard info={sidebarInfo} dateStr={dateStr} timeStr={timeStr} /></div>
+              {todayFixtures && todayFixtures.length > 0 && (
+                <section className="mc-more-matches" aria-label="Ostale utakmice">
+                  <h2 className="mc-more-matches-title">Ostale utakmice</h2>
+                  <div className="mc-more-matches-scroll">
+                    {todayFixtures.map((f) => (
+                      <a key={f.id} href={`/utakmica/${f.id}`} className="mc-more-match-card">
+                        <span className="mc-more-match-league">{f.league}</span>
+                        <div className="mc-more-match-teams">
+                          <span className="mc-more-match-team">{f.homeTeam}</span>
+                          <span className="mc-more-match-score">
+                            {f.status === 'live' ? `${f.homeScore ?? '-'} – ${f.awayScore ?? '-'}` : f.status === 'ft' ? `${f.homeScore ?? 0} – ${f.awayScore ?? 0}` : f.time}
+                          </span>
+                          <span className="mc-more-match-team">{f.awayTeam}</span>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
             <aside className="mc-side"><div className="mc-side-sticky"><SidebarCard info={sidebarInfo} dateStr={dateStr} timeStr={timeStr} /></div></aside>
           </div>
@@ -352,11 +457,9 @@ const STYLES = `
 .mc-wrap{max-width:1080px;margin:0 auto;padding:0 16px}
 .mc-layout{display:flex;gap:24px}
 .mc-main{flex:1;min-width:0;padding:16px 0 48px}
-.mc-side{display:none}
-@media(min-width:700px){.mc-side{display:flex;flex-direction:column;gap:16px;width:35%;max-width:320px;flex-shrink:0;padding:16px 0 48px}}
+.mc-side{display:flex;flex-direction:column;gap:16px;padding:16px 0 48px;order:2}
+@media(min-width:700px){.mc-side{order:unset;width:35%;max-width:320px;flex-shrink:0}}
 @media(min-width:960px){.mc-side{width:320px;gap:20px}}
-.mc-side-mobile{display:flex;flex-direction:column;gap:16px;padding-top:20px}
-@media(min-width:700px){.mc-side-mobile{display:none}}
 .mc-side-sticky{position:sticky;top:72px;display:flex;flex-direction:column;gap:16px}
 
 .mc-bc{font-family:var(--sba-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--sba-text-3);margin-bottom:16px;display:flex;align-items:center;gap:8px}
@@ -408,6 +511,14 @@ const STYLES = `
 .mc-spinner{display:inline-block;width:32px;height:32px;border:3px solid var(--sba-border);border-top-color:var(--sba-accent);border-radius:50%;animation:mc-spin .8s linear infinite}
 @keyframes mc-spin{to{transform:rotate(360deg)}}
 
+.mc-timeline{margin-bottom:20px;padding:8px 0}
+.mc-timeline-track{display:flex;justify-content:space-between;font-family:var(--sba-mono);font-size:9px;font-weight:700;color:var(--sba-text-3);margin-bottom:6px;padding:0 2px}
+.mc-timeline-marker--ht{color:var(--sba-accent)}
+.mc-timeline-events{position:relative;height:24px;background:var(--sba-bg-2);border-radius:12px;border:1px solid var(--sba-border)}
+.mc-timeline-dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;border:2px solid var(--sba-bg-0)}
+.mc-timeline-dot--home{background:var(--sba-accent)}
+.mc-timeline-dot--away{background:var(--sba-blue)}
+.mc-timeline-dot--goal{width:14px;height:14px;border-color:var(--sba-green);box-shadow:0 0 0 2px var(--sba-green)}
 .mc-ev-title{font-family:var(--sba-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--sba-text-3);margin-bottom:16px}
 .mc-ev{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--sba-border);transition:background .15s}
 .mc-ev:last-child{border-bottom:none}
@@ -432,7 +543,12 @@ const STYLES = `
 
 .mc-stats-hdr{display:flex;justify-content:space-between;padding-bottom:14px;margin-bottom:4px;border-bottom:1px solid var(--sba-border)}
 .mc-stats-team{font-family:var(--sba-mono);font-size:12px;font-weight:700;text-transform:uppercase;color:var(--sba-text-1)}
+.mc-key-stats{margin-bottom:16px;padding:16px;background:var(--sba-bg-2);border-radius:var(--sba-radius);border:1px solid var(--sba-border)}
+.mc-key-stats .mc-stat{border-bottom:1px solid var(--sba-border-subtle)}
+.mc-key-stats .mc-stat:last-child{border-bottom:none}
+.mc-other-stats .mc-stat:first-child{padding-top:4px}
 .mc-stat{padding:14px 0;border-bottom:1px solid var(--sba-border-subtle)}
+.mc-stat--key .mc-stat-lbl{color:var(--sba-text-1);font-weight:700}
 .mc-stat:last-child{border-bottom:none}
 .mc-stat-lbl{font-family:var(--sba-mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--sba-text-3);text-align:center;margin-bottom:8px}
 .mc-stat-row{display:flex;align-items:center;gap:10px}
@@ -477,6 +593,9 @@ const STYLES = `
 @media(min-width:700px){.mc-pdot{width:32px;height:32px;font-size:12px}}
 .mc-pdot--home{background:var(--sba-accent);box-shadow:0 0 8px rgba(255,87,34,.3)}
 .mc-pdot--away{background:var(--sba-blue);box-shadow:0 0 8px rgba(59,130,246,.3)}
+.mc-pdot--photo{width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.3);padding:0;display:block}
+@media(min-width:700px){.mc-pdot--photo{width:32px;height:32px}}
+.mc-sub-photo{width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--sba-border)}
 .mc-player:hover .mc-pdot{transform:scale(1.15)}
 .mc-pname{font-family:var(--sba-mono);font-size:8px;font-weight:600;color:rgba(255,255,255,.85);text-align:center;max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.5)}
 @media(min-width:700px){.mc-pname{font-size:10px;max-width:64px}}
@@ -518,5 +637,17 @@ const STYLES = `
 .mc-info-icon{font-size:14px;flex-shrink:0}
 .mc-info-lbl{color:var(--sba-text-3);flex:1}
 .mc-info-val{color:var(--sba-text-0);font-weight:600;text-align:right}
-.mc-ad{height:250px;background:var(--sba-bg-1);border:1px dashed var(--sba-border);border-radius:var(--sba-radius);display:flex;align-items:center;justify-content:center;font-family:var(--sba-mono);font-size:12px;color:var(--sba-text-3)}
+.mc-ad{height:250px;min-height:250px;background:var(--sba-bg-1);border:1px dashed var(--sba-border);border-radius:var(--sba-radius);display:flex;align-items:center;justify-content:center;font-family:var(--sba-mono);font-size:12px;color:var(--sba-text-3)}
+
+.mc-more-matches{margin-top:32px;padding-top:24px;border-top:1px solid var(--sba-border)}
+.mc-more-matches-title{font-family:var(--sba-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--sba-text-3);margin-bottom:12px}
+.mc-more-matches-scroll{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;scrollbar-width:none}
+.mc-more-matches-scroll::-webkit-scrollbar{display:none}
+.mc-more-match-card{scroll-snap-align:start;flex:0 0 260px;padding:12px 14px;background:var(--sba-bg-1);border:1px solid var(--sba-border);border-radius:var(--sba-radius);text-decoration:none;color:inherit;transition:border-color .15s,background .15s}
+.mc-more-match-card:hover{background:var(--sba-bg-2);border-color:var(--sba-accent)}
+.mc-more-match-card:focus-visible{outline:2px solid var(--sba-accent);outline-offset:2px}
+.mc-more-match-league{font-family:var(--sba-mono);font-size:9px;font-weight:600;text-transform:uppercase;color:var(--sba-text-3);display:block;margin-bottom:8px}
+.mc-more-match-teams{display:flex;flex-direction:column;gap:4px}
+.mc-more-match-team{font-size:13px;font-weight:600;color:var(--sba-text-0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-more-match-score{font-family:var(--sba-mono);font-size:14px;font-weight:700;color:var(--sba-text-2);margin:4px 0}
 `

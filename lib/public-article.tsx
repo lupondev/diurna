@@ -12,6 +12,7 @@ import {
   FloatingShareBar,
   BackToTop,
 } from '@/components/public/sportba/article-widgets'
+import { PreloadHeroImage } from '@/components/public/PreloadHeroImage'
 import { MetaBar } from '@/components/public/sportba/meta-bar'
 import { Reactions } from '@/components/public/sportba/reactions'
 import { NewsletterForm } from '@/components/public/sportba/newsletter-form'
@@ -45,15 +46,32 @@ export async function fetchArticle(slug: string, categorySlug?: string) {
 
   if (!article) return null
 
-  // Use site.name — NEVER hardcode platform name
   let authorName = `Redakcija ${site.name || 'Sport'}`
+  let authorImage: string | null = null
   if (article.authorId && !article.aiGenerated) {
     const author = await prisma.user.findUnique({
       where: { id: article.authorId },
-      select: { name: true },
+      select: { name: true, image: true },
     })
     if (author?.name) authorName = author.name
+    if (author?.image) authorImage = author.image
   }
+
+  const byAuthor = article.authorId
+    ? await prisma.article.findMany({
+        where: {
+          siteId: site.id,
+          authorId: article.authorId,
+          status: 'PUBLISHED',
+          deletedAt: null,
+          isTest: false,
+          id: { not: article.id },
+        },
+        select: { title: true, slug: true, featuredImage: true, category: { select: { slug: true, name: true } }, publishedAt: true },
+        orderBy: { publishedAt: 'desc' },
+        take: 3,
+      })
+    : []
 
   const related = await prisma.article.findMany({
     where: {
@@ -82,7 +100,7 @@ export async function fetchArticle(slug: string, categorySlug?: string) {
     take: 5,
   })
 
-  return { article, authorName, related, trending, site }
+  return { article, authorName, authorImage, byAuthor, related, trending, site }
 }
 
 export type ArticleData = NonNullable<Awaited<ReturnType<typeof fetchArticle>>>
@@ -141,8 +159,34 @@ function getCategoryFallback(slug?: string): string {
   return map[slug || ''] || 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=1080&q=80'
 }
 
+type RelatedItem = { title: string; slug: string; category: { slug: string; name: string } | null; publishedAt: Date | null }
+function injectInlineRelated(html: string, related: RelatedItem[], getArticleUrl: (r: RelatedItem) => string): string {
+  if (related.length === 0) return html
+  const parts = html.split(/(<\/p>\s*)/i)
+  const result: string[] = []
+  let paragraphCount = 0
+  let relatedIndex = 0
+  for (let i = 0; i < parts.length; i++) {
+    result.push(parts[i])
+    if (/<\/p>/i.test(parts[i])) {
+      paragraphCount++
+      if (paragraphCount >= 3 && relatedIndex < related.length) {
+        const r = related[relatedIndex]
+        const href = getArticleUrl(r)
+        const cat = (r.category?.name || 'Vijesti').toUpperCase()
+        result.push(
+          `<div class="sba-inline-related"><p class="sba-inline-related-label">Pročitaj još</p><a href="${href}" class="sba-inline-related-link"><span class="sba-inline-related-cat">${cat}</span><span class="sba-inline-related-title">${r.title.replace(/</g, '&lt;').replace(/"/g, '&quot;')}</span></a></div>`
+        )
+        relatedIndex++
+        paragraphCount = 0
+      }
+    }
+  }
+  return result.join('')
+}
+
 export function ArticlePage({ data }: { data: ArticleData }) {
-  const { article, authorName, related, trending, site } = data
+  const { article, authorName, authorImage, byAuthor, related, trending, site } = data
   const siteName = site?.name || process.env.NEXT_PUBLIC_SITE_NAME || 'TodayFootballMatch'
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://todayfootballmatch.com').replace(/\/$/, '')
   const rawHtml = tiptapToHtml(article.content)
@@ -171,7 +215,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
             image: toAbsUrl(imageUrl),
             datePublished: pubDate.toISOString(),
             dateModified: article.updatedAt.toISOString(),
-            author: { '@type': 'Organization', name: siteName },
+            author: { '@type': 'Person', name: authorName },
             publisher: {
               '@type': 'Organization',
               name: siteName,
@@ -182,6 +226,7 @@ export function ArticlePage({ data }: { data: ArticleData }) {
           }),
         }}
       />
+      <PreloadHeroImage src={imageUrl || ''} />
       <ReadingProgress />
       <ScrollDepthTracker />
 
@@ -197,12 +242,21 @@ export function ArticlePage({ data }: { data: ArticleData }) {
             <Link href={`/${categorySlug}`}>{categoryName}</Link>
           </nav>
 
-          <span className="sba-article-cat">{categoryName}</span>
-          <h1 className="sba-article-title">{article.title}</h1>
-
-          {article.excerpt && (
-            <p className="sba-article-subtitle">{article.excerpt}</p>
-          )}
+          <header className="sba-article-hero">
+            <img
+              src={imageUrl}
+              alt=""
+              className="sba-article-hero-img"
+              fetchPriority="high"
+            />
+            <div className="sba-article-hero-overlay">
+              <span className="sba-article-hero-badge">{categoryName}</span>
+              <h1 className="sba-article-hero-title">{article.title}</h1>
+              {article.excerpt && (
+                <p className="sba-article-hero-excerpt">{article.excerpt}</p>
+              )}
+            </div>
+          </header>
 
           <MetaBar
             author={authorName}
@@ -211,18 +265,8 @@ export function ArticlePage({ data }: { data: ArticleData }) {
             views=""
           />
 
-          <div className="sba-featured-img">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageUrl}
-              alt={article.title}
-              className="sba-featured-img-real"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12, display: 'block' }}
-            />
-          </div>
-
           <div className="sba-article-body">
-            <WidgetHydrator html={bodyHtml} />
+            <WidgetHydrator html={injectInlineRelated(bodyHtml, related, getArticleUrl)} />
           </div>
 
           {article.tags.length > 0 && (
@@ -236,6 +280,32 @@ export function ArticlePage({ data }: { data: ArticleData }) {
           )}
 
           <Reactions />
+
+          <section className="sba-author-card">
+            <div className="sba-author-card-inner">
+              {authorImage ? (
+                <img src={authorImage} alt="" className="sba-author-card-avatar" width={64} height={64} />
+              ) : (
+                <div className="sba-author-card-avatar sba-author-card-avatar--fallback" aria-hidden />
+              )}
+              <div className="sba-author-card-body">
+                <span className="sba-author-card-label">Autor</span>
+                <span className="sba-author-card-name">{authorName}</span>
+                {byAuthor.length > 0 && (
+                  <div className="sba-author-card-more">
+                    <span className="sba-author-card-more-label">Još od autora</span>
+                    <ul className="sba-author-card-links">
+                      {byAuthor.map((a) => (
+                        <li key={a.slug}>
+                          <Link href={getArticleUrl(a)} className="sba-author-card-link">{a.title}</Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
 
           {related.length > 0 && (
             <section className="sba-related">

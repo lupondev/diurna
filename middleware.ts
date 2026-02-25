@@ -72,7 +72,9 @@ export async function middleware(req: NextRequest) {
   const isEmbedRoute = pathname.startsWith('/api/embed')
   const isOgRoute = pathname.startsWith('/api/og')
   const isFeedRoute = pathname.startsWith('/feed')
+  const isRssRoute = pathname === '/rss'
   const isHealthRoute = pathname.startsWith('/api/health')
+  const isFootballHealthRoute = pathname.startsWith('/api/football/health')
   const isWebhookRoute = pathname.startsWith('/api/webhooks')
   const isCronRoute = pathname.startsWith('/api/cron')
   const isSeedRoute = pathname.startsWith('/api/admin/seed-feeds') || pathname.startsWith('/api/admin/seed-entities') || pathname.startsWith('/api/admin/seed-players') || pathname.startsWith('/api/admin/enrich-players') || pathname.startsWith('/api/admin/seed-matches') || pathname.startsWith('/api/admin/sync-players') || pathname.startsWith('/api/admin/scrape-salaries')
@@ -94,7 +96,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/api/articles') ||
     pathname.startsWith('/api/site')
   )
-  const isPublicRoute = isHomepage || isStaticPage || isCategoryPage || isMatchCenter || isPlayerPage || isLigaPage || pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isCronRoute || isSeedRoute || isNewsroomPublic || isSetupRoute || isDashboardStats || isCategoriesRoute || isPublicArticle || isHealthRoute || isWebhookRoute || isAdminApiWithBearer || isMcpRoute
+  const isPublicRoute = isHomepage || isStaticPage || isCategoryPage || isMatchCenter || isPlayerPage || isLigaPage || pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isRssRoute || isCronRoute || isSeedRoute || isNewsroomPublic || isSetupRoute || isDashboardStats || isCategoriesRoute || isPublicArticle || isHealthRoute || isFootballHealthRoute || isWebhookRoute || isAdminApiWithBearer || isMcpRoute
 
   if (!isPublicRoute) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })

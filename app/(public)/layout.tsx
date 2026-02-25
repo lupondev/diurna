@@ -22,6 +22,7 @@ export default async function PublicLayout({ children }: { children: React.React
 
   return (
     <ThemeProvider>
+      <a href="#main-content" className="skip-link">Preskoči na sadržaj</a>
       {gaId && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="afterInteractive" />
@@ -33,7 +34,7 @@ export default async function PublicLayout({ children }: { children: React.React
           `}</Script>
         </>
       )}
-      <Header siteName={siteName} />
+      <Header siteName={siteName} liveCount={matches.filter((m) => m.status === 'live').length} />
       <LiveStrip matches={matches} />
       {children}
       <Footer siteName={siteName} />

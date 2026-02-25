@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { SkeletonTable } from '@/components/public/Skeleton'
 
 type StandingRow = {
   pos: number
@@ -22,7 +24,7 @@ function zoneForRank(rank: number, total: number): string {
   return ''
 }
 
-export function StandingsTable() {
+export function StandingsTable({ limit }: { limit?: number } = {}) {
   const [standings, setStandings] = useState<StandingRow[]>([])
   const [expanded, setExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -60,8 +62,10 @@ export function StandingsTable() {
         <div className="sba-section-head">
           <h2 className="sba-section-title">Tabela &mdash; Premier League</h2>
         </div>
-        <div className="sba-standings" style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ color: 'var(--sba-text-3)', fontSize: 13, fontFamily: 'var(--sba-mono)' }}>Ucitavanje...</span>
+        <div className="sba-standings">
+          <div className="sba-standings-wrap">
+            <SkeletonTable rows={8} />
+          </div>
         </div>
       </section>
     )
@@ -69,7 +73,10 @@ export function StandingsTable() {
 
   if (standings.length === 0) return null
 
-  const rows = expanded ? standings : standings.slice(0, 8)
+  const maxRows = limit ?? 8
+  const rows = limit != null
+    ? standings.slice(0, limit)
+    : (expanded ? standings : standings.slice(0, 8))
 
   return (
     <section>
@@ -117,7 +124,7 @@ export function StandingsTable() {
             </tbody>
           </table>
         </div>
-        {standings.length > 8 && (
+        {limit == null && standings.length > 8 && (
           <div className="sba-standings-expand">
             <button
               className="sba-standings-expand-btn"
@@ -125,6 +132,13 @@ export function StandingsTable() {
             >
               {expanded ? 'Prikazi manje \u2191' : 'Prikazi sve \u2193'}
             </button>
+          </div>
+        )}
+        {limit != null && standings.length > limit && (
+          <div className="sba-standings-expand">
+            <Link href="/tabela" className="sba-standings-expand-btn" style={{ textDecoration: 'none' }}>
+              Vidi tabelu &rarr;
+            </Link>
           </div>
         )}
       </div>
