@@ -64,7 +64,7 @@ async function main() {
 
   for (const feed of NEWS_FEEDS) {
     // Check if exists
-    const existing = await prisma.feedSource.findUnique({ where: { url: feed.url } })
+    const existing = await prisma.feedSource.findFirst({ where: { url: feed.url, siteId: feed.siteId ?? null } })
     if (existing) {
       console.log(`⏭️  Exists: ${feed.name}`)
       skipped++

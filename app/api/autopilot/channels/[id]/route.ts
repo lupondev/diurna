@@ -16,6 +16,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const body = await req.json() as Record<string, unknown>
   const { configId, config, id: _, ...data } = body
 
+  const existing = await prisma.distributionChannel.findFirst({
+    where: { id, config: { orgId: session.user.organizationId } },
+  })
+  if (!existing) {
+    return NextResponse.json({ error: 'Channel not found' }, { status: 404 })
+  }
+
   const channel = await prisma.distributionChannel.update({
     where: { id },
     data,
@@ -34,6 +41,12 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
 
   const { id } = await params
+  const existing = await prisma.distributionChannel.findFirst({
+    where: { id, config: { orgId: session.user.organizationId } },
+  })
+  if (!existing) {
+    return NextResponse.json({ error: 'Channel not found' }, { status: 404 })
+  }
   await prisma.distributionChannel.delete({ where: { id } })
   return NextResponse.json({ ok: true })
 }

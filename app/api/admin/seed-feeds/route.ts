@@ -88,14 +88,21 @@ export async function POST(req: NextRequest) {
   let created = 0
   for (const feed of DEFAULT_FEEDS) {
     try {
-      await prisma.feedSource.upsert({
-        where: { url: feed.url },
-        update: { name: feed.name, tier: feed.tier, category: feed.category, country: feed.country },
-        create: feed,
+      const existing = await prisma.feedSource.findFirst({
+        where: { url: feed.url, siteId: null },
       })
-      created++
-    } catch (err) {
-      console.error('Seed feed upsert:', err)
+      if (existing) {
+        await prisma.feedSource.update({
+          where: { id: existing.id },
+          data: { name: feed.name, tier: feed.tier, category: feed.category, country: feed.country },
+        })
+      } else {
+        await prisma.feedSource.create({
+          data: { ...feed, siteId: null },
+        })
+        created++
+      }
+    } catch (_) {
     }
   }
   return NextResponse.json({ created, total: DEFAULT_FEEDS.length })

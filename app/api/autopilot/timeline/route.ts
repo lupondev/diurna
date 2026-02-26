@@ -29,7 +29,6 @@ export async function GET(req: NextRequest) {
   }
 
   if (!site) {
-    console.error('Timeline: No site found for org:', session.user.organizationId)
     return NextResponse.json({ articles: [], matches: [] })
   }
 

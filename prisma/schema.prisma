@@ -453,7 +453,7 @@ model NewsItem {
 model FeedSource {
   id         String    @id @default(cuid())
   name       String
-  url        String    @unique
+  url        String
   category   String    @default("breaking")
   tier       Int       @default(3)
   country    String    @default("global")
@@ -464,6 +464,7 @@ model FeedSource {
   siteId     String?
   createdAt  DateTime  @default(now())
 
+  @@unique([url, siteId])
   @@index([siteId, active])
 }
 

@@ -13,6 +13,12 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
 
   const { id } = await params
+  const existing = await prisma.autopilotTopic.findFirst({
+    where: { id, config: { orgId: session.user.organizationId } },
+  })
+  if (!existing) {
+    return NextResponse.json({ error: 'Topic not found' }, { status: 404 })
+  }
   await prisma.autopilotTopic.delete({ where: { id } })
   return NextResponse.json({ ok: true })
 }

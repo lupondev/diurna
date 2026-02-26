@@ -39,11 +39,18 @@ export async function POST(req: NextRequest) {
   if (!name || !url) {
     return NextResponse.json({ error: 'Name and URL required' }, { status: 400 })
   }
+  const urlTrimmed = url.trim()
+  const existing = await prisma.feedSource.findFirst({
+    where: { url: urlTrimmed, siteId: site.id },
+  })
+  if (existing) {
+    return NextResponse.json({ error: 'A source with this URL already exists' }, { status: 409 })
+  }
   try {
     const source = await prisma.feedSource.create({
       data: {
         name: name.trim(),
-        url: url.trim(),
+        url: urlTrimmed,
         tier: tier ?? 2,
         active: true,
         category: 'breaking',
@@ -55,7 +62,6 @@ export async function POST(req: NextRequest) {
     if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'P2002') {
       return NextResponse.json({ error: 'A source with this URL already exists' }, { status: 409 })
     }
-    console.error('Feed source create error:', e)
     return NextResponse.json({ error: 'Failed to create source' }, { status: 500 })
   }
 }
