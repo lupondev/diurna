@@ -187,16 +187,15 @@ export default function NewsroomPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // Manual fetch — uses x-cron-secret header so the cron endpoint accepts the request
   async function triggerFetch() {
     setFetching(true)
-    const cronSecret = process.env.NEXT_PUBLIC_CRON_SECRET
-    const headers: Record<string, string> = {}
-    if (cronSecret) headers['x-cron-secret'] = cronSecret
-
     try {
-      await fetch('/api/cron/fetch-feeds', { headers })
-      await fetch('/api/cron/cluster-engine', { headers })
+      const res = await fetch('/api/newsroom/manual-fetch', { method: 'POST' })
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(data.error || 'Error fetching feeds')
+        return
+      }
       await loadClusters()
       toast.success('Feeds refreshed')
     } catch {

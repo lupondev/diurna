@@ -214,6 +214,8 @@ model Article {
   @@index([siteId, status, deletedAt])
   @@index([siteId, categoryId])
   @@index([siteId])
+  @@index([siteId, status, publishedAt])
+  @@index([siteId, categoryId, status, publishedAt])
 }
 
 model AIRevision {
@@ -242,6 +244,7 @@ model Category {
   articles Article[]
 
   @@unique([siteId, slug])
+  @@index([siteId, order])
 }
 
 model Widget {
@@ -899,6 +902,7 @@ model Athlete {
 
   @@unique([siteId, slug])
   @@index([siteId, sport, legendRank])
+  @@index([siteId, status, publishedAt])
 }
 
 model SportOrganization {
@@ -944,4 +948,5 @@ model SportOrganization {
   @@unique([siteId, slug])
   @@index([siteId, sport, type])
   @@index([siteId, level])
+  @@index([siteId, status, publishedAt])
 }

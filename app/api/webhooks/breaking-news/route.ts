@@ -18,11 +18,9 @@ export async function POST(req: NextRequest) {
     clusterId?: string
     title?: string
     dis?: number
-    orgId?: string
     test?: boolean
   }
 
-  // Test mode — verify endpoint is reachable and auth works
   if (body.test) {
     await systemLog('info', 'webhook', 'Breaking news webhook test ping')
     return NextResponse.json({ success: true, mode: 'test', message: 'Webhook endpoint is operational' })
@@ -33,34 +31,33 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Find autopilot config
+    const cluster = await prisma.storyCluster.findUnique({
+      where: { id: body.clusterId },
+      select: { siteId: true, title: true, eventType: true, entities: true, dis: true },
+    })
+    if (!cluster || !cluster.siteId) {
+      return NextResponse.json({ success: false, reason: 'Cluster not found or has no site' })
+    }
+
+    const site = await prisma.site.findUnique({
+      where: { id: cluster.siteId },
+      select: { id: true, organizationId: true },
+    })
+    if (!site) {
+      return NextResponse.json({ success: false, reason: 'Site not found' })
+    }
+
     const config = await prisma.autopilotConfig.findFirst({
-      where: { isActive: true, ...(body.orgId ? { orgId: body.orgId } : {}) },
+      where: { isActive: true, orgId: site.organizationId },
       include: { categories: { orderBy: { sortOrder: 'asc' } } },
     })
-
     if (!config) {
-      return NextResponse.json({ success: false, reason: 'No active autopilot config' })
-    }
-
-    const site = await prisma.site.findFirst({
-      where: { organizationId: config.orgId },
-    })
-
-    if (!site) {
-      return NextResponse.json({ success: false, reason: 'No site configured' })
-    }
-
-    // Slug dedup — skip if article already written today with this slug
-    const cluster = await prisma.storyCluster.findUnique({ where: { id: body.clusterId } })
-    if (!cluster) {
-      return NextResponse.json({ success: false, reason: 'Cluster not found' })
+      return NextResponse.json({ success: false, reason: 'No active autopilot config for this site' })
     }
 
     const startOfDay = new Date()
     startOfDay.setHours(0, 0, 0, 0)
 
-    // Check if already covered today
     const alreadyCovered = await prisma.article.findFirst({
       where: {
         siteId: site.id,

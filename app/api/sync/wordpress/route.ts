@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getDefaultSite, getArticleById } from '@/lib/db'
+import { getDefaultSite } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,7 +53,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'articleId is required' }, { status: 400 })
     }
 
-    const article = await getArticleById(articleId)
+    const article = await prisma.article.findFirst({
+      where: { id: articleId, siteId: site.id, deletedAt: null },
+      include: { category: true, site: true },
+    })
     if (!article) {
       return NextResponse.json({ error: 'Article not found' }, { status: 404 })
     }

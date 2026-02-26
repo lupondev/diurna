@@ -33,29 +33,29 @@ export async function getArticleBySlug(siteId: string, slug: string) {
   })
 }
 
-export async function getArticleById(id: string) {
+export async function getArticleById(id: string, siteId?: string) {
   return prisma.article.findFirst({
-    where: { id, deletedAt: null },
+    where: {
+      id,
+      deletedAt: null,
+      ...(siteId && { siteId }),
+    },
     include: {
-      category: true,
-      site: true,
+      category: { select: { name: true, slug: true } },
+      site: { select: { id: true, name: true, domain: true, organizationId: true } },
       aiRevisions: { orderBy: { version: 'desc' }, take: 5 },
     },
   })
 }
 
-export async function getDashboardStats(organizationId?: string) {
-  const orgFilter = organizationId
-    ? { site: { organizationId } }
-    : {}
+export async function getDashboardStats(organizationId: string) {
+  const orgFilter = { site: { organizationId } }
 
   const [published, drafts, aiGenerated, teamMembers] = await Promise.all([
     prisma.article.count({ where: { status: 'PUBLISHED', deletedAt: null, ...orgFilter } }),
     prisma.article.count({ where: { status: 'DRAFT', deletedAt: null, ...orgFilter } }),
     prisma.article.count({ where: { aiGenerated: true, deletedAt: null, ...orgFilter } }),
-    organizationId
-      ? prisma.userOnOrganization.count({ where: { organizationId, deletedAt: null } })
-      : prisma.userOnOrganization.count({ where: { deletedAt: null } }),
+    prisma.userOnOrganization.count({ where: { organizationId, deletedAt: null } }),
   ])
   return { published, drafts, aiGenerated, teamMembers }
 }

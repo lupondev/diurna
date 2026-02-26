@@ -20,37 +20,16 @@ function isAlwaysPublic(pathname: string): boolean {
   return false
 }
 
-const PLATFORM_PREFIXES = [
-  '/api',
-  '/site',
-  '/feed',
-  '/landing',
-  '/login',
-  '/register',
-  '/onboarding',
-  '/admin',
-  '/editor',
-  '/newsroom',
-  '/copilot',
-  '/dashboard',
-  '/widgets',
-  '/widget-creator',
-  '/media',
-  '/calendar',
-  '/analytics',
-  '/settings',
-  '/team',
-  '/templates',
-  '/export',
-  '/import',
-  '/articles',
-  '/football',
-  '/health',
-]
+const PLATFORM_PREFIXES = new Set([
+  '/api', '/site', '/feed', '/landing', '/login', '/register', '/onboarding',
+  '/admin', '/editor', '/newsroom', '/copilot', '/dashboard', '/widgets',
+  '/widget-creator', '/media', '/calendar', '/analytics', '/settings',
+  '/team', '/templates', '/export', '/import', '/articles', '/football', '/health',
+])
 
 function isPlatformPath(pathname: string): boolean {
-  for (let i = 0; i < PLATFORM_PREFIXES.length; i++) {
-    if (pathname.startsWith(PLATFORM_PREFIXES[i])) return true
+  for (const prefix of Array.from(PLATFORM_PREFIXES)) {
+    if (pathname.startsWith(prefix)) return true
   }
   return false
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { captureApiError } from '@/lib/sentry'
 
 export async function GET() {
   try {
@@ -25,7 +26,7 @@ export async function GET() {
     })
     return NextResponse.json({ categories })
   } catch (error) {
-    console.error('Get categories error:', error)
+    captureApiError(error, { route: '/api/categories', method: 'GET' })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -48,17 +48,20 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
-        token.organizationId = (user as unknown as { organizationId?: string | null }).organizationId ?? null
-        token.onboardingCompleted = (user as unknown as { onboardingCompleted?: boolean }).onboardingCompleted ?? false
-        token.role = (user as unknown as { role?: string }).role ?? 'JOURNALIST'
+        token.organizationId = user.organizationId ?? null
+        token.onboardingCompleted = user.onboardingCompleted ?? false
+        token.role = user.role ?? 'JOURNALIST'
+        token.lastDbRefresh = Date.now()
       }
 
-      // FIX BUG-005: Always refresh from DB to pick up onboardingCompleted changes
-      // Without this, users who finish onboarding stay stuck in redirect loop
-      if (token.id) {
+      const REFRESH_MS = 5 * 60 * 1000
+      const lastRefresh = (token.lastDbRefresh as number) || 0
+      const shouldRefresh = trigger === 'update' || (token.id && Date.now() - lastRefresh > REFRESH_MS)
+
+      if (token.id && shouldRefresh) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
@@ -79,6 +82,7 @@ export const authOptions: NextAuthOptions = {
               token.organizationId = dbUser.orgs[0].organizationId
             }
           }
+          token.lastDbRefresh = Date.now()
         } catch (err) {
           console.error('Auth JWT callback db fetch:', err)
         }
@@ -88,10 +92,10 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string
-        session.user.organizationId = token.organizationId as string | null
-        session.user.onboardingCompleted = token.onboardingCompleted as boolean
-        session.user.role = token.role as string
+        session.user.id = token.id!
+        session.user.organizationId = token.organizationId ?? null
+        session.user.onboardingCompleted = token.onboardingCompleted ?? false
+        session.user.role = token.role ?? 'JOURNALIST'
       }
       return session
     },

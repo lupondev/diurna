@@ -1,164 +1,143 @@
-# Diurna Codebase Audit Report
+# Diurna — Final Mega Audit Report
 
-**Date:** 2026-02-25
-
-## Summary
-
-- **Build:** Passes (`rm -rf .next && npm run build` → exit 0). No TypeScript errors, no new warnings.
-- **Scope:** app/, components/, lib/ (scripts/, prisma/seed, lupon-intelligence excluded from cleanup).
-- **Issues addressed:**
-  - console.log/warn removed or converted to console.error: **4** (canonical-registry, config, webhooks/breaking-news, embed/script).
-  - Empty catch blocks fixed or annotated: **~15** in editor-shell and ai-sidebar (API catches get console.error; storage catches get non-critical comment).
-  - lib/utils: added **slugify** and **toDateStr** for future consolidation.
-- **Skipped (per SCOPE LOCK):** Prisma schema, auth, public frontend, AI endpoints logic, calendar/copilot refactors, CSS minification, dependency removal.
+**Date:** 2026-02-25  
+**Scope:** Security, performance, quality, tenant isolation, DB indexes, tests.
 
 ---
 
-## Phase 1 — Audit Findings
+## 1. Summary
 
-### 1A. Build Health
-
-- `npm run build` completes with **zero errors**.
-- No unused variable or missing module warnings in build output.
-
-### 1B. Dead Exports & Unused Imports
-
-- **knip** not installed; no automated report.
-- Manual: no systematic unused-import sweep (would require running knip or manual file-by-file). No obvious unused imports removed in this pass.
-
-### 1C. Console Logs in Production (app / components / lib)
-
-| File | Change |
-|------|--------|
-| `lib/canonical-registry.ts` | `console.warn` → `console.error` (production path) |
-| `lib/config.ts` | `console.warn` → `console.error` (optional env vars) |
-| `app/api/webhooks/breaking-news/route.ts` | `console.warn` → `console.error` (revalidation failed) |
-| `app/api/embed/script/route.ts` | Removed `console.warn` from generated embed script (client-side) |
-
-**Left unchanged:** `scripts/*.ts`, `prisma/seed.ts`, `scripts/test-ai-engine.ts` (CLI/dev only). `lupon-intelligence/worker-configuration.d.ts` is type-def text, not runtime.
-
-### 1D. Empty Catch Blocks
-
-- **editor-shell.tsx:** SessionStorage/localStorage catches annotated with `/* sessionStorage non-critical */` or `/* localStorage non-critical */`; API-related empty catches replaced with `console.error('...', e)` (smart-generate, combined-generate, auto-save, save, delete, add-tag).
-- **ai-sidebar.tsx:** AI action catch now logs `console.error('AI action failed:', e)` before setting error state.
-- **Other files:** Many empty catches remain in app/(platform), app/api, components (fetch, JSON parse, cron). Per rules: localStorage/JSON parse can stay; API fetches could get `console.error` in a follow-up pass. Not all were modified to avoid scope creep.
-
-### 1E. TODO / FIXME / HACK
-
-- `app/api/calendar/route.ts`: `// TODO: Full calendar integration pending`
-- `lib/autopilot.ts`: `// TODO: Re-enable when AI prompt generates actual widget content`
-- Others: placeholder strings (e.g. `G-XXXXXXXXXX`), not TODOs. No removal of TODO comments (kept for context).
-
-### 1F. Oversized Files (>500 lines)
-
-| File | Lines (approx) | Note |
-|------|-----------------|------|
-| `app/(platform)/calendar/page.tsx` | ~1117 | Candidate for extracting ConfigPanel, TimelineView, WeekView, MonthView (not done; SCOPE LOCK). |
-| `app/(public)/utakmica/match.css` | 1514 | Target for CSS minification prep (not done). |
-| `app/(public)/home.css` | 1470 | Same. |
-| `app/site/public.css` | 1332 | Same. |
-| `app/(public)/vijesti/article.css` | 1329 | Same. |
-| `components/editor/editor-shell.tsx` | ~900 | DO NOT refactor (per prompt). |
-| `app/(platform)/editor/editor.css` | 833 | Has dark theme block; minification prep not done. |
-| `app/(platform)/copilot/page.tsx` | ~676 | Acceptable; no extraction. |
-
-### 1G. Duplicate Code Patterns
-
-- **slugify:** `lib/utils.ts` (added), `components/editor/editor-shell.tsx`, `app/api/tags/route.ts`, `lib/autopilot.ts`, `scripts/seed-organizations.ts`, `scripts/seed-athletes.ts`. Consolidation to `lib/utils` only partially done (utils has slugify; editor-shell and API still use local copies to avoid broad refactor).
-- **toDateStr / fmtDate:** `lib/utils.ts` (toDateStr added), `app/(platform)/calendar/page.tsx` (local toDateStr + fmtDate). Calendar not switched to utils to avoid behavior change.
-- **formatDate / formatDateTime:** `lib/utils.ts` (formatDateTime), `lib/public-article.tsx`, `app/site/page.tsx`, `app/site/[slug]/page.tsx`, `app/site/category/[slug]/page.tsx`, `app/(platform)/dashboard/page.tsx`. No consolidation in this pass.
-
-### 1H. CSS Size Report
-
-| File | Lines |
-|------|-------|
-| app/(public)/utakmica/match.css | 1514 |
-| app/(public)/home.css | 1470 |
-| app/site/public.css | 1332 |
-| app/(public)/vijesti/article.css | 1329 |
-| app/sportba.css | 838 |
-| app/(platform)/editor/editor.css | 833 |
-| app/(public)/legende/legende.css | 682 |
-| app/(public)/static.css | 497 |
-| app/(platform)/calendar/calendar.css | 252 |
-| app/(platform)/copilot/copilot.css | 164 |
-| app/(platform)/dashboard.css | 126 |
-
-### 1I. API Route Security Audit
-
-Routes **without** `getServerSession` / `authOptions` / `CRON_SECRET` in file (many are intentionally public or use other checks):
-
-- Public/embed: `embed/[articleId]`, `embed/script`, `organizations`, `organizations/[slug]`, `athletes`, `athletes/[slug]`, `clubs`, `categories`, `entities/search`, `fixtures`, `fixtures/ticker`, `match/[id]`, `health/*`, `newsletter/unsubscribe`, `newsroom/for-you`, `newsroom/feed`, `newsroom/stats`, `videos`, `dashboard/stats`, `setup/seed-*`, `auth/register`, `auth/invite-check`, `admin/*` (admin may use different auth). No changes made (SCOPE LOCK: do not change auth).
-
-### 1J. Prisma Query Efficiency
-
-- Most `findMany` usages use `select` or `include`. Some routes (e.g. `newsroom/feed/sources`, `calendar`, `newsroom/for-you`) use `findMany` with select/include. No N+1 pattern sweep performed; no schema or query changes.
+| Severity   | Found | Fixed | Deferred |
+|-----------|-------|--------|----------|
+| CRITICAL  | 4     | 4      | 0        |
+| HIGH      | 8     | 6      | 2        |
+| MEDIUM    | 15+   | 8      | 7        |
 
 ---
 
-## Phase 2 — Cleanup Done
+## 2. Issues Fixed (by phase)
 
-- **console.log/warn/info/debug:** Removed or converted to `console.error` in lib/ and app/api (embed, webhooks, config, canonical-registry).
-- **Empty catch blocks:** editor-shell and ai-sidebar updated as above; others left for future pass.
-- **Comments:** No bulk removal of section dividers or obvious comments (to limit diff size).
-- **Unused imports:** Not run (knip not installed).
-- **Dead constants:** `DEFAULT_FEED_SOURCES` already removed in prior sprint.
+### Phase 1 — Critical security
 
----
+| Issue | File(s) | Fix |
+|-------|---------|-----|
+| **Client-side cron secret** | `app/(platform)/newsroom/page.tsx` | Removed `NEXT_PUBLIC_CRON_SECRET`. Added `app/api/newsroom/manual-fetch/route.ts` — POST requires session, calls cron internally with server `CRON_SECRET`. Newsroom page now calls `POST /api/newsroom/manual-fetch`. |
+| **WordPress sync IDOR** | `app/api/sync/wordpress/route.ts`, `lib/db.ts` | Replaced `getArticleById(articleId)` with `prisma.article.findFirst({ where: { id: articleId, siteId: site.id, deletedAt: null } })`. `getArticleById(id, siteId?)` now accepts optional `siteId` and scopes query when provided. |
+| **Webhook org trust** | `app/api/webhooks/breaking-news/route.ts` | Removed trust of `body.orgId`. Org/site derived from cluster: `cluster = findUnique(clusterId)` → `site = findUnique(cluster.siteId)` → `config = findFirst(orgId: site.organizationId)`. |
+| **CSRF startsWith bypass** | `lib/csrf.ts` | Replaced `origin.startsWith(allowed)` with `ALLOWED_ORIGINS` as `Set` of normalized origins (`new URL(url).origin`). `validateOrigin` uses `new URL(origin).origin` and `ALLOWED_ORIGINS.has(...)`. |
 
-## Phase 3 — Optimization (Partial)
+### Phase 2 — Performance
 
-- **CSS:** No minification or comment stripping (would touch 1000+ line files; kept for safety).
-- **Utils:** `slugify` and `toDateStr` added to `lib/utils.ts` for future use; existing call sites not switched.
-- **Calendar/editor:** No component extraction (risk and SCOPE LOCK).
-- **Types:** No broad `any` or `as` cleanup (time-boxed).
-- **API responses:** No systematic consistency pass.
+| Issue | File(s) | Fix |
+|-------|---------|-----|
+| **Cache headers** | `next.config.mjs` | Already path-specific (api, dashboard, editor, etc. no-cache; `/:path*` s-maxage=60; feed 300/600). No change. |
+| **Vercel cron** | `vercel.json` | Autopilot cron already present (`*/15 * * * *`). No change. |
+| **JWT DB spam** | `lib/auth.ts` | JWT callback now refreshes from DB only when `trigger === 'update'` or `Date.now() - lastDbRefresh > 5 * 60 * 1000`. `token.lastDbRefresh` set after each refresh. |
 
----
+### Phase 3 — High priority
 
-## Phase 4 — Dependencies
+| Issue | File(s) | Fix |
+|-------|---------|-----|
+| **Middleware cleanup** | `middleware.ts` | `PLATFORM_PREFIXES` changed to `Set`, `isPlatformPath` iterates with `Array.from(PLATFORM_PREFIXES)` (Set iteration). |
+| **Entities rate limit** | `app/api/entities/search/route.ts` | Added `rateLimit({ interval: 60_000 })`, `limiter.check(60, \`entities:${ip}\`)` at start of GET; 429 on exceed. |
+| **getDashboardStats tenant** | `lib/db.ts` | `getDashboardStats(organizationId: string)` — parameter now required; `orgFilter` always `{ site: { organizationId } }`; no global count. |
+| **@auth/prisma-adapter** | `package.json` | Removed unused `@auth/prisma-adapter` dependency. |
+| **NextAuth types** | `types/next-auth.d.ts`, `lib/auth.ts` | Extended `User`, `Session.user`, `JWT` with `organizationId`, `onboardingCompleted`, `role`, `lastDbRefresh`. Removed `(user as unknown as ...)` casts in auth callbacks. |
+| **Junk file "20%:"** | — | Not found in repo; skipped. |
 
-- **depcheck / npm outdated:** Run in environment; no package changes (SCOPE LOCK: do not introduce or remove dependencies). Report not filled.
+### Phase 4 — Tenant isolation
 
----
+| Item | Fix |
+|------|-----|
+| **getApiContext** | Added `lib/api-auth.ts`: `getApiContext()` returns `{ userId, orgId, siteId, site, role }` or null (session + site lookup). For use when refactoring routes to a single auth helper. |
+| **TENANT_AUDIT.md** | Existing audit retained. WordPress sync and webhook fixes above address IDOR and org trust. |
 
-## Remaining Items (Not Fixed)
+### Phase 5 — Database & autopilot
 
-- Consolidate all `slugify` / `formatDate` / `toDateStr` call sites to `lib/utils.ts`.
-- Add `console.error` to remaining API-fetch empty catches across app/(platform) and app/api.
-- Strip section-divider and obvious comments in bulk.
-- CSS minification prep for editor.css, calendar.css, copilot.css, match.css, dashboard.css.
-- Calendar page: extract ConfigPanel, TimelineView, WeekView, MonthView (optional; add `// TODO: Extract sub-components in future refactor` if desired).
-- Run `knip` (or equivalent) and remove unused imports.
-- Review API routes without session auth for intended public vs. oversight.
+| Item | File(s) | Fix |
+|------|---------|-----|
+| **Schema indexes** | `prisma/schema.prisma` | Added: Article `@@index([siteId, status, publishedAt])`, `@@index([siteId, categoryId, status, publishedAt])`; Category `@@index([siteId, order])`; Athlete `@@index([siteId, status, publishedAt])`; SportOrganization `@@index([siteId, status, publishedAt])`. |
+| **Autopilot N+1** | `lib/autopilot.ts` | At start of `getNextTask`: one `findMany` for articles today with non-null `aiPrompt`; build `coveredClusterIds` and `coveredMatchIds` from parsed `aiPrompt` JSON. Replaced all `findFirst` “already covered” checks with `coveredClusterIds.has(cluster.id)` or `coveredMatchIds.has(match.id)`. |
 
----
+### Other
 
-## File Size Changes
-
-| File | Change |
-|------|--------|
-| lib/utils.ts | +slugify, +toDateStr (no line count change elsewhere) |
-| editor-shell.tsx, ai-sidebar.tsx, embed/script, webhooks, config, canonical-registry | Small edits (console/catch). |
-| editor.css, calendar.css, etc. | No change. |
-
----
-
-## Security Notes
-
-- Several API routes do not reference `getServerSession`; many are public (embed, health, fixtures, newsletter/unsubscribe, categories, etc.). Admin and cron routes may rely on middleware or CRON_SECRET. No verification of every route in this audit.
-- No exposed secrets or env vars in code (debug-env removed in prior work).
+| Item | File(s) | Fix |
+|------|---------|-----|
+| **Categories Sentry** | `app/api/categories/route.ts` | Added `captureApiError(error, { route, method })` in catch. |
+| **Newsroom manual-fetch type** | `app/(platform)/newsroom/page.tsx` | Typed `res.json()` as `{ error?: string }` to fix TypeScript error. |
 
 ---
 
-## Performance Notes
+## 3. New files
 
-- No N+1 fixes or index suggestions in this pass.
-- Prisma `findMany` usage generally uses select/include where seen.
-- No bundle or CSS size metrics collected.
+- `app/api/newsroom/manual-fetch/route.ts` — server-side cron proxy (session required, uses `CRON_SECRET`).
+- `lib/api-auth.ts` — `getApiContext()` for shared auth/site resolution.
 
 ---
 
-## Post-Audit Build
+## 4. Files modified (high level)
 
-After cleanup: `rm -rf .next && npm run build` → **ZERO errors**. Ready for `git add -A && git commit -m "chore: deep audit, cleanup & optimization" && git push`.
+- `app/(platform)/newsroom/page.tsx` — triggerFetch uses manual-fetch route; type fix.
+- `app/api/sync/wordpress/route.ts` — tenant-scoped article fetch; prisma import.
+- `app/api/webhooks/breaking-news/route.ts` — org from cluster/site; no `body.orgId`.
+- `app/api/categories/route.ts` — captureApiError.
+- `app/api/entities/search/route.ts` — rate limit.
+- `lib/auth.ts` — JWT 5-min refresh; typed user/token.
+- `lib/csrf.ts` — exact-origin validation with Set.
+- `lib/db.ts` — `getArticleById(id, siteId?)`, `getDashboardStats(organizationId: string)`.
+- `lib/autopilot.ts` — pre-fetch covered IDs; use Sets instead of findFirst for “already covered”.
+- `middleware.ts` — PLATFORM_PREFIXES as Set; Array.from in loop.
+- `prisma/schema.prisma` — new indexes (Article, Category, Athlete, SportOrganization).
+- `package.json` — removed `@auth/prisma-adapter`.
+- `types/next-auth.d.ts` — User, Session, JWT extensions and `lastDbRefresh`.
+
+---
+
+## 5. Deferred / not done
+
+- **Phase 6 (code cleanup):** Global removal of `console.log`/warn/info, strip dead comments, CSS cleanup — deferred (time/scope).
+- **Phase 7 (error boundaries):** Error components already use Sentry; Tailwind-based layout not applied (existing inline styles kept).
+- **Full tenant audit table:** Existing TENANT_AUDIT.md kept; no full re-scan of every route in this pass.
+- **Refactor all API routes to getApiContext():** Helper added; only categories and manual-fetch use session/site pattern explicitly; bulk refactor deferred.
+- **Junk file "20%:":** Not present; `git rm "20%:"` not run.
+
+---
+
+## 6. Verification checklist
+
+- [x] `NEXT_PUBLIC_CRON_SECRET` does not appear in codebase (only in CODE_REVIEW.md as recommendation).
+- [x] WordPress sync uses `siteId: site.id` for article fetch.
+- [x] Breaking-news webhook derives org from cluster/site; does not use `body.orgId`.
+- [x] CSRF uses exact origin matching via Set of origins.
+- [x] `vercel.json` includes autopilot cron.
+- [x] `next.config.mjs` has path-specific cache headers.
+- [x] JWT callback uses 5-minute refresh interval.
+- [x] `getArticleById` accepts optional `siteId`; WordPress sync no longer uses unscoped fetch.
+- [x] `getDashboardStats` requires `organizationId`.
+- [x] `@auth/prisma-adapter` removed from package.json.
+- [x] Build: `rm -rf .next && npm run build` completes with exit 0 (ESLint img warnings only).
+
+---
+
+## 7. DB indexes added
+
+| Model | Index |
+|-------|--------|
+| Article | `@@index([siteId, status, publishedAt])`, `@@index([siteId, categoryId, status, publishedAt])` |
+| Category | `@@index([siteId, order])` |
+| Athlete | `@@index([siteId, status, publishedAt])` |
+| SportOrganization | `@@index([siteId, status, publishedAt])` |
+
+Migration not run; schema updated only. Run `prisma migrate` when ready.
+
+---
+
+## 8. API routes (auth / tenant)
+
+- **Manual-fetch:** Auth via `getServerSession`; no tenant data returned.
+- **WordPress sync:** Session + site by org; article by `siteId: site.id`.
+- **Breaking-news webhook:** CRON_SECRET; org from cluster → site.
+- **Categories:** Session + site by org; categories by `siteId`.
+- **Entities search:** Rate-limited by IP; no tenant (global Entity).
+
+Other routes unchanged in this audit; see TENANT_AUDIT.md for prior findings.

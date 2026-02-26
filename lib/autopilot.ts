@@ -442,10 +442,25 @@ export async function getNextTask(
   startOfDay.setHours(0, 0, 0, 0)
   const now = new Date()
 
-  // Football-only base filter for cluster queries
+  const coveredArticles = await prisma.article.findMany({
+    where: { siteId, createdAt: { gte: startOfDay }, aiPrompt: { not: null } },
+    select: { aiPrompt: true },
+  })
+  const coveredClusterIds = new Set<string>()
+  const coveredMatchIds = new Set<string>()
+  for (const a of coveredArticles) {
+    if (!a.aiPrompt) continue
+    try {
+      const j = typeof a.aiPrompt === 'string' ? JSON.parse(a.aiPrompt) : a.aiPrompt
+      if (j && typeof j === 'object') {
+        if (j.clusterId) coveredClusterIds.add(j.clusterId)
+        if (j.matchId) coveredMatchIds.add(j.matchId)
+      }
+    } catch { /* ignore */ }
+  }
+
   const footballFilter = { primaryEntityType: { in: FOOTBALL_ENTITY_TYPES } }
 
-  // ── Priority 1: Breaking news ──
   if (config.breakingNews) {
     const breakingCluster = await prisma.storyCluster.findFirst({
       where: {
@@ -457,10 +472,9 @@ export async function getNextTask(
     })
 
     if (breakingCluster) {
-      const alreadyCovered = await prisma.article.findFirst({
-        where: { siteId, aiPrompt: { contains: breakingCluster.id }, createdAt: { gte: startOfDay } },
-      })
-      if (!alreadyCovered) {
+      if (coveredClusterIds.has(breakingCluster.id)) {
+        // already covered, skip
+      } else {
         const newsItems = await prisma.newsItem.findMany({
           where: { clusterId: breakingCluster.id },
           orderBy: { pubDate: 'desc' },
@@ -480,7 +494,6 @@ export async function getNextTask(
     }
   }
 
-  // ── Priority 2: Match previews ──
   if (config.matchAutoCoverage) {
     const upcomingMatch = await prisma.matchResult.findFirst({
       where: {
@@ -490,10 +503,9 @@ export async function getNextTask(
       orderBy: { matchDate: 'asc' },
     })
     if (upcomingMatch) {
-      const alreadyCovered = await prisma.article.findFirst({
-        where: { siteId, aiPrompt: { contains: upcomingMatch.id }, createdAt: { gte: startOfDay } },
-      })
-      if (!alreadyCovered) {
+      if (coveredMatchIds.has(upcomingMatch.id)) {
+        // already covered
+      } else {
         const teamNews = await prisma.newsItem.findMany({
           where: {
             OR: [
@@ -536,10 +548,7 @@ export async function getNextTask(
       orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
     })
     if (topicCluster) {
-      const alreadyCovered = await prisma.article.findFirst({
-        where: { siteId, aiPrompt: { contains: topicCluster.id }, createdAt: { gte: startOfDay } },
-      })
-      if (!alreadyCovered) {
+      if (!coveredClusterIds.has(topicCluster.id)) {
         const newsItems = await prisma.newsItem.findMany({
           where: { clusterId: topicCluster.id },
           orderBy: { pubDate: 'desc' },
@@ -582,10 +591,7 @@ export async function getNextTask(
       })
 
       if (cluster) {
-        const alreadyCovered = await prisma.article.findFirst({
-          where: { siteId, aiPrompt: { contains: cluster.id }, createdAt: { gte: startOfDay } },
-        })
-        if (!alreadyCovered) {
+        if (!coveredClusterIds.has(cluster.id)) {
           const newsItems = await prisma.newsItem.findMany({
             where: { clusterId: cluster.id },
             orderBy: { pubDate: 'desc' },
@@ -624,10 +630,7 @@ export async function getNextTask(
         orderBy: [{ dis: 'desc' }, { latestItem: 'desc' }],
       })
       if (cluster) {
-        const alreadyCovered = await prisma.article.findFirst({
-          where: { siteId, aiPrompt: { contains: cluster.id }, createdAt: { gte: startOfDay } },
-        })
-        if (!alreadyCovered) {
+        if (!coveredClusterIds.has(cluster.id)) {
           const newsItems = await prisma.newsItem.findMany({
             where: { clusterId: cluster.id },
             orderBy: { pubDate: 'desc' },
@@ -658,10 +661,7 @@ export async function getNextTask(
       orderBy: { matchDate: 'desc' },
     })
     if (completedMatch) {
-      const alreadyCovered = await prisma.article.findFirst({
-        where: { siteId, aiPrompt: { contains: completedMatch.id }, createdAt: { gte: startOfDay } },
-      })
-      if (!alreadyCovered) {
+      if (!coveredMatchIds.has(completedMatch.id)) {
         const teamNews = await prisma.newsItem.findMany({
           where: {
             OR: [
@@ -699,10 +699,7 @@ export async function getNextTask(
   })
 
   if (anyCluster) {
-    const alreadyCovered = await prisma.article.findFirst({
-      where: { siteId, aiPrompt: { contains: anyCluster.id }, createdAt: { gte: startOfDay } },
-    })
-    if (!alreadyCovered) {
+    if (!coveredClusterIds.has(anyCluster.id)) {
       const newsItems = await prisma.newsItem.findMany({
         where: { clusterId: anyCluster.id },
         orderBy: { pubDate: 'desc' },
