@@ -16,7 +16,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 const pageMeta: Record<string, { icon: string; title: string }> = {
   '/': { icon: '📊', title: 'Dashboard' },
   '/newsroom': { icon: '📰', title: 'Newsroom' },
-  '/editor': { icon: '🤖', title: 'AI Co-Pilot' },
+  '/editor': { icon: '✍️', title: 'Editor' },
   '/widgets': { icon: '🧩', title: 'Widgets' },
   '/widget-creator': { icon: '🛠️', title: 'Widget Creator' },
   '/calendar': { icon: '📅', title: 'Calendar' },

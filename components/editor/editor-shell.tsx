@@ -623,15 +623,6 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           💾 {saving ? 'Saving...' : (articleIdRef.current ? 'Save' : 'Save Draft')}
         </button>
         <button className="ed-btn ed-btn-secondary" onClick={() => setShowSchedule(true)}>📅 Schedule</button>
-        <button
-          type="button"
-          className="ed-btn ed-btn-secondary"
-          onClick={toggleEditorTheme}
-          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          style={{ minWidth: 36, padding: '6px 10px' }}
-        >
-          {isDark ? '□' : '■'}
-        </button>
         <label className="ed-nl-check">
           <input type="checkbox" checked={sendNewsletter} onChange={(e) => setSendNewsletter(e.target.checked)} />
           <span>📧</span>
