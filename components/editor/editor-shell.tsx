@@ -599,7 +599,8 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           {articleIdRef.current ? '← Articles' : '← Back'}
         </button>
         <div className="ed-title-bar">
-          {title || (articleIdRef.current ? 'Edit Article' : 'New Article')}
+          <span className="ed-page-label">✍️ Editor</span>
+          <span className="ed-article-title">{title || (articleIdRef.current ? 'Edit Article' : 'New Article')}</span>
           {aiResult && <span className="badge-ai">AI</span>}
           <span
             className="badge-status"

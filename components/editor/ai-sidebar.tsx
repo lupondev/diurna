@@ -47,6 +47,7 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
   const [lastResult, setLastResult] = useState<{ model?: string; tokensIn?: number; tokensOut?: number } | null>(null)
   const [didAutoGenerate, setDidAutoGenerate] = useState(false)
   const [factCheckResult, setFactCheckResult] = useState<string | null>(null)
+  const [showActions, setShowActions] = useState(false)
 
   // Detect context from editor content
   const detectContext = useCallback(() => {
@@ -245,30 +246,38 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) handleGenerate() }}
         />
-        <div className="ai-sb-chips">
-          {TEMPLATES.map((t) => (
-            <button
-              key={t.label}
-              className={`ai-sb-chip ${selectedTemplate === t.articleType ? 'active' : ''}`}
-              onClick={() => handleTemplateClick(t)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <div className="ai-sb-gen-row">
-          <select className="ai-sb-coverage" value={wordCount} onChange={(e) => setWordCount(Number(e.target.value))}>
-            {COVERAGE.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
+        <div className="ai-generate-area">
+          <div className="ai-controls-row">
+            <div className="ai-sb-chips">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.label}
+                  className={`ai-sb-chip ${selectedTemplate === t.articleType ? 'active' : ''}`}
+                  onClick={() => handleTemplateClick(t)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <select className="ai-sb-coverage" value={wordCount} onChange={(e) => setWordCount(Number(e.target.value))}>
+              {COVERAGE.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+          </div>
           <button
-            className="ai-sb-gen-btn"
+            type="button"
+            className="ai-generate-btn"
             onClick={handleGenerate}
             disabled={generating || !prompt.trim()}
           >
-            {generating ? 'Generating...' : '✨ Generate'}
+            {generating ? '⏳ Generating...' : '✨ Generate Article'}
           </button>
+          {generating && (
+            <div className="ai-loading-bar">
+              <div className="ai-loading-bar-fill" />
+            </div>
+          )}
         </div>
         {error && (
           <div className="ai-sb-error">{error}</div>
@@ -281,11 +290,20 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
         {contextEntities.length > 0 ? (
           <div className="ai-sb-entities">
             {contextEntities.map((e) => (
-              <span key={e} className="ai-sb-entity">{e}</span>
+              <span
+                key={e}
+                className="ai-sb-entity context-chip"
+                onClick={() => setPrompt(prev => prev ? `${prev}, ${e}` : e)}
+                title="Click to add to prompt"
+                style={{ cursor: 'pointer' }}
+                role="button"
+              >
+                {e}
+              </span>
             ))}
           </div>
         ) : (
-          <div className="ai-sb-empty">Start writing to detect entities automatically</div>
+          <div className="ai-sb-empty">Write or generate content — teams, players, and leagues will appear here</div>
         )}
       </div>
 
@@ -301,23 +319,31 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
         </div>
       )}
 
-      {/* Actions */}
+      {/* Actions — collapsible */}
       <div className="ai-sb-section">
-        <div className="ai-sb-section-title">Actions</div>
-        <div className="ai-sb-desc">Select text, then click an action</div>
-        <div className="ai-sb-actions">
-          {AI_ACTIONS.map((a) => (
-            <button
-              key={a.key}
-              className={`ai-sb-action ${aiLoading === a.key ? 'loading' : ''}`}
-              onClick={() => handleAiAction(a)}
-              disabled={aiLoading !== null}
-            >
-              <span>{a.icon}</span>
-              <span>{aiLoading === a.key ? 'Working...' : a.label}</span>
-            </button>
-          ))}
+        <div className="ai-section-header" onClick={() => setShowActions(!showActions)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowActions(prev => !prev) }}>
+          <span>Actions</span>
+          <span>{showActions ? '▼' : '▶'}</span>
         </div>
+        {showActions && (
+          <div className="ai-actions">
+            <div className="ai-sb-desc">Select text, then click an action</div>
+            <div className="ai-sb-actions">
+              {AI_ACTIONS.map((a) => (
+                <button
+                  key={a.key}
+                  type="button"
+                  className={`ai-sb-action ${aiLoading === a.key ? 'loading' : ''}`}
+                  onClick={() => handleAiAction(a)}
+                  disabled={aiLoading !== null}
+                >
+                  <span>{a.icon}</span>
+                  <span>{aiLoading === a.key ? 'Working...' : a.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Fact-check result panel */}

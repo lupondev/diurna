@@ -203,6 +203,10 @@ export default function TiptapEditor({
   editable = true,
 }: TiptapEditorProps) {
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)
+  const [showYoutubeModal, setShowYoutubeModal] = useState(false)
+  const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [showLinkModal, setShowLinkModal] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
   const [showAddBlock, setShowAddBlock] = useState(false)
   const [slashOpen, setSlashOpen] = useState(false)
   const [slashFilter, setSlashFilter] = useState('')
@@ -344,17 +348,14 @@ export default function TiptapEditor({
     return () => document.removeEventListener('mousedown', close, true)
   }, [slashOpen, editor])
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts (Cmd+K opens link modal)
   useEffect(() => {
     if (!editor) return
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        const prev = editor.getAttributes('link').href
-        const url = window.prompt('URL', prev || 'https://')
-        if (url === null) return
-        if (url === '') { editor.chain().focus().extendMarkRange('link').unsetLink().run(); return }
-        editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+        setLinkUrl(editor.getAttributes('link').href || 'https://')
+        setShowLinkModal(true)
       }
     }
     document.addEventListener('keydown', handler)
@@ -392,22 +393,43 @@ export default function TiptapEditor({
     setSlashOpen(false)
   }, [editor])
 
-  // Task 9: BubbleMenu link helper
+  // BubbleMenu link helper — open link modal
   const bubbleSetLink = useCallback(() => {
     if (!editor) return
-    const prev = editor.getAttributes('link').href
-    const url = window.prompt('URL', prev || 'https://')
-    if (url === null) return
-    if (url === '') { editor.chain().focus().extendMarkRange('link').unsetLink().run(); return }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+    setLinkUrl(editor.getAttributes('link').href || 'https://')
+    setShowLinkModal(true)
   }, [editor])
+
+  const applyLink = useCallback(() => {
+    if (!editor) return
+    if (linkUrl.trim() === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run()
+    } else {
+      editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl.trim() }).run()
+    }
+    setShowLinkModal(false)
+    setLinkUrl('')
+  }, [editor, linkUrl])
+
+  const applyYoutube = useCallback(() => {
+    if (youtubeUrl.trim() && editor) {
+      editor.chain().focus().setYoutubeVideo({ src: youtubeUrl.trim() }).run()
+      setYoutubeUrl('')
+      setShowYoutubeModal(false)
+    }
+  }, [editor, youtubeUrl])
 
   if (!editor) return <div className="te-loading" />
 
   return (
     <>
       <div className="te-wrap">
-        <Toolbar editor={editor} onOpenMediaLibrary={() => setShowMediaLibrary(true)} />
+        <Toolbar
+          editor={editor}
+          onOpenMediaLibrary={() => setShowMediaLibrary(true)}
+          onOpenLink={() => { setLinkUrl(editor.getAttributes('link').href || 'https://'); setShowLinkModal(true) }}
+          onOpenYoutube={() => setShowYoutubeModal(true)}
+        />
 
         <div className="te-body">
           <div className="te-editor-area">
@@ -460,6 +482,64 @@ export default function TiptapEditor({
           onClose={() => setShowMediaLibrary(false)}
           onSelect={handleImageSelect}
         />
+      )}
+
+      {showYoutubeModal && (
+        <div className="editor-modal-overlay" onClick={() => setShowYoutubeModal(false)}>
+          <div className="editor-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Embed YouTube Video</h3>
+            <input
+              type="url"
+              placeholder="https://youtube.com/watch?v=..."
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && youtubeUrl.trim()) {
+                  applyYoutube()
+                }
+              }}
+              autoFocus
+            />
+            <div className="editor-modal-actions">
+              <button type="button" onClick={() => setShowYoutubeModal(false)}>Cancel</button>
+              <button
+                type="button"
+                className="primary"
+                onClick={() => applyYoutube()}
+                disabled={!youtubeUrl.trim()}
+              >
+                Embed
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLinkModal && (
+        <div className="editor-modal-overlay" onClick={() => setShowLinkModal(false)}>
+          <div className="editor-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Insert Link</h3>
+            <input
+              type="url"
+              placeholder="https://..."
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); applyLink() }
+              }}
+              autoFocus
+            />
+            <div className="editor-modal-actions">
+              <button type="button" onClick={() => setShowLinkModal(false)}>Cancel</button>
+              <button type="button" onClick={() => { if (editor) editor.chain().focus().extendMarkRange('link').unsetLink().run(); setShowLinkModal(false); setLinkUrl('') }}>
+                Remove link
+              </button>
+              <button type="button" className="primary" onClick={applyLink}>
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Slash command menu */}
