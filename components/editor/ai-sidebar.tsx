@@ -95,8 +95,23 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
           wordCount,
         }),
       })
+      if (!res.ok) {
+        const text = await res.text()
+        let errorMsg = 'AI generation failed'
+        try {
+          const err = JSON.parse(text) as { error?: string }
+          errorMsg = err.error || errorMsg
+        } catch {
+          if (res.status === 504 || res.status === 502) {
+            errorMsg = 'AI generation timed out. Try a shorter article (150-300 words) or try again.'
+          } else if (!text) {
+            errorMsg = 'Empty response from server. The AI model may be overloaded — try again in a moment.'
+          }
+        }
+        setError(errorMsg)
+        return
+      }
       const data = await res.json() as { error?: string; model?: string; tokensIn?: number; tokensOut?: number; title?: string; tiptapContent?: Record<string, unknown>; content?: string }
-      if (!res.ok) throw new Error(data.error || 'Generation failed')
 
       setLastResult({ model: data.model, tokensIn: data.tokensIn, tokensOut: data.tokensOut })
 

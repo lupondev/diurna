@@ -290,6 +290,18 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      if (!res.ok) {
+        const text = await res.text()
+        let errMsg = 'Generation failed'
+        try {
+          const err = JSON.parse(text) as { error?: string }
+          errMsg = err.error || errMsg
+        } catch {
+          if (res.status === 504 || res.status === 502) errMsg = 'AI timed out. Try a shorter article or try again.'
+          else if (!text) errMsg = 'Empty response — try again in a moment.'
+        }
+        throw new Error(errMsg)
+      }
       const result = await res.json() as { title?: string; tiptapContent?: Record<string, unknown>; model?: string; tokensIn?: number; tokensOut?: number }
       if (result.title) setTitle(result.title)
       if (result.tiptapContent) { setContent(result.tiptapContent); setInitialContent(result.tiptapContent) }
@@ -312,6 +324,18 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           articleType: 'report', mode: 'combined', sources,
         }),
       })
+      if (!res.ok) {
+        const text = await res.text()
+        let errMsg = 'Combined generation failed'
+        try {
+          const err = JSON.parse(text) as { error?: string }
+          errMsg = err.error || errMsg
+        } catch {
+          if (res.status === 504 || res.status === 502) errMsg = 'AI timed out. Try again.'
+          else if (!text) errMsg = 'Empty response — try again in a moment.'
+        }
+        throw new Error(errMsg)
+      }
       const data = await res.json() as { title?: string; tiptapContent?: Record<string, unknown>; model?: string; tokensIn?: number; tokensOut?: number }
       if (data.title) setTitle(data.title)
       if (data.tiptapContent) { setContent(data.tiptapContent); setInitialContent(data.tiptapContent) }

@@ -1,0 +1,72 @@
+id: diurna_editorial_v4
+version: "4.0"
+languages: [any]
+authority_hierarchy:
+  - diurna_v4
+  - google_search_essentials
+  - reuters_standards
+  - spj_code
+  - bbc_guidelines
+
+evidence_modes:
+  default: GENERAL_MODE
+  FACT_MODE:
+    trigger: facts_payload.length > 0
+    allows: [specific_numbers, proper_nouns, dates, direct_quotes, superlatives_with_metric]
+    restricts_to_payload: true
+  SOURCE_MODE:
+    trigger: web_access OR citations.length > 0
+    requires: inline_attribution_on_every_claim
+    fact_check_prompt: P7
+  GENERAL_MODE:
+    allows: [general_principles, hedged_opinions, editor_provided_facts]
+    blocks: [unverified_numbers, unverified_names, unverified_dates]
+    required_hedges: ["može", "obično", "historijski", "prema procjenama", "typically", "generally"]
+
+hard_rules:
+  - id: C01_CLAIM_EVIDENCE
+    error_codes: [E301, E302, E303, E304]
+  - id: C03_P1_CONTRACT
+    error_codes: [E101, E102]
+  - id: C05_NO_FAKE_AUTHORITY
+    error_codes: [E501, E502]
+  - id: STRUCTURE_COMPLETE
+    error_codes: [E201, E202, E203]
+  - id: CONSISTENCY
+    error_codes: [E601, E602]
+
+quality_rules:
+  - id: C02_READER_TENSION
+    warn_codes: [W201, W202]
+  - id: C04_ANCHOR_DENSITY
+    warn_codes: [W401]
+    error_below: 0.4
+    error_code: E402
+  - id: C06_REPLACE_TEST
+    warn_codes: [W601, W602]
+    thresholds: { avg: 0.82, per_sentence: 0.90 }
+  - id: C07_VOICE
+    warn_codes: [W701, W702]
+  - id: SEO_GEO_COMPLIANCE
+    warn_codes: [W801, W802, W803, W804, W805, W806, W807, W811, W812, W813, W814, W815, W816, W817]
+
+pipeline:
+  outline_required: true
+  validate_outline_before_draft: true
+  max_rewrite_iterations: 2
+  rewrite_feedback_type: errors_only_never_examples
+  human_approval_required: true
+  error_blocks_publish: true
+  warn_requires_editor_review: true
+  corrections_policy: ap_corrections + ipso_online_correction
+
+seo:
+  structured_data: [NewsArticle, SportsEvent, FAQPage, BreadcrumbList]
+  headline_length: { min: 50, max: 70 }
+  meta_desc_length: { min: 120, max: 155 }
+  min_internal_links: 2
+  min_h2_count: 2
+  hero_image_min: { width: 1200, height: 675 }
+  faq_required_above: 800
+  faq_min_questions: 3
+  ai_crawlers_allowed: [GPTBot, ChatGPT-User, Google-Extended, PerplexityBot, ClaudeBot, anthropic-ai]

@@ -8,9 +8,11 @@ import { rateLimit } from '@/lib/rate-limit'
 import { validateOrigin } from '@/lib/csrf'
 import { captureApiError } from '@/lib/sentry'
 import { z } from 'zod'
+import { detectMode, validate, P1_SYSTEM_IDENTITY, DIURNA_DEFAULT_VOICE } from '@/lib/editor-brain'
 
 const limiter = rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 })
 const client = new Anthropic()
+const LLM_TIMEOUT_MS = 55_000
 
 const schema = z.object({
   topic: z.string().min(3).max(500),
@@ -50,7 +52,16 @@ export async function POST(req: NextRequest) {
     const input = schema.parse(body)
     const wordTarget = input.wordCount || 300
 
-    const systemPrompt = `You are a senior sports journalist writing for a digital newsroom. Output valid JSON only, no markdown wrapping.
+    const editorBrainMode = detectMode({
+      topic: input.topic,
+      sources: input.sources,
+      sourceContext: input.sourceContext,
+      mode: input.mode,
+    })
+
+    const systemPrompt = `${P1_SYSTEM_IDENTITY}
+
+You are a senior sports journalist writing for a digital newsroom. Output valid JSON only, no markdown wrapping.
 
 ABSOLUTE RULES — VIOLATION OF THESE PRODUCES FAKE NEWS:
 1. NEVER add player names, goal scorers, match minutes, assist providers, substitutions, or specific match statistics unless they are EXPLICITLY written in the source text provided to you. If the source says "Inter beat Juventus 3-2" but does not name the scorers, you must write "Inter beat Juventus 3-2" and NOTHING MORE about who scored. Do not fill in names from your own knowledge — your knowledge may be outdated or wrong.
@@ -163,6 +174,53 @@ LANGUAGE: ${input.language}
 Remember: ONLY use facts from the headlines above. Do NOT invent details. Max ${wordTarget} words. Synthesize, do NOT repeat.`
     } else if (input.mode === 'copilot') {
       contextLevel = 'full'
+
+      let newsContext = ''
+      const site = await prisma.site.findFirst({
+        where: { organizationId: session.user.organizationId!, deletedAt: null },
+        select: { id: true },
+      })
+      if (site) {
+        const topicWords = input.topic.split(/\s+/).filter(w => w.length > 3).slice(0, 3)
+        if (topicWords.length > 0) {
+          const clusters = await prisma.storyCluster.findMany({
+            where: {
+              OR: topicWords.map(word => ({
+                title: { contains: word, mode: 'insensitive' as const },
+              })),
+              latestItem: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) },
+            },
+            orderBy: { dis: 'desc' },
+            take: 3,
+            select: { id: true, title: true, entities: true },
+          })
+          if (clusters.length > 0) {
+            const clusterIds = clusters.map(c => c.id)
+            const newsItems = await prisma.newsItem.findMany({
+              where: { clusterId: { in: clusterIds } },
+              orderBy: { pubDate: 'desc' },
+              take: 8,
+              select: { title: true, source: true, content: true },
+            })
+            if (newsItems.length > 0) {
+              newsContext =
+                '\n\nREAL NEWS CONTEXT (from newsroom — USE THESE FACTS):\n' +
+                newsItems
+                  .map(
+                    (item, i) =>
+                      `SOURCE ${i + 1}: ${item.title} (${item.source})${item.content ? `\nCONTENT: ${item.content.substring(0, 500)}` : ''}`
+                  )
+                  .join('\n\n')
+            }
+            const allEntities = clusters.flatMap(c => (c.entities as string[]) || []).filter(Boolean)
+            const uniqueEntities = Array.from(new Set(allEntities)).slice(0, 10)
+            if (uniqueEntities.length > 0) {
+              newsContext += `\n\nKEY ENTITIES: ${uniqueEntities.join(', ')}`
+            }
+          }
+        }
+      }
+
       const typeMap: Record<string, string> = {
         preview: 'Write a match preview. Include both teams form, head-to-head history, key players and prediction.',
         report: 'Write a match report. Include key moments, statistics, player ratings and analysis.',
@@ -177,20 +235,19 @@ Remember: ONLY use facts from the headlines above. Do NOT invent details. Max ${
       userPrompt = `Write a full sports article based on this prompt from the editor:
 
 PROMPT: ${input.topic}
+${newsContext}
 
 ARTICLE TYPE GUIDANCE: ${typeInstruction}
 CATEGORY: ${input.category || 'Sport'}
 LANGUAGE: ${input.language === 'bs' ? 'Bosnian' : input.language === 'hr' ? 'Croatian' : input.language === 'sr' ? 'Serbian' : 'English'}
 
 Instructions:
-- Write a complete, well-structured article of approximately ${wordTarget} words
-- Use the prompt as your main topic/direction
-- You may use general knowledge you are confident about (team names, well-known facts)
+- Use the REAL NEWS CONTEXT above as your primary source of facts when provided
+- If no news context was found, write a SHORT factual stub (max 3 sentences) and note that no recent sources were found
 - Do NOT invent specific statistics, quotes, match scores, or transfer fees
-- If the prompt mentions specific details, use them; otherwise stay general
 - Write in ${input.language === 'bs' ? 'Bosnian' : input.language === 'hr' ? 'Croatian' : input.language === 'sr' ? 'Serbian' : 'English'}
 - Start with the news lead, not background
-- Include relevant context and analysis where appropriate`
+- Approximately ${wordTarget} words`
     } else {
       contextLevel = 'headline-only'
       userPrompt = `YOU HAVE NO SOURCE ARTICLE. You ONLY have this headline:
@@ -218,21 +275,30 @@ STRICT RULES FOR HEADLINE-ONLY GENERATION:
     let tokensIn = 0
     let tokensOut = 0
 
-    // Try Anthropic first, fallback to Gemini
     try {
       if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not set')
-      const response = await client.messages.create({
+      const anthropicCall = client.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: maxTokens,
         temperature: 0.3,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
       })
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('LLM_TIMEOUT')), LLM_TIMEOUT_MS)
+      )
+      const response = (await Promise.race([anthropicCall, timeoutPromise])) as Awaited<typeof anthropicCall>
       text = response.content[0].type === 'text' ? response.content[0].text : ''
       llmModel = response.model
       tokensIn = response.usage.input_tokens
       tokensOut = response.usage.output_tokens
     } catch (anthropicErr) {
+      if (anthropicErr instanceof Error && anthropicErr.message === 'LLM_TIMEOUT') {
+        return NextResponse.json(
+          { error: 'AI generation timed out. Try a shorter word count.' },
+          { status: 504 }
+        )
+      }
       console.error('[Smart Generate] Anthropic failed, trying Gemini:', anthropicErr instanceof Error ? anthropicErr.message : anthropicErr)
       const geminiResult = await generateWithGemini({
         system: systemPrompt,
@@ -259,6 +325,16 @@ STRICT RULES FOR HEADLINE-ONLY GENERATION:
 
     const warnings = await basicFactCheck(result.content || '', input.sourceContext || '', input.topic)
 
+    const contentForValidation = result.content || ''
+    const format = input.articleType || 'report'
+    const validation = validate(contentForValidation, {
+      mode: editorBrainMode,
+      format,
+      voiceProfile: DIURNA_DEFAULT_VOICE,
+      language: input.language,
+      wordCount: wordTarget,
+    })
+
     return NextResponse.json({
       ...result,
       tiptapContent,
@@ -269,6 +345,18 @@ STRICT RULES FOR HEADLINE-ONLY GENERATION:
         status: warnings.length === 0 ? 'CLEAN' :
                 warnings.some(w => w.severity === 'HIGH') ? 'REVIEW_REQUIRED' : 'CAUTION',
       },
+      editorBrain: {
+        mode: editorBrainMode,
+        validation: {
+          pass: validation.pass,
+          score: validation.score,
+          seo_score: validation.seo_score,
+          geo_readiness: validation.geo_readiness,
+          publish_blocked: validation.publish_blocked,
+          errors: validation.errors,
+          warnings: validation.warnings,
+        },
+      },
       model: llmModel,
       tokensIn,
       tokensOut,
@@ -277,6 +365,9 @@ STRICT RULES FOR HEADLINE-ONLY GENERATION:
     captureApiError(error, { route: '/api/ai/smart-generate', method: 'POST' })
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 })
+    }
+    if (error instanceof Error && error.message === 'LLM_TIMEOUT') {
+      return NextResponse.json({ error: 'AI generation timed out. Try a shorter word count.' }, { status: 504 })
     }
     return NextResponse.json({ error: 'Failed to generate article' }, { status: 500 })
   }
@@ -396,22 +487,30 @@ async function basicFactCheck(articleHtml: string, sourceContext: string, headli
 
   if (sourceContext && sourceContext.trim().length > 50) {
     try {
-      const players = await prisma.player.findMany({
-        select: { name: true, shortName: true, currentTeam: true }
-      })
+      const potentialNames = (articleHtml.match(/[A-ZČĆŠŽĐ][a-zčćšžđ]+(?:\s+[A-ZČĆŠŽĐ][a-zčćšžđ]+)+/g) || []).slice(0, 20)
+      if (potentialNames.length > 0) {
+        const nameConditions = potentialNames.flatMap(name => [
+          { name: { contains: name, mode: 'insensitive' as const } },
+          { shortName: { contains: name, mode: 'insensitive' as const } },
+        ])
+        const players = await prisma.player.findMany({
+          where: { OR: nameConditions },
+          select: { name: true, shortName: true, currentTeam: true },
+        })
 
-      for (const player of players) {
+        for (const player of players) {
         const nameInArticle = text.includes(player.name.toLowerCase()) ||
                              (player.shortName ? text.includes(player.shortName.toLowerCase()) : false)
         const nameInSource = sourceLower.includes(player.name.toLowerCase()) ||
                             (player.shortName ? sourceLower.includes(player.shortName.toLowerCase()) : false)
 
-        if (nameInArticle && !nameInSource) {
-          warnings.push({
-            type: 'PLAYER_NOT_IN_SOURCE',
-            detail: `"${player.name}" appears in article but NOT in source material. This may be hallucinated.`,
-            severity: 'HIGH',
-          })
+          if (nameInArticle && !nameInSource) {
+            warnings.push({
+              type: 'PLAYER_NOT_IN_SOURCE',
+              detail: `"${player.name}" appears in article but NOT in source material. This may be hallucinated.`,
+              severity: 'HIGH',
+            })
+          }
         }
       }
     } catch (err) {
