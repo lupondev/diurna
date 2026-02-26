@@ -233,7 +233,7 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
   return (
     <div className="ai-sb">
       <div className="ai-sb-header">
-        <span className="ai-sb-title">🤖 AI Co-Pilot</span>
+        <span className="ai-sb-title">✍️ Editor</span>
       </div>
 
       {/* Prompt section */}
@@ -247,6 +247,19 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
           onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) handleGenerate() }}
         />
         <div className="ai-generate-area">
+          <button
+            type="button"
+            className="ai-generate-btn"
+            onClick={handleGenerate}
+            disabled={generating || !prompt.trim()}
+          >
+            {generating ? '⏳ Generating...' : '✨ Generate Article'}
+          </button>
+          {generating && (
+            <div className="ai-loading-bar">
+              <div className="ai-loading-bar-fill" />
+            </div>
+          )}
           <div className="ai-controls-row">
             <div className="ai-sb-chips">
               {TEMPLATES.map((t) => (
@@ -265,19 +278,6 @@ export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }:
               ))}
             </select>
           </div>
-          <button
-            type="button"
-            className="ai-generate-btn"
-            onClick={handleGenerate}
-            disabled={generating || !prompt.trim()}
-          >
-            {generating ? '⏳ Generating...' : '✨ Generate Article'}
-          </button>
-          {generating && (
-            <div className="ai-loading-bar">
-              <div className="ai-loading-bar-fill" />
-            </div>
-          )}
         </div>
         {error && (
           <div className="ai-sb-error">{error}</div>

@@ -930,7 +930,7 @@
    ═══════════════════════════════════ */
 
 .ai-generate-area { margin-top: 12px; }
-.ai-controls-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ai-controls-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; margin-bottom: 0; }
 .ai-generate-btn {
   width: 100%;
   padding: 12px;
