@@ -84,6 +84,10 @@ No further indexes added; no speculative indexes.
 
 ---
 
+## Section 3.5: Common Auth Helper
+
+- **`lib/api-auth.ts`** — `getApiContext()` returns `{ userId, orgId, siteId, site, role }` or `null`. Uses `getServerSession(authOptions)` and `getDefaultSite(organizationId)`. Routes can call `const ctx = await getApiContext(); if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });` and use `ctx.siteId` / `ctx.orgId` for all Prisma queries. Refactor routes incrementally to use this helper.
+
 ## Section 4: Files Changed
 
 | File | Change |

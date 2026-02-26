@@ -464,6 +464,7 @@ export async function getNextTask(
   if (config.breakingNews) {
     const breakingCluster = await prisma.storyCluster.findFirst({
       where: {
+        siteId,
         dis: { gte: config.breakingThreshold },
         latestItem: { gte: new Date(Date.now() - 6 * 60 * 60 * 1000) },
         ...footballFilter,
@@ -540,6 +541,7 @@ export async function getNextTask(
 
     const topicCluster = await prisma.storyCluster.findFirst({
       where: {
+        siteId,
         OR: keywordConditions,
         latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
         dis: { gte: 30 },
@@ -582,6 +584,7 @@ export async function getNextTask(
     if (currentCount < expectedCount) {
       const cluster = await prisma.storyCluster.findFirst({
         where: {
+          siteId,
           OR: mappedEventTypes.map((t) => ({ eventType: { contains: t, mode: 'insensitive' as const } })),
           latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
           dis: { gte: 20 },
@@ -623,6 +626,7 @@ export async function getNextTask(
     if (hasGap) {
       const cluster = await prisma.storyCluster.findFirst({
         where: {
+          siteId,
           latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
           dis: { gte: 15 },
           ...footballFilter,
@@ -692,6 +696,7 @@ export async function getNextTask(
   // ── Priority 7: ALWAYS-ON fallback ──
   const anyCluster = await prisma.storyCluster.findFirst({
     where: {
+      siteId,
       latestItem: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       ...footballFilter,
     },

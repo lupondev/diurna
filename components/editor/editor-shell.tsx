@@ -298,11 +298,18 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           errMsg = err.error || errMsg
         } catch {
           if (res.status === 504 || res.status === 502) errMsg = 'AI timed out. Try a shorter article or try again.'
-          else if (!text) errMsg = 'Empty response — try again in a moment.'
+          else if (!text) errMsg = 'Empty response from server. Try again in a moment.'
         }
         throw new Error(errMsg)
       }
-      const result = await res.json() as { title?: string; tiptapContent?: Record<string, unknown>; model?: string; tokensIn?: number; tokensOut?: number }
+      const raw = await res.text()
+      if (!raw.trim()) throw new Error('Empty response from server. Try again in a moment.')
+      let result: { title?: string; tiptapContent?: Record<string, unknown>; model?: string; tokensIn?: number; tokensOut?: number }
+      try {
+        result = JSON.parse(raw)
+      } catch {
+        throw new Error('Invalid response from server. Please try again.')
+      }
       if (result.title) setTitle(result.title)
       if (result.tiptapContent) { setContent(result.tiptapContent); setInitialContent(result.tiptapContent) }
       setAiResult({ model: result.model, tokensIn: result.tokensIn, tokensOut: result.tokensOut })
@@ -332,11 +339,18 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
           errMsg = err.error || errMsg
         } catch {
           if (res.status === 504 || res.status === 502) errMsg = 'AI timed out. Try again.'
-          else if (!text) errMsg = 'Empty response — try again in a moment.'
+          else if (!text) errMsg = 'Empty response from server. Try again in a moment.'
         }
         throw new Error(errMsg)
       }
-      const data = await res.json() as { title?: string; tiptapContent?: Record<string, unknown>; model?: string; tokensIn?: number; tokensOut?: number }
+      const raw = await res.text()
+      if (!raw.trim()) throw new Error('Empty response from server. Try again in a moment.')
+      let data: { title?: string; tiptapContent?: Record<string, unknown>; model?: string; tokensIn?: number; tokensOut?: number }
+      try {
+        data = JSON.parse(raw)
+      } catch {
+        throw new Error('Invalid response from server. Please try again.')
+      }
       if (data.title) setTitle(data.title)
       if (data.tiptapContent) { setContent(data.tiptapContent); setInitialContent(data.tiptapContent) }
       setAiResult({ model: data.model, tokensIn: data.tokensIn, tokensOut: data.tokensOut })

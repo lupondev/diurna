@@ -1,30 +1,25 @@
 import { getServerSession } from 'next-auth'
-import { authOptions } from './auth'
-import { prisma } from './prisma'
+import { authOptions } from '@/lib/auth'
+import { getDefaultSite } from '@/lib/db'
+import type { Site } from '@prisma/client'
 
-export async function getApiContext() {
+export type ApiContext = {
+  userId: string
+  orgId: string
+  siteId: string
+  site: Site
+  role: string
+}
+
+export async function getApiContext(): Promise<ApiContext | null> {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.id || !session.user.organizationId) {
-    return null
-  }
-
-  const site = await prisma.site.findFirst({
-    where: { organizationId: session.user.organizationId, deletedAt: null },
-    select: {
-      id: true,
-      organizationId: true,
-      name: true,
-      domain: true,
-      language: true,
-      timezone: true,
-    },
-  })
-
+  const orgId = session?.user?.organizationId ?? null
+  if (!session?.user?.id || !orgId) return null
+  const site = await getDefaultSite(orgId)
   if (!site) return null
-
   return {
     userId: session.user.id,
-    orgId: session.user.organizationId,
+    orgId,
     siteId: site.id,
     site,
     role: session.user.role ?? 'JOURNALIST',

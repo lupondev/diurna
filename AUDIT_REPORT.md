@@ -1,7 +1,7 @@
 # Diurna — Final Mega Audit Report
 
-**Date:** 2026-02-25  
-**Scope:** Security, performance, quality, tenant isolation, DB indexes, tests.
+**Date:** 2026-02-26 (mega audit prompt run)  
+**Scope:** Security, performance, quality, tenant isolation, DB indexes, AI copilot, cleanup.
 
 ---
 
@@ -17,6 +17,13 @@
 
 ## 2. Issues Fixed (by phase)
 
+### Phase 0 — AI Co-Pilot
+
+| Issue | File(s) | Fix |
+|-------|---------|-----|
+| **Unexpected end of JSON input** | `components/editor/ai-sidebar.tsx`, `components/editor/editor-shell.tsx` | On success: read `res.text()` first; if empty or invalid JSON, set error and return. Never call `res.json()` on empty/HTML response. |
+| **Copilot context / fact-check** | `app/api/ai/smart-generate/route.ts` | Already implemented: copilot mode fetches newsroom clusters + news items; `basicFactCheck` queries players by extracted names only. |
+
 ### Phase 1 — Critical security
 
 | Issue | File(s) | Fix |
@@ -31,7 +38,7 @@
 | Issue | File(s) | Fix |
 |-------|---------|-----|
 | **Cache headers** | `next.config.mjs` | Already path-specific (api, dashboard, editor, etc. no-cache; `/:path*` s-maxage=60; feed 300/600). No change. |
-| **Vercel cron** | `vercel.json` | Autopilot cron already present (`*/15 * * * *`). No change. |
+| **Vercel cron** | `vercel.json` | Added `crons: [{ "path": "/api/cron/autopilot", "schedule": "*/15 * * * *" }]`. |
 | **JWT DB spam** | `lib/auth.ts` | JWT callback now refreshes from DB only when `trigger === 'update'` or `Date.now() - lastDbRefresh > 5 * 60 * 1000`. `token.lastDbRefresh` set after each refresh. |
 
 ### Phase 3 — High priority
@@ -43,7 +50,8 @@
 | **getDashboardStats tenant** | `lib/db.ts` | `getDashboardStats(organizationId: string)` — parameter now required; `orgFilter` always `{ site: { organizationId } }`; no global count. |
 | **@auth/prisma-adapter** | `package.json` | Removed unused `@auth/prisma-adapter` dependency. |
 | **NextAuth types** | `types/next-auth.d.ts`, `lib/auth.ts` | Extended `User`, `Session.user`, `JWT` with `organizationId`, `onboardingCompleted`, `role`, `lastDbRefresh`. Removed `(user as unknown as ...)` casts in auth callbacks. |
-| **Junk file "20%:"** | — | Not found in repo; skipped. |
+| **Junk file "20%:"** | repo root | Deleted empty file `20%:`. |
+| **Middleware isSeedRoute** | `middleware.ts` | Removed `isSeedRoute` from public bypass; seed/admin routes require Bearer auth via `isAdminApiWithBearer`. |
 
 ### Phase 4 — Tenant isolation
 
@@ -57,7 +65,7 @@
 | Item | File(s) | Fix |
 |------|---------|-----|
 | **Schema indexes** | `prisma/schema.prisma` | Added: Article `@@index([siteId, status, publishedAt])`, `@@index([siteId, categoryId, status, publishedAt])`; Category `@@index([siteId, order])`; Athlete `@@index([siteId, status, publishedAt])`; SportOrganization `@@index([siteId, status, publishedAt])`. |
-| **Autopilot N+1** | `lib/autopilot.ts` | At start of `getNextTask`: one `findMany` for articles today with non-null `aiPrompt`; build `coveredClusterIds` and `coveredMatchIds` from parsed `aiPrompt` JSON. Replaced all `findFirst` “already covered” checks with `coveredClusterIds.has(cluster.id)` or `coveredMatchIds.has(match.id)`. |
+| **Autopilot tenant scope** | `lib/autopilot.ts` | At start of `getNextTask`: one `findMany` for articles today with non-null `aiPrompt`; build `coveredClusterIds` and `coveredMatchIds` from parsed `aiPrompt` JSON. Replaced all `findFirst` “already covered” checks with `coveredClusterIds.has(cluster.id)` or `coveredMatchIds.has(match.id)`. |
 
 ### Other
 

@@ -90,7 +90,6 @@ export async function middleware(req: NextRequest) {
   const isFootballHealthRoute = pathname.startsWith('/api/football/health')
   const isWebhookRoute = pathname.startsWith('/api/webhooks')
   const isCronRoute = pathname.startsWith('/api/cron')
-  const isSeedRoute = pathname.startsWith('/api/admin/seed-feeds') || pathname.startsWith('/api/admin/seed-entities') || pathname.startsWith('/api/admin/seed-players') || pathname.startsWith('/api/admin/enrich-players') || pathname.startsWith('/api/admin/seed-matches') || pathname.startsWith('/api/admin/sync-players') || pathname.startsWith('/api/admin/scrape-salaries')
   const isNewsroomPublic = pathname.startsWith('/api/newsroom/clusters') || pathname.startsWith('/api/newsroom/fixtures') || pathname.startsWith('/api/newsroom/stats') || pathname.startsWith('/api/newsroom/for-you') || pathname.startsWith('/api/entities/search') || pathname.startsWith('/api/clubs') || pathname.startsWith('/api/fixtures/ticker') || pathname.startsWith('/api/videos')
   const isAdminApiWithBearer = (pathname.startsWith('/api/admin/backfill-images') || pathname.startsWith('/api/admin/seed') || pathname.startsWith('/api/admin/sync') || pathname.startsWith('/api/admin/enrich') || pathname.startsWith('/api/admin/revalidate')) && req.headers.get('authorization')?.startsWith('Bearer ')
   const isSetupRoute = pathname.startsWith('/api/setup/')
@@ -100,14 +99,13 @@ export async function middleware(req: NextRequest) {
   const isCategoryPage = ['/vijesti', '/transferi', '/utakmice', '/povrede', '/video', '/igraci', '/tabela'].includes(pathname)
   const isMatchCenter = pathname.startsWith('/utakmica/')
   const isPlayerPage = pathname.startsWith('/igraci/')
-  // Liga/league pages — must be public for SEO crawl
   const isLigaPage = pathname.startsWith('/lige/') || pathname.startsWith('/premier-league') || pathname.startsWith('/la-liga') || pathname.startsWith('/serie-a') || pathname.startsWith('/bundesliga') || pathname.startsWith('/ligue-1') || pathname.startsWith('/liga-prvaka') || pathname.startsWith('/champions-league')
   const isMcpRoute = req.headers.get('x-mcp-secret') === process.env.MCP_SECRET && (
     pathname.startsWith('/api/autopilot') ||
     pathname.startsWith('/api/articles') ||
     pathname.startsWith('/api/site')
   )
-  const isPublicRoute = isHomepage || isStaticPage || isCategoryPage || isMatchCenter || isPlayerPage || isLigaPage || pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isRssRoute || isCronRoute || isSeedRoute || isNewsroomPublic || isSetupRoute || isPublicArticle || isHealthRoute || isFootballHealthRoute || isWebhookRoute || isAdminApiWithBearer || isMcpRoute
+  const isPublicRoute = isHomepage || isStaticPage || isCategoryPage || isMatchCenter || isPlayerPage || isLigaPage || pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isRssRoute || isCronRoute || isNewsroomPublic || isSetupRoute || isPublicArticle || isHealthRoute || isFootballHealthRoute || isWebhookRoute || isAdminApiWithBearer || isMcpRoute
 
   if (!isPublicRoute) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
