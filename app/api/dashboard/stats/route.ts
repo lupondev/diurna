@@ -60,8 +60,8 @@ export async function GET() {
       prisma.entity.count(),
       prisma.feedSource.count({ where: feedWhere }),
       prisma.feedSource.count({ where: { ...feedWhere, active: true } }),
-      prisma.newsItem.count(),
-      prisma.newsItem.count({ where: { createdAt: { gte: todayStart } } }),
+      prisma.newsItem.count({ where: { siteId: site.id } }),
+      prisma.newsItem.count({ where: { siteId: site.id, createdAt: { gte: todayStart } } }),
       prisma.category.findMany({
         where: { siteId: site.id, deletedAt: null },
         include: { _count: { select: { articles: { where: { deletedAt: null } } } } },

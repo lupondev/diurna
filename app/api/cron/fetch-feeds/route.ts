@@ -143,84 +143,82 @@ export async function GET(req: Request) {
     },
     orderBy: { lastFetch: 'asc' },
     take,
+    select: { id: true, name: true, url: true, tier: true, category: true, siteId: true },
   })
 
   let totalNew = 0
   let totalErrors = 0
+  const results: { feed: string; items?: number; error?: string }[] = []
 
-  const results = await Promise.allSettled(
-    feeds.map(async (feed) => {
-      try {
-        const parsed = await parser.parseURL(feed.url)
-        const items = (parsed.items || [])
-          .filter(item => item.title && isFootballArticle(item.title))
-          .slice(0, 15)
+  for (const feed of feeds) {
+    try {
+      const parsed = await parser.parseURL(feed.url)
+      const items = (parsed.items || [])
+        .filter((item: { title?: string }) => item.title && isFootballArticle(item.title))
+        .slice(0, 15)
 
-        let newCount = 0
-        for (const item of items) {
-          const rawUrl = item.link || item.guid || ''
-          if (!rawUrl) continue
+      let newCount = 0
+      for (const item of items) {
+        const rawUrl = item.link || item.guid || ''
+        if (!rawUrl) continue
 
-          const pubDate = item.pubDate ? new Date(item.pubDate) : new Date()
-          if (isNaN(pubDate.getTime())) continue
-          if (Date.now() - pubDate.getTime() > 48 * 60 * 60 * 1000) continue
+        const pubDate = item.pubDate ? new Date(item.pubDate) : new Date()
+        if (isNaN(pubDate.getTime())) continue
+        if (Date.now() - pubDate.getTime() > 48 * 60 * 60 * 1000) continue
 
-          const sourceUrl = normalizeUrl(rawUrl)
-          const hash = generateContentHash(item.title || '', feed.name)
+        const sourceUrl = normalizeUrl(rawUrl)
+        const hash = generateContentHash(item.title || '', feed.name)
+        const siteIdVal = feed.siteId
+        if (siteIdVal == null) continue
 
-          try {
-            await prisma.newsItem.upsert({
-              where: { sourceUrl },
-              update: {
-                title: item.title || '',
-                pubDate,
-                contentHash: hash,
-                updatedAt: new Date(),
-              },
-              create: {
-                title: item.title || '',
-                source: feed.name,
-                sourceDomain: extractSourceDomain(feed.name, sourceUrl),
-                sourceUrl,
-                contentHash: hash,
-                content: (item.contentSnippet || item.content || '').slice(0, 500),
-                category: getCategory(feed.category, item.title || ''),
-                pubDate,
-                feedUrl: feed.url,
-                tier: feed.tier,
-              },
-            })
-            newCount++
-          } catch (err) {
-            console.error('Feed item create (duplicate or error):', err)
-          }
+        try {
+          await prisma.newsItem.upsert({
+            where: { sourceUrl_siteId: { sourceUrl, siteId: siteIdVal } },
+            update: {
+              title: item.title || '',
+              pubDate,
+              contentHash: hash,
+              updatedAt: new Date(),
+            },
+            create: {
+              title: item.title || '',
+              source: feed.name,
+              sourceDomain: extractSourceDomain(feed.name, sourceUrl),
+              sourceUrl,
+              contentHash: hash,
+              content: (item.contentSnippet || item.content || '').slice(0, 500),
+              category: getCategory(feed.category, item.title || ''),
+              pubDate,
+              feedUrl: feed.url,
+              tier: feed.tier,
+              siteId: siteIdVal,
+            },
+          })
+          newCount++
+        } catch (err) {
+          results.push({ feed: feed.name, error: `Item upsert: ${err instanceof Error ? err.message : String(err)}` })
         }
-
-        await prisma.feedSource.update({
-          where: { id: feed.id },
-          data: {
-            lastFetch: new Date(),
-            itemCount: { increment: newCount },
-            errorCount: 0,
-          },
-        })
-
-        return { feed: feed.name, items: newCount }
-      } catch (error) {
-        await prisma.feedSource.update({
-          where: { id: feed.id },
-          data: { errorCount: { increment: 1 } },
-        }).catch(() => {})
-
-        totalErrors++
-        return { feed: feed.name, error: String(error) }
       }
-    })
-  )
 
-  for (const r of results) {
-    if (r.status === 'fulfilled' && r.value && 'items' in r.value) {
-      totalNew += r.value.items as number
+      await prisma.feedSource.update({
+        where: { id: feed.id },
+        data: {
+          lastFetch: new Date(),
+          itemCount: { increment: newCount },
+          errorCount: 0,
+        },
+      })
+
+      results.push({ feed: feed.name, items: newCount })
+      totalNew += newCount
+    } catch (error) {
+      await prisma.feedSource.update({
+        where: { id: feed.id },
+        data: { errorCount: { increment: 1 } },
+      }).catch(() => {})
+
+      totalErrors++
+      results.push({ feed: feed.name, error: String(error) })
     }
   }
 
@@ -246,6 +244,7 @@ export async function GET(req: Request) {
     tiers: tierFilter,
     newItems: totalNew,
     errors: totalErrors,
+    results,
     deduplicated: dedupDeleted,
     timestamp: new Date().toISOString(),
   })
@@ -261,32 +260,40 @@ async function crossSourceDedup(): Promise<number> {
     orderBy: { pubDate: 'desc' },
   })
 
-  const groups = new Map<string, typeof items>()
+  const bySite = new Map<string | null, typeof items>()
   for (const item of items) {
-    const key = item.title
-      .toLowerCase()
-      .replace(/\s*[-–—]\s*\w.*$/, '')
-      .replace(/[^a-z0-9\s]/g, '')
-      .split(/\s+/)
-      .filter(w => w.length > 3)
-      .slice(0, 8)
-      .join(' ')
-    if (!key) continue
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key)!.push(item)
+    const s = item.siteId ?? null
+    if (!bySite.has(s)) bySite.set(s, [])
+    bySite.get(s)!.push(item)
   }
 
   let deleted = 0
-  for (const [, group] of Array.from(groups)) {
-    if (group.length <= 1) continue
-    group.sort((a, b) => {
-      if (a.tier !== b.tier) return a.tier - b.tier
-      return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime()
-    })
-    const toDelete = group.slice(1).map(i => i.id)
-    if (toDelete.length > 0) {
-      await prisma.newsItem.deleteMany({ where: { id: { in: toDelete } } })
-      deleted += toDelete.length
+  for (const siteItems of Array.from(bySite.values())) {
+    const groups = new Map<string, typeof items>()
+    for (const item of siteItems) {
+      const key = item.title
+        .toLowerCase()
+        .replace(/\s*[-–—]\s*\w.*$/, '')
+        .replace(/[^a-z0-9\s]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 3)
+        .slice(0, 8)
+        .join(' ')
+      if (!key) continue
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)!.push(item)
+    }
+    for (const [, group] of Array.from(groups)) {
+      if (group.length <= 1) continue
+      group.sort((a, b) => {
+        if (a.tier !== b.tier) return a.tier - b.tier
+        return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime()
+      })
+      const toDelete = group.slice(1).map(i => i.id)
+      if (toDelete.length > 0) {
+        await prisma.newsItem.deleteMany({ where: { id: { in: toDelete } } })
+        deleted += toDelete.length
+      }
     }
   }
 

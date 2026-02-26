@@ -57,6 +57,15 @@
 - Site switcher: deduplicate by name, prefer site with domain
 - Default active site: always the one with domain set
 
+## NEWSROOM PIPELINE INVARIANTS (NEVER break these)
+- FeedSource uniqueness is per-site: @@unique([url, siteId])
+- Every NewsItem.create/upsert MUST include siteId (from FeedSource.siteId)
+- Every StoryCluster MUST have siteId set (cluster-engine uses per-site key suffix)
+- fetch-feeds cron MUST set siteId on every NewsItem and MUST return results array (no silent swallow)
+- Newsroom GET /api/newsroom/clusters MUST scope to session's siteId (via query param)
+- crossSourceDedup and cluster-engine MUST respect siteId (per-site grouping)
+- These rules apply to EVERY code change touching newsroom/feeds/clusters
+
 ## Category Normalization
 - Articles must use Bosnian category names: VIJESTI, TRANSFERI, POVREDE, ANALIZE
 - Autopilot maps English→Bosnian: NEWS→VIJESTI, TRANSFERS→TRANSFERI, etc.

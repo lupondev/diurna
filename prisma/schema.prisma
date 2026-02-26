@@ -441,7 +441,7 @@ model NewsItem {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@unique([sourceUrl])
+  @@unique([sourceUrl, siteId])
   @@unique([contentHash])
   @@index([pubDate])
   @@index([category])

@@ -316,99 +316,112 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: 'No items to cluster', clusters: 0 })
     }
 
-    const processedItems = newsItems.map(item => {
-      const matchedEntities = matchEntities(item.title, entities)
-      const eventType = detectEventType(item.title)
-      const primary = getPrimaryEntity(matchedEntities, eventType)
-      const clusterKey = buildClusterKey(primary.key, eventType, item.pubDate)
-
-      return {
-        ...item,
-        matchedEntities,
-        eventType,
-        primaryEntity: primary,
-        clusterKey,
-      }
-    })
-
-    const clusterMap = new Map<string, typeof processedItems>()
-    for (const item of processedItems) {
-      const existing = clusterMap.get(item.clusterKey) || []
-      existing.push(item)
-      clusterMap.set(item.clusterKey, existing)
+    const bySite = new Map<string | null, typeof newsItems>()
+    for (const item of newsItems) {
+      const s = item.siteId ?? null
+      if (!bySite.has(s)) bySite.set(s, [])
+      bySite.get(s)!.push(item)
     }
 
     let clustersCreated = 0
     let clustersUpdated = 0
     let summariesCreated = 0
     let errors = 0
+    let totalClusters = 0
 
-    for (const [clusterKey, items] of Array.from(clusterMap.entries())) {
-      try {
-        const primary = items[0].primaryEntity
-        const allEntities = Array.from(new Set(items.flatMap(i => i.matchedEntities.map(e => e.name))))
-        const uniqueSources = Array.from(new Set(items.map(i => i.source)))
+    for (const [siteId, siteItems] of Array.from(bySite.entries())) {
+      const siteSuffix = siteId ? `_s${siteId}` : '_global'
+      const processedItems = siteItems.map(item => {
+        const matchedEntities = matchEntities(item.title, entities)
+        const eventType = detectEventType(item.title)
+        const primary = getPrimaryEntity(matchedEntities, eventType)
+        const baseKey = buildClusterKey(primary.key, eventType, item.pubDate)
+        const clusterKey = baseKey + siteSuffix
 
-        const tier1Count = items.filter(i => i.tier === 1).length
-        const tier2Count = items.filter(i => i.tier === 2).length
-        const tier3Count = items.filter(i => i.tier === 3).length
-
-        const now = Date.now()
-        const velocity30m = items.filter(i => (now - new Date(i.pubDate).getTime()) < 30 * 60 * 1000).length
-        const velocityPrev30m = items.filter(i => {
-          const age = now - new Date(i.pubDate).getTime()
-          return age >= 30 * 60 * 1000 && age < 60 * 60 * 1000
-        }).length
-
-        const firstSeen = new Date(Math.min(...items.map(i => new Date(i.pubDate).getTime())))
-        const latestItem = new Date(Math.max(...items.map(i => new Date(i.pubDate).getTime())))
-
-        const bestItem = items.sort((a, b) => a.tier - b.tier)[0]
-        const title = bestItem.title.replace(/\s*[-–—]\s*[^-–—]+$/, '').trim()
-
-        const summary = generateDeterministicSummary(items, tier1Count, tier2Count, tier3Count)
-
-        const { dis, acceleration, trend } = calculateDIS({
-          tier1Count,
-          tier2Count,
-          tier3Count,
-          velocity30m,
-          velocityPrev30m,
-          consistency: summary.consistency,
-          firstSeen,
-        })
-
-        const existingCluster = await prisma.storyCluster.findUnique({ where: { key: clusterKey } })
-
-        const clusterData = {
-          title,
-          eventType: items[0].eventType,
-          primaryEntity: primary.name,
-          primaryEntityType: primary.type,
-          entities: allEntities,
-          sourceCount: uniqueSources.length,
-          tier1Count,
-          tier2Count,
-          tier3Count,
-          hasConflicts: (summary.conflictingReports || []).length > 0,
-          velocity30m,
-          velocityPrev30m,
-          acceleration,
-          trend,
-          consistency: summary.consistency,
-          dis,
-          peakDis: existingCluster ? Math.max(existingCluster.peakDis, dis) : dis,
-          peakAt: (!existingCluster || dis > (existingCluster?.peakDis || 0)) ? new Date() : existingCluster?.peakAt,
-          firstSeen,
-          latestItem,
-          newsItems: items.map(i => i.id),
+        return {
+          ...item,
+          matchedEntities,
+          eventType,
+          primaryEntity: primary,
+          clusterKey,
         }
+      })
 
-        const cluster = await prisma.storyCluster.upsert({
-          where: { key: clusterKey },
-          update: clusterData,
-          create: { key: clusterKey, ...clusterData },
-        })
+      const clusterMap = new Map<string, typeof processedItems>()
+      for (const item of processedItems) {
+        const existing = clusterMap.get(item.clusterKey) || []
+        existing.push(item)
+        clusterMap.set(item.clusterKey, existing)
+      }
+      totalClusters += clusterMap.size
+
+      for (const [clusterKey, items] of Array.from(clusterMap.entries())) {
+        try {
+          const primary = items[0].primaryEntity
+          const allEntities = Array.from(new Set(items.flatMap(i => i.matchedEntities.map(e => e.name))))
+          const uniqueSources = Array.from(new Set(items.map(i => i.source)))
+
+          const tier1Count = items.filter(i => i.tier === 1).length
+          const tier2Count = items.filter(i => i.tier === 2).length
+          const tier3Count = items.filter(i => i.tier === 3).length
+
+          const now = Date.now()
+          const velocity30m = items.filter(i => (now - new Date(i.pubDate).getTime()) < 30 * 60 * 1000).length
+          const velocityPrev30m = items.filter(i => {
+            const age = now - new Date(i.pubDate).getTime()
+            return age >= 30 * 60 * 1000 && age < 60 * 60 * 1000
+          }).length
+
+          const firstSeen = new Date(Math.min(...items.map(i => new Date(i.pubDate).getTime())))
+          const latestItem = new Date(Math.max(...items.map(i => new Date(i.pubDate).getTime())))
+
+          const bestItem = items.sort((a, b) => a.tier - b.tier)[0]
+          const title = bestItem.title.replace(/\s*[-–—]\s*[^-–—]+$/, '').trim()
+
+          const summary = generateDeterministicSummary(items, tier1Count, tier2Count, tier3Count)
+
+          const { dis, acceleration, trend } = calculateDIS({
+            tier1Count,
+            tier2Count,
+            tier3Count,
+            velocity30m,
+            velocityPrev30m,
+            consistency: summary.consistency,
+            firstSeen,
+          })
+
+          const existingCluster = await prisma.storyCluster.findUnique({ where: { key: clusterKey } })
+
+          const clusterData = {
+            title,
+            eventType: items[0].eventType,
+            primaryEntity: primary.name,
+            primaryEntityType: primary.type,
+            entities: allEntities,
+            sourceCount: uniqueSources.length,
+            tier1Count,
+            tier2Count,
+            tier3Count,
+            hasConflicts: (summary.conflictingReports || []).length > 0,
+            velocity30m,
+            velocityPrev30m,
+            acceleration,
+            trend,
+            consistency: summary.consistency,
+            dis,
+            peakDis: existingCluster ? Math.max(existingCluster.peakDis, dis) : dis,
+            peakAt: (!existingCluster || dis > (existingCluster?.peakDis || 0)) ? new Date() : existingCluster?.peakAt,
+            firstSeen,
+            latestItem,
+            newsItems: items.map(i => i.id),
+            siteId,
+          }
+
+          const cluster = await prisma.storyCluster.upsert({
+            where: { key: clusterKey },
+            update: clusterData,
+            create: { key: clusterKey, ...clusterData },
+          })
 
         if (existingCluster) clustersUpdated++
         else clustersCreated++
@@ -449,6 +462,7 @@ export async function GET(req: Request) {
         console.error(`[Cluster Engine] Error processing cluster ${clusterKey}:`, e)
         errors++
       }
+    }
     }
 
     // Breaking news webhook
@@ -502,7 +516,7 @@ export async function GET(req: Request) {
       success: true,
       duration: `${duration}ms`,
       items: newsItems.length,
-      clusters: clusterMap.size,
+      clusters: totalClusters,
       created: clustersCreated,
       updated: clustersUpdated,
       summaries: summariesCreated,
