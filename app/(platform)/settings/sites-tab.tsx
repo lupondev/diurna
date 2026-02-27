@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import toast from 'react-hot-toast'
 import { SUPPORTED_LANGUAGES } from '@/lib/languages'
 
 const TIMEZONES = [
@@ -57,6 +58,7 @@ export default function SitesTab() {
         setCurrentSiteId(current.id ?? null)
       } else {
         setCurrentSiteId(null)
+        // Don't treat /api/site failure as an error — 404 just means no active badge
       }
       const data = (await sitesRes.json()) as { sites?: SiteRow[] }
       setSites(data.sites ?? [])
@@ -136,6 +138,8 @@ export default function SitesTab() {
         return
       }
       setDeleteConfirmId(null)
+      toast.success('Site removed')
+      setSites((prev) => prev.filter((s) => s.id !== siteId))
       loadSites()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete site')
