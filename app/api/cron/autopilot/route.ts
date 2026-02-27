@@ -14,6 +14,7 @@ import {
   slugify,
   fetchUnsplashImage,
 } from '@/lib/autopilot'
+import { getPrimarySite } from '@/lib/site-resolver'
 import { verifyArticle } from '@/lib/model-router'
 import { systemLog } from '@/lib/system-log'
 import { captureApiError } from '@/lib/sentry'
@@ -120,9 +121,7 @@ export async function GET(req: NextRequest) {
         continue
       }
 
-      const site = await prisma.site.findFirst({
-        where: { organizationId: config.orgId, domain: { not: null } },
-      }) || await prisma.site.findFirst({ where: { organizationId: config.orgId } })
+      const site = await getPrimarySite(config.orgId)
       if (!site) {
         results.push({ orgId: config.orgId, action: 'skipped', reason: 'No site configured' })
         continue
@@ -225,6 +224,32 @@ export async function GET(req: NextRequest) {
         if (catConfig) tiptapContent = injectWidgets(tiptapContent, catConfig)
 
         const baseSlug = parsed.seo?.slug || slugify(title)
+
+        const recentDupe = await prisma.article.findFirst({
+          where: {
+            siteId: site.id,
+            title: { equals: title, mode: 'insensitive' },
+            createdAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+          },
+        })
+        if (recentDupe) {
+          await systemLog('warn', 'autopilot', `Dedup: skipped "${title}" — duplicate of ${recentDupe.id}`)
+          results.push({ orgId: config.orgId, action: 'skipped', reason: `Duplicate: "${title}"` })
+          continue
+        }
+
+        const slugDupe = await prisma.article.findFirst({
+          where: {
+            siteId: site.id,
+            slug: { startsWith: baseSlug },
+            createdAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+          },
+        })
+        if (slugDupe) {
+          await systemLog('warn', 'autopilot', `Dedup (slug): skipped "${title}" — slug "${baseSlug}" matches ${slugDupe.id}`)
+          results.push({ orgId: config.orgId, action: 'skipped', reason: `Slug duplicate: "${baseSlug}"` })
+          continue
+        }
         const featuredImage = await fetchUnsplashImage(title)
 
         const article = await createArticleSafe({
@@ -351,6 +376,32 @@ export async function GET(req: NextRequest) {
       if (catConfig) tiptapContent = injectWidgets(tiptapContent, catConfig)
 
       const baseSlug = parsed.seo?.slug || slugify(title)
+
+      const recentDupe = await prisma.article.findFirst({
+        where: {
+          siteId: site.id,
+          title: { equals: title, mode: 'insensitive' },
+          createdAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+        },
+      })
+      if (recentDupe) {
+        await systemLog('warn', 'autopilot', `Dedup: skipped "${title}" — duplicate of ${recentDupe.id}`)
+        results.push({ orgId: config.orgId, action: 'skipped', reason: `Duplicate: "${title}"` })
+        continue
+      }
+
+      const slugDupe = await prisma.article.findFirst({
+        where: {
+          siteId: site.id,
+          slug: { startsWith: baseSlug },
+          createdAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+        },
+      })
+      if (slugDupe) {
+        await systemLog('warn', 'autopilot', `Dedup (slug): skipped "${title}" — slug "${baseSlug}" matches ${slugDupe.id}`)
+        results.push({ orgId: config.orgId, action: 'skipped', reason: `Slug duplicate: "${baseSlug}"` })
+        continue
+      }
       const featuredImage = await fetchUnsplashImage(title)
 
       const article = await createArticleSafe({

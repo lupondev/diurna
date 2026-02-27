@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getPrimarySite } from '@/lib/site-resolver'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -12,7 +13,7 @@ export async function GET() {
   const orgId = session.user.organizationId
 
   const [site, config] = await Promise.all([
-    prisma.site.findFirst({ where: { organizationId: orgId } }),
+    getPrimarySite(orgId),
     prisma.autopilotConfig.findUnique({ where: { orgId } }),
   ])
 

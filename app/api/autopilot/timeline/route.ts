@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getPrimarySite } from '@/lib/site-resolver'
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -15,19 +16,7 @@ export async function GET(req: NextRequest) {
   const startOfDay = new Date(`${dateStr}T00:00:00`)
   const endOfDay = new Date(`${dateStr}T23:59:59.999`)
 
-  let site = await prisma.site.findFirst({
-    where: { organizationId: session.user.organizationId },
-    select: { id: true },
-  })
-
-  if (!site) {
-    const org = await prisma.organization.findFirst({
-      where: { id: session.user.organizationId },
-      include: { sites: { select: { id: true }, take: 1 } },
-    })
-    site = org?.sites?.[0] ?? null
-  }
-
+  const site = await getPrimarySite(session.user.organizationId)
   if (!site) {
     return NextResponse.json({ articles: [], matches: [] })
   }

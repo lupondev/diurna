@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { getOrg } from '@/lib/tenant'
 
 export async function GET() {
   try {
-    const org = await getOrg()
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const orgId = session.user.organizationId
     const sites = await prisma.site.findMany({
-      where: { organizationId: org.id, deletedAt: null },
+      where: { organizationId: orgId, deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -30,7 +35,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const org = await getOrg()
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const orgId = session.user.organizationId
     const body = (await req.json()) as { name?: string; slug?: string; domain?: string; language?: string; timezone?: string }
     const { name, slug, domain, language, timezone } = body
 
@@ -45,7 +54,7 @@ export async function POST(req: Request) {
       .replace(/^-|-$/g, '')
 
     const existing = await prisma.site.findFirst({
-      where: { organizationId: org.id, slug: cleanSlug, deletedAt: null },
+      where: { organizationId: orgId, slug: cleanSlug, deletedAt: null },
     })
     if (existing) {
       return NextResponse.json({ error: 'A site with this slug already exists' }, { status: 409 })
@@ -53,7 +62,7 @@ export async function POST(req: Request) {
 
     const site = await prisma.site.create({
       data: {
-        organizationId: org.id,
+        organizationId: orgId,
         name,
         slug: cleanSlug,
         domain: domain || null,
@@ -80,7 +89,11 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const org = await getOrg()
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const orgId = session.user.organizationId
     const body = (await req.json()) as { siteId?: string }
     const { siteId } = body
 
@@ -89,14 +102,14 @@ export async function DELETE(req: Request) {
     }
 
     const siteCount = await prisma.site.count({
-      where: { organizationId: org.id, deletedAt: null },
+      where: { organizationId: orgId, deletedAt: null },
     })
     if (siteCount <= 1) {
       return NextResponse.json({ error: 'Cannot delete the last site' }, { status: 400 })
     }
 
     const site = await prisma.site.findFirst({
-      where: { id: siteId, organizationId: org.id, deletedAt: null },
+      where: { id: siteId, organizationId: orgId, deletedAt: null },
     })
     if (!site) {
       return NextResponse.json({ error: 'Site not found' }, { status: 404 })
