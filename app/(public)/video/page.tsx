@@ -15,6 +15,7 @@ interface Video {
 const TABS = [
   { key: 'all', label: 'Sve' },
   { key: 'pl', label: 'Premier League' },
+  { key: 'scorebat', label: '⚽ Highlights' },
 ]
 
 function timeAgo(dateStr: string): string {
@@ -41,6 +42,18 @@ export default function VideoPage() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'scorebat') {
+      const existing = document.getElementById('scorebat-jssdk')
+      if (!existing) {
+        const script = document.createElement('script')
+        script.id = 'scorebat-jssdk'
+        script.src = 'https://www.scorebat.com/embed/embed.js?v=arrv'
+        document.body.appendChild(script)
+      }
+    }
+  }, [activeTab])
 
   const filtered = activeTab === 'all' ? videos : videos.filter(v => v.channel === activeTab)
 
@@ -81,51 +94,69 @@ export default function VideoPage() {
 
       {/* Grid */}
       <div className="vp-container">
-        {loading && (
-          <div className="vp-grid">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="vp-skeleton">
-                <div className="vp-skeleton-thumb" />
-                <div style={{ padding: '10px 12px' }}>
-                  <div className="vp-skeleton-line" style={{ width: '85%' }} />
-                  <div className="vp-skeleton-line" style={{ width: '50%', marginTop: 6 }} />
-                </div>
-              </div>
-            ))}
+        {activeTab === 'scorebat' && (
+          <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <iframe
+              src="https://www.scorebat.com/embed/"
+              frameBorder="0"
+              width="100%"
+              height="760"
+              allowFullScreen
+              allow="autoplay; fullscreen"
+              style={{ display: 'block', background: '#000' }}
+            />
           </div>
         )}
 
-        {!loading && filtered.length === 0 && (
-          <p style={{ color: 'var(--sba-muted, #666)', padding: '3rem 0', textAlign: 'center' }}>
-            Trenutno nema dostupnog video sadržaja.
-          </p>
-        )}
-
-        {!loading && filtered.length > 0 && (
-          <div className="vp-grid">
-            {filtered.map(v => (
-              <button key={v.videoId} onClick={() => setPlayingId(v.videoId)} className="vp-card">
-                <div className="vp-card-thumb">
-                  <img
-                    src={`https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg`}
-                    onError={e => { e.currentTarget.src = `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg` }}
-                    alt={v.title}
-                    loading="lazy"
-                  />
-                  {isNew(v.publishedAt) && <span className="vp-badge-new">NOVO</span>}
-                  <div className="vp-card-play">
-                    <div className="vp-card-play-btn">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><polygon points="6,3 20,12 6,21" /></svg>
+        {activeTab !== 'scorebat' && (
+          <>
+            {loading && (
+              <div className="vp-grid">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="vp-skeleton">
+                    <div className="vp-skeleton-thumb" />
+                    <div style={{ padding: '10px 12px' }}>
+                      <div className="vp-skeleton-line" style={{ width: '85%' }} />
+                      <div className="vp-skeleton-line" style={{ width: '50%', marginTop: 6 }} />
                     </div>
                   </div>
-                </div>
-                <div className="vp-card-body">
-                  <span className="vp-card-title">{v.title}</span>
-                  <span className="vp-card-meta">{timeAgo(v.publishedAt)} &middot; {v.channelTitle}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+                ))}
+              </div>
+            )}
+
+            {!loading && filtered.length === 0 && (
+              <p style={{ color: 'var(--sba-muted, #666)', padding: '3rem 0', textAlign: 'center' }}>
+                Trenutno nema dostupnog video sadržaja.
+              </p>
+            )}
+
+            {!loading && filtered.length > 0 && (
+              <div className="vp-grid">
+                {filtered.map(v => (
+                  <button key={v.videoId} onClick={() => setPlayingId(v.videoId)} className="vp-card">
+                    <div className="vp-card-thumb">
+                      <img
+                        src={`https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg`}
+                        onError={e => { e.currentTarget.src = `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg` }}
+                        alt={v.title}
+                        loading="lazy"
+                      />
+                      {isNew(v.publishedAt) && <span className="vp-badge-new">NOVO</span>}
+                      <div className="vp-card-play">
+                        <div className="vp-card-play-btn">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><polygon points="6,3 20,12 6,21" /></svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="vp-card-body">
+                      <span className="vp-card-title">{v.title}</span>
+                      <span className="vp-card-meta">{timeAgo(v.publishedAt)} &middot; {v.channelTitle}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
