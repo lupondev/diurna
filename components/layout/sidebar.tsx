@@ -27,14 +27,6 @@ const sections: NavSection[] = [
     ],
   },
   {
-    label: 'Sport',
-    items: [
-      { label: 'Football Hub', icon: '⚽', href: '/football', exact: true },
-      { label: 'Fixtures', icon: '🔢', href: '/football/fixtures' },
-      { label: 'Leagues & Tables', icon: '🏆', href: '/football/leagues' },
-    ],
-  },
-  {
     label: 'Content',
     items: [
       { label: 'Widgets', icon: '🧩', href: '/widgets' },
