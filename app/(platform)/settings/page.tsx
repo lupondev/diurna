@@ -7,6 +7,7 @@ import './settings.css'
 import '../admin/admin.css'
 import '../team/team.css'
 
+const SitesTab = dynamic(() => import('./sites-tab'), { ssr: false })
 const GeneralTab = dynamic(() => import('./general'), { ssr: false })
 const TeamTab = dynamic(() => import('../team/page'), { ssr: false })
 const InvitesTab = dynamic(() => import('../admin/invites/page'), { ssr: false })
@@ -16,6 +17,7 @@ const SyncTab = dynamic(() => import('../admin/sync/page'), { ssr: false })
 const HealthTab = dynamic(() => import('../health/page'), { ssr: false })
 
 const TABS = [
+  { id: 'sites', label: 'Sites' },
   { id: 'general', label: 'General' },
   { id: 'api-keys', label: 'API Keys' },
   { id: 'team', label: 'Team' },
@@ -54,6 +56,7 @@ function SettingsInner() {
       </div>
 
       <div className="st-tab-content">
+        {activeTab === 'sites' && <SitesTab />}
         {activeTab === 'general' && <GeneralTab />}
         {activeTab === 'api-keys' && <ApiKeysTab />}
         {activeTab === 'team' && <TeamTab />}
