@@ -1,5 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron/autopilot", "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/autopilot", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/fetch-feeds", "schedule": "*/30 * * * *" }
   ]
 }

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: 'Pretraži igrače iz Premier League, La Lige, Serie A, Bundeslige i Ligue 1.',
 }
 
-export const revalidate = 300
+export const revalidate = 600
 
 const POSITIONS = ['Attacker', 'Midfielder', 'Defender', 'Goalkeeper'] as const
 

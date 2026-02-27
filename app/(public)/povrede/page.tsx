@@ -7,7 +7,7 @@ import { AdSlot } from '@/components/public/sportba'
 import { canonicalUrl } from '@/lib/seo'
 import '../category.css'
 
-export const revalidate = 120
+export const revalidate = 600
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getDefaultSite()

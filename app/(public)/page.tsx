@@ -15,7 +15,7 @@ import { LegendsWidget } from '@/components/public/LegendsWidget'
 import { buildMetadata } from '@/lib/seo'
 import './home.css'
 
-export const revalidate = 60
+export const revalidate = 300
 
 export async function generateMetadata(): Promise<Metadata> {
   return buildMetadata({

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   alternates: { canonical: canonicalUrl('/utakmice') },
 }
 
-export const revalidate = 60
+export const revalidate = 600
 
 const TABS = [
   { key: 'today', label: 'Danas' },

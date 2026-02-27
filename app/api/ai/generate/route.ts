@@ -197,7 +197,20 @@ export async function POST(req: NextRequest) {
     const { system, prompt } = buildPrompt(data)
 
     const maxTokens = Math.min(4000, Math.max(500, Math.round(data.wordCount * 2.5)))
-    const result = await generateContent({ system, prompt, maxTokens, temperature: 0.3 })
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 55_000)
+    let result
+    try {
+      result = await generateContent({ system, prompt, maxTokens, temperature: 0.3 })
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return NextResponse.json({ error: 'AI generation timed out. Try a shorter article or try again.' }, { status: 504 })
+      }
+      throw err
+    } finally {
+      clearTimeout(timeout)
+    }
 
     let parsed
     try {

@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const dateStr = searchParams.get('date') || new Date().toISOString().split('T')[0]
 
-  const startOfDay = new Date(`${dateStr}T00:00:00.000Z`)
-  const endOfDay = new Date(`${dateStr}T23:59:59.999Z`)
+  const startOfDay = new Date(`${dateStr}T00:00:00`)
+  const endOfDay = new Date(`${dateStr}T23:59:59.999`)
 
   let site = await prisma.site.findFirst({
     where: { organizationId: session.user.organizationId },
