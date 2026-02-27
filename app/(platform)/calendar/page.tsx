@@ -123,6 +123,54 @@ const DIST_PLATFORMS = [
   { platform: 'newsletter', icon: '📧', label: 'Newsletter' },
 ]
 
+function normalizeCategories(cats: CatConfig[]): CatConfig[] {
+  if (!cats.length) return cats
+  const total = cats.reduce((s, c) => s + (c.percentage || 0), 0)
+  if (total === 100 || total <= 0) {
+    if (total === 100) return cats
+    const base = Math.floor(100 / cats.length)
+    const remainder = 100 - base * cats.length
+    return cats.map((c, idx) => ({ ...c, percentage: base + (idx === 0 ? remainder : 0) }))
+  }
+  const scaled = cats.map((c) => ({
+    ...c,
+    percentage: Math.max(0, Math.round(((c.percentage || 0) / total) * 100)),
+  }))
+  const sum = scaled.reduce((s, c) => s + c.percentage, 0)
+  if (sum !== 100 && scaled.length > 0) {
+    scaled[0] = { ...scaled[0], percentage: scaled[0].percentage + (100 - sum) }
+  }
+  return scaled
+}
+
+function normalizeLeagues(leagues: LeagueConfig[]): LeagueConfig[] {
+  if (!leagues.length) return leagues
+  const total = leagues.reduce((s, l) => s + (l.weight || 0), 0)
+  if (total === 100 || total <= 0) {
+    if (total === 100) return leagues
+    const base = Math.floor(100 / leagues.length)
+    const remainder = 100 - base * leagues.length
+    return leagues.map((l, idx) => ({ ...l, weight: base + (idx === 0 ? remainder : 0) }))
+  }
+  const scaled = leagues.map((l) => ({
+    ...l,
+    weight: Math.max(0, Math.round(((l.weight || 0) / total) * 100)),
+  }))
+  const sum = scaled.reduce((s, l) => s + l.weight, 0)
+  if (sum !== 100 && scaled.length > 0) {
+    scaled[0] = { ...scaled[0], weight: scaled[0].weight + (100 - sum) }
+  }
+  return scaled
+}
+
+function normalizeConfig(cfg: AutopilotConfig): AutopilotConfig {
+  return {
+    ...cfg,
+    categories: normalizeCategories(cfg.categories || []),
+    leagues: normalizeLeagues(cfg.leagues || []),
+  }
+}
+
 /* ════════════════════════════════════════════════ */
 /* ─── MAIN COMPONENT ─── */
 /* ════════════════════════════════════════════════ */
@@ -164,12 +212,20 @@ export default function CalendarPage() {
   const [weekArticleCounts, setWeekArticleCounts] = useState<Record<string, number>>({})
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const tlDayRef = useRef<HTMLDivElement | null>(null)
 
   /* ── Data fetching ── */
-  useEffect(() => {
-    fetch('/api/autopilot/config', { credentials: 'include' }).then(r => r.json() as Promise<AutopilotConfig>).then(setConfig).catch(() => {})
-    fetch('/api/autopilot/stats', { credentials: 'include' }).then(r => r.json() as Promise<Stats>).then(setStats).catch(() => {})
+  const loadConfig = useCallback(() => {
+    fetch('/api/autopilot/config', { credentials: 'include' })
+      .then(r => r.json() as Promise<AutopilotConfig>)
+      .then(cfg => setConfig(normalizeConfig(cfg)))
+      .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    loadConfig()
+    fetch('/api/autopilot/stats', { credentials: 'include' }).then(r => r.json() as Promise<Stats>).then(setStats).catch(() => {})
+  }, [loadConfig])
 
   useEffect(() => {
     fetch('/api/newsroom/feed/sources', { credentials: 'include' })
@@ -218,11 +274,48 @@ export default function CalendarPage() {
         method: 'PUT', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(partial),
-      }).catch(() => {})
+      }).catch(() => toast.error('Failed to save'))
     }, 500)
   }, [])
 
   const updateCategory = useCallback((id: string, data: Partial<CatConfig>) => {
+    if (data.percentage !== undefined) {
+      const pct = data.percentage
+      setConfig(prev => {
+        if (!prev) return prev
+        const others = prev.categories.filter(c => c.id !== id)
+        if (others.length === 0) {
+          const updated = prev.categories.map(c =>
+            c.id === id ? { ...c, ...data, percentage: 100 } : c,
+          )
+          return { ...prev, categories: updated }
+        }
+        const othersTotal = others.reduce((s, c) => s + c.percentage, 0)
+        const remaining = 100 - pct
+        const categories = prev.categories.map(c => {
+          if (c.id === id) return { ...c, ...data }
+          if (othersTotal === 0) {
+            return { ...c, percentage: Math.round(remaining / others.length) }
+          }
+          return {
+            ...c,
+            percentage: Math.max(0, Math.round((c.percentage / othersTotal) * remaining)),
+          }
+        })
+        const sum = categories.reduce((s, c) => s + c.percentage, 0)
+        if (sum !== 100) {
+          const adj = categories.find(c => c.id !== id)
+          if (adj) adj.percentage += 100 - sum
+        }
+        return { ...prev, categories }
+      })
+      fetch(`/api/autopilot/categories/${id}`, {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).catch(() => toast.error('Failed to save'))
+      return
+    }
     setConfig(prev => {
       if (!prev) return prev
       return { ...prev, categories: prev.categories.map(c => c.id === id ? { ...c, ...data } : c) }
@@ -231,13 +324,17 @@ export default function CalendarPage() {
       method: 'PUT', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-    }).catch(() => {})
+    }).catch(() => toast.error('Failed to save'))
   }, [])
 
   const deleteCategory = useCallback((id: string) => {
     setConfig(prev => prev ? { ...prev, categories: prev.categories.filter(c => c.id !== id) } : prev)
-    fetch(`/api/autopilot/categories/${id}`, { method: 'DELETE', credentials: 'include' }).catch(() => {})
-  }, [])
+    toast.success('Category removed')
+    fetch(`/api/autopilot/categories/${id}`, { method: 'DELETE', credentials: 'include' }).catch(() => {
+      toast.error('Failed to remove category')
+      loadConfig()
+    })
+  }, [loadConfig])
 
   const addCategory = useCallback(() => {
     if (!newCat.name || !newCat.slug) return
@@ -249,10 +346,48 @@ export default function CalendarPage() {
       setConfig(prev => prev ? { ...prev, categories: [...prev.categories, cat] } : prev)
       setNewCat({ name: '', slug: '', color: '#3B82F6', percentage: 10 })
       setAddingCat(false)
-    }).catch(() => {})
+      toast.success('Category added')
+    }).catch(() => toast.error('Failed to add category'))
   }, [newCat])
 
   const updateLeague = useCallback((id: string, data: Partial<LeagueConfig>) => {
+    if (data.weight !== undefined) {
+      const wt = data.weight
+      setConfig(prev => {
+        if (!prev) return prev
+        const others = prev.leagues.filter(l => l.id !== id)
+        if (others.length === 0) {
+          const updated = prev.leagues.map(l =>
+            l.id === id ? { ...l, ...data, weight: 100 } : l,
+          )
+          return { ...prev, leagues: updated }
+        }
+        const othersTotal = others.reduce((s, l) => s + l.weight, 0)
+        const remaining = 100 - wt
+        const leagues = prev.leagues.map(l => {
+          if (l.id === id) return { ...l, ...data }
+          if (othersTotal === 0) {
+            return { ...l, weight: Math.round(remaining / others.length) }
+          }
+          return {
+            ...l,
+            weight: Math.max(0, Math.round((l.weight / othersTotal) * remaining)),
+          }
+        })
+        const sum = leagues.reduce((s, l) => s + l.weight, 0)
+        if (sum !== 100) {
+          const adj = leagues.find(l => l.id !== id)
+          if (adj) adj.weight += 100 - sum
+        }
+        return { ...prev, leagues }
+      })
+      fetch(`/api/autopilot/leagues/${id}`, {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).catch(() => toast.error('Failed to save'))
+      return
+    }
     setConfig(prev => {
       if (!prev) return prev
       return { ...prev, leagues: prev.leagues.map(l => l.id === id ? { ...l, ...data } : l) }
@@ -261,13 +396,17 @@ export default function CalendarPage() {
       method: 'PUT', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-    }).catch(() => {})
+    }).catch(() => toast.error('Failed to save'))
   }, [])
 
   const deleteLeague = useCallback((id: string) => {
     setConfig(prev => prev ? { ...prev, leagues: prev.leagues.filter(l => l.id !== id) } : prev)
-    fetch(`/api/autopilot/leagues/${id}`, { method: 'DELETE', credentials: 'include' }).catch(() => {})
-  }, [])
+    toast.success('League removed')
+    fetch(`/api/autopilot/leagues/${id}`, { method: 'DELETE', credentials: 'include' }).catch(() => {
+      toast.error('Failed to remove league')
+      loadConfig()
+    })
+  }, [loadConfig])
 
   const addLeague = useCallback(() => {
     if (!newLeague.name) return
@@ -279,13 +418,18 @@ export default function CalendarPage() {
       setConfig(prev => prev ? { ...prev, leagues: [...prev.leagues, lg] } : prev)
       setNewLeague({ name: '', flag: '', weight: 10 })
       setAddingLeague(false)
-    }).catch(() => {})
+      toast.success('League added')
+    }).catch(() => toast.error('Failed to add league'))
   }, [newLeague])
 
   const deleteTopic = useCallback((id: string) => {
     setConfig(prev => prev ? { ...prev, topics: prev.topics.filter(t => t.id !== id) } : prev)
-    fetch(`/api/autopilot/topics/${id}`, { method: 'DELETE', credentials: 'include' }).catch(() => {})
-  }, [])
+    toast.success('Topic removed')
+    fetch(`/api/autopilot/topics/${id}`, { method: 'DELETE', credentials: 'include' }).catch(() => {
+      toast.error('Failed to remove topic')
+      loadConfig()
+    })
+  }, [loadConfig])
 
   const addTopic = useCallback(() => {
     if (!newTopic.name) return
@@ -297,13 +441,18 @@ export default function CalendarPage() {
       setConfig(prev => prev ? { ...prev, topics: [...prev.topics, tp] } : prev)
       setNewTopic({ name: '', icon: '', keywords: '' })
       setAddingTopic(false)
-    }).catch(() => {})
+      toast.success('Topic added')
+    }).catch(() => toast.error('Failed to add topic'))
   }, [newTopic])
 
   const deleteChannel = useCallback((id: string) => {
     setConfig(prev => prev ? { ...prev, channels: prev.channels.filter(c => c.id !== id) } : prev)
-    fetch(`/api/autopilot/channels/${id}`, { method: 'DELETE', credentials: 'include' }).catch(() => {})
-  }, [])
+    toast.success('Channel removed')
+    fetch(`/api/autopilot/channels/${id}`, { method: 'DELETE', credentials: 'include' }).catch(() => {
+      toast.error('Failed to remove channel')
+      loadConfig()
+    })
+  }, [loadConfig])
 
   const addChannel = useCallback(() => {
     if (!newChannel.accountName) return
@@ -315,7 +464,8 @@ export default function CalendarPage() {
       setConfig(prev => prev ? { ...prev, channels: [...prev.channels, ch] } : prev)
       setNewChannel({ platform: 'twitter', accountName: '', filter: 'all' })
       setAddingChannel(false)
-    }).catch(() => {})
+      toast.success('Channel added')
+    }).catch(() => toast.error('Failed to add channel'))
   }, [newChannel])
 
   const toggleChannel = useCallback((id: string, isActive: boolean) => {
@@ -512,17 +662,20 @@ export default function CalendarPage() {
   const monthFirst = new Date(tlDate.getFullYear(), tlDate.getMonth(), 1)
   const monthLast = new Date(tlDate.getFullYear(), tlDate.getMonth() + 1, 0)
   const monthStartPad = monthFirst.getDay() === 0 ? 6 : monthFirst.getDay() - 1
-  const monthCells: { date: Date | null; count: number; isToday: boolean }[] = []
-  for (let i = 0; i < monthStartPad; i++) monthCells.push({ date: null, count: 0, isToday: false })
-  for (let d = 1; d <= monthLast.getDate(); d++) {
-    const dt = new Date(monthFirst.getFullYear(), monthFirst.getMonth(), d)
-    const dateStr = toDateStr(dt)
-    monthCells.push({
-      date: dt,
-      count: weekArticleCounts[dateStr] ?? (isSameDay(dt, today) ? tlArticles.length : 0),
-      isToday: isSameDay(dt, today),
-    })
-  }
+  const monthCells = useMemo(() => {
+    const cells: { date: Date | null; count: number; isToday: boolean }[] = []
+    for (let i = 0; i < monthStartPad; i++) cells.push({ date: null, count: 0, isToday: false })
+    for (let d = 1; d <= monthLast.getDate(); d++) {
+      const dt = new Date(monthFirst.getFullYear(), monthFirst.getMonth(), d)
+      const dateStr = toDateStr(dt)
+      cells.push({
+        date: dt,
+        count: weekArticleCounts[dateStr] ?? (isSameDay(dt, today) ? tlArticles.length : 0),
+        isToday: isSameDay(dt, today),
+      })
+    }
+    return cells
+  }, [monthFirst, monthLast, monthStartPad, weekArticleCounts, today, tlArticles.length])
 
   // Source filtering
   const filteredSources = sources.filter(s => !sourceSearch || s.name.toLowerCase().includes(sourceSearch.toLowerCase()))
@@ -532,10 +685,21 @@ export default function CalendarPage() {
   const catColorMap: Record<string, string> = {}
   config?.categories.forEach(c => { catColorMap[c.slug] = c.color })
 
-  const estimatedViews = useMemo(() => stats.published * 1240, [stats.published])
+  const publishedInView = useMemo(() => {
+    if (tlView === 'Day') {
+      return tlArticles.filter(a => a.status === 'PUBLISHED').length
+    }
+    if (tlView === 'Week') {
+      return weekDays.reduce((sum, wd) => sum + wd.count, 0)
+    }
+    // Month
+    return monthCells.reduce((sum, cell) => sum + (cell.date ? cell.count : 0), 0)
+  }, [tlView, tlArticles, weekDays, monthCells])
+
+  const estimatedViews = useMemo(() => publishedInView * 1240, [publishedInView])
   const estimatedSocialPosts = useMemo(
-    () => (config?.channels.filter(c => c.isActive).length ?? 0) * stats.published,
-    [config?.channels, stats.published]
+    () => (config?.channels.filter(c => c.isActive).length ?? 0) * publishedInView,
+    [config?.channels, publishedInView]
   )
 
   const totalRealSlots = tlArticles.length + tlMatches.length
@@ -550,10 +714,31 @@ export default function CalendarPage() {
         <span className="cal-status-label">{config.isActive ? 'AUTOPILOT ACTIVE' : 'PAUSED'}</span>
         <div className="cal-status-stats">
           <div className="cal-stat"><div className="cal-stat-val">{stats.today}</div><div className="cal-stat-lbl">Today</div></div>
-          <div className="cal-stat"><div className="cal-stat-val">{stats.published}</div><div className="cal-stat-lbl">Published</div></div>
-          <div className="cal-stat"><div className="cal-stat-val">{stats.scheduled}</div><div className="cal-stat-lbl">Scheduled</div></div>
-          <div className="cal-stat"><div className="cal-stat-val">{stats.live}</div><div className="cal-stat-lbl">Live Now</div></div>
-          <div className="cal-stat"><div className="cal-stat-val">{stats.drafts}</div><div className="cal-stat-lbl">Drafts</div></div>
+          <div className="cal-stat"><div className="cal-stat-val">{publishedInView}</div><div className="cal-stat-lbl">Published</div></div>
+          <div className="cal-stat">
+            <div className="cal-stat-val">
+              {tlView === 'Day'
+                ? tlArticles.filter(a => a.status === 'SCHEDULED').length
+                : stats.scheduled}
+            </div>
+            <div className="cal-stat-lbl">Scheduled</div>
+          </div>
+          <div className="cal-stat">
+            <div className="cal-stat-val">
+              {tlView === 'Day'
+                ? tlArticles.filter(a => a.status === 'LIVE').length
+                : stats.live}
+            </div>
+            <div className="cal-stat-lbl">Live Now</div>
+          </div>
+          <div className="cal-stat">
+            <div className="cal-stat-val">
+              {tlView === 'Day'
+                ? tlArticles.filter(a => a.status === 'DRAFT').length
+                : stats.drafts}
+            </div>
+            <div className="cal-stat-lbl">Drafts</div>
+          </div>
         </div>
         <button
           type="button"
@@ -974,7 +1159,11 @@ export default function CalendarPage() {
 
       {/* Day View — only real articles */}
       {tlView === 'Day' && (
-        <div className="cal-tl cal-fadein" style={{ animationDelay: '.15s' }}>
+        <div
+          ref={tlDayRef}
+          className="cal-tl cal-fadein"
+          style={{ animationDelay: '.15s' }}
+        >
           {isToday && (() => {
             const topPx = (nowHour - 7) * 64 + (nowMin / 60) * 64
             return topPx > 0 ? <div className="cal-tl-now" style={{ top: topPx }} /> : null
@@ -992,13 +1181,13 @@ export default function CalendarPage() {
           {hours.map(h => {
             const rowSlots = slotsByHour[h] || []
             if (rowSlots.length === 0) return (
-              <div key={h} className="cal-tl-row">
+              <div key={h} className="cal-tl-row" data-hour={h}>
                 <div className="cal-tl-time">{String(h).padStart(2, '0')}:00</div>
                 <div className="cal-tl-content" />
               </div>
             )
             return (
-              <div key={h} className="cal-tl-row">
+              <div key={h} className="cal-tl-row" data-hour={h}>
                 <div className="cal-tl-time">{String(h).padStart(2, '0')}:00</div>
                 <div className="cal-tl-content">
                   {rowSlots.map(slot => {
