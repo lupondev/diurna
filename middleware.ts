@@ -99,9 +99,10 @@ export async function middleware(req: NextRequest) {
   const isWebhookRoute = pathname.startsWith('/api/webhooks')
   const isCronRoute = pathname.startsWith('/api/cron')
   const isNewsroomPublic = pathname.startsWith('/api/newsroom/clusters') || pathname.startsWith('/api/newsroom/fixtures') || pathname.startsWith('/api/newsroom/stats') || pathname.startsWith('/api/newsroom/for-you') || pathname.startsWith('/api/entities/search') || pathname.startsWith('/api/clubs') || pathname.startsWith('/api/fixtures/ticker') || pathname.startsWith('/api/videos')
-  const isAdminApiWithBearer = (pathname.startsWith('/api/admin/backfill-images') || pathname.startsWith('/api/admin/seed') || pathname.startsWith('/api/admin/sync') || pathname.startsWith('/api/admin/enrich') || pathname.startsWith('/api/admin/revalidate')) && req.headers.get('authorization')?.startsWith('Bearer ')
+  const isAdminApiWithBearer = pathname.startsWith('/api/admin/') && (req.headers.get('authorization')?.startsWith('Bearer ') || req.headers.get('x-admin-secret'))
   const isSetupRoute = pathname.startsWith('/api/setup/')
   const isPublicArticle = /^\/[a-z0-9-]+\/[a-z0-9-]+$/.test(pathname) && !isPlatformPath(pathname)
+  const isTagPage = pathname.startsWith('/tag/')
   const isHomepage = pathname === '/'
   const isStaticPage = ['/o-nama', '/impressum', '/privatnost', '/uslovi', '/kontakt', '/marketing'].includes(pathname)
   const isCategoryPage = ['/vijesti', '/transferi', '/utakmice', '/povrede', '/video', '/igraci', '/tabela'].includes(pathname)
@@ -113,7 +114,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/api/articles') ||
     pathname.startsWith('/api/site')
   )
-  const isPublicRoute = isHomepage || isStaticPage || isCategoryPage || isMatchCenter || isPlayerPage || isLigaPage || pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isRssRoute || isCronRoute || isNewsroomPublic || isSetupRoute || isPublicArticle || isHealthRoute || isFootballHealthRoute || isWebhookRoute || isAdminApiWithBearer || isMcpRoute
+  const isPublicRoute = isHomepage || isStaticPage || isCategoryPage || isMatchCenter || isPlayerPage || isLigaPage || isTagPage || pathname.startsWith('/api/auth') || pathname.startsWith('/api/public') || pathname.startsWith('/api/onboarding') || pathname.startsWith('/api/social/facebook/callback') || pathname.startsWith('/site') || isAuthPage || isMarketingPage || isEmbedRoute || isOgRoute || isFeedRoute || isRssRoute || isCronRoute || isNewsroomPublic || isSetupRoute || isPublicArticle || isHealthRoute || isFootballHealthRoute || isWebhookRoute || isAdminApiWithBearer || isMcpRoute
 
   if (!isPublicRoute) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
