@@ -201,7 +201,14 @@ function injectEntityLinks(
 ): string {
   if (!tags || tags.length === 0) return html
 
-  let result = html
+  // Mask <a>...</a> blocks so we never link inside existing links (avoid double-linking)
+  const linkBlocks: string[] = []
+  let result = html.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, (m) => {
+    const idx = linkBlocks.length
+    linkBlocks.push(m)
+    return `\x00A${idx}\x00`
+  })
+
   const linked = new Set<string>()
 
   const sortedTags = [...tags]
@@ -226,7 +233,7 @@ function injectEntityLinks(
     const escaped = tag.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     // Word boundary after name so we don't match inside longer words (e.g. tag "La" in "LaLiga")
     const pattern = new RegExp(
-      `(?<![<\\w])(${escaped})(?!\\w)(?![^<]*>)(?![^<]*</a>)`,
+      `(?<![<\\w])(${escaped})(?!\\w)(?![^<]*>)`,
       'i'
     )
 
@@ -238,6 +245,11 @@ function injectEntityLinks(
       result = before + link + after
       linked.add(tag.name.toLowerCase())
     }
+  }
+
+  // Restore masked <a>...</a> blocks
+  for (let i = 0; i < linkBlocks.length; i++) {
+    result = result.replace(`\x00A${i}\x00`, linkBlocks[i])
   }
 
   return result

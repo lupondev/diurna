@@ -18,6 +18,7 @@ export async function GET() {
   const sources = await prisma.feedSource.findMany({
     where: { siteId: site.id },
     orderBy: [{ tier: 'asc' }, { name: 'asc' }],
+    take: 100,
   })
   return NextResponse.json(sources)
 }

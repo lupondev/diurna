@@ -141,6 +141,7 @@ export async function GET(req: NextRequest) {
         const coveredToday = await prisma.article.findMany({
           where: { siteId: site.id, aiGenerated: true, createdAt: { gte: startOfDay }, aiPrompt: { not: null } },
           select: { aiPrompt: true },
+          take: 200,
         })
         const coveredClusterIds = new Set<string>()
         for (const a of coveredToday) {

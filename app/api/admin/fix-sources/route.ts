@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Primary site not found' }, { status: 404 })
     }
 
-    const sources = await prisma.feedSource.findMany()
+    const sources = await prisma.feedSource.findMany({ take: 500 })
     const fixes: { id: string; name: string; url: string; updates: Record<string, unknown> }[] = []
 
     for (const source of sources) {

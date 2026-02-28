@@ -597,6 +597,7 @@ export async function getNextTask(
   const coveredArticles = await prisma.article.findMany({
     where: { siteId, createdAt: { gte: startOfDay }, aiPrompt: { not: null } },
     select: { aiPrompt: true },
+    take: 500,
   })
   const coveredClusterIds = new Set<string>(excludedClusterIds)
   const coveredMatchIds = new Set<string>()

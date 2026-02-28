@@ -258,6 +258,7 @@ async function crossSourceDedup(): Promise<number> {
   const items = await prisma.newsItem.findMany({
     where: { pubDate: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
     orderBy: { pubDate: 'desc' },
+    take: 5000,
   })
 
   const bySite = new Map<string | null, typeof items>()
@@ -304,6 +305,7 @@ async function computeDIS() {
   const recentItems = await prisma.newsItem.findMany({
     where: { pubDate: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
     select: { id: true, title: true, source: true, pubDate: true, tier: true },
+    take: 2000,
   })
 
   const clusters: { words: string; items: typeof recentItems }[] = []

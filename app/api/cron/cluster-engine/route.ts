@@ -304,12 +304,13 @@ export async function GET(req: Request) {
   const startTime = Date.now()
 
   try {
-    const entities = await prisma.entity.findMany()
+    const entities = await prisma.entity.findMany({ take: 1000 })
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
     const newsItems = await prisma.newsItem.findMany({
       where: { pubDate: { gte: since } },
       orderBy: { pubDate: 'desc' },
+      take: 5000,
     })
 
     if (newsItems.length === 0) {
@@ -473,6 +474,7 @@ export async function GET(req: Request) {
           dis: { gte: 70 },
           latestItem: { gte: new Date(Date.now() - 10 * 60 * 1000) },
         },
+        take: 20,
       })
 
       const startOfDay = new Date()

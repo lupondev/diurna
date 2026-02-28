@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
       { scheduledAt: 'asc' },
       { createdAt: 'asc' },
     ],
+    take: 200,
   })
 
   const matches = await prisma.matchResult.findMany({
@@ -57,6 +58,7 @@ export async function GET(req: NextRequest) {
       matchDate: { gte: startOfDay, lte: endOfDay },
     },
     orderBy: { matchDate: 'asc' },
+    take: 50,
   })
 
   const timelineArticles = articles.map((a) => {

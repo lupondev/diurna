@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const period = searchParams.get('period') || 'today' // today, week, month, year
 
+  try {
   const now = new Date()
   let startDate: Date
   switch (period) {
@@ -253,4 +254,8 @@ export async function GET(req: NextRequest) {
     sourcePerformance,
     period,
   })
+  } catch (err) {
+    console.error('[analytics/advanced]', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }

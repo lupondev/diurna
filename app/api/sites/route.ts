@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
         _count: { select: { articles: true } },
       },
       orderBy: { createdAt: 'asc' },
+      take: 50,
     })
     return NextResponse.json({
       sites: sites.map(({ _count, ...s }) => ({ ...s, articleCount: _count.articles })),

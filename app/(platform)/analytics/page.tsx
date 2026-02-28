@@ -469,7 +469,7 @@ export default function AnalyticsPage() {
                           <div style={{ fontSize: 11, color: 'var(--g500)' }}>Active sources</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 20, fontWeight: 800, color: sp.staleSourcesCount > 0 ? '#F59E0B' : 'var(--g600)' }}>{sp.staleSourcesCount}</div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: sp.staleSourcesCount > 0 ? '#EF4444' : 'var(--g600)' }}>{sp.staleSourcesCount}</div>
                           <div style={{ fontSize: 11, color: 'var(--g500)' }}>Stale (24h+)</div>
                         </div>
                       </div>
