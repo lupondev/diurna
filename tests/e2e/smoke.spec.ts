@@ -5,6 +5,7 @@ test.describe('Public site smoke tests', () => {
     await page.goto('/')
     await expect(page).toHaveTitle(/.+/)
     await expect(page.locator('body')).toBeVisible()
+    // Should have at least one article link
     const articles = page.locator('article, [class*="card"], [class*="article"]')
     await expect(articles.first()).toBeVisible({ timeout: 10000 })
   })

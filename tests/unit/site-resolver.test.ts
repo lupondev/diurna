@@ -22,7 +22,7 @@ describe('getPrimarySite logic', () => {
       id: 'site-with-domain',
       domain: 'example.com',
       organizationId: 'org-1',
-    } as never)
+    } as any)
 
     const { getPrimarySite } = await import('@/lib/site-resolver')
     const site = await getPrimarySite('org-1')
@@ -42,12 +42,14 @@ describe('getPrimarySite logic', () => {
 
   it('falls back to any non-deleted site if none has domain', async () => {
     const mockFindFirst = vi.mocked(prisma.site.findFirst)
+    // First call (with domain filter) returns null
     mockFindFirst.mockResolvedValueOnce(null)
+    // Second call (fallback) returns site without domain
     mockFindFirst.mockResolvedValueOnce({
       id: 'site-no-domain',
       domain: null,
       organizationId: 'org-1',
-    } as never)
+    } as any)
 
     const { getPrimarySite } = await import('@/lib/site-resolver')
     const site = await getPrimarySite('org-1')
