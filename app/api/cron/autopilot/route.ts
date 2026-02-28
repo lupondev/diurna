@@ -12,7 +12,7 @@ import {
   htmlToTiptap,
   injectWidgets,
   slugify,
-  fetchUnsplashImage,
+  resolveArticleImage,
 } from '@/lib/autopilot'
 import { getPrimarySite } from '@/lib/site-resolver'
 import { verifyArticle } from '@/lib/model-router'
@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
           continue
         }
 
-        let parsed: { title?: string; content?: string; excerpt?: string; seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }; tags?: string[]; entities?: { name: string; type?: string; slug?: string }[] }
+        let parsed: { title?: string; content?: string; excerpt?: string; seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }; tags?: string[]; entities?: { name: string; type?: string; slug?: string }[]; imageQuery?: string }
         try {
           let cleaned = ai.text.trim()
           if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
@@ -250,7 +250,14 @@ export async function GET(req: NextRequest) {
           results.push({ orgId: config.orgId, action: 'skipped', reason: `Slug duplicate: "${baseSlug}"` })
           continue
         }
-        const featuredImage = await fetchUnsplashImage(title)
+        const featuredImage = await resolveArticleImage(
+          {
+            imageQuery: parsed.imageQuery,
+            entities: parsed.entities,
+            tags: parsed.tags,
+          },
+          { title, categorySlug: FORCED_CATEGORY_SLUG }
+        )
 
         const article = await createArticleSafe({
           siteId: site.id, title, slug: baseSlug,
@@ -349,7 +356,7 @@ export async function GET(req: NextRequest) {
       const ai = await generateContent({ system: promptData.system, prompt: promptData.prompt, maxTokens, temperature: 0.3 })
       await systemLog('info', 'autopilot', `Normal: AI success ${ai.model}`, { tokensIn: ai.tokensIn, tokensOut: ai.tokensOut })
 
-      let parsed: { title?: string; content?: string; excerpt?: string; seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }; tags?: string[]; entities?: { name: string; type?: string; slug?: string }[] }
+      let parsed: { title?: string; content?: string; excerpt?: string; seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }; tags?: string[]; entities?: { name: string; type?: string; slug?: string }[]; imageQuery?: string }
       try {
         let cleaned = ai.text.trim()
         if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
@@ -408,7 +415,14 @@ export async function GET(req: NextRequest) {
         results.push({ orgId: config.orgId, action: 'skipped', reason: `Slug duplicate: "${baseSlug}"` })
         continue
       }
-      const featuredImage = await fetchUnsplashImage(title)
+      const featuredImage = await resolveArticleImage(
+        {
+          imageQuery: parsed.imageQuery,
+          entities: parsed.entities,
+          tags: parsed.tags,
+        },
+        { title: task.title, categorySlug: task.categorySlug }
+      )
 
       const article = await createArticleSafe({
         siteId: site.id, title, slug: baseSlug,

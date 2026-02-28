@@ -319,3 +319,151 @@ export async function getTrendingTopics(organizationId: string): Promise<Trendin
   cache.set(cacheKey, { data: topics, expires: Date.now() + CACHE_TTL })
   return topics
 }
+
+/**
+ * Enrich a trending topic with context.
+ *
+ * Strategy:
+ * 1. Match trending title against story clusters (newsroom DB) → if match, return cluster info
+ * 2. If no cluster match → use AI to generate a 2-sentence context summary
+ *
+ * Returns: { context, relatedCluster?, relatedArticles, sources }
+ */
+export async function enrichTrendingTopic(
+  title: string,
+  siteId: string
+): Promise<{
+  context: string
+  relatedCluster: { id: string; title: string; itemCount: number; dis: number } | null
+  relatedArticles: { title: string; slug: string; categorySlug: string }[]
+  sources: string[]
+}> {
+  const keywords = title.toLowerCase().split(/\s+/).filter((w) => w.length > 2)
+
+  let bestCluster: { id: string; title: string; itemCount: number; dis: number } | null = null
+  let clusterSources: string[] = []
+
+  if (keywords.length > 0) {
+    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000)
+    const clusters = await prisma.storyCluster.findMany({
+      where: {
+        latestItem: { gte: cutoff },
+        OR: keywords.map((kw) => ({
+          title: { contains: kw, mode: 'insensitive' as const },
+        })),
+      },
+      orderBy: { dis: 'desc' },
+      take: 10,
+    })
+
+    const filteredClusters = siteId
+      ? clusters.filter((c) => c.siteId === siteId || c.siteId === null)
+      : clusters
+
+    if (filteredClusters.length > 0) {
+      const scored = filteredClusters.map((c) => {
+        const clusterLower = c.title.toLowerCase()
+        const overlap = keywords.filter((kw) => clusterLower.includes(kw)).length
+        return { cluster: c, overlap }
+      }).sort((a, b) => b.overlap - a.overlap)
+
+      const best = scored[0]
+      const minOverlap = Math.max(1, Math.floor(keywords.length * 0.4))
+      if (best && best.overlap >= minOverlap) {
+        const newsItems = await prisma.newsItem.findMany({
+          where: { clusterId: best.cluster.id },
+          orderBy: { pubDate: 'desc' },
+          take: 5,
+          select: { title: true, source: true },
+        })
+        bestCluster = {
+          id: best.cluster.id,
+          title: best.cluster.title,
+          itemCount: newsItems.length,
+          dis: best.cluster.dis,
+        }
+        clusterSources = newsItems.map((n) => `${n.title} (${n.source})`)
+      }
+    }
+  }
+
+  const relatedArticles = await prisma.article.findMany({
+    where: {
+      siteId,
+      status: 'PUBLISHED',
+      deletedAt: null,
+      isTest: false,
+      OR: keywords.slice(0, 3).map((kw) => ({
+        title: { contains: kw, mode: 'insensitive' as const },
+      })),
+    },
+    select: {
+      title: true,
+      slug: true,
+      category: { select: { slug: true } },
+    },
+    orderBy: { publishedAt: 'desc' },
+    take: 3,
+  })
+
+  let context = ''
+
+  if (bestCluster) {
+    const snippets = clusterSources.slice(0, 3).join('; ')
+    context = `Povezano sa viješću: "${bestCluster.title}" (${bestCluster.itemCount} izvora, važnost: ${bestCluster.dis}/100). Izvori: ${snippets}`
+  } else {
+    try {
+      context = await generateTrendContext(title)
+    } catch (err) {
+      console.error('AI trend context failed:', err)
+      context = `Trending termin "${title}" — nema dodatnog konteksta u bazi.`
+    }
+  }
+
+  return {
+    context,
+    relatedCluster: bestCluster,
+    relatedArticles: relatedArticles.map((a) => ({
+      title: a.title,
+      slug: a.slug,
+      categorySlug: a.category?.slug || 'vijesti',
+    })),
+    sources: clusterSources,
+  }
+}
+
+async function generateTrendContext(title: string): Promise<string> {
+  const key = process.env.ANTHROPIC_API_KEY
+  if (!key) return `Trending: "${title}" — AI kontekst nedostupan.`
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 150,
+        messages: [
+          {
+            role: 'user',
+            content: `This is a Google Trends trending search term: "${title}"\n\nIn 2-3 sentences in Bosnian language, explain what this trending topic is about based on your knowledge. Be factual and specific. If it's about a current event, explain what happened. If you're not sure, say so.`,
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(10000),
+    })
+
+    if (!res.ok) return `Trending: "${title}"`
+
+    const data = (await res.json()) as { content?: Array<{ text?: string }> }
+    const text = data.content?.[0]?.text?.trim()
+    return text || `Trending: "${title}"`
+  } catch (err) {
+    console.error('Trend AI context error:', err)
+    return `Trending: "${title}"`
+  }
+}

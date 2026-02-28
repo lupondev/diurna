@@ -218,7 +218,8 @@ The JSON must have this structure:
   "entities": [
     {"name": "Cristiano Ronaldo", "type": "PLAYER", "slug": "cristiano-ronaldo"},
     {"name": "Al-Nassr", "type": "CLUB", "slug": "al-nassr"}
-  ]
+  ],
+  "imageQuery": "Precise search query for finding a relevant photo. Be specific: include team names with 'FC', player full names, 'soccer' not 'football', stadium names, 'pitch' or 'goal celebration'. Never use ambiguous terms like 'football' alone. Example: 'Arsenal FC Emirates Stadium soccer Premier League' or 'Erling Haaland Manchester City goal celebration'"
 }`
 
   const sourcesText = newsItems
@@ -356,6 +357,8 @@ const UNSPLASH_NOISE_WORDS = [
   'horse', 'horses', 'bee', 'bees', 'hornet', 'hornets', 'ram', 'rams',
   'hawk', 'hawks', 'owl', 'owls', 'cat', 'cats', 'dog', 'dogs',
   'cherry', 'forest', 'ocean', 'river', 'lake', 'mountain', 'sunset',
+  'football', 'match', 'score', 'result', 'update', 'news', 'report',
+  'breaking', 'transfer', 'injury', 'preview', 'review',
 ]
 
 function buildFootballQueries(query: string): string[] {
@@ -367,17 +370,107 @@ function buildFootballQueries(query: string): string[] {
 
   const queries: string[] = []
 
+  // Always use "soccer" instead of "football" to avoid American football results
   if (cleaned.length > 2) {
-    queries.push(`${cleaned} football soccer`)
+    // Remove "football" from query and add "soccer" for clarity
+    const soccerQuery = cleaned.replace(/\bfootball\b/gi, '').trim()
+    queries.push(`${soccerQuery} soccer match`)
+    queries.push(`${soccerQuery} soccer pitch stadium`)
   }
 
-  if (query !== cleaned && query.length > 2) {
-    queries.push(`${query} football`)
+  // Specific sport-context queries
+  queries.push('soccer match stadium crowd')
+  queries.push('soccer goal celebration')
+  queries.push('soccer pitch aerial view')
+
+  return queries.slice(0, 4) // Max 4 queries to respect API limits
+}
+
+async function getClubImage(clubName: string): Promise<string | null> {
+  try {
+    const key = process.env.API_FOOTBALL_KEY
+    if (!key) return null
+
+    const res = await fetch(
+      `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(clubName)}`,
+      { headers: { 'x-apisports-key': key } }
+    )
+    if (!res.ok) return null
+
+    const data = (await res.json()) as { response?: Array<{ team: { id: number; name: string; logo: string } }> }
+    const team = data.response?.[0]
+    if (team?.team?.logo) {
+      const stadiumQuery = `${team.team.name} FC stadium soccer pitch`
+      const stadiumImage = await fetchUnsplashImage(stadiumQuery)
+      if (stadiumImage) return stadiumImage
+      return team.team.logo
+    }
+  } catch (err) {
+    console.error('getClubImage error:', err)
+  }
+  return null
+}
+
+async function getPlayerImage(playerName: string): Promise<string | null> {
+  try {
+    const key = process.env.API_FOOTBALL_KEY
+    if (!key) return null
+
+    const season = new Date().getMonth() >= 7 ? new Date().getFullYear() : new Date().getFullYear() - 1
+    const res = await fetch(
+      `https://v3.football.api-sports.io/players?search=${encodeURIComponent(playerName)}&season=${season}`,
+      { headers: { 'x-apisports-key': key } }
+    )
+    if (!res.ok) return null
+
+    const data = (await res.json()) as { response?: Array<{ player: { photo: string; name: string } }> }
+    const player = data.response?.[0]
+    if (player?.player?.photo) {
+      const actionQuery = `${playerName} soccer match action`
+      const actionImage = await fetchUnsplashImage(actionQuery)
+      if (actionImage) return actionImage
+      return player.player.photo
+    }
+  } catch (err) {
+    console.error('getPlayerImage error:', err)
+  }
+  return null
+}
+
+/**
+ * Three-tier image resolution:
+ * 1. Entity images from api-football (club logos, player photos) — most relevant
+ * 2. Unsplash with AI-generated imageQuery — contextual
+ * 3. Unsplash with fallback queries — generic but safe
+ */
+export async function resolveArticleImage(
+  aiOutput: {
+    imageQuery?: string
+    entities?: Array<{ name: string; type?: string; slug?: string }>
+    tags?: string[]
+  },
+  task: { title: string; categorySlug: string }
+): Promise<string | null> {
+  const entities = aiOutput.entities || []
+
+  const clubEntity = entities.find((e) => e.type === 'CLUB')
+  if (clubEntity) {
+    const clubImage = await getClubImage(clubEntity.name)
+    if (clubImage) return clubImage
   }
 
-  queries.push('football match stadium', 'soccer premier league', 'football stadium')
+  const playerEntity = entities.find((e) => e.type === 'PLAYER')
+  if (playerEntity) {
+    const playerImage = await getPlayerImage(playerEntity.name)
+    if (playerImage) return playerImage
+  }
 
-  return queries
+  if (aiOutput.imageQuery) {
+    const aiImage = await fetchUnsplashImage(aiOutput.imageQuery)
+    if (aiImage) return aiImage
+  }
+
+  return fetchUnsplashImage(task.title)
 }
 
 export async function fetchUnsplashImage(query: string): Promise<string | null> {

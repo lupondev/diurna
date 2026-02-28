@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { getCategoriesForSite, FOOTBALL_CATEGORIES, detectCategoryFromTitle } from '@/lib/newsroom-categories'
 import type { CategoryItem } from '@/lib/newsroom-categories'
+import { getArticleUrl } from '@/lib/article-url'
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -68,12 +69,24 @@ function getClusterCategory(c: Cluster): string {
   return detectCategoryFromTitle(c.title)
 }
 
+// ─── Trend context types ───────────────────────────────────
+
+interface TrendContextData {
+  context: string
+  relatedCluster: { id: string; title: string; itemCount: number; dis: number } | null
+  relatedArticles: { title: string; slug: string; categorySlug: string }[]
+  sources: string[]
+}
+
 // ─── Trends Panel ────────────────────────────────────────
 
-function TrendsPanel({ onWriteTrend }: { onWriteTrend: (title: string) => void }) {
+function TrendsPanel({ onWriteTrend, getArticleUrl }: { onWriteTrend: (title: string) => void; getArticleUrl: (a: { slug: string; categorySlug: string }) => string }) {
   const [trends, setTrends] = useState<TrendItem[]>([])
   const [geo, setGeo] = useState('BA')
   const [loading, setLoading] = useState(true)
+  const [expandedTitle, setExpandedTitle] = useState<string | null>(null)
+  const [contextData, setContextData] = useState<TrendContextData | null>(null)
+  const [contextLoading, setContextLoading] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -86,6 +99,30 @@ function TrendsPanel({ onWriteTrend }: { onWriteTrend: (title: string) => void }
       })
       .catch(() => setLoading(false))
   }, [geo])
+
+  async function handleTrendClick(title: string) {
+    if (expandedTitle === title) {
+      setExpandedTitle(null)
+      setContextData(null)
+      return
+    }
+    setExpandedTitle(title)
+    setContextLoading(true)
+    setContextData(null)
+    try {
+      const res = await fetch(`/api/newsroom/trend-context?title=${encodeURIComponent(title)}`)
+      if (res.ok) {
+        const data = (await res.json()) as TrendContextData
+        setContextData(data)
+      } else {
+        setContextData({ context: `Trending: "${title}"`, relatedCluster: null, relatedArticles: [], sources: [] })
+      }
+    } catch {
+      setContextData({ context: `Trending: "${title}"`, relatedCluster: null, relatedArticles: [], sources: [] })
+    } finally {
+      setContextLoading(false)
+    }
+  }
 
   return (
     <div className="bg-card border border-border rounded-lg p-3">
@@ -102,12 +139,53 @@ function TrendsPanel({ onWriteTrend }: { onWriteTrend: (title: string) => void }
       ) : (
         <div className="flex flex-col max-h-[280px] overflow-y-auto">
           {trends.slice(0, 10).map((t, i) => (
-            <button key={i} onClick={() => onWriteTrend(t.title)} className="flex items-center gap-2 py-1 px-1.5 rounded text-left hover:bg-accent transition-colors">
-              <span className="font-mono text-[10px] text-muted-foreground w-4 text-right shrink-0">{i + 1}</span>
-              <span className="flex-1 text-[11px] text-foreground font-medium truncate">{t.title}</span>
-              {t.traffic && <span className="text-[9px] text-muted-foreground font-mono">{t.traffic}</span>}
-              <span className="text-[9px] text-orange-500">✨</span>
-            </button>
+            <div key={i} className="border-b border-border/50 last:border-0">
+              <button
+                onClick={() => handleTrendClick(t.title)}
+                className="flex items-center gap-2 py-1 px-1.5 rounded text-left hover:bg-accent transition-colors w-full"
+              >
+                <span className="font-mono text-[10px] text-muted-foreground w-4 text-right shrink-0">{i + 1}</span>
+                <span className="flex-1 text-[11px] text-foreground font-medium truncate">{t.title}</span>
+                {t.traffic && <span className="text-[9px] text-muted-foreground font-mono">{t.traffic}</span>}
+                <span className="text-[9px] text-orange-500">{expandedTitle === t.title ? '▲' : '▼'}</span>
+              </button>
+              {expandedTitle === t.title && (
+                <div className="pl-5 pr-1.5 pb-2 pt-0.5 text-[10px] text-muted-foreground space-y-1.5">
+                  {contextLoading ? (
+                    <div className="flex items-center gap-1">
+                      <span className="w-3 h-3 border border-orange-500 border-t-transparent rounded-full animate-spin" />
+                      Loading context...
+                    </div>
+                  ) : contextData ? (
+                    <>
+                      <p className="leading-relaxed">{contextData.context}</p>
+                      {contextData.relatedCluster && (
+                        <p className="text-[9px]">
+                          📰 Cluster: &quot;{contextData.relatedCluster.title}&quot; ({contextData.relatedCluster.itemCount} izvora, {contextData.relatedCluster.dis}/100)
+                        </p>
+                      )}
+                      {contextData.relatedArticles.length > 0 && (
+                        <p className="text-[9px]">
+                          📝 Članci:{' '}
+                          {contextData.relatedArticles.map((a, idx) => (
+                            <span key={a.slug}>
+                              {idx > 0 && ' | '}
+                              <a href={getArticleUrl(a)} className="text-orange-500 hover:underline">{a.title.length > 35 ? `${a.title.substring(0, 35)}...` : a.title}</a>
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                      <button
+                        onClick={() => onWriteTrend(t.title)}
+                        className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-semibold rounded"
+                      >
+                        ✍️ Piši o ovome
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -531,7 +609,7 @@ export default function NewsroomPage() {
             </div>
 
             {/* Google Trends */}
-            <TrendsPanel onWriteTrend={writeFromTrend} />
+            <TrendsPanel onWriteTrend={writeFromTrend} getArticleUrl={(a) => getArticleUrl({ slug: a.slug, categorySlug: a.categorySlug })} />
 
             {/* Signal Guide */}
             <div className="bg-card border border-border rounded-lg p-3">
