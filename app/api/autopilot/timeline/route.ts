@@ -13,8 +13,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const dateStr = searchParams.get('date') || new Date().toISOString().split('T')[0]
 
-  const startOfDay = new Date(`${dateStr}T00:00:00`)
-  const endOfDay = new Date(`${dateStr}T23:59:59.999`)
+  // Use UTC explicitly to avoid timezone issues on Vercel
+  const startOfDay = new Date(`${dateStr}T00:00:00.000Z`)
+  const endOfDay = new Date(`${dateStr}T23:59:59.999Z`)
 
   const site = await getPrimarySite(session.user.organizationId)
   if (!site) {
@@ -71,8 +72,8 @@ export async function GET(req: NextRequest) {
       categorySlug: a.category?.slug || 'uncategorized',
       status: a.status,
       time: time.toISOString(),
-      hour: time.getHours(),
-      aiGenerated: a.aiGenerated,
+      hour: time.getUTCHours(),
+    aiGenerated: a.aiGenerated,
       isWebhook,
     }
   })
@@ -86,7 +87,7 @@ export async function GET(req: NextRequest) {
     league: m.league,
     status: m.status,
     time: m.matchDate.toISOString(),
-    hour: m.matchDate.getHours(),
+    hour: m.matchDate.getUTCHours(),
   }))
 
   return NextResponse.json({
