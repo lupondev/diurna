@@ -851,6 +851,8 @@
 .ed-dark .ai-sb-result { border-color: var(--ed-brd); }
 .ed-dark .ai-sb-result-text { color: var(--ed-fg-dim); }
 .ed-dark .ai-sb-suggestion { background: var(--ed-bg3); color: var(--ed-fg2); border-color: var(--ed-brd2); }
+.ed-dark .ai-generate-btn { background: #00D4AA; color: #fff; }
+.ed-dark .ai-generate-btn:hover:not(:disabled) { background: #00b894; }
 
 /* AI result info at bottom of editor */
 .ed-dark .ai-result-info { color: var(--ed-fg-dim); }
@@ -929,19 +931,39 @@
    AI SIDEBAR — Generate area & Actions
    ═══════════════════════════════════ */
 
-.ai-generate-area { margin-top: 12px; }
+/* Prevent prompt section from shrinking so Generate Article button stays visible */
+.ai-sb-section:has(.ai-generate-area) {
+  flex-shrink: 0;
+}
+
+.ai-generate-area {
+  margin-top: 12px;
+  display: block;
+  visibility: visible;
+}
+
 .ai-controls-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; margin-bottom: 0; }
+
 .ai-generate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
+  min-height: 44px;
   padding: 12px;
   border-radius: 8px;
-  background: var(--accent, #2dd4a8);
+  background: #00D4AA;
   color: white;
   font-weight: 600;
   font-size: 14px;
   border: none;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: background 0.15s, opacity 0.15s;
+  visibility: visible;
+  font-family: var(--sans);
+}
+.ai-generate-btn:hover:not(:disabled) {
+  background: #00b894;
 }
 .ai-generate-btn:disabled {
   opacity: 0.5;
