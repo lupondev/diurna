@@ -582,7 +582,6 @@ export default function CalendarPage() {
   const isToday = isSameDay(tlDate, today)
   const nowHour = today.getHours()
   const nowMin = today.getMinutes()
-  const hours = Array.from({ length: 17 }, (_, i) => i + 7) // 07:00 to 23:00
 
   // Build slots from real articles + matches only (no fake data)
   const slotsByHour = useMemo(() => {
@@ -646,6 +645,12 @@ export default function CalendarPage() {
 
     return map
   }, [tlArticles, tlMatches, config?.gapDetection, config?.gapHours])
+
+  // Show 0-23 range, but only render rows that have articles OR are in the 7-23 range
+  const allHoursWithSlots = Object.keys(slotsByHour).map(Number)
+  const hours = Array.from({ length: 24 }, (_, i) => i).filter(h =>
+    (h >= 7 && h <= 23) || allHoursWithSlots.includes(h)
+  )
 
   // Week view — use real counts where available, 0 for days without data
   const weekStart = getMonday(tlDate)
@@ -1189,7 +1194,9 @@ export default function CalendarPage() {
           style={{ animationDelay: '.15s' }}
         >
           {isToday && (() => {
-            const topPx = (nowHour - 7) * 64 + (nowMin / 60) * 64
+            const hourIndex = hours.indexOf(nowHour)
+            if (hourIndex < 0) return null
+            const topPx = hourIndex * 64 + (nowMin / 60) * 64
             return topPx > 0 ? <div className="cal-tl-now" style={{ top: topPx }} /> : null
           })()}
 
