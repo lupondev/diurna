@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { getCategoriesForSite, FOOTBALL_CATEGORIES, detectCategoryFromTitle } from '@/lib/newsroom-categories'
-import type { CategoryItem } from '@/lib/newsroom-categories'
 import { getArticleUrl } from '@/lib/article-url'
 
 // ─── Types ───────────────────────────────────────────────

@@ -206,7 +206,7 @@ function injectEntityLinks(
 
   const sortedTags = [...tags]
     .map((t) => t.tag)
-    .filter((t) => t.name.length >= 2 && /^[A-ZČĆŠŽĐ]/.test(t.name))
+    .filter((t) => t.name.length >= 3 && /^[A-ZČĆŠŽĐ]/.test(t.name))
     .sort((a, b) => b.name.length - a.name.length)
 
   for (const tag of sortedTags) {
@@ -224,8 +224,9 @@ function injectEntityLinks(
         .replace(/^-|-$/g, '')
 
     const escaped = tag.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // Word boundary after name so we don't match inside longer words (e.g. tag "La" in "LaLiga")
     const pattern = new RegExp(
-      `(?<![<\\w])(${escaped})(?![^<]*>)(?![^<]*</a>)`,
+      `(?<![<\\w])(${escaped})(?!\\w)(?![^<]*>)(?![^<]*</a>)`,
       'i'
     )
 

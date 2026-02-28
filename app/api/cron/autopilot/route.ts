@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client'
 import {
   shouldGenerateNow,
   getNextTask,
+  isDuplicateTask,
   buildPromptContext,
   htmlToTiptap,
   injectWidgets,
@@ -28,10 +29,10 @@ const FORCED_CATEGORY_NAME = 'Vijesti'
 
 const FOOTBALL_ENTITY_TYPES = ['PLAYER', 'CLUB', 'MANAGER', 'MATCH', 'LEAGUE', 'ORGANIZATION']
 
-async function getOrCreateCategory(siteId: string) {
-  let category = await prisma.category.findFirst({ where: { siteId, slug: FORCED_CATEGORY_SLUG } })
+async function getOrCreateCategory(siteId: string, slug = FORCED_CATEGORY_SLUG, name = FORCED_CATEGORY_NAME) {
+  let category = await prisma.category.findFirst({ where: { siteId, slug } })
   if (!category) {
-    category = await prisma.category.create({ data: { siteId, name: FORCED_CATEGORY_NAME, slug: FORCED_CATEGORY_SLUG } })
+    category = await prisma.category.create({ data: { siteId, name, slug } })
   }
   return category
 }
@@ -327,8 +328,14 @@ export async function GET(req: NextRequest) {
         continue
       }
 
-      // ── Normal mode: priority task selection ──
-      const task = await getNextTask(config, site.id, todayCount, false)
+      // ── Normal mode: priority task selection (with duplicate-topic skip) ──
+      let task = await getNextTask(config, site.id, todayCount, false)
+      const excludedClusterIds = new Set<string>()
+      while (task && (await isDuplicateTask(task.title, site.id))) {
+        await systemLog('info', 'autopilot', `Skipping duplicate topic: "${task.title}"`, { clusterId: task.clusterId })
+        if (task.clusterId) excludedClusterIds.add(task.clusterId)
+        task = await getNextTask(config, site.id, todayCount, false, excludedClusterIds)
+      }
 
       if (!task) {
         results.push({
@@ -424,13 +431,14 @@ export async function GET(req: NextRequest) {
         { title: task.title, categorySlug: task.categorySlug }
       )
 
+      const taskCategory = await getOrCreateCategory(site.id, task.categorySlug, task.category)
       const article = await createArticleSafe({
         siteId: site.id, title, slug: baseSlug,
         content: tiptapContent as unknown as Prisma.InputJsonValue,
         excerpt: parsed.excerpt || '', featuredImage,
         status: config.autoPublish ? 'PUBLISHED' : 'DRAFT',
         publishedAt: config.autoPublish ? new Date() : null,
-        categoryId: forcedCategory.id, aiGenerated: true, aiModel: ai.model,
+        categoryId: taskCategory.id, aiGenerated: true, aiModel: ai.model,
         aiPrompt: JSON.stringify({ priority: task.priority, clusterId: task.clusterId, matchId: task.matchId, sources: task.sources.map((s) => s.title) }),
         aiVerificationScore: verification?.score ?? null,
         aiVerificationIssues: verification?.issues.join(', ') ?? null,

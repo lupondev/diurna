@@ -393,7 +393,7 @@ async function getClubImage(clubName: string): Promise<string | null> {
 
     const res = await fetch(
       `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(clubName)}`,
-      { headers: { 'x-apisports-key': key } }
+      { headers: { 'x-apisports-key': key }, signal: AbortSignal.timeout(8000) }
     )
     if (!res.ok) return null
 
@@ -419,7 +419,7 @@ async function getPlayerImage(playerName: string): Promise<string | null> {
     const season = new Date().getMonth() >= 7 ? new Date().getFullYear() : new Date().getFullYear() - 1
     const res = await fetch(
       `https://v3.football.api-sports.io/players?search=${encodeURIComponent(playerName)}&season=${season}`,
-      { headers: { 'x-apisports-key': key } }
+      { headers: { 'x-apisports-key': key }, signal: AbortSignal.timeout(8000) }
     )
     if (!res.ok) return null
 
@@ -453,24 +453,41 @@ export async function resolveArticleImage(
 ): Promise<string | null> {
   const entities = aiOutput.entities || []
 
-  const clubEntity = entities.find((e) => e.type === 'CLUB')
-  if (clubEntity) {
-    const clubImage = await getClubImage(clubEntity.name)
-    if (clubImage) return clubImage
+  try {
+    const clubEntity = entities.find((e) => e.type === 'CLUB')
+    if (clubEntity) {
+      const clubImage = await getClubImage(clubEntity.name)
+      if (clubImage) return clubImage
+    }
+  } catch (err) {
+    console.error('resolveArticleImage club:', err)
   }
 
-  const playerEntity = entities.find((e) => e.type === 'PLAYER')
-  if (playerEntity) {
-    const playerImage = await getPlayerImage(playerEntity.name)
-    if (playerImage) return playerImage
+  try {
+    const playerEntity = entities.find((e) => e.type === 'PLAYER')
+    if (playerEntity) {
+      const playerImage = await getPlayerImage(playerEntity.name)
+      if (playerImage) return playerImage
+    }
+  } catch (err) {
+    console.error('resolveArticleImage player:', err)
   }
 
-  if (aiOutput.imageQuery) {
-    const aiImage = await fetchUnsplashImage(aiOutput.imageQuery)
-    if (aiImage) return aiImage
+  try {
+    if (aiOutput.imageQuery) {
+      const aiImage = await fetchUnsplashImage(aiOutput.imageQuery)
+      if (aiImage) return aiImage
+    }
+  } catch (err) {
+    console.error('resolveArticleImage imageQuery:', err)
   }
 
-  return fetchUnsplashImage(task.title)
+  try {
+    return await fetchUnsplashImage(task.title)
+  } catch (err) {
+    console.error('resolveArticleImage fallback:', err)
+    return null
+  }
 }
 
 export async function fetchUnsplashImage(query: string): Promise<string | null> {
@@ -486,7 +503,7 @@ export async function fetchUnsplashImage(query: string): Promise<string | null> 
     try {
       const res = await fetch(
         `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&orientation=landscape&content_filter=high&per_page=5&client_id=${key}`,
-        { cache: 'no-store' },
+        { cache: 'no-store', signal: AbortSignal.timeout(10000) },
       )
       if (!res.ok) {
         console.error(`[Unsplash] Search error for "${q}":`, res.status)
@@ -528,11 +545,45 @@ export function slugify(text: string): string {
 // PRIORITY-BASED TASK SELECTION
 // ══════════════════════════════════
 
+/** Returns true if an article with >60% word overlap to taskTitle was published in the last 24h (duplicate topic). */
+export async function isDuplicateTask(taskTitle: string, siteId: string): Promise<boolean> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const recent = await prisma.article.findMany({
+    where: {
+      siteId,
+      status: 'PUBLISHED',
+      deletedAt: null,
+      publishedAt: { gte: since },
+    },
+    select: { title: true },
+    take: 100,
+  })
+
+  const taskWords = new Set(taskTitle.toLowerCase().split(/\s+/).filter((w) => w.length > 3))
+  if (taskWords.size === 0) return false
+
+  for (const article of recent) {
+    const articleWords = new Set(article.title.toLowerCase().split(/\s+/).filter((w) => w.length > 3))
+    if (articleWords.size === 0) continue
+
+    let overlap = 0
+    for (const word of Array.from(taskWords)) {
+      if (articleWords.has(word)) overlap++
+    }
+
+    const similarity = overlap / Math.min(taskWords.size, articleWords.size)
+    if (similarity >= 0.6) return true
+  }
+
+  return false
+}
+
 export async function getNextTask(
   config: AutopilotConfigFull,
   siteId: string,
   todayCount: number,
-  force = false
+  force = false,
+  excludedClusterIds = new Set<string>()
 ): Promise<GenerationTask | null> {
   if (!force) {
     const needed = getArticlesNeeded(config.dailyTarget, todayCount)
@@ -547,7 +598,7 @@ export async function getNextTask(
     where: { siteId, createdAt: { gte: startOfDay }, aiPrompt: { not: null } },
     select: { aiPrompt: true },
   })
-  const coveredClusterIds = new Set<string>()
+  const coveredClusterIds = new Set<string>(excludedClusterIds)
   const coveredMatchIds = new Set<string>()
   for (const a of coveredArticles) {
     if (!a.aiPrompt) continue

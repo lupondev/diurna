@@ -45,6 +45,8 @@ export async function GET(req: NextRequest) {
       isTest: false,
       publishedAt: { gte: startDate },
     },
+    orderBy: { publishedAt: 'desc' },
+    take: 500,
     select: {
       id: true,
       title: true,
@@ -57,7 +59,6 @@ export async function GET(req: NextRequest) {
       category: { select: { name: true, slug: true } },
       tags: { select: { tagId: true } },
     },
-    orderBy: { publishedAt: 'desc' },
   })
 
   // Word count per article (content is JSON/Tiptap — extract text)
@@ -110,6 +111,8 @@ export async function GET(req: NextRequest) {
       isTest: false,
       createdAt: { gte: startDate },
     },
+    orderBy: { createdAt: 'desc' },
+    take: 1000,
     select: {
       status: true,
       aiGenerated: true,
