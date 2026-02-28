@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 import './copilot.css'
 
 type CopilotMode = 'full-auto' | 'hybrid' | 'manual'
@@ -45,6 +46,7 @@ type AutopilotLeague = {
 
 type AutopilotStats = {
   articlesWrittenToday: number
+  inReviewToday?: number
   isActive: boolean
   dailyTarget: number
 }
@@ -169,6 +171,7 @@ export default function CopilotPage() {
   const [showAddRule, setShowAddRule] = useState(false)
   const [saveFlash, setSaveFlash] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [apStats, setApStats] = useState<AutopilotStats | null>(null)
+  const [runningNow, setRunningNow] = useState(false)
 
   const [newRuleName, setNewRuleName] = useState('')
   const [newRuleFilter, setNewRuleFilter] = useState<'top6' | 'all' | 'specific'>('all')
@@ -274,6 +277,35 @@ export default function CopilotPage() {
     })
   }, [])
 
+  const refreshStats = useCallback(() => {
+    fetch('/api/autopilot/stats', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() as Promise<AutopilotStats> : null))
+      .then((data) => { if (data) setApStats(data) })
+      .catch(() => {})
+  }, [])
+
+  const handleRunNow = useCallback(async () => {
+    setRunningNow(true)
+    try {
+      const res = await fetch('/api/cron/autopilot?force=true', { credentials: 'include' })
+      const data = (await res.json()) as { action?: string; article?: { title: string }; reason?: string; error?: string }
+      if (!res.ok) {
+        toast.error(data.reason || data.error || 'Request failed')
+      } else if (data.action === 'generated' && data.article) {
+        toast.success(`✅ Generisano: ${data.article.title}`)
+        refreshStats()
+      } else if (data.action === 'skipped' || data.action === 'error') {
+        toast.error(data.reason || (data.action === 'error' ? 'Generation error' : 'No stories available'))
+      } else {
+        toast(data.reason || 'No action taken', { icon: 'ℹ️' })
+      }
+    } catch {
+      toast.error('Failed to run autopilot')
+    } finally {
+      setRunningNow(false)
+    }
+  }, [refreshStats])
+
   const saveStrategy = useCallback(async () => {
     setSaveFlash('saving')
     saveJSON('copilot-rules', rules)
@@ -335,8 +367,8 @@ export default function CopilotPage() {
   const approvedCount = queue.filter(q => q.status === 'approved').length
 
   const planned = apStats?.dailyTarget ?? strategy.dailyTarget
-  const published = apStats?.articlesWrittenToday ?? approvedCount
-  const inReview = pendingQueue.length
+  const published = apStats?.articlesWrittenToday ?? 0
+  const inReview = apStats?.inReviewToday ?? 0
   const completed = Math.min(published, planned)
 
   const saveBtnLabel =
@@ -371,6 +403,26 @@ export default function CopilotPage() {
             </span>
           </div>
         )}
+        <button
+          type="button"
+          onClick={handleRunNow}
+          disabled={runningNow}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 20,
+            border: 'none',
+            fontWeight: 700,
+            fontSize: 12,
+            cursor: runningNow ? 'wait' : 'pointer',
+            background: runningNow ? '#A1A1AA' : '#00D4AA',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          {runningNow ? <>Generating...</> : <>✦ Run Now</>}
+        </button>
       </div>
 
       <div className="cop-modes">

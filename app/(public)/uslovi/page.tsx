@@ -1,22 +1,29 @@
 import type { Metadata } from 'next'
 import { StaticNav } from '@/components/public/sportba/static-nav'
 import { canonicalUrl } from '@/lib/seo'
+import { getDefaultSite } from '@/lib/db'
 import '../static.css'
 
 export const revalidate = 86400
 
-export const metadata: Metadata = {
-  title: 'Uslovi kori\u0161tenja \u2014 Diurna',
-  description: 'Uslovi kori\u0161tenja portala Diurna.',
-  alternates: { canonical: canonicalUrl('/uslovi') },
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getDefaultSite()
+  const siteName = site?.name || process.env.NEXT_PUBLIC_SITE_NAME || 'Diurna'
+  return {
+    title: `Uslovi korištenja — ${siteName}`,
+    description: `Uslovi korištenja portala ${siteName}.`,
+    alternates: { canonical: canonicalUrl('/uslovi') },
+  }
 }
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const site = await getDefaultSite()
+  const siteName = site?.name || process.env.NEXT_PUBLIC_SITE_NAME || 'Diurna'
   return (
     <main className="sba-sp">
       <StaticNav current="/uslovi" />
       <div className="sba-sp-content">
-        <h1 className="sba-sp-title">Uslovi kori\u0161tenja</h1>
+        <h1 className="sba-sp-title">Uslovi korištenja — {siteName}</h1>
         <div className="sba-sp-prose">
           <p>
             Kori\u0161tenjem portala Diurna prihvatate sljede\u0107e uslove. Molimo vas da ih pa\u017eljivo

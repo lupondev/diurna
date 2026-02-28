@@ -43,7 +43,7 @@ function parseLogo(name: string) {
   return { main: name.toUpperCase(), suffix: '' }
 }
 
-export function Header({ siteName = 'TodayFootballMatch', liveCount = 0 }: { siteName?: string; liveCount?: number }) {
+export function Header({ siteName = 'TodayFootballMatch', logoUrl, liveCount = 0 }: { siteName?: string; logoUrl?: string; liveCount?: number }) {
   const { toggle } = useTheme()
   const logo = parseLogo(siteName)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -91,8 +91,14 @@ export function Header({ siteName = 'TodayFootballMatch', liveCount = 0 }: { sit
         aria-hidden={slim}
       >
         <Link href="/" className="sba-logo" aria-label={`${siteName} početna`}>
-          <span className="sba-logo-sport">{logo.main}</span>
-          {logo.suffix && <span className="sba-logo-ba">{logo.suffix}</span>}
+          {logoUrl ? (
+            <img src={logoUrl} alt={siteName} style={{ height: 32, width: 'auto', maxWidth: 180, objectFit: 'contain' }} />
+          ) : (
+            <>
+              <span className="sba-logo-sport">{logo.main}</span>
+              {logo.suffix && <span className="sba-logo-ba">{logo.suffix}</span>}
+            </>
+          )}
         </Link>
 
         <nav className="sba-header-nav" aria-label="Glavna navigacija">

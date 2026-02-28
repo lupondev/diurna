@@ -20,7 +20,8 @@ const OTHER = [
   { href: '/rss', label: 'RSS' },
   { href: '/o-nama', label: 'O nama' },
   { href: '/kontakt', label: 'Kontakt' },
-  { href: '/privatnost', label: 'Privatnost' },
+  { href: '/privatnost', label: 'Politika privatnosti' },
+  { href: '/uslovi', label: 'Uslovi korištenja' },
 ]
 
 function parseLogo(name: string) {

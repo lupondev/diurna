@@ -38,6 +38,9 @@ interface SiteData {
   facebookUrl: string
   instagramHandle: string
   youtubeUrl: string
+  brandColor: string
+  logo: string
+  favicon: string
 }
 
 const DEFAULT_SITE: SiteData = {
@@ -59,6 +62,9 @@ const DEFAULT_SITE: SiteData = {
   facebookUrl: '',
   instagramHandle: '',
   youtubeUrl: '',
+  brandColor: '#00D4AA',
+  logo: '',
+  favicon: '',
 }
 
 export default function GeneralTab() {
@@ -99,6 +105,12 @@ export default function GeneralTab() {
   const [wpTestResult, setWpTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [competitorFeeds, setCompetitorFeeds] = useState<string[]>([])
   const [newFeedUrl, setNewFeedUrl] = useState('')
+  const [logo, setLogo] = useState('')
+  const [favicon, setFavicon] = useState('')
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [faviconUploading, setFaviconUploading] = useState(false)
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  const faviconInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/site')
@@ -124,6 +136,9 @@ export default function GeneralTab() {
           facebookUrl: data.facebookUrl ?? '',
           instagramHandle: data.instagramHandle ?? '',
           youtubeUrl: data.youtubeUrl ?? '',
+          brandColor: (data as { brandColor?: string }).brandColor ?? '#00D4AA',
+          logo: (data as { logo?: string }).logo ?? '',
+          favicon: (data as { favicon?: string }).favicon ?? '',
         }
         serverData.current = loaded
         setSiteName(loaded.name)
@@ -144,6 +159,9 @@ export default function GeneralTab() {
         setFacebook(loaded.facebookUrl)
         setInstagram(loaded.instagramHandle)
         setYoutube(loaded.youtubeUrl)
+        setBrandColor(loaded.brandColor)
+        setLogo(loaded.logo)
+        setFavicon(loaded.favicon)
       })
       .catch(() => {})
   }, [])
@@ -233,6 +251,9 @@ export default function GeneralTab() {
           language,
           timezone,
           theme,
+          brandColor: brandColor || null,
+          logo: logo || null,
+          favicon: favicon || null,
           wpSiteUrl: wpSiteUrl || null,
           wpApiKey: wpApiKey || null,
           competitorFeeds,
@@ -251,6 +272,7 @@ export default function GeneralTab() {
           wpSiteUrl, wpApiKey, competitorFeeds,
           metaTitle, metaDescription: metaDesc, ogImage,
           twitterHandle: twitter, facebookUrl: facebook, instagramHandle: instagram, youtubeUrl: youtube,
+          brandColor, logo, favicon,
         }
         setDirty(false)
         setSaved(true)
@@ -288,7 +310,70 @@ export default function GeneralTab() {
     setFacebook(s.facebookUrl)
     setInstagram(s.instagramHandle)
     setYoutube(s.youtubeUrl)
+    setBrandColor(s.brandColor)
+    setLogo(s.logo)
+    setFavicon(s.favicon)
     setDirty(false)
+  }
+
+  async function handleLogoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo must be under 2MB')
+      return
+    }
+    setLogoUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('kind', 'logo')
+      const res = await fetch('/api/upload', { method: 'POST', body: form })
+      const data = (await res.json()) as { url?: string; error?: string }
+      if (data.url) {
+        setLogo(data.url)
+        setDirty(true)
+        setSaved(false)
+        toast.success('Logo uploaded — click Save to apply')
+      } else {
+        toast.error(data.error || 'Upload failed')
+      }
+    } catch {
+      toast.error('Upload failed')
+    } finally {
+      setLogoUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  async function handleFaviconSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 512 * 1024) {
+      toast.error('Favicon must be under 512KB')
+      return
+    }
+    setFaviconUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('kind', 'favicon')
+      const res = await fetch('/api/upload', { method: 'POST', body: form })
+      const data = (await res.json()) as { url?: string; error?: string }
+      if (data.url) {
+        setFavicon(data.url)
+        setDirty(true)
+        setSaved(false)
+        toast.success('Favicon uploaded — click Save to apply')
+      } else {
+        toast.error(data.error || 'Upload failed')
+      }
+    } catch {
+      toast.error('Upload failed')
+    } finally {
+      setFaviconUploading(false)
+      e.target.value = ''
+    }
   }
 
   const activeCount = fbPages.filter((p) => p.isActive).length
@@ -312,7 +397,16 @@ export default function GeneralTab() {
           </div>
           <div className="st-row">
             <span className="st-label">Slug</span>
-            <input className="st-input mono" value={siteSlug} readOnly title="URL slug (read-only). Used in site URLs." />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                className="st-input mono"
+                value={siteSlug}
+                readOnly
+                title="URL slug (read-only). Used in site URLs."
+                style={{ background: 'var(--g50)', cursor: 'not-allowed' }}
+              />
+              <span style={{ color: 'var(--g400)', fontSize: 14 }} title="Read-only">🔒</span>
+            </div>
           </div>
           <div className="st-row">
             <span className="st-label">Site URL</span>
@@ -366,7 +460,42 @@ export default function GeneralTab() {
           <div className="st-card-desc">Your publication&apos;s visual identity.</div>
           <div className="st-row">
             <span className="st-label">Logo</span>
-            <div className="st-upload" title="Click to upload">+</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <input
+                type="file"
+                ref={logoInputRef}
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                className="st-input"
+                style={{ display: 'none' }}
+                onChange={handleLogoSelect}
+              />
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => logoInputRef.current?.click()}
+                onKeyDown={(e) => e.key === 'Enter' && logoInputRef.current?.click()}
+                className="st-upload"
+                title="Click to upload (max 2MB)"
+                style={{ cursor: logoUploading ? 'wait' : 'pointer', opacity: logoUploading ? 0.7 : 1 }}
+              >
+                {logo ? (
+                  <img src={logo} alt="Logo" style={{ maxWidth: '100%', maxHeight: 48, objectFit: 'contain' }} />
+                ) : logoUploading ? (
+                  '…'
+                ) : (
+                  '+'
+                )}
+              </div>
+              {logo && (
+                <button
+                  type="button"
+                  onClick={() => { setLogo(''); setDirty(true) }}
+                  style={{ fontSize: 11, color: 'var(--g500)' }}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
           <div className="st-row">
             <span className="st-label">Brand Color</span>
@@ -383,7 +512,41 @@ export default function GeneralTab() {
           </div>
           <div className="st-row">
             <span className="st-label">Favicon</span>
-            <div className="st-upload" title="Click to upload" style={{ width: 36, height: 36, fontSize: 14 }}>+</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <input
+                type="file"
+                ref={faviconInputRef}
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                style={{ display: 'none' }}
+                onChange={handleFaviconSelect}
+              />
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => faviconInputRef.current?.click()}
+                onKeyDown={(e) => e.key === 'Enter' && faviconInputRef.current?.click()}
+                className="st-upload"
+                title="Click to upload (max 512KB)"
+                style={{ width: 36, height: 36, fontSize: 14, cursor: faviconUploading ? 'wait' : 'pointer', opacity: faviconUploading ? 0.7 : 1 }}
+              >
+                {favicon ? (
+                  <img src={favicon} alt="Favicon" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                ) : faviconUploading ? (
+                  '…'
+                ) : (
+                  '+'
+                )}
+              </div>
+              {favicon && (
+                <button
+                  type="button"
+                  onClick={() => { setFavicon(''); setDirty(true) }}
+                  style={{ fontSize: 11, color: 'var(--g500)' }}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -27,6 +27,9 @@ const UpdateSiteSchema = z.object({
   facebookUrl: z.string().max(500).optional().nullable(),
   instagramHandle: z.string().max(100).optional().nullable(),
   youtubeUrl: z.string().max(500).optional().nullable(),
+  brandColor: z.string().max(20).optional().nullable(),
+  logo: z.string().url().max(500).optional().nullable(),
+  favicon: z.string().url().max(500).optional().nullable(),
 })
 
 const CreateSiteSchema = z.object({
@@ -118,6 +121,9 @@ export async function GET(req: NextRequest) {
       facebookUrl: site.facebookUrl,
       instagramHandle: site.instagramHandle,
       youtubeUrl: site.youtubeUrl,
+      brandColor: (site as { brandColor?: string }).brandColor ?? null,
+      logo: (site as { logo?: string }).logo ?? null,
+      favicon: (site as { favicon?: string }).favicon ?? null,
       categories: categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
     })
   } catch (error) {
@@ -251,6 +257,9 @@ export async function PATCH(req: NextRequest) {
         ...(data.facebookUrl !== undefined && { facebookUrl: data.facebookUrl || null }),
         ...(data.instagramHandle !== undefined && { instagramHandle: data.instagramHandle || null }),
         ...(data.youtubeUrl !== undefined && { youtubeUrl: data.youtubeUrl || null }),
+        ...(data.brandColor !== undefined && { brandColor: data.brandColor || null }),
+        ...(data.logo !== undefined && { logo: data.logo || null }),
+        ...(data.favicon !== undefined && { favicon: data.favicon || null }),
       },
     })
 
@@ -274,6 +283,9 @@ export async function PATCH(req: NextRequest) {
       facebookUrl: updated.facebookUrl,
       instagramHandle: updated.instagramHandle,
       youtubeUrl: updated.youtubeUrl,
+      brandColor: (updated as { brandColor?: string }).brandColor ?? null,
+      logo: (updated as { logo?: string }).logo ?? null,
+      favicon: (updated as { favicon?: string }).favicon ?? null,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

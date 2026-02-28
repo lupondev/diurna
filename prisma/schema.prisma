@@ -56,6 +56,11 @@ model Site {
   instagramHandle String?
   youtubeUrl      String?
 
+  // Brand assets
+  logo       String?
+  favicon    String?
+  brandColor String?
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?

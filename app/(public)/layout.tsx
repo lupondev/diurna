@@ -3,15 +3,23 @@ import { ThemeProvider, Header, Footer, LiveStrip } from '@/components/public/sp
 import type { LiveMatch } from '@/components/public/sportba'
 import { getDefaultSite } from '@/lib/db'
 import { getLiveMatches } from '@/lib/api-football'
+import type { Metadata } from 'next'
 
 // NEVER use 'Diurna' as fallback on public routes — that is platform branding.
 // Always fall back to NEXT_PUBLIC_SITE_NAME env, then a safe generic name.
 const FALLBACK_SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'TodayFootballMatch'
 
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getDefaultSite()
+  const favicon = (site as { favicon?: string })?.favicon
+  return favicon ? { icons: { icon: favicon } } : {}
+}
+
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const site = await getDefaultSite()
   const siteName = site?.name || FALLBACK_SITE_NAME
   const gaId = site?.gaId || process.env.NEXT_PUBLIC_GA4_ID
+  const logoUrl = (site as { logo?: string })?.logo ?? undefined
 
   let matches: LiveMatch[] = []
   try {
@@ -34,7 +42,7 @@ export default async function PublicLayout({ children }: { children: React.React
           `}</Script>
         </>
       )}
-      <Header siteName={siteName} liveCount={matches.filter((m) => m.status === 'live').length} />
+      <Header siteName={siteName} logoUrl={logoUrl} liveCount={matches.filter((m) => m.status === 'live').length} />
       <LiveStrip matches={matches} />
       {children}
       <Footer siteName={siteName} />

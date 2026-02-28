@@ -1,25 +1,32 @@
 import type { Metadata } from 'next'
 import { StaticNav } from '@/components/public/sportba/static-nav'
 import { canonicalUrl } from '@/lib/seo'
+import { getDefaultSite } from '@/lib/db'
 import '../static.css'
 
 export const revalidate = 86400
 
-export const metadata: Metadata = {
-  title: 'Politika privatnosti \u2014 Diurna',
-  description: 'Kako Diurna prikuplja, koristi i \u0161titi va\u0161e podatke.',
-  alternates: { canonical: canonicalUrl('/privatnost') },
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getDefaultSite()
+  const siteName = site?.name || process.env.NEXT_PUBLIC_SITE_NAME || 'Diurna'
+  return {
+    title: `Politika privatnosti — ${siteName}`,
+    description: `Kako ${siteName} prikuplja, koristi i štiti vaše podatke.`,
+    alternates: { canonical: canonicalUrl('/privatnost') },
+  }
 }
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const site = await getDefaultSite()
+  const siteName = site?.name || process.env.NEXT_PUBLIC_SITE_NAME || 'Diurna'
   return (
     <main className="sba-sp">
       <StaticNav current="/privatnost" />
       <div className="sba-sp-content">
-        <h1 className="sba-sp-title">Politika privatnosti</h1>
+        <h1 className="sba-sp-title">Politika privatnosti — {siteName}</h1>
         <div className="sba-sp-prose">
           <p>
-            Va\u0161a privatnost nam je va\u017ena. Ova politika obja\u0161njava kako Diurna (u vlasni\u0161tvu Lupon Media d.o.o.)
+            Vaša privatnost nam je važna. Ova politika objašnjava kako {siteName} (u vlasništvu Lupon Media d.o.o.)
             prikuplja, koristi i \u0161titi va\u0161e li\u010dne podatke u skladu sa GDPR regulativom i zakonima
             Bosne i Hercegovine.
           </p>

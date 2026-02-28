@@ -27,8 +27,11 @@ export async function GET() {
   let drafts = 0
   let todayTotal = 0
 
+  let aiPublishedToday = 0
+  let aiDraftsToday = 0
+
   if (site) {
-    ;[published, scheduled, drafts, todayTotal] = await Promise.all([
+    const [p, s, d, total, aiPub, aiDraft] = await Promise.all([
       prisma.article.count({
         where: { siteId: site.id, status: 'PUBLISHED', publishedAt: { gte: startOfDay, lte: endOfDay } },
       }),
@@ -48,7 +51,19 @@ export async function GET() {
           ],
         },
       }),
+      prisma.article.count({
+        where: { siteId: site.id, status: 'PUBLISHED', aiGenerated: true, publishedAt: { gte: startOfDay, lte: endOfDay } },
+      }),
+      prisma.article.count({
+        where: { siteId: site.id, status: 'DRAFT', aiGenerated: true, createdAt: { gte: startOfDay, lte: endOfDay } },
+      }),
     ])
+    published = p
+    scheduled = s
+    drafts = d
+    todayTotal = total
+    aiPublishedToday = aiPub
+    aiDraftsToday = aiDraft
   }
 
   return NextResponse.json({
@@ -58,8 +73,9 @@ export async function GET() {
     scheduled,
     live: 0,
     drafts,
-    // Fields expected by copilot page
-    articlesWrittenToday: published,
+    // Fields expected by copilot page (AI-only for Today's Status)
+    articlesWrittenToday: aiPublishedToday,
+    inReviewToday: aiDraftsToday,
     isActive: config?.isActive ?? false,
     dailyTarget: config?.dailyTarget ?? 10,
   })
