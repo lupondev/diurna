@@ -43,9 +43,24 @@ export async function POST(req: NextRequest) {
         'Find organization'
       )
       if (!membership?.organizationId) {
-        return NextResponse.json({ error: 'No organization found' }, { status: 404 })
+        const user = await prisma.user.findUnique({ where: { id: userId } })
+        const baseName = (user?.name || 'My').split(' ')[0] || 'My'
+        const baseSlug = baseName.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30) || 'newsroom'
+        let slug = baseSlug
+        let suffix = 1
+        while (await prisma.organization.findFirst({ where: { slug } })) {
+          slug = `${baseSlug}-${suffix++}`
+        }
+        const org = await prisma.organization.create({
+          data: { name: `${baseName}'s Newsroom`, slug, plan: 'FREE' },
+        })
+        await prisma.userOnOrganization.create({
+          data: { userId, organizationId: org.id, role: 'OWNER' },
+        })
+        orgId = org.id
+      } else {
+        orgId = membership.organizationId
       }
-      orgId = membership.organizationId
     } catch (err) {
       console.error('Onboarding step 1 (find org) failed:', err)
       return NextResponse.json({ error: 'Failed to find organization. Please try again.' }, { status: 500 })
@@ -74,6 +89,17 @@ export async function POST(req: NextRequest) {
       console.error('Onboarding step 1.5 (check existing site) failed:', err)
     }
 
+    const timezoneMap: Record<string, string> = {
+      en: 'Europe/London',
+      bs: 'Europe/Sarajevo',
+      hr: 'Europe/Zagreb',
+      sr: 'Europe/Belgrade',
+      de: 'Europe/Berlin',
+      es: 'Europe/Madrid',
+      fr: 'Europe/Paris',
+      it: 'Europe/Rome',
+    }
+
     let siteId: string
     try {
       const slug = data.siteName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 50)
@@ -84,6 +110,7 @@ export async function POST(req: NextRequest) {
             name: data.siteName,
             slug: slug || 'my-site',
             language: data.language,
+            timezone: timezoneMap[data.language] || 'UTC',
           },
         }),
         TIMEOUT_MS,
@@ -154,6 +181,45 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error('Onboarding step 3 (create categories) failed:', err)
       return NextResponse.json({ error: 'Failed to create league categories. Please try again.' }, { status: 500 })
+    }
+
+    try {
+      const defaultFeeds: Record<string, Array<{ name: string; url: string }>> = {
+        en: [
+          { name: 'BBC Sport Football', url: 'https://feeds.bbci.co.uk/sport/football/rss.xml' },
+          { name: 'ESPN FC', url: 'https://www.espn.com/espn/rss/soccer/news' },
+          { name: 'Sky Sports Football', url: 'https://www.skysports.com/rss/12040' },
+        ],
+        bs: [
+          { name: 'Klix Sport', url: 'https://www.klix.ba/rss/sport' },
+          { name: 'SportSport.ba', url: 'https://www.sportsport.ba/rss' },
+        ],
+        hr: [
+          { name: 'Index.hr Sport', url: 'https://www.index.hr/rss/sport' },
+          { name: 'Sportske Novosti', url: 'https://sportske.jutarnji.hr/rss' },
+        ],
+        sr: [
+          { name: 'B92 Sport', url: 'https://www.b92.net/sport/rss/' },
+          { name: 'Sportski Zurnal', url: 'https://sportskizurnal.com/rss' },
+        ],
+        de: [
+          { name: 'Kicker', url: 'https://rss.kicker.de/news/aktuell' },
+        ],
+      }
+      const feeds = defaultFeeds[data.language] || defaultFeeds.en || []
+      if (feeds.length > 0) {
+        await prisma.feedSource.createMany({
+          data: feeds.map((f) => ({
+            siteId,
+            name: f.name,
+            url: f.url,
+            active: true,
+          })),
+          skipDuplicates: true,
+        })
+      }
+    } catch (err) {
+      console.error('Onboarding (seed feeds) failed:', err)
     }
 
     try {

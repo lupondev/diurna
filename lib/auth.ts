@@ -1,5 +1,6 @@
 import type { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import GoogleProvider from 'next-auth/providers/google'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma } from './prisma'
 import bcrypt from 'bcryptjs'
@@ -9,8 +10,14 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/login',
+    newUser: '/onboarding',
   },
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      allowDangerousEmailAccountLinking: true,
+    }),
     CredentialsProvider({
       name: 'credentials',
       credentials: {
@@ -55,6 +62,20 @@ export const authOptions: NextAuthOptions = {
         token.onboardingCompleted = user.onboardingCompleted ?? false
         token.role = user.role ?? 'JOURNALIST'
         token.lastDbRefresh = Date.now()
+      }
+
+      if (user && !user.organizationId) {
+        const membership = await prisma.userOnOrganization.findFirst({
+          where: { userId: user.id, deletedAt: null },
+          orderBy: { joinedAt: 'asc' },
+        })
+        if (membership) {
+          token.organizationId = membership.organizationId
+          token.role = membership.role
+        } else {
+          token.organizationId = null
+          token.onboardingCompleted = false
+        }
       }
 
       const REFRESH_MS = 5 * 60 * 1000

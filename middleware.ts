@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
+const CUSTOM_DOMAIN_MAP: Record<string, string> = (() => {
+  try {
+    return JSON.parse(process.env.CUSTOM_DOMAIN_MAP || '{}')
+  } catch {
+    return {}
+  }
+})()
+
 const ROLE_ACCESS: Record<string, string[]> = {
   '/admin': ['OWNER', 'ADMIN'],
   '/copilot': ['OWNER', 'ADMIN', 'EDITOR'],
@@ -144,6 +152,11 @@ export async function middleware(req: NextRequest) {
     if (subdomain !== 'www' && subdomain !== 'app') {
       orgSlug = subdomain
     }
+  }
+
+  if (!orgSlug) {
+    const cleanHost = host.replace(/:\d+$/, '')
+    orgSlug = CUSTOM_DOMAIN_MAP[cleanHost] || CUSTOM_DOMAIN_MAP[`www.${cleanHost}`] || null
   }
 
   const requestHeaders = new Headers(req.headers)

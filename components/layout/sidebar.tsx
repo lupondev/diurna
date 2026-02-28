@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { LanguageSelector } from '@/components/language-selector'
 import { useLanguage } from '@/hooks/use-language'
+import { useSite } from '@/lib/site-context'
 
 type NavItem = { label: string; icon: string; href: string; badge?: string; exact?: boolean }
 type NavSection = { label: string; items: NavItem[]; roles?: string[] }
@@ -53,6 +54,7 @@ const sections: NavSection[] = [
 export function Sidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const { sites, activeSite, setActiveSite } = useSite()
 
   const userName = session?.user?.name || 'User'
   const userInitial = userName.charAt(0).toUpperCase()
@@ -78,14 +80,34 @@ export function Sidebar() {
       </div>
 
       <div className="ss">
-        <div className="ss-row">
-          <div className="ss-icon">⚽</div>
-          <div>
-            <div className="ss-name">Diurna</div>
-            <div className="ss-url">Publishing Platform</div>
+        {sites.length > 1 ? (
+          <div style={{ padding: '8px 12px', borderBottom: '1px solid #27272A' }}>
+            <select
+              value={activeSite?.id || ''}
+              onChange={(e) => {
+                const site = sites.find((s) => s.id === e.target.value)
+                if (site) setActiveSite(site)
+              }}
+              style={{
+                width: '100%', padding: '6px 8px', fontSize: 13, fontWeight: 600,
+                background: '#18181B', color: '#F4F4F5', border: '1px solid #3F3F46',
+                borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
           </div>
-          <span style={{ color: 'var(--g400)', fontSize: 12, marginLeft: 'auto' }}>▼</span>
-        </div>
+        ) : (
+          <div className="ss-row">
+            <div className="ss-icon">⚽</div>
+            <div>
+              <div className="ss-name">{activeSite?.name || 'Diurna'}</div>
+              <div className="ss-url">Publishing Platform</div>
+            </div>
+          </div>
+        )}
       </div>
 
       <nav className="sb-nav">

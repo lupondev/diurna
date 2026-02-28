@@ -2,6 +2,7 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { PlatformFooter } from '@/components/layout/platform-footer'
 import { MobileShell } from '@/components/layout/mobile-shell'
+import { SiteProvider } from '@/lib/site-context'
 
 export default function PlatformLayout({
   children,
@@ -9,6 +10,7 @@ export default function PlatformLayout({
   children: React.ReactNode
 }) {
   return (
+    <SiteProvider>
     <MobileShell>
       <div className="platform-layout">
         <Sidebar />
@@ -21,5 +23,6 @@ export default function PlatformLayout({
         </div>
       </div>
     </MobileShell>
+    </SiteProvider>
   )
 }
