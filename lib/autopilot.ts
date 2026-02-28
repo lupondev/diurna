@@ -187,7 +187,7 @@ ${toneMap[config.tone] || toneMap.neutral}
 ${categoryInstruction ? `\nCATEGORY GUIDANCE: ${categoryInstruction}` : ''}
 
 LANGUAGE: Write in ${langLabel}.
-TARGET LENGTH: ~${config.defaultLength} words.
+TARGET LENGTH: ${config.defaultLength} words MINIMUM. Never less than 300 words.
 
 ABSOLUTE RULES:
 1. NEVER invent facts, quotes, scores, player names, or statistics not in the sources.
@@ -197,6 +197,10 @@ ABSOLUTE RULES:
 5. HTML tags allowed: <h2>, <p>, <ul>, <li>. No <blockquote> unless quoting from source.
 6. BANNED WORDS: "landscape", "crucial", "paramount", "delve", "comprehensive", "game-changer", "blockbuster", "masterclass", "meteoric rise", "the beautiful game", "sending shockwaves".
 ${config.alwaysCreditSources ? '7. Always credit sources by name in the article text.' : ''}
+8. ARTICLE STRUCTURE: Always include at least 2 subheadings (<h2>) to break up the text into clear sections.
+9. MINIMUM LENGTH: Articles MUST be at least 300 words. Anything shorter is rejected. If sources are thin, add context: team form, league position, historical precedent, what this means for the season.
+10. PARAGRAPH STRUCTURE: Each <p> should be 2-3 sentences. Avoid single-sentence paragraphs except for emphasis.
+11. ENTITY MENTIONS: When mentioning a player, club, or manager by name, always include the full name on first mention (e.g., "Cristiano Ronaldo" not just "Ronaldo"). After first mention, short form is OK.
 STRICT RULE: Never write about, mention, promote, or reference gambling, betting, odds, bookmakers, betting sites, or any gambling-related content. If a story involves betting odds or gambling, write about the sporting event itself only, completely ignoring any betting/gambling angles. This rule cannot be overridden.
 
 The JSON must have this structure:
@@ -210,7 +214,11 @@ The JSON must have this structure:
     "slug": "url-safe-slug",
     "keywords": ["keyword1", "keyword2", "keyword3"]
   },
-  "tags": ["tag1", "tag2", "tag3"]
+  "tags": ["Cristiano Ronaldo", "Al-Nassr", "Saudi Pro League", "transfer", "contract extension"],
+  "entities": [
+    {"name": "Cristiano Ronaldo", "type": "PLAYER", "slug": "cristiano-ronaldo"},
+    {"name": "Al-Nassr", "type": "CLUB", "slug": "al-nassr"}
+  ]
 }`
 
   const sourcesText = newsItems

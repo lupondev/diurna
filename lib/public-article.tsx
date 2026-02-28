@@ -87,6 +87,52 @@ export async function fetchArticle(slug: string, categorySlug?: string) {
     take: 3,
   })
 
+  const articleTagIds = article.tags.map((t) => t.tagId)
+  let tagRelated: typeof related = []
+
+  if (articleTagIds.length > 0) {
+    const tagOverlap = await prisma.article.findMany({
+      where: {
+        siteId: site.id,
+        status: 'PUBLISHED',
+        deletedAt: null,
+        isTest: false,
+        id: { not: article.id },
+        tags: { some: { tagId: { in: articleTagIds } } },
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        featuredImage: true,
+        category: { select: { slug: true, name: true } },
+        publishedAt: true,
+        tags: { select: { tagId: true } },
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: 10,
+    })
+
+    tagRelated = tagOverlap
+      .map((a) => ({
+        ...a,
+        overlap: a.tags.filter((t) => articleTagIds.includes(t.tagId)).length,
+      }))
+      .sort((a, b) => b.overlap - a.overlap)
+      .slice(0, 3)
+      .map(({ overlap: _o, tags: _t, id: _id, ...rest }) => rest)
+  }
+
+  const relatedSlugs = new Set<string>()
+  const mergedRelated: typeof related = []
+  for (const r of [...tagRelated, ...related]) {
+    if (!relatedSlugs.has(r.slug)) {
+      relatedSlugs.add(r.slug)
+      mergedRelated.push(r)
+    }
+    if (mergedRelated.length >= 3) break
+  }
+
   const trending = await prisma.article.findMany({
     where: {
       siteId: site.id,
@@ -100,7 +146,7 @@ export async function fetchArticle(slug: string, categorySlug?: string) {
     take: 5,
   })
 
-  return { article, authorName, authorImage, byAuthor, related, trending, site }
+  return { article, authorName, authorImage, byAuthor, related: mergedRelated, trending, site }
 }
 
 export type ArticleData = NonNullable<Awaited<ReturnType<typeof fetchArticle>>>
@@ -149,6 +195,53 @@ function removeLeadingTitle(html: string, title: string): string {
   return html
 }
 
+function injectEntityLinks(
+  html: string,
+  tags: { tag: { id: string; name: string; slug?: string } }[]
+): string {
+  if (!tags || tags.length === 0) return html
+
+  let result = html
+  const linked = new Set<string>()
+
+  const sortedTags = [...tags]
+    .map((t) => t.tag)
+    .filter((t) => t.name.length >= 2 && /^[A-ZČĆŠŽĐ]/.test(t.name))
+    .sort((a, b) => b.name.length - a.name.length)
+
+  for (const tag of sortedTags) {
+    if (linked.has(tag.name.toLowerCase())) continue
+
+    const slug =
+      tag.slug ||
+      tag.name
+        .toLowerCase()
+        .replace(/[čć]/g, 'c')
+        .replace(/š/g, 's')
+        .replace(/ž/g, 'z')
+        .replace(/đ/g, 'dj')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+
+    const escaped = tag.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const pattern = new RegExp(
+      `(?<![<\\w])(${escaped})(?![^<]*>)(?![^<]*</a>)`,
+      'i'
+    )
+
+    const match = result.match(pattern)
+    if (match && match.index !== undefined) {
+      const before = result.slice(0, match.index)
+      const after = result.slice(match.index + match[0].length)
+      const link = `<a href="/tag/${slug}" class="sba-entity-link" style="color:#1e3a5f;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;text-decoration-thickness:1.5px;text-decoration-color:#00D4AA;font-weight:600">${match[0]}</a>`
+      result = before + link + after
+      linked.add(tag.name.toLowerCase())
+    }
+  }
+
+  return result
+}
+
 function getCategoryFallback(slug?: string): string {
   const map: Record<string, string> = {
     transferi: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=1080&q=80',
@@ -191,7 +284,8 @@ export function ArticlePage({ data }: { data: ArticleData }) {
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://todayfootballmatch.com').replace(/\/$/, '')
   const rawHtml = tiptapToHtml(article.content)
   const bodyHtml = removeLeadingTitle(rawHtml, article.title)
-  const wordCount = bodyHtml.replace(/<[^>]*>/g, '').split(/\s+/).length
+  const linkedHtml = injectEntityLinks(bodyHtml, article.tags)
+  const wordCount = linkedHtml.replace(/<[^>]*>/g, '').split(/\s+/).length
   const readTime = Math.max(1, Math.round(wordCount / 200))
   const categoryName = article.category?.name || 'Vijesti'
   const categorySlug = article.category?.slug || 'vijesti'
@@ -266,13 +360,17 @@ export function ArticlePage({ data }: { data: ArticleData }) {
           />
 
           <div className="sba-article-body">
-            <WidgetHydrator html={injectInlineRelated(bodyHtml, related, getArticleUrl)} />
+            <WidgetHydrator html={injectInlineRelated(linkedHtml, related, getArticleUrl)} />
           </div>
 
           {article.tags.length > 0 && (
             <div className="sba-article-tags">
               {article.tags.map(({ tag }) => (
-                <Link key={tag.id} href={`/${categorySlug}`} className="sba-tag">
+                <Link
+                  key={tag.id}
+                  href={`/tag/${tag.slug || tag.name.toLowerCase().replace(/[čć]/g, 'c').replace(/š/g, 's').replace(/ž/g, 'z').replace(/đ/g, 'dj').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
+                  className="sba-tag"
+                >
                   {tag.name}
                 </Link>
               ))}

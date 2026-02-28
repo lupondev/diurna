@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
           continue
         }
 
-        let parsed: { title?: string; content?: string; excerpt?: string; seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }; tags?: string[] }
+        let parsed: { title?: string; content?: string; excerpt?: string; seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }; tags?: string[]; entities?: { name: string; type?: string; slug?: string }[] }
         try {
           let cleaned = ai.text.trim()
           if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
@@ -266,13 +266,19 @@ export async function GET(req: NextRequest) {
           metaDescription: parsed.seo?.metaDescription || parsed.excerpt || '',
         }, site.id, baseSlug)
 
-        if (parsed.tags?.length) {
-          for (const tagName of parsed.tags.slice(0, 5)) {
+        const aiTags: string[] = (parsed.tags || []).concat(
+          (parsed.entities || []).map((e: { name: string }) => e.name)
+        )
+        const uniqueTags = Array.from(new Set(aiTags.filter(Boolean).map((t: string) => t.trim())))
+        for (const tagName of uniqueTags.slice(0, 10)) {
+          try {
             const tagSlug = slugify(tagName)
             if (!tagSlug) continue
             let tag = await prisma.tag.findFirst({ where: { siteId: site.id, slug: tagSlug } })
             if (!tag) tag = await prisma.tag.create({ data: { siteId: site.id, name: tagName, slug: tagSlug } })
             await prisma.articleTag.create({ data: { articleId: article.id, tagId: tag.id } }).catch(() => {})
+          } catch (err) {
+            console.error(`Tag creation failed for "${tagName}":`, err)
           }
         }
 
@@ -343,7 +349,7 @@ export async function GET(req: NextRequest) {
       const ai = await generateContent({ system: promptData.system, prompt: promptData.prompt, maxTokens, temperature: 0.3 })
       await systemLog('info', 'autopilot', `Normal: AI success ${ai.model}`, { tokensIn: ai.tokensIn, tokensOut: ai.tokensOut })
 
-      let parsed: { title?: string; content?: string; excerpt?: string; seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }; tags?: string[] }
+      let parsed: { title?: string; content?: string; excerpt?: string; seo?: { slug?: string; metaTitle?: string; metaDescription?: string; keywords?: string[] }; tags?: string[]; entities?: { name: string; type?: string; slug?: string }[] }
       try {
         let cleaned = ai.text.trim()
         if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
@@ -418,13 +424,19 @@ export async function GET(req: NextRequest) {
         metaDescription: parsed.seo?.metaDescription || parsed.excerpt || '',
       }, site.id, baseSlug)
 
-      if (parsed.tags?.length) {
-        for (const tagName of parsed.tags.slice(0, 5)) {
+      const aiTags: string[] = (parsed.tags || []).concat(
+        (parsed.entities || []).map((e: { name: string }) => e.name)
+      )
+      const uniqueTags = Array.from(new Set(aiTags.filter(Boolean).map((t: string) => t.trim())))
+      for (const tagName of uniqueTags.slice(0, 10)) {
+        try {
           const tagSlug = slugify(tagName)
           if (!tagSlug) continue
           let tag = await prisma.tag.findFirst({ where: { siteId: site.id, slug: tagSlug } })
           if (!tag) tag = await prisma.tag.create({ data: { siteId: site.id, name: tagName, slug: tagSlug } })
           await prisma.articleTag.create({ data: { articleId: article.id, tagId: tag.id } }).catch(() => {})
+        } catch (err) {
+          console.error(`Tag creation failed for "${tagName}":`, err)
         }
       }
 
