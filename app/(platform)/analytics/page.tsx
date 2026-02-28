@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { formatDateTime } from '@/lib/utils'
 import './analytics.css'
 
@@ -46,6 +47,36 @@ type WidgetStats = {
   byDevice: { device: string; count: number }[]
 }
 
+type AdvancedData = {
+  contentQuality: {
+    totalArticles: number
+    avgWordCount: number
+    imageRate: number
+    tagRate: number
+    excerptRate: number
+    wordCountDistribution: { range: string; count: number }[]
+  }
+  autopilotPerformance: {
+    successRate: number
+    hourHeatmap: { hour: number; count: number }[]
+    dailyTrend: { date: string; count: number; ai: number; manual: number }[]
+    topCategories: { name: string; count: number }[]
+  }
+  entityAnalytics: {
+    avgTagsPerArticle: number
+    untaggedArticles: number
+    topTags: { name: string; slug: string; count: number }[]
+  }
+  sourcePerformance: {
+    totalSources: number
+    activeSources: number
+    staleSourcesCount: number
+    staleSources: { name: string; lastFetch: string }[]
+    topClusters: { title: string; dis: number; itemCount: number }[]
+  }
+  period: string
+}
+
 const eventLabels: Record<string, { label: string; icon: string; color: string }> = {
   widget_view: { label: 'Widget Views', icon: '👁️', color: 'var(--elec)' },
   poll_vote: { label: 'Poll Votes', icon: '🗳️', color: 'var(--mint)' },
@@ -68,15 +99,22 @@ function changeLabel(pct: number): { text: string; dir: 'up' | 'down' | 'flat' }
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState<Period>('week')
   const [stats, setStats] = useState<StatsData | null>(null)
+  const [advanced, setAdvanced] = useState<AdvancedData | null>(null)
   const [widgetStats, setWidgetStats] = useState<WidgetStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/analytics/stats?period=${period}`)
-      .then(r => r.json() as Promise<StatsData>)
-      .then(data => { setStats(data); setLoading(false) })
-      .catch(() => setLoading(false))
+    Promise.all([
+      fetch(`/api/analytics/stats?period=${period}`).then(r => r.json() as Promise<StatsData>),
+      fetch(`/api/analytics/advanced?period=${period}`).then(r => r.json() as Promise<AdvancedData | { error?: string }>),
+    ])
+      .then(([statsData, advancedData]) => {
+        setStats(statsData)
+        setAdvanced((advancedData as AdvancedData)?.contentQuality ? (advancedData as AdvancedData) : null)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [period])
 
   useEffect(() => {
@@ -242,6 +280,229 @@ export default function AnalyticsPage() {
               </div>
             )}
           </div>
+
+          {/* Advanced Analytics — 4 new sections */}
+          {advanced && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24, marginTop: 24 }}>
+              {/* Section 1: Content Quality Score */}
+              <div className="an-chart">
+                <div className="an-chart-head">
+                  <div className="an-chart-title">📊 Content Quality Score</div>
+                </div>
+                {(() => {
+                  const cq = advanced.contentQuality
+                  const score = Math.round(
+                    (cq.imageRate * 0.3) +
+                    (cq.tagRate * 0.3) +
+                    (Math.min(cq.avgWordCount / 400, 1) * 100 * 0.3) +
+                    (cq.excerptRate * 0.1)
+                  )
+                  const scoreColor = score > 70 ? '#00D4AA' : score >= 40 ? '#F59E0B' : '#EF4444'
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 16 }}>
+                        <div style={{
+                          width: 72, height: 72, borderRadius: '50%',
+                          background: `conic-gradient(${scoreColor} ${score * 3.6}deg, var(--g200) 0deg)`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--wh)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: scoreColor }}>
+                            {score}
+                          </div>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ height: 8, background: 'var(--g100)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
+                            <div style={{ height: '100%', width: `${score}%`, background: scoreColor, borderRadius: 4, transition: 'width .4s' }} />
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, fontSize: 11, color: 'var(--g500)' }}>
+                            <span>Avg {cq.avgWordCount} words</span>
+                            <span>Image {cq.imageRate}%</span>
+                            <span>Tag {cq.tagRate}%</span>
+                            <span>Excerpt {cq.excerptRate}%</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 12 }}>
+                        {cq.wordCountDistribution.map(d => (
+                          <div key={d.range} className="an-source" style={{ padding: '6px 0' }}>
+                            <div className="an-source-name" style={{ width: 70, fontSize: 11 }}>{d.range}</div>
+                            <div className="an-source-track">
+                              <div className="an-source-fill" style={{
+                                width: `${Math.round((d.count / (cq.totalArticles || 1)) * 100)}%`,
+                                background: 'var(--elec)',
+                              }}>{d.count}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+
+              {/* Section 2: Autopilot Performance */}
+              <div className="an-chart">
+                <div className="an-chart-head">
+                  <div className="an-chart-title">🤖 Autopilot Performance</div>
+                </div>
+                {(() => {
+                  const ap = advanced.autopilotPerformance
+                  const sr = ap.successRate
+                  const srColor = sr >= 80 ? '#00D4AA' : sr >= 50 ? '#F59E0B' : '#EF4444'
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+                        <div style={{
+                          width: 64, height: 64, borderRadius: '50%',
+                          background: `conic-gradient(${srColor} ${sr * 3.6}deg, var(--g200) 0deg)`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--wh)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: srColor }}>
+                            {sr}%
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 11, color: 'var(--g500)' }}>AI success rate</span>
+                      </div>
+                      <div style={{ marginBottom: 12, fontSize: 11, fontWeight: 700, color: 'var(--g600)' }}>Daily trend (7 days)</div>
+                      <div className="an-bars" style={{ height: 100 }}>
+                        {ap.dailyTrend.map(d => {
+                          const max = Math.max(...ap.dailyTrend.map(x => x.count), 1)
+                          return (
+                            <div key={d.date} className="an-bar-col" title={`${d.date}: ${d.count} (AI: ${d.ai}, Manual: ${d.manual})`}>
+                              <div className="an-bar views" style={{ height: `${Math.round((d.ai / max) * 100)}%` }} />
+                              <div className="an-bar visitors" style={{ height: `${Math.round((d.manual / max) * 100)}%` }} />
+                              <div className="an-bar-label">{formatDay(d.date)}</div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div style={{ marginTop: 12, fontSize: 11, fontWeight: 700, color: 'var(--g600)' }}>Publishing heatmap (24h)</div>
+                      <div style={{ display: 'flex', gap: 2, marginTop: 6 }}>
+                        {ap.hourHeatmap.map(h => {
+                          const max = Math.max(...ap.hourHeatmap.map(x => x.count), 1)
+                          const opacity = 0.2 + (h.count / max) * 0.8
+                          return (
+                            <div key={h.hour} title={`${h.hour}:00 — ${h.count} articles`} style={{
+                              flex: 1, height: 24, background: `rgba(37, 99, 235, ${opacity})`, borderRadius: 2,
+                            }} />
+                          )
+                        })}
+                      </div>
+                      {ap.topCategories.length > 0 && (
+                        <>
+                          <div style={{ marginTop: 12, fontSize: 11, fontWeight: 700, color: 'var(--g600)' }}>Top categories (AI)</div>
+                          {ap.topCategories.slice(0, 5).map(c => {
+                            const catMax = Math.max(...ap.topCategories.map(x => x.count), 1)
+                            return (
+                              <div key={c.name} className="an-source" style={{ padding: '4px 0' }}>
+                                <div className="an-source-name" style={{ width: 100, fontSize: 11 }}>{c.name}</div>
+                                <div className="an-source-track">
+                                  <div className="an-source-fill" style={{
+                                    width: `${Math.round((c.count / catMax) * 100)}%`,
+                                    background: 'var(--mint)',
+                                  }}>{c.count}</div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </>
+                      )}
+                    </>
+                  )
+                })()}
+              </div>
+
+              {/* Section 3: Tag & Entity Coverage */}
+              <div className="an-chart">
+                <div className="an-chart-head">
+                  <div className="an-chart-title">🏷️ Tag & Entity Coverage</div>
+                </div>
+                {(() => {
+                  const ea = advanced.entityAnalytics
+                  return (
+                    <>
+                      <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+                        <div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--elec)' }}>{ea.avgTagsPerArticle}</div>
+                          <div style={{ fontSize: 11, color: 'var(--g500)' }}>Avg tags/article</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: ea.untaggedArticles > 0 ? '#EF4444' : 'var(--g600)' }}>{ea.untaggedArticles}</div>
+                          <div style={{ fontSize: 11, color: 'var(--g500)' }}>Untagged</div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--g600)', marginBottom: 8 }}>Top tags</div>
+                      {ea.topTags.slice(0, 10).map(t => (
+                        <div key={t.slug || t.name} className="an-source" style={{ padding: '6px 0' }}>
+                          {t.slug ? (
+                            <Link href={`/tag/${t.slug}`} className="an-source-name" style={{ width: 120, fontSize: 12, color: 'var(--elec)', textDecoration: 'none' }}>
+                              {t.name}
+                            </Link>
+                          ) : (
+                            <span className="an-source-name" style={{ width: 120, fontSize: 12, color: 'var(--g600)' }}>{t.name}</span>
+                          )}
+                          <div className="an-source-track">
+                            <div className="an-source-fill" style={{
+                              width: `${ea.topTags[0] ? Math.round((t.count / ea.topTags[0].count) * 100) : 0}%`,
+                              background: '#2563EB',
+                            }}>{t.count}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )
+                })()}
+              </div>
+
+              {/* Section 4: Source Health */}
+              <div className="an-chart">
+                <div className="an-chart-head">
+                  <div className="an-chart-title">📡 Source Health</div>
+                </div>
+                {(() => {
+                  const sp = advanced.sourcePerformance
+                  return (
+                    <>
+                      <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+                        <div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--g800)' }}>{sp.activeSources}/{sp.totalSources}</div>
+                          <div style={{ fontSize: 11, color: 'var(--g500)' }}>Active sources</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: sp.staleSourcesCount > 0 ? '#F59E0B' : 'var(--g600)' }}>{sp.staleSourcesCount}</div>
+                          <div style={{ fontSize: 11, color: 'var(--g500)' }}>Stale (24h+)</div>
+                        </div>
+                      </div>
+                      {sp.staleSources.length > 0 && (
+                        <>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--g600)', marginBottom: 6 }}>Stale sources</div>
+                          <div style={{ marginBottom: 12, fontSize: 11, color: 'var(--g500)' }}>
+                            {sp.staleSources.map(s => {
+                              const last = s.lastFetch === 'Never' ? null : new Date(s.lastFetch)
+                              const ago = last ? Math.round((Date.now() - last.getTime()) / (60 * 60 * 1000)) : null
+                              return (
+                                <div key={s.name} style={{ padding: '4px 0' }}>
+                                  {s.name} — {s.lastFetch === 'Never' ? 'Never' : `${ago}h ago`}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </>
+                      )}
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--g600)', marginBottom: 6 }}>Top story clusters</div>
+                      {sp.topClusters.map((c, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--g100)' }}>
+                          <span style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: 'var(--elec-l)', color: 'var(--elec)' }}>{c.dis}</span>
+                          <span style={{ fontSize: 10, color: 'var(--g500)' }}>{c.itemCount} src</span>
+                        </div>
+                      ))}
+                    </>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
 
           {/* Autopilot Stats */}
           {stats?.autopilot && (
