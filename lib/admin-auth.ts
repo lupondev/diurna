@@ -18,11 +18,13 @@ export async function requireAdmin(allowedRoles: string[] = ['OWNER', 'ADMIN']) 
   })
 
   // Case-insensitive role check + fallback to session role
-  const memberRole = membership?.role?.toUpperCase() || ''
-  const sessionRole = ((session.user as Record<string, unknown>).role as string || '').toUpperCase()
+  const memberRole = membership?.role ? membership.role.toUpperCase() : ''
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sessionRole = typeof (session.user as any).role === 'string' ? ((session.user as any).role as string).toUpperCase() : ''
   const effectiveRole = memberRole || sessionRole
 
-  if (!effectiveRole || !allowedRoles.map(r => r.toUpperCase()).includes(effectiveRole)) {
+  const allowedUpper = allowedRoles.map(r => r.toUpperCase())
+  if (!effectiveRole || !allowedUpper.includes(effectiveRole)) {
     return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }), session: null, orgId: '' }
   }
 
