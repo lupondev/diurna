@@ -21,6 +21,7 @@ type SiteRow = {
   theme: string
   createdAt: string
   articleCount: number
+  deletedAt?: string | null
 }
 
 function slugFromName(name: string): string {
@@ -43,13 +44,17 @@ export default function SitesTab() {
   const [formLanguage, setFormLanguage] = useState('bs')
   const [formTimezone, setFormTimezone] = useState('Europe/Sarajevo')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [showDeleted, setShowDeleted] = useState(false)
+  const [deletedSites, setDeletedSites] = useState<SiteRow[]>([])
+  const [loadingDeleted, setLoadingDeleted] = useState(false)
+  const [recoveringId, setRecoveringId] = useState<string | null>(null)
 
-  const loadSites = useCallback(async () => {
+  const loadSites = useCallback(async (includeDeleted = false) => {
     setLoading(true)
     setError(null)
     try {
       const [sitesRes, currentRes] = await Promise.all([
-        fetch('/api/sites'),
+        fetch(includeDeleted ? '/api/sites?includeDeleted=true' : '/api/sites'),
         fetch('/api/site'),
       ])
       if (!sitesRes.ok) throw new Error('Failed to load sites')
@@ -61,7 +66,8 @@ export default function SitesTab() {
         // Don't treat /api/site failure as an error — 404 just means no active badge
       }
       const data = (await sitesRes.json()) as { sites?: SiteRow[] }
-      setSites(data.sites ?? [])
+      const list = data.sites ?? []
+      setSites(includeDeleted ? list.filter((s) => s.deletedAt === null) : list)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load sites')
       setSites([])
@@ -73,6 +79,45 @@ export default function SitesTab() {
   useEffect(() => {
     loadSites()
   }, [loadSites])
+
+  useEffect(() => {
+    if (showDeleted) {
+      setLoadingDeleted(true)
+      fetch('/api/sites?includeDeleted=true')
+        .then((r) => r.json() as Promise<{ sites?: SiteRow[] }>)
+        .then((data) => {
+          const list = data.sites ?? []
+          setDeletedSites(list.filter((s) => s.deletedAt !== null))
+        })
+        .catch(() => setDeletedSites([]))
+        .finally(() => setLoadingDeleted(false))
+    }
+  }, [showDeleted])
+
+  const handleRecover = async (siteId: string) => {
+    setRecoveringId(siteId)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/recover-sites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteId }),
+        credentials: 'include',
+      })
+      const data = (await res.json()) as { error?: string }
+      if (!res.ok) {
+        setError(data.error || 'Failed to recover site')
+        return
+      }
+      setDeletedSites((prev) => prev.filter((s) => s.id !== siteId))
+      loadSites()
+      toast.success('Site recovered successfully')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to recover site')
+    } finally {
+      setRecoveringId(null)
+    }
+  }
 
   const handleAddClick = () => {
     setShowForm(true)
@@ -138,9 +183,13 @@ export default function SitesTab() {
         return
       }
       setDeleteConfirmId(null)
-      toast.success('Site removed')
-      setSites((prev) => prev.filter((s) => s.id !== siteId))
-      loadSites()
+      const wasCurrentSite = currentSiteId === siteId
+      const remaining = sites.filter((s) => s.id !== siteId)
+      setSites(remaining)
+      if (wasCurrentSite && remaining.length > 0) {
+        setCurrentSiteId(remaining[0].id)
+      }
+      toast.success('Site deleted successfully')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete site')
       setDeleteConfirmId(null)
@@ -218,6 +267,53 @@ export default function SitesTab() {
               </div>
             </div>
           ))}
+
+          <div style={{ marginTop: 16 }}>
+            <button
+              type="button"
+              className="st-fb-reconnect"
+              style={{ padding: '6px 12px', fontSize: 12 }}
+              onClick={() => setShowDeleted((v) => !v)}
+            >
+              {showDeleted ? 'Hide deleted sites' : 'Show deleted sites'}
+            </button>
+          </div>
+
+          {showDeleted && (
+            <div className="st-card" style={{ marginTop: 16 }}>
+              <div className="st-card-head">
+                <div className="st-card-title">Recover Deleted Sites</div>
+              </div>
+              <div className="st-card-desc">Sites that were soft-deleted. Recover to restore them.</div>
+              {loadingDeleted ? (
+                <p style={{ color: 'var(--g500)', fontSize: 13, padding: 12 }}>Loading…</p>
+              ) : deletedSites.length === 0 ? (
+                <p style={{ color: 'var(--g500)', fontSize: 13, padding: 12 }}>No deleted sites</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                  {deletedSites.map((site) => (
+                    <div key={site.id} className="st-card" style={{ marginBottom: 0, opacity: 0.85 }}>
+                      <div className="st-card-head" style={{ marginBottom: 4 }}>
+                        <div className="st-card-title">{site.domain || site.slug}</div>
+                        <button
+                          type="button"
+                          className="st-fb-connect-btn"
+                          style={{ padding: '6px 12px', fontSize: 11 }}
+                          onClick={() => handleRecover(site.id)}
+                          disabled={recoveringId === site.id}
+                        >
+                          {recoveringId === site.id ? 'Recovering…' : 'Recover'}
+                        </button>
+                      </div>
+                      <div className="st-card-desc" style={{ marginBottom: 0 }}>
+                        {site.name} · {site.articleCount} articles
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {!showForm && (
             <button type="button" className="st-comp-add" onClick={handleAddClick}>

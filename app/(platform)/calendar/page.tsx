@@ -213,6 +213,7 @@ export default function CalendarPage() {
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
   const tlDayRef = useRef<HTMLDivElement | null>(null)
+  const hasScrolledToFirstRef = useRef(false)
 
   /* ── Data fetching ── */
   const loadConfig = useCallback(() => {
@@ -242,7 +243,7 @@ export default function CalendarPage() {
   useEffect(() => {
     fetch(`/api/autopilot/timeline?date=${toDateStr(tlDate)}`, { credentials: 'include' })
       .then(r => r.json() as Promise<{ articles?: TlArticle[]; matches?: TlMatch[] }>)
-      .then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []) })
+      .then(d => { setTlArticles(d.articles || []); setTlMatches(d.matches || []); hasScrolledToFirstRef.current = false })
       .catch(() => {})
   }, [tlDate])
 
@@ -703,6 +704,29 @@ export default function CalendarPage() {
   )
 
   const totalRealSlots = tlArticles.length + tlMatches.length
+
+  // Day view: auto-scroll to first article after load or panel toggle
+  useEffect(() => {
+    if (tlView !== 'Day' || totalRealSlots === 0) return
+    hasScrolledToFirstRef.current = false
+  }, [configOpen])
+
+  useEffect(() => {
+    if (tlView !== 'Day' || totalRealSlots === 0) return
+    const scrollToFirst = () => {
+      requestAnimationFrame(() => {
+        const first = document.querySelector('[data-article-time]') ||
+          document.querySelector('.cal-tl-card, .cal-tl-gap')
+        if (first) {
+          first.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          hasScrolledToFirstRef.current = true
+        }
+      })
+    }
+    if (!hasScrolledToFirstRef.current) {
+      scrollToFirst()
+    }
+  }, [tlView, totalRealSlots, tlArticles.length, configOpen])
 
   if (!config) return <div className="cal-page"><div style={{ padding: 40, textAlign: 'center', color: '#A1A1AA' }}>Loading configuration...</div></div>
 
@@ -1178,36 +1202,43 @@ export default function CalendarPage() {
             </div>
           )}
 
-          {hours.map(h => {
-            const rowSlots = slotsByHour[h] || []
-            if (rowSlots.length === 0) return (
-              <div key={h} className="cal-tl-row" data-hour={h}>
-                <div className="cal-tl-time">{String(h).padStart(2, '0')}:00</div>
-                <div className="cal-tl-content" />
-              </div>
-            )
-            return (
-              <div key={h} className="cal-tl-row" data-hour={h}>
-                <div className="cal-tl-time">{String(h).padStart(2, '0')}:00</div>
-                <div className="cal-tl-content">
-                  {rowSlots.map(slot => {
-                    if (slot.isGap) {
+          {(() => {
+            let firstArticleFound = false
+            return hours.map(h => {
+              const rowSlots = slotsByHour[h] || []
+              if (rowSlots.length === 0) return (
+                <div key={h} className="cal-tl-row" data-hour={h}>
+                  <div className="cal-tl-time">{String(h).padStart(2, '0')}:00</div>
+                  <div className="cal-tl-content" />
+                </div>
+              )
+              return (
+                <div key={h} className="cal-tl-row" data-hour={h}>
+                  <div className="cal-tl-time">{String(h).padStart(2, '0')}:00</div>
+                  <div className="cal-tl-content">
+                    {rowSlots.map(slot => {
+                      if (slot.isGap) {
+                        const isFirst = !firstArticleFound
+                        if (isFirst) firstArticleFound = true
+                        return (
+                          <div key={slot.id} className="cal-tl-gap" {...(isFirst ? { 'data-article-time': 'true' } : {})}>
+                            <span style={{ fontSize: 14 }}>⚠️</span>
+                            <span className="cal-tl-gap-text">{slot.title}</span>
+                          </div>
+                        )
+                      }
+                      const catClass = slot.catSlug ? `cat-${slot.catSlug}` : ''
+                      const extraClass = slot.isMatch ? 'match' : slot.isLive ? 'live' : ''
+                      const isFirst = !firstArticleFound
+                      if (isFirst) firstArticleFound = true
                       return (
-                        <div key={slot.id} className="cal-tl-gap">
-                          <span style={{ fontSize: 14 }}>⚠️</span>
-                          <span className="cal-tl-gap-text">{slot.title}</span>
-                        </div>
-                      )
-                    }
-                    const catClass = slot.catSlug ? `cat-${slot.catSlug}` : ''
-                    const extraClass = slot.isMatch ? 'match' : slot.isLive ? 'live' : ''
-                    return (
-                      <div
-                        key={slot.id}
-                        className={`cal-tl-card ${catClass} ${extraClass}`}
-                        style={{ cursor: slot.isMatch ? 'default' : 'pointer' }}
-                        onClick={() => { if (!slot.isMatch) router.push(`/editor/${slot.id}`) }}
-                      >
+                        <div
+                          key={slot.id}
+                          className={`cal-tl-card ${catClass} ${extraClass}`}
+                          style={{ cursor: slot.isMatch ? 'default' : 'pointer' }}
+                          onClick={() => { if (!slot.isMatch) router.push(`/editor/${slot.id}`) }}
+                          {...(isFirst ? { 'data-article-time': 'true' } : {})}
+                        >
                         <div className="cal-tl-card-body">
                           <div className="cal-tl-card-title">{slot.title}</div>
                           <div className="cal-tl-card-meta">
@@ -1226,7 +1257,8 @@ export default function CalendarPage() {
                 </div>
               </div>
             )
-          })}
+          })
+          })()}
         </div>
       )}
 

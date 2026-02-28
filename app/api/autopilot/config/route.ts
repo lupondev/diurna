@@ -17,7 +17,7 @@ const DEFAULT_LEAGUES = [
   { name: 'La Liga', apiFootballId: 140, flag: '🇪🇸', weight: 25 },
   { name: 'Champions League', apiFootballId: 2, flag: '🏆', weight: 20 },
   { name: 'Serie A', apiFootballId: 135, flag: '🇮🇹', weight: 12 },
-  { name: 'Premijer Liga BiH', apiFootballId: 210, flag: '🇧🇦', weight: 8 },
+  { name: 'Premijer Liga BiH', apiFootballId: 262, flag: '🇧🇦', weight: 8 },
   { name: 'HNL', apiFootballId: 210, flag: '🇭🇷', weight: 5 },
 ]
 

@@ -172,6 +172,28 @@ export async function GET(req: NextRequest) {
       where.isTest = true
     }
 
+    const fromParam = searchParams.get('from')
+    const toParam = searchParams.get('to')
+    if (fromParam || toParam) {
+      const dateFilter: Record<string, Date> = {}
+      if (fromParam) {
+        const fromDate = new Date(fromParam)
+        if (!isNaN(fromDate.getTime())) dateFilter.gte = fromDate
+      }
+      if (toParam) {
+        const toDate = new Date(toParam)
+        if (!isNaN(toDate.getTime())) dateFilter.lte = toDate
+      }
+      if (Object.keys(dateFilter).length > 0) {
+        where.publishedAt = dateFilter
+      }
+    }
+
+    const siteIdParam = searchParams.get('siteId')
+    if (siteIdParam) {
+      where.siteId = siteIdParam
+    }
+
     const [articles, total] = await Promise.all([
       prisma.article.findMany({
         where,
