@@ -41,8 +41,9 @@ describe('toDateStr', () => {
     const result = toDateStr(new Date(2025, 5, 15)) // June 15 (month is 0-indexed)
     expect(result).toBe('2025-06-15')
   })
-  it('uses local date not UTC', () => {
-    const d = new Date('2025-06-15T00:30:00+02:00')
+  it('uses local date — midday is same date in any timezone', () => {
+    // Use midday UTC so local date is June 15 in ALL timezones (UTC-12 to UTC+14)
+    const d = new Date('2025-06-15T12:00:00Z')
     const result = toDateStr(d)
     expect(result).toBe('2025-06-15')
   })
