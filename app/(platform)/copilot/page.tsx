@@ -284,6 +284,13 @@ export default function CopilotPage() {
       .catch(() => {})
   }, [])
 
+  const refreshQueue = useCallback(() => {
+    fetch('/api/copilot/queue', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() as Promise<QueueItem[]> : null))
+      .then((data) => { if (data) setQueue(data) })
+      .catch(() => {})
+  }, [])
+
   const handleRunNow = useCallback(async () => {
     setRunningNow(true)
     try {
@@ -293,18 +300,21 @@ export default function CopilotPage() {
         toast.error(data.reason || data.error || 'Request failed')
       } else if (data.action === 'generated' && data.article) {
         toast.success(`✅ Generisano: ${data.article.title}`)
-        refreshStats()
       } else if (data.action === 'skipped' || data.action === 'error') {
         toast.error(data.reason || (data.action === 'error' ? 'Generation error' : 'No stories available'))
       } else {
         toast(data.reason || 'No action taken', { icon: 'ℹ️' })
       }
+      refreshStats()
+      refreshQueue()
     } catch {
       toast.error('Failed to run autopilot')
+      refreshStats()
+      refreshQueue()
     } finally {
       setRunningNow(false)
     }
-  }, [refreshStats])
+  }, [refreshStats, refreshQueue])
 
   const saveStrategy = useCallback(async () => {
     setSaveFlash('saving')
