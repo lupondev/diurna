@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { getMiniWidget } from '../widgets/shared-mini-widgets'
+import '../widgets/widgets.css'
 import './widget-creator.css'
 
 type Template = { id: string; icon: string; name: string; desc: string }
 type MatchOption = { id: string; icon: string; name: string; meta: string; type: 'match' | 'league' }
-type WidgetTheme = 'light' | 'dark' | 'transparent' | 'custom'
+type WidgetTheme = 'light' | 'dark' | 'glass' | 'custom'
 
 type ApiMatch = {
   fixture: { id: number; date: string; status: { short: string } }
@@ -74,130 +76,22 @@ function matchToOption(m: ApiMatch): MatchOption {
   }
 }
 
-function LiveScoreWidget({ theme, accentColor }: { theme: WidgetTheme; accentColor: string }) {
-  const isDark = theme === 'dark'
-  const isTransparent = theme === 'transparent'
-  const bg = isDark ? '#1a1a2e' : isTransparent ? 'rgba(255,255,255,.85)' : '#fff'
-  const textColor = isDark ? '#fff' : 'var(--g900)'
-  return (
-    <div style={{ background: bg, borderRadius: 14, overflow: 'hidden', fontFamily: 'var(--sans)', border: isTransparent ? '1px solid rgba(0,0,0,.1)' : 'none' }}>
-      <div style={{ height: 3, background: accentColor }} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,.1)' : 'var(--g100)'}` }}>
-        <span style={{ fontSize: 9, fontWeight: 700, color: isDark ? 'rgba(255,255,255,.5)' : 'var(--g400)', textTransform: 'uppercase', letterSpacing: '.04em' }}>Diurna</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 6px', background: 'var(--coral)', borderRadius: 6, fontSize: 9, fontWeight: 700, color: '#fff' }}>LIVE</span>
-      </div>
-      <div style={{ padding: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flex: 1 }}>
-            <div style={{ width: 40, height: 40, background: isDark ? 'rgba(255,255,255,.1)' : 'var(--g100)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: isDark ? '#fff' : 'var(--g600)' }}>MCI</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: textColor }}>Man City</div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 12px' }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: '1.8rem', fontWeight: 800, color: textColor, letterSpacing: 3 }}>2 - 1</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--coral)' }}>67&apos;</div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flex: 1 }}>
-            <div style={{ width: 40, height: 40, background: isDark ? 'rgba(255,255,255,.1)' : 'var(--g100)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: isDark ? '#fff' : 'var(--g600)' }}>LIV</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: textColor }}>Liverpool</div>
-          </div>
-        </div>
-      </div>
-      <div style={{ padding: '6px 14px', textAlign: 'center', fontSize: 9, color: isDark ? 'rgba(255,255,255,.3)' : 'var(--g400)', background: isDark ? 'rgba(255,255,255,.03)' : 'var(--g50)' }}>
-        Powered by <span style={{ color: accentColor, fontWeight: 700 }}>Diurna</span>
-      </div>
-    </div>
-  )
-}
-
-function StandingsWidget({ theme, accentColor }: { theme: WidgetTheme; accentColor: string }) {
-  const isDark = theme === 'dark'
-  const isTransparent = theme === 'transparent'
-  const bg = isDark ? '#1a1a2e' : isTransparent ? 'rgba(255,255,255,.85)' : '#fff'
-  const textColor = isDark ? '#fff' : 'var(--g900)'
-  const teams = [
-    { pos: 1, name: 'Arsenal', pts: 73 },
-    { pos: 2, name: 'Man City', pts: 70 },
-    { pos: 3, name: 'Liverpool', pts: 68 },
-    { pos: 4, name: 'Tottenham', pts: 60 },
-    { pos: 5, name: 'Chelsea', pts: 55 },
-  ]
-  return (
-    <div style={{ background: bg, borderRadius: 14, overflow: 'hidden', fontFamily: 'var(--sans)', border: isTransparent ? '1px solid rgba(0,0,0,.1)' : 'none' }}>
-      <div style={{ height: 3, background: accentColor }} />
-      <div style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,.1)' : 'var(--g100)'}` }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: textColor }}>Premier League 2025/26</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: isDark ? 'rgba(255,255,255,.4)' : 'var(--g400)' }}>Diurna</span>
-      </div>
-      <div style={{ padding: '4px 0' }}>
-        {teams.map((t) => (
-          <div key={t.pos} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 36px', gap: 8, padding: '7px 12px', alignItems: 'center', fontSize: 11 }}>
-            <div style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: accentColor, color: '#fff', fontWeight: 800, borderRadius: 4, fontSize: 10 }}>{t.pos}</div>
-            <div style={{ fontWeight: 600, color: textColor }}>{t.name}</div>
-            <div style={{ fontFamily: 'var(--mono)', fontWeight: 800, color: textColor, textAlign: 'center' }}>{t.pts}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ padding: '6px 14px', textAlign: 'center', fontSize: 9, color: isDark ? 'rgba(255,255,255,.3)' : 'var(--g400)', background: isDark ? 'rgba(255,255,255,.03)' : 'var(--g50)' }}>
-        Powered by <span style={{ color: accentColor, fontWeight: 700 }}>Diurna</span>
-      </div>
-    </div>
-  )
-}
-
-function PollWidget({ theme, accentColor }: { theme: WidgetTheme; accentColor: string }) {
-  const isDark = theme === 'dark'
-  const isTransparent = theme === 'transparent'
-  const bg = isDark ? '#1a1a2e' : isTransparent ? 'rgba(255,255,255,.85)' : '#fff'
-  const textColor = isDark ? '#fff' : 'var(--g900)'
-  return (
-    <div style={{ background: bg, borderRadius: 14, overflow: 'hidden', fontFamily: 'var(--sans)', border: isTransparent ? '1px solid rgba(0,0,0,.1)' : 'none' }}>
-      <div style={{ height: 3, background: accentColor }} />
-      <div style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,.1)' : 'var(--g100)'}` }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: textColor }}>Fan Poll</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: isDark ? 'rgba(255,255,255,.4)' : 'var(--g400)' }}>Diurna</span>
-      </div>
-      <div style={{ padding: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: textColor, marginBottom: 12 }}>Who will win El Clasico?</div>
-        {['Real Madrid — 45%', 'Barcelona — 35%', 'Draw — 20%'].map((o) => (
-          <div key={o} style={{ padding: '10px 12px', background: isDark ? 'rgba(255,255,255,.06)' : 'var(--g50)', borderRadius: 'var(--rm)', marginBottom: 8, fontSize: 12, fontWeight: 600, color: isDark ? 'rgba(255,255,255,.8)' : 'var(--g700)' }}>
-            {o}
-          </div>
-        ))}
-        <div style={{ textAlign: 'center', fontSize: 11, color: isDark ? 'rgba(255,255,255,.4)' : 'var(--g500)', marginTop: 8 }}>12,847 votes</div>
-      </div>
-      <div style={{ padding: '6px 14px', textAlign: 'center', fontSize: 9, color: isDark ? 'rgba(255,255,255,.3)' : 'var(--g400)', background: isDark ? 'rgba(255,255,255,.03)' : 'var(--g50)' }}>
-        Powered by <span style={{ color: accentColor, fontWeight: 700 }}>Diurna</span>
-      </div>
-    </div>
-  )
-}
-
-const previewMap: Record<string, (props: { theme: WidgetTheme; accentColor: string }) => React.JSX.Element> = {
-  'live-score': LiveScoreWidget,
-  'standings': StandingsWidget,
-  'h2h': LiveScoreWidget,
-  'match-center': LiveScoreWidget,
-  'top-scorers': StandingsWidget,
-  'team-form': StandingsWidget,
-  'player-card': LiveScoreWidget,
-  'prediction': LiveScoreWidget,
-  'match-prediction': PollWidget,
-  'motm': PollWidget,
-  'opinion': PollWidget,
-  'rating': PollWidget,
-  'trivia': PollWidget,
-  'guess-player': PollWidget,
-  'predict-score': PollWidget,
-  'fan-survey': PollWidget,
-  'transfer-pick': PollWidget,
+const templateToPreviewId: Record<string, string> = {
+  'live-score': 'live-score', 'standings': 'standings', 'h2h': 'h2h', 'match-center': 'match-center',
+  'top-scorers': 'top-scorers', 'team-form': 'team-form', 'player-card': 'player-card', 'prediction': 'prediction',
+  'match-prediction': 'poll', 'motm': 'poll', 'opinion': 'poll', 'rating': 'poll',
+  'trivia': 'quiz', 'guess-player': 'quiz', 'predict-score': 'quiz',
+  'fan-survey': 'survey', 'transfer-pick': 'survey',
 }
 
 const themeOptions: { id: WidgetTheme; label: string; icon: string }[] = [
   { id: 'light', label: 'Light', icon: '☀' },
   { id: 'dark', label: 'Dark', icon: '🌙' },
-  { id: 'transparent', label: 'Glass', icon: '◻' },
+  { id: 'glass', label: 'Glass', icon: '◻' },
   { id: 'custom', label: 'Custom', icon: '🎨' },
 ]
+
+const ACCENT_PRESETS = ['#00D4AA', '#5B5FFF', '#F43F5E', '#F59E0B', '#1877F2']
 
 export default function WidgetCreatorPage() {
   const [category, setCategory] = useState('football')
@@ -246,7 +140,8 @@ export default function WidgetCreatorPage() {
     })
   }
 
-  const PreviewComp = selectedTpl ? previewMap[selectedTpl] : null
+  const previewId = selectedTpl ? templateToPreviewId[selectedTpl] : null
+  const livePreviewWidget = previewId ? getMiniWidget(previewId, { theme, accentColor }) : null
 
   return (
     <div className="wc-layout">
@@ -305,22 +200,23 @@ export default function WidgetCreatorPage() {
             <div className="wc-step-title">Select Match or League</div>
           </div>
           <div className="wc-search">
-            <span className="wc-search-icon">🔍</span>
+            <span className="wc-search-icon" aria-hidden>🔍</span>
             <input
               className="wc-search-input"
               placeholder="Search matches, leagues..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search matches and leagues"
             />
           </div>
           {matchesLoading ? (
-            <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--g400)' }}>Loading today&apos;s matches...</div>
+            <div className="wc-results-loading">Loading today&apos;s matches...</div>
           ) : (
             <div className="wc-results">
               {filteredMatches.map((m) => (
                 <div
                   key={m.id}
-                  className={`wc-result${selectedMatch === m.id ? ' sel' : ''}`}
+                  className={`wc-result${selectedMatch === m.id ? ' sel' : ''}${m.meta.includes('LIVE') ? ' wc-result-live' : ''}`}
                   onClick={() => setSelectedMatch(m.id)}
                 >
                   <div className="wc-result-icon">{m.icon}</div>
@@ -335,10 +231,10 @@ export default function WidgetCreatorPage() {
           )}
         </div>
 
-        <div className={`wc-step${!step3Ready ? ' disabled' : ''}`}>
+        <div className={`wc-step${!step2Ready ? ' disabled' : ''}`}>
           <div className="wc-step-label">
-            <div className="wc-step-num">3</div>
-            <div className="wc-step-title">Frame &amp; Theme</div>
+            <div className={`wc-step-num${step3Ready ? ' done' : ''}`}>{step3Ready ? '✓' : '3'}</div>
+            <div className="wc-step-title">Theme &amp; Style</div>
           </div>
           <div className="wc-config">
             <div className="wc-field">
@@ -347,6 +243,7 @@ export default function WidgetCreatorPage() {
                 {themeOptions.map((t) => (
                   <button
                     key={t.id}
+                    type="button"
                     className={`wc-theme-opt${theme === t.id ? ' act' : ''}`}
                     onClick={() => setTheme(t.id)}
                   >
@@ -359,11 +256,11 @@ export default function WidgetCreatorPage() {
             <div className="wc-field">
               <label>Accent Color</label>
               <div className="wc-accent-row">
-                <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="wc-color-input" />
+                <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="wc-color-input" aria-label="Accent color" />
                 <span className="wc-color-code">{accentColor}</span>
                 <div className="wc-accent-presets">
-                  {['#00D4AA', '#5B5FFF', '#F43F5E', '#F59E0B', '#1877F2'].map((c) => (
-                    <button key={c} className={`wc-accent-dot${accentColor === c ? ' act' : ''}`} style={{ background: c }} onClick={() => setAccentColor(c)} />
+                  {ACCENT_PRESETS.map((c) => (
+                    <button key={c} type="button" className={`wc-accent-dot${accentColor === c ? ' act' : ''}`} style={{ background: c }} onClick={() => setAccentColor(c)} aria-label={`Accent ${c}`} />
                   ))}
                 </div>
               </div>
@@ -371,27 +268,28 @@ export default function WidgetCreatorPage() {
             <div className="wc-field">
               <label>Widget Frame</label>
               <div className="wc-frame-info">
-                <div className="wc-frame-item"><span className="wc-frame-check">✓</span> Colored top accent bar</div>
-                <div className="wc-frame-item"><span className="wc-frame-check">✓</span> Publisher logo in header</div>
-                <div className="wc-frame-item"><span className="wc-frame-check">✓</span> &quot;Powered by Diurna&quot; footer</div>
+                <div className="wc-frame-item"><span className="wc-frame-check">✓</span> Accent bar</div>
+                <div className="wc-frame-item"><span className="wc-frame-check">✓</span> Publisher branding</div>
+                <div className="wc-frame-item"><span className="wc-frame-check">✓</span> Diurna footer</div>
+                <div className="wc-frame-item"><span className="wc-frame-check">✓</span> Related articles + ad slot</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="wc-preview" style={theme === 'dark' ? { background: '#0a0a1a' } : theme === 'transparent' ? { background: 'linear-gradient(135deg, #667eea, #764ba2)' } : undefined}>
+      <div className="wc-preview">
         <div className="wc-preview-head">
           <div className="wc-preview-title">Live Preview</div>
           <div className="wc-device-toggle">
-            <button className={`wc-device-btn${device === 'desktop' ? ' act' : ''}`} onClick={() => setDevice('desktop')}>🖥</button>
-            <button className={`wc-device-btn${device === 'mobile' ? ' act' : ''}`} onClick={() => setDevice('mobile')}>📱</button>
+            <button type="button" className={`wc-device-btn${device === 'desktop' ? ' act' : ''}`} onClick={() => setDevice('desktop')} aria-pressed={device === 'desktop'}>Desktop</button>
+            <button type="button" className={`wc-device-btn${device === 'mobile' ? ' act' : ''}`} onClick={() => setDevice('mobile')} aria-pressed={device === 'mobile'}>Mobile</button>
           </div>
         </div>
         <div className="wc-preview-area">
-          {PreviewComp ? (
+          {livePreviewWidget ? (
             <div className="wc-preview-widget" style={device === 'mobile' ? { maxWidth: 320 } : undefined}>
-              <PreviewComp theme={theme} accentColor={accentColor} />
+              {livePreviewWidget}
             </div>
           ) : (
             <div className="wc-preview-empty">
@@ -400,12 +298,10 @@ export default function WidgetCreatorPage() {
             </div>
           )}
         </div>
-        {step3Ready && (
-          <div className="wc-preview-actions">
-            <button className="wg-btn secondary" onClick={() => setCodeModal(true)}>Get Code</button>
-            <button className="wg-btn primary" onClick={() => setCodeModal(true)}>Publish</button>
-          </div>
-        )}
+        <div className="wc-preview-actions">
+          <button type="button" className="wg-btn secondary" onClick={() => setCodeModal(true)} disabled={!step3Ready}>Get Code</button>
+          <button type="button" className="wg-btn primary" onClick={() => step3Ready && setCodeModal(true)} disabled={!step3Ready}>Publish Widget</button>
+        </div>
       </div>
 
       {codeModal && (

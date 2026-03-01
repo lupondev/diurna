@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
+import { getMiniWidget } from './shared-mini-widgets'
 import './widgets.css'
+
+const FILTER_ALL = 'all'
+const FILTER_FOOTBALL = 'football'
+const FILTER_ENGAGEMENT = 'engagement'
+const FILTER_AI = 'ai'
 
 type Widget = {
   id: string
@@ -11,7 +17,8 @@ type Widget = {
   tag?: { label: string; cls: string }
   embedCode: string
   preview: string
-  thumb: string // short visual identifier for compact card
+  thumb: string
+  filter?: string // football | engagement | ai
 }
 
 type PollData = { question: string; options: string[] }
@@ -21,175 +28,124 @@ type SurveyQuestion = { question: string; scale: string[] }
 type SurveyData = { title: string; questions: SurveyQuestion[] }
 
 const widgets: Widget[] = [
-  { id: 'live-score', name: 'Live Score', desc: 'Real-time match scores with live events and minute-by-minute updates.', tag: { label: 'Popular', cls: 'popular' }, embedCode: '<script src="https://cdn.diurna.io/widgets/live-score.js" data-match="auto" data-theme="light"></script>', preview: 'live-score', thumb: 'ls' },
-  { id: 'standings', name: 'League Standings', desc: 'Full league table with positions, points, and form indicators.', tag: { label: 'Popular', cls: 'popular' }, embedCode: '<script src="https://cdn.diurna.io/widgets/standings.js" data-league="premier-league" data-theme="light"></script>', preview: 'standings', thumb: 'st' },
-  { id: 'h2h', name: 'Head to Head', desc: 'H2H comparison between two teams with historical stats.', tag: { label: 'New', cls: 'new' }, embedCode: '<script src="https://cdn.diurna.io/widgets/h2h.js" data-home="real-madrid" data-away="barcelona" data-theme="light"></script>', preview: 'h2h', thumb: 'h2h' },
-  { id: 'poll', name: 'Fan Poll', desc: 'Interactive polls for fan engagement and predictions.', tag: { label: 'AI', cls: 'pro' }, embedCode: '<script src="https://cdn.diurna.io/widgets/poll.js" data-id="auto" data-theme="light"></script>', preview: 'poll', thumb: 'poll' },
-  { id: 'timeline', name: 'Match Timeline', desc: 'Visual timeline showing goals, cards, and substitutions.', tag: { label: 'New', cls: 'new' }, embedCode: '<script src="https://cdn.diurna.io/widgets/timeline.js" data-match="auto" data-theme="light"></script>', preview: 'timeline', thumb: 'tl' },
-  { id: 'player', name: 'Player Card', desc: 'Player stats with season performance and match ratings.', tag: { label: 'Pro', cls: 'pro' }, embedCode: '<script src="https://cdn.diurna.io/widgets/player.js" data-player="vinicius-jr" data-theme="light"></script>', preview: 'player', thumb: 'pl' },
-  { id: 'match-center', name: 'Match Center', desc: 'Comprehensive match view with events, lineups, and stats.', tag: { label: 'New', cls: 'new' }, embedCode: '<script src="https://cdn.diurna.io/widgets/match-center.js" data-match="auto" data-theme="light"></script>', preview: 'match-center', thumb: 'mc' },
-  { id: 'top-scorers', name: 'Top Scorers', desc: 'League top scorers with goals, assists, and apps.', tag: { label: 'Popular', cls: 'popular' }, embedCode: '<script src="https://cdn.diurna.io/widgets/top-scorers.js" data-league="premier-league" data-theme="light"></script>', preview: 'top-scorers', thumb: 'ts' },
-  { id: 'team-form', name: 'Team Form', desc: 'Last 5 match results with W/D/L indicators and scores.', embedCode: '<script src="https://cdn.diurna.io/widgets/team-form.js" data-team="man-city" data-theme="light"></script>', preview: 'team-form', thumb: 'tf' },
-  { id: 'player-card', name: 'Player Trading Card', desc: 'Trading card style profile with nationality and stats.', tag: { label: 'Pro', cls: 'pro' }, embedCode: '<script src="https://cdn.diurna.io/widgets/player-card.js" data-player="haaland" data-theme="dark"></script>', preview: 'player-card', thumb: 'pc' },
-  { id: 'prediction', name: 'Match Prediction', desc: 'AI-powered match prediction with win probability.', tag: { label: 'AI', cls: 'pro' }, embedCode: '<script src="https://cdn.diurna.io/widgets/prediction.js" data-match="auto" data-theme="light"></script>', preview: 'prediction', thumb: 'pr' },
-  { id: 'quiz', name: 'Sports Quiz', desc: 'AI-generated multiple choice quiz for fan engagement.', tag: { label: 'AI', cls: 'pro' }, embedCode: '<script src="https://cdn.diurna.io/widgets/quiz.js" data-id="auto" data-theme="light"></script>', preview: 'quiz', thumb: 'qz' },
-  { id: 'survey', name: 'Fan Survey', desc: 'AI-generated survey with rating scales for fan feedback.', tag: { label: 'AI', cls: 'pro' }, embedCode: '<script src="https://cdn.diurna.io/widgets/survey.js" data-id="auto" data-theme="light"></script>', preview: 'survey', thumb: 'sv' },
+  { id: 'live-score', name: 'Live Score', desc: 'Real-time match scores with live events and minute-by-minute updates.', tag: { label: 'Popular', cls: 'popular' }, embedCode: '<script src="https://cdn.diurna.io/widgets/live-score.js" data-match="auto" data-theme="light"></script>', preview: 'live-score', thumb: 'ls', filter: FILTER_FOOTBALL },
+  { id: 'standings', name: 'League Standings', desc: 'Full league table with positions, points, and form indicators.', tag: { label: 'Popular', cls: 'popular' }, embedCode: '<script src="https://cdn.diurna.io/widgets/standings.js" data-league="premier-league" data-theme="light"></script>', preview: 'standings', thumb: 'st', filter: FILTER_FOOTBALL },
+  { id: 'h2h', name: 'Head to Head', desc: 'H2H comparison between two teams with historical stats.', tag: { label: 'New', cls: 'new' }, embedCode: '<script src="https://cdn.diurna.io/widgets/h2h.js" data-home="real-madrid" data-away="barcelona" data-theme="light"></script>', preview: 'h2h', thumb: 'h2h', filter: FILTER_FOOTBALL },
+  { id: 'poll', name: 'Fan Poll', desc: 'Interactive polls for fan engagement and predictions.', tag: { label: 'AI', cls: 'ai' }, embedCode: '<script src="https://cdn.diurna.io/widgets/poll.js" data-id="auto" data-theme="light"></script>', preview: 'poll', thumb: 'poll', filter: FILTER_ENGAGEMENT },
+  { id: 'timeline', name: 'Match Timeline', desc: 'Visual timeline showing goals, cards, and substitutions.', tag: { label: 'New', cls: 'new' }, embedCode: '<script src="https://cdn.diurna.io/widgets/timeline.js" data-match="auto" data-theme="light"></script>', preview: 'timeline', thumb: 'tl', filter: FILTER_FOOTBALL },
+  { id: 'player', name: 'Player Card', desc: 'Player stats with season performance and match ratings.', tag: { label: 'Pro', cls: 'pro' }, embedCode: '<script src="https://cdn.diurna.io/widgets/player.js" data-player="vinicius-jr" data-theme="light"></script>', preview: 'player', thumb: 'pl', filter: FILTER_FOOTBALL },
+  { id: 'match-center', name: 'Match Center', desc: 'Comprehensive match view with events, lineups, and stats.', tag: { label: 'New', cls: 'new' }, embedCode: '<script src="https://cdn.diurna.io/widgets/match-center.js" data-match="auto" data-theme="light"></script>', preview: 'match-center', thumb: 'mc', filter: FILTER_FOOTBALL },
+  { id: 'top-scorers', name: 'Top Scorers', desc: 'League top scorers with goals, assists, and apps.', tag: { label: 'Popular', cls: 'popular' }, embedCode: '<script src="https://cdn.diurna.io/widgets/top-scorers.js" data-league="premier-league" data-theme="light"></script>', preview: 'top-scorers', thumb: 'ts', filter: FILTER_FOOTBALL },
+  { id: 'team-form', name: 'Team Form', desc: 'Last 5 match results with W/D/L indicators and scores.', embedCode: '<script src="https://cdn.diurna.io/widgets/team-form.js" data-team="man-city" data-theme="light"></script>', preview: 'team-form', thumb: 'tf', filter: FILTER_FOOTBALL },
+  { id: 'player-card', name: 'Player Trading Card', desc: 'Trading card style profile with nationality and stats.', tag: { label: 'Pro', cls: 'pro' }, embedCode: '<script src="https://cdn.diurna.io/widgets/player-card.js" data-player="haaland" data-theme="dark"></script>', preview: 'player-card', thumb: 'pc', filter: FILTER_FOOTBALL },
+  { id: 'prediction', name: 'Match Prediction', desc: 'AI-powered match prediction with win probability.', tag: { label: 'AI', cls: 'ai' }, embedCode: '<script src="https://cdn.diurna.io/widgets/prediction.js" data-match="auto" data-theme="light"></script>', preview: 'prediction', thumb: 'pr', filter: FILTER_AI },
+  { id: 'quiz', name: 'Sports Quiz', desc: 'AI-generated multiple choice quiz for fan engagement.', tag: { label: 'AI', cls: 'ai' }, embedCode: '<script src="https://cdn.diurna.io/widgets/quiz.js" data-id="auto" data-theme="light"></script>', preview: 'quiz', thumb: 'qz', filter: FILTER_AI },
+  { id: 'survey', name: 'Fan Survey', desc: 'AI-generated survey with rating scales for fan feedback.', tag: { label: 'AI', cls: 'ai' }, embedCode: '<script src="https://cdn.diurna.io/widgets/survey.js" data-id="auto" data-theme="light"></script>', preview: 'survey', thumb: 'sv', filter: FILTER_AI },
 ]
 
-function ThumbLiveScore() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar dark"><span>Premier League</span><span className="wg-thumb-live">LIVE</span></div>
-      <div className="wg-thumb-center"><span>MCI</span><strong>2 - 1</strong><span>LIV</span></div>
-    </div>
-  )
-}
-function ThumbStandings() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar dark"><span>Premier League</span></div>
-      <div className="wg-thumb-rows">
-        <div className="wg-thumb-row"><span className="wg-thumb-pos ucl">1</span><span>Man City</span><strong>57</strong></div>
-        <div className="wg-thumb-row"><span className="wg-thumb-pos ucl">2</span><span>Arsenal</span><strong>55</strong></div>
-        <div className="wg-thumb-row"><span className="wg-thumb-pos ucl">3</span><span>Liverpool</span><strong>53</strong></div>
-      </div>
-    </div>
-  )
-}
-function ThumbH2H() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar mint"><span>Head to Head</span></div>
-      <div className="wg-thumb-center"><span>RMA</span><strong>VS</strong><span>FCB</span></div>
-      <div className="wg-thumb-h2h-bar"><div className="wg-thumb-seg home" style={{ width: '41%' }} /><div className="wg-thumb-seg draw" style={{ width: '20%' }} /><div className="wg-thumb-seg away" style={{ width: '39%' }} /></div>
-    </div>
-  )
-}
-function ThumbPoll() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar elec"><span>Fan Poll</span></div>
-      <div className="wg-thumb-poll">
-        <div className="wg-thumb-poll-opt">Real Madrid</div>
-        <div className="wg-thumb-poll-opt sel">Barcelona</div>
-        <div className="wg-thumb-poll-opt">Draw</div>
-      </div>
-    </div>
-  )
-}
-function ThumbTimeline() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar dark"><span>Match Timeline</span></div>
-      <div className="wg-thumb-list">
-        <div className="wg-thumb-evt">12&apos; Haaland</div>
-        <div className="wg-thumb-evt">45&apos; Salah</div>
-        <div className="wg-thumb-evt">67&apos; Foden</div>
-      </div>
-    </div>
-  )
-}
-function ThumbPlayer() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar navy"><span>Player Card</span></div>
-      <div className="wg-thumb-player">
-        <strong>Vinicius Jr.</strong>
-        <div className="wg-thumb-stats"><span>18G</span><span>12A</span><span>8.4</span></div>
-      </div>
-    </div>
-  )
-}
-function ThumbMatchCenter() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar dark"><span>Match Center</span><span className="wg-thumb-live">LIVE</span></div>
-      <div className="wg-thumb-center"><span>MCI</span><strong>2 - 1</strong><span>LIV</span></div>
-      <div className="wg-thumb-tabs"><span className="act">Events</span><span>Lineups</span><span>Stats</span></div>
-    </div>
-  )
-}
-function ThumbTopScorers() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar navy"><span>Top Scorers</span></div>
-      <div className="wg-thumb-rows">
-        <div className="wg-thumb-row"><span className="wg-thumb-pos gold">1</span><span>Haaland</span><strong>22</strong></div>
-        <div className="wg-thumb-row"><span className="wg-thumb-pos">2</span><span>Salah</span><strong>19</strong></div>
-        <div className="wg-thumb-row"><span className="wg-thumb-pos">3</span><span>Isak</span><strong>17</strong></div>
-      </div>
-    </div>
-  )
-}
-function ThumbTeamForm() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar light"><span>Team Form</span></div>
-      <div className="wg-thumb-form">
-        <span className="wg-thumb-dot w">W</span><span className="wg-thumb-dot d">D</span><span className="wg-thumb-dot w">W</span><span className="wg-thumb-dot l">L</span><span className="wg-thumb-dot w">W</span>
-      </div>
-    </div>
-  )
-}
-function ThumbPlayerCard() {
-  return (
-    <div className="wg-thumb dark-bg">
-      <div className="wg-thumb-pc">
-        <strong>Haaland</strong>
-        <div className="wg-thumb-stats light"><span>22G</span><span>5A</span><span>8.6</span></div>
-      </div>
-    </div>
-  )
-}
-function ThumbPrediction() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar mint"><span>AI Prediction</span></div>
-      <div className="wg-thumb-center"><span>MCI</span><strong>2-1</strong><span>LIV</span></div>
-      <div className="wg-thumb-pred-bar"><span className="home">52%</span><span className="draw">22%</span><span className="away">26%</span></div>
-    </div>
-  )
-}
-function ThumbQuiz() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar elec"><span>Sports Quiz</span></div>
-      <div className="wg-thumb-quiz">
-        <div className="wg-thumb-q">Q1: Who scored?</div>
-        <div className="wg-thumb-opts"><span>A</span><span className="sel">B</span><span>C</span><span>D</span></div>
-      </div>
-    </div>
-  )
-}
-function ThumbSurvey() {
-  return (
-    <div className="wg-thumb">
-      <div className="wg-thumb-bar elec"><span>Fan Survey</span></div>
-      <div className="wg-thumb-survey">
-        <div className="wg-thumb-q">Rate the match</div>
-        <div className="wg-thumb-scale"><span /><span /><span /><span className="filled" /><span /></div>
-      </div>
-    </div>
-  )
+function badgeClass(tag: Widget['tag']): string {
+  if (!tag) return ''
+  const m: Record<string, string> = { Popular: 'popular', New: 'new', AI: 'ai', Pro: 'pro' }
+  return m[tag.label] || tag.cls
 }
 
-const thumbComponents: Record<string, () => React.JSX.Element> = {
-  'ls': ThumbLiveScore, 'st': ThumbStandings, 'h2h': ThumbH2H, 'poll': ThumbPoll,
-  'tl': ThumbTimeline, 'pl': ThumbPlayer, 'mc': ThumbMatchCenter, 'ts': ThumbTopScorers,
-  'tf': ThumbTeamForm, 'pc': ThumbPlayerCard, 'pr': ThumbPrediction, 'qz': ThumbQuiz, 'sv': ThumbSurvey,
+function LiveScorePremiumPreview() {
+  const [dateOffset, setDateOffset] = useState(0)
+  const [matchFilter, setMatchFilter] = useState<'all' | 'live' | 'finished' | 'scheduled'>('all')
+  const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set())
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - 3 + i + dateOffset)
+    return d
+  })
+  const today = new Date()
+  const isToday = (d: Date) => d.toDateString() === today.toDateString()
+
+  const groups = [
+    { country: 'England', flag: '🏴', leagues: [{ name: 'Premier League', matches: [{ time: '16:00', status: 'live', minute: "67'", home: 'Man United', homeAbbr: 'MU', homeScore: 2, away: 'Chelsea', awayAbbr: 'CHE', awayScore: 1 }, { time: '13:30', status: 'ft', home: 'Liverpool', homeAbbr: 'LIV', homeScore: 5, away: 'West Ham', awayAbbr: 'WHU', awayScore: 2 }, { time: '20:45', status: 'scheduled', home: 'Arsenal', homeAbbr: 'ARS', away: 'Liverpool', awayAbbr: 'LIV' }] }] },
+    { country: 'Spain', flag: '🇪🇸', leagues: [{ name: 'La Liga', matches: [{ time: '16:15', status: 'ft', home: 'Barcelona', homeAbbr: 'FCB', homeScore: 4, away: 'Villarreal', awayAbbr: 'VIL', awayScore: 1 }] }] },
+  ]
+
+  const toggleLeague = (key: string) => {
+    setCollapsedLeagues((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n })
+  }
+
+  return (
+    <div className="wg-ls-premium">
+      <div className="wg-ls-premium-header">
+        <div className="wg-ls-premium-title">Live Scores</div>
+      </div>
+      <div className="wg-ls-calendar">
+        <button type="button" className="wg-ls-cal-arrow" onClick={() => setDateOffset((o) => o - 1)} aria-label="Previous days">‹</button>
+        <div className="wg-ls-cal-days">
+          {days.map((d) => (
+            <button type="button" key={d.toISOString()} className={`wg-ls-cal-day ${d.getDay() === 5 ? 'act' : ''}`}>
+              <span className="wg-ls-cal-dow">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()].toUpperCase()}</span>
+              <span className="wg-ls-cal-num">{d.getDate()}</span>
+              {isToday(d) && <span className="wg-ls-cal-today" />}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="wg-ls-cal-arrow" onClick={() => setDateOffset((o) => o + 1)} aria-label="Next days">›</button>
+      </div>
+      <div className="wg-ls-filters">
+        <button type="button" className={`wg-ls-filter ${matchFilter === 'all' ? 'act' : ''}`} onClick={() => setMatchFilter('all')}>All</button>
+        <button type="button" className={`wg-ls-filter wg-ls-filter-live ${matchFilter === 'live' ? 'act' : ''}`} onClick={() => setMatchFilter('live')}><span className="wg-ls-dot" />Live (3)</button>
+        <button type="button" className={`wg-ls-filter ${matchFilter === 'finished' ? 'act' : ''}`} onClick={() => setMatchFilter('finished')}>Finished</button>
+        <button type="button" className={`wg-ls-filter ${matchFilter === 'scheduled' ? 'act' : ''}`} onClick={() => setMatchFilter('scheduled')}>Scheduled</button>
+      </div>
+      <div className="wg-ls-groups">
+        {groups.map((g) => (
+          <div key={g.country} className="wg-ls-country">
+            <div className="wg-ls-country-name">{g.flag} {g.country.toUpperCase()}</div>
+            {g.leagues.map((league) => {
+              const key = `${g.country}-${league.name}`
+              const isCollapsed = collapsedLeagues.has(key)
+              return (
+                <div key={key} className="wg-ls-league">
+                  <button type="button" className="wg-ls-league-head" onClick={() => toggleLeague(key)}>
+                    <span>{league.name}</span>
+                    <span className="wg-ls-league-tog">{isCollapsed ? '▸' : '▾'}</span>
+                  </button>
+                  {!isCollapsed && (
+                    <div className="wg-ls-league-matches">
+                      {league.matches.map((m, i) => (
+                        <div key={i} className={`wg-ls-match-row ${m.status === 'live' ? 'live' : ''}`}>
+                          <div className="wg-ls-match-time">
+                            <span>{m.time}</span>
+                            <span className="wg-ls-match-status">{m.status === 'live' ? m.minute : m.status === 'ft' ? 'FT' : m.status === 'ht' ? 'HT' : '—'}</span>
+                          </div>
+                          <div className="wg-ls-match-sep" />
+                          <div className="wg-ls-match-teams">
+                            <div className="wg-ls-match-team">
+                              <span className="wg-ls-match-logo" style={{ background: '#6C5CE7', color: '#fff' }}>{m.homeAbbr}</span>
+                              <span className="wg-ls-match-name">{m.home}</span>
+                              <span className="wg-ls-match-score">{m.homeScore ?? '–'}</span>
+                            </div>
+                            <div className="wg-ls-match-team">
+                              <span className="wg-ls-match-logo" style={{ background: '#E17055', color: '#fff' }}>{m.awayAbbr}</span>
+                              <span className="wg-ls-match-name">{m.away}</span>
+                              <span className="wg-ls-match-score">{m.awayScore ?? '–'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+      <div className="wg-ls-premium-footer">Powered by <strong className="wg-ls-premium-brand">Diurna</strong></div>
+    </div>
+  )
 }
 
 function LiveScorePreview() {
-  return (
-    <div className="wg-live-score">
-      <div className="wg-ls-header"><div className="wg-ls-league">Premier League</div><div className="wg-ls-live"><span className="wg-ls-dot" />LIVE</div></div>
-      <div className="wg-ls-match"><div className="wg-ls-teams">
-        <div className="wg-ls-team"><div className="wg-ls-logo">MCI</div><div className="wg-ls-name">Man City</div></div>
-        <div className="wg-ls-center"><div className="wg-ls-score">2 - 1</div><div className="wg-ls-minute">67&apos;</div></div>
-        <div className="wg-ls-team"><div className="wg-ls-logo">LIV</div><div className="wg-ls-name">Liverpool</div></div>
-      </div></div>
-    </div>
-  )
+  return <LiveScorePremiumPreview />
 }
 function StandingsPreview() {
   const teams = [
@@ -575,7 +531,7 @@ function buildEmbedCode(widgetScript: string): string {
   </div>
   <div style="width:100%;height:1px;background:#e5e7eb"></div>
   <div style="display:flex;flex-direction:column;align-items:center;padding:12px 20px 20px">
-    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:10px">Powered by Lupon Media SSP</div>
+    <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:10px">Powered by <strong style="color:#00D4AA">Diurna</strong></div>
     <div id="diurna-ad-300x250">
       <script src="https://cdn.luponmedia.com/ssp/ad-slot.js" data-size="300x250" data-placement="widget-below"></script>
     </div>
@@ -590,8 +546,18 @@ export default function WidgetsPage() {
   const [aiData, setAiData] = useState<{ poll?: PollData; quiz?: QuizData; survey?: SurveyData }>({})
   const [copied, setCopied] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState(FILTER_ALL)
 
   useEffect(() => { setMounted(true) }, [])
+
+  const filteredWidgets = useMemo(() => {
+    return widgets.filter((w) => {
+      const matchSearch = !search.trim() || w.name.toLowerCase().includes(search.toLowerCase()) || w.desc.toLowerCase().includes(search.toLowerCase())
+      const matchFilter = filter === FILTER_ALL || w.filter === filter
+      return matchSearch && matchFilter
+    })
+  }, [search, filter])
 
   function handleCopy(code: string) {
     navigator.clipboard.writeText(code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
@@ -618,33 +584,47 @@ export default function WidgetsPage() {
   return (
     <div className="wg-page">
       <div className="wg-header">
-        <div className="wg-badge">Widget Library</div>
+        <div className="wg-badge">WIDGET LIBRARY</div>
         <h1 className="wg-title">Football Widgets</h1>
         <p className="wg-subtitle">Embeddable sports widgets with AI generation. Live scores, standings, polls, quizzes, and more.</p>
       </div>
 
+      <div className="wg-search-row">
+        <input
+          type="search"
+          className="wg-search-input"
+          placeholder="Search widgets..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search widgets"
+        />
+        <div className="wg-filter-pills">
+          <button type="button" className={`wg-filter-pill ${filter === FILTER_ALL ? 'act' : ''}`} onClick={() => setFilter(FILTER_ALL)}>All</button>
+          <button type="button" className={`wg-filter-pill ${filter === FILTER_FOOTBALL ? 'act' : ''}`} onClick={() => setFilter(FILTER_FOOTBALL)}>Football</button>
+          <button type="button" className={`wg-filter-pill ${filter === FILTER_ENGAGEMENT ? 'act' : ''}`} onClick={() => setFilter(FILTER_ENGAGEMENT)}>Engagement</button>
+          <button type="button" className={`wg-filter-pill ${filter === FILTER_AI ? 'act' : ''}`} onClick={() => setFilter(FILTER_AI)}>AI Powered</button>
+        </div>
+      </div>
+
       <div className="wg-grid">
-        {widgets.map((w) => {
-          const Thumb = thumbComponents[w.thumb]
-          return (
-            <div key={w.id} className="wg-card">
-              <div className="wg-card-thumb">
-                <Thumb />
-              </div>
-              <div className="wg-card-body">
-                <div className="wg-card-name">
-                  {w.name}
-                  {w.tag && <span className={`wg-tag ${w.tag.cls}`}>{w.tag.label}</span>}
-                </div>
-                <div className="wg-card-desc">{w.desc}</div>
-                <div className="wg-card-actions">
-                  <button className="wg-btn primary" onClick={() => openEmbed(w)}>Embed</button>
-                  <button className="wg-btn secondary" onClick={() => openPreview(w)}>Preview</button>
-                </div>
+        {filteredWidgets.map((w, i) => (
+          <div key={w.id} className="wg-card" style={{ animationDelay: `${i * 0.05}s` }}>
+            <div className="wg-card-preview">
+              {w.tag && <span className={`wg-card-badge ${badgeClass(w.tag)}`}>{w.tag.label}</span>}
+              <div className="wg-card-preview-inner">
+                {getMiniWidget(w.preview, {})}
               </div>
             </div>
-          )
-        })}
+            <div className="wg-card-body">
+              <div className="wg-card-name">{w.name}</div>
+              <div className="wg-card-desc">{w.desc}</div>
+              <div className="wg-card-actions">
+                <button type="button" className="wg-btn primary" onClick={() => openEmbed(w)}>Embed</button>
+                <button type="button" className="wg-btn secondary" onClick={() => openPreview(w)}>Preview</button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {mounted && aiModal && createPortal(
