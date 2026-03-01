@@ -129,8 +129,11 @@ export default function WidgetCreatorPage() {
     m.name.toLowerCase().includes(search.toLowerCase())
   )
 
+  const selectedMatchOption = selectedMatch ? matchOptions.find((m) => m.id === selectedMatch) : null
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  const teamsParam = selectedMatchOption?.type === 'match' && selectedMatchOption?.name ? `&teams=${encodeURIComponent(selectedMatchOption.name)}` : ''
   const embedCode = selectedTpl
-    ? `<script src="https://cdn.diurna.io/widgets/${selectedTpl}.js" data-${selectedMatch && matchOptions.find((m) => m.id === selectedMatch)?.type === 'league' ? 'league' : 'match'}="${selectedMatch || 'auto'}" data-theme="${theme}" data-accent="${accentColor}"></script>`
+    ? `<!-- Diurna Widget: ${selectedTpl} -->\n<iframe src="${siteUrl}/embed/widget/${selectedTpl}?match=${encodeURIComponent(selectedMatch || 'auto')}&theme=${theme}&accent=${encodeURIComponent(accentColor)}${teamsParam}" width="100%" height="400" frameborder="0" style="border:none;border-radius:12px;overflow:hidden"></iframe>`
     : ''
 
   function handleCopy() {
@@ -141,7 +144,6 @@ export default function WidgetCreatorPage() {
   }
 
   const previewId = selectedTpl ? templateToPreviewId[selectedTpl] : null
-  const selectedMatchOption = selectedMatch ? matchOptions.find((m) => m.id === selectedMatch) : null
   const matchPreview = selectedMatchOption?.type === 'match' && selectedMatchOption?.name?.includes(' vs ')
     ? (() => {
         const [homeName, awayName] = selectedMatchOption.name.split(/\s+vs\s+/).map((s) => s.trim())

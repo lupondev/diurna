@@ -522,21 +522,10 @@ function AIGenerateForm({ type, onGenerated }: { type: string; onGenerated: (dat
   )
 }
 
-function buildEmbedCode(widgetScript: string): string {
-  return `<div style="display:flex;flex-direction:column;align-items:center;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff">
-  ${widgetScript}
-  <div style="width:100%;height:1px;background:#e5e7eb"></div>
-  <div id="diurna-related" style="width:100%;padding:12px 16px">
-    <script src="https://cdn.diurna.io/widgets/related.js" data-count="3" data-source="auto"></script>
-  </div>
-  <div style="width:100%;height:1px;background:#e5e7eb"></div>
-  <div style="display:flex;flex-direction:column;align-items:center;padding:12px 20px 20px">
-    <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:10px">Powered by <strong style="color:#00D4AA">Diurna</strong></div>
-    <div id="diurna-ad-300x250">
-      <script src="https://cdn.luponmedia.com/ssp/ad-slot.js" data-size="300x250" data-placement="widget-below"></script>
-    </div>
-  </div>
-</div>`
+function buildEmbedCode(widgetId: string): string {
+  if (typeof window === 'undefined') return ''
+  const siteUrl = window.location.origin
+  return `<!-- Diurna Widget: ${widgetId} -->\n<iframe src="${siteUrl}/embed/widget/${widgetId}?match=auto&theme=light&accent=${encodeURIComponent('#00D4AA')}" width="100%" height="400" frameborder="0" style="border:none;border-radius:12px;overflow:hidden"></iframe>`
 }
 
 export default function WidgetsPage() {
@@ -563,7 +552,7 @@ export default function WidgetsPage() {
     navigator.clipboard.writeText(code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
   }
 
-  function openEmbed(w: Widget) { setCopied(false); setEmbedModal({ code: buildEmbedCode(w.embedCode), name: w.name }) }
+  function openEmbed(w: Widget) { setCopied(false); setEmbedModal({ code: buildEmbedCode(w.id), name: w.name }) }
 
   function openPreview(w: Widget) {
     if (interactiveTypes.has(w.id)) {
@@ -573,12 +562,10 @@ export default function WidgetsPage() {
     }
   }
 
-  function handleAiGenerated(type: string, data: PollData | QuizData | SurveyData) {
+  function handleAiGenerated(type: string, widget: Widget, data: PollData | QuizData | SurveyData) {
     setAiData((prev) => ({ ...prev, [type]: data }))
-    if (aiModal) {
-      setAiModal(null)
-      setPreviewModal({ widget: aiModal.widget })
-    }
+    setAiModal(null)
+    setPreviewModal({ widget })
   }
 
   return (
@@ -635,7 +622,7 @@ export default function WidgetsPage() {
               <button className="wg-modal-close" onClick={() => setAiModal(null)}>&times;</button>
             </div>
             <div className="wg-modal-body-ai">
-              <AIGenerateForm type={aiModal.widget.id} onGenerated={(data) => handleAiGenerated(aiModal.widget.id, data)} />
+              <AIGenerateForm type={aiModal.widget.id} onGenerated={(data) => handleAiGenerated(aiModal.widget.id, aiModal.widget, data)} />
               <div className="wg-ai-or">or</div>
               <button className="wg-ai-skip" onClick={() => { setAiModal(null); setPreviewModal({ widget: aiModal.widget }) }}>
                 Use Default Preview
@@ -685,7 +672,7 @@ export default function WidgetsPage() {
                 {copied ? 'Copied!' : 'Copy to Clipboard'}
               </button>
               <div className="wg-embed-hint">
-                <strong>Includes related articles + 300x250 ad slot</strong> powered by Lupon Media SSP.
+                Paste this iframe into your site to embed the widget. Powered by <strong>Diurna</strong>.
               </div>
             </div>
           </div>
