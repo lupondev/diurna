@@ -52,9 +52,9 @@
 .wc-result.sel .wc-result-check { opacity: 1; }
 
 .wc-theme-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.wc-theme-opt { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; font-size: 12px; font-weight: 600; border: 2px solid var(--g200); border-radius: var(--rm); cursor: pointer; transition: all .15s; text-align: center; background: var(--wh); color: var(--g600); font-family: inherit; }
+.wc-theme-opt { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px; font-size: 12px; font-weight: 600; border: 1.5px solid var(--g200); border-radius: 10px; cursor: pointer; transition: all .15s; text-align: center; background: var(--wh); color: var(--g600); font-family: inherit; }
 .wc-theme-opt.act { border-color: var(--mint); background: var(--mint-l); color: var(--mint-d); }
-.wc-theme-opt:hover:not(.act) { border-color: var(--g300); }
+.wc-theme-opt:hover:not(.act) { border-color: var(--mint); background: var(--mint-l); }
 .wc-theme-icon { font-size: 20px; line-height: 1; }
 
 .wc-accent-row { display: flex; align-items: center; gap: 12px; }

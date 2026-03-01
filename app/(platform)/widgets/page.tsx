@@ -79,8 +79,8 @@ function LiveScorePremiumPreview() {
       <div className="wg-ls-calendar">
         <button type="button" className="wg-ls-cal-arrow" onClick={() => setDateOffset((o) => o - 1)} aria-label="Previous days">‹</button>
         <div className="wg-ls-cal-days">
-          {days.map((d) => (
-            <button type="button" key={d.toISOString()} className={`wg-ls-cal-day ${d.getDay() === 5 ? 'act' : ''}`}>
+          {days.map((d, i) => (
+            <button type="button" key={d.toISOString()} className={`wg-ls-cal-day ${i === 3 ? 'act' : ''}`}>
               <span className="wg-ls-cal-dow">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()].toUpperCase()}</span>
               <span className="wg-ls-cal-num">{d.getDate()}</span>
               {isToday(d) && <span className="wg-ls-cal-today" />}

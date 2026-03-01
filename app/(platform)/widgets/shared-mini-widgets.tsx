@@ -3,7 +3,8 @@
 import React, { useMemo } from 'react'
 
 export type WidgetTheme = 'light' | 'dark' | 'glass' | 'custom'
-export type MiniWidgetProps = { theme?: WidgetTheme; accentColor?: string; className?: string }
+export type MatchPreview = { homeName: string; awayName: string; homeAbbr?: string; awayAbbr?: string }
+export type MiniWidgetProps = { theme?: WidgetTheme; accentColor?: string; className?: string; match?: MatchPreview }
 
 const defaultAccent = '#00D4AA'
 
@@ -17,8 +18,19 @@ function WidgetFooter({ accentColor }: { theme?: WidgetTheme; accentColor?: stri
   )
 }
 
-export function MiniLiveScore({ accentColor, className }: MiniWidgetProps) {
+function abbrev(name: string, fallback: string): string {
+  if (!name) return fallback
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase().slice(0, 3)
+  return name.slice(0, 3).toUpperCase() || fallback
+}
+
+export function MiniLiveScore({ accentColor, className, match }: MiniWidgetProps) {
   const ac = accentColor || defaultAccent
+  const homeName = match?.homeName ?? 'Man City'
+  const awayName = match?.awayName ?? 'Liverpool'
+  const homeAbbr = match?.homeAbbr ?? abbrev(homeName, 'MCI')
+  const awayAbbr = match?.awayAbbr ?? abbrev(awayName, 'LIV')
   return (
     <div className={`wg-mini wg-mini-ls ${className || ''}`}>
       <div className="wg-mini-bar wg-mini-bar-dark">
@@ -28,16 +40,16 @@ export function MiniLiveScore({ accentColor, className }: MiniWidgetProps) {
       <div className="wg-mini-body">
         <div className="wg-mini-ls-teams">
           <div className="wg-mini-ls-team">
-            <div className="wg-mini-logo" style={{ background: '#6C5CE7', color: '#fff' }}>MCI</div>
-            <span>Man City</span>
+            <div className="wg-mini-logo" style={{ background: '#6C5CE7', color: '#fff' }}>{homeAbbr}</div>
+            <span>{homeName}</span>
           </div>
           <div className="wg-mini-ls-center">
             <span className="wg-mini-score">2 – 1</span>
             <span className="wg-mini-minute">67&apos;</span>
           </div>
           <div className="wg-mini-ls-team">
-            <div className="wg-mini-logo" style={{ background: '#E17055', color: '#fff' }}>LIV</div>
-            <span>Liverpool</span>
+            <div className="wg-mini-logo" style={{ background: '#E17055', color: '#fff' }}>{awayAbbr}</div>
+            <span>{awayName}</span>
           </div>
         </div>
       </div>
@@ -197,16 +209,18 @@ export function MiniSportsQuiz({ theme, accentColor, className }: MiniWidgetProp
   )
 }
 
-export function MiniAIPrediction({ accentColor, className }: MiniWidgetProps) {
+export function MiniAIPrediction({ accentColor, className, match }: MiniWidgetProps) {
   const ac = accentColor || defaultAccent
+  const homeAbbr = (match?.homeAbbr ?? abbrev(match?.homeName ?? '', 'MCI')) || 'MCI'
+  const awayAbbr = (match?.awayAbbr ?? abbrev(match?.awayName ?? '', 'LIV')) || 'LIV'
   return (
     <div className={`wg-mini wg-mini-pred ${className || ''}`}>
       <div className="wg-mini-bar wg-mini-bar-mint" style={{ background: ac }}>AI Match Prediction</div>
       <div className="wg-mini-body">
         <div className="wg-mini-pred-teams">
-          <div className="wg-mini-logo" style={{ background: '#6C5CE7', color: '#fff' }}>MCI</div>
+          <div className="wg-mini-logo" style={{ background: '#6C5CE7', color: '#fff' }}>{homeAbbr}</div>
           <span className="wg-mini-score wg-mini-pred-score">2 – 1</span>
-          <div className="wg-mini-logo" style={{ background: '#E17055', color: '#fff' }}>LIV</div>
+          <div className="wg-mini-logo" style={{ background: '#E17055', color: '#fff' }}>{awayAbbr}</div>
         </div>
         <div className="wg-mini-pred-bar">
           <div className="wg-mini-pred-seg home" style={{ width: '52%' }} />
@@ -247,8 +261,8 @@ export function MiniTopScorers({ theme, accentColor, className }: MiniWidgetProp
   )
 }
 
-export function MiniMatchCenter({ theme, accentColor, className }: MiniWidgetProps) {
-  return <MiniLiveScore theme={theme} accentColor={accentColor} className={className} />
+export function MiniMatchCenter({ accentColor, className, match }: MiniWidgetProps) {
+  return <MiniLiveScore accentColor={accentColor} className={className} match={match} />
 }
 
 export function MiniTeamForm({ accentColor, className }: MiniWidgetProps) {

@@ -141,7 +141,15 @@ export default function WidgetCreatorPage() {
   }
 
   const previewId = selectedTpl ? templateToPreviewId[selectedTpl] : null
-  const livePreviewWidget = previewId ? getMiniWidget(previewId, { theme, accentColor }) : null
+  const selectedMatchOption = selectedMatch ? matchOptions.find((m) => m.id === selectedMatch) : null
+  const matchPreview = selectedMatchOption?.type === 'match' && selectedMatchOption?.name?.includes(' vs ')
+    ? (() => {
+        const [homeName, awayName] = selectedMatchOption.name.split(/\s+vs\s+/).map((s) => s.trim())
+        const abbr = (n: string) => n.split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 3) || n.slice(0, 3).toUpperCase()
+        return { homeName: homeName || 'Home', awayName: awayName || 'Away', homeAbbr: abbr(homeName), awayAbbr: abbr(awayName) }
+      })()
+    : undefined
+  const livePreviewWidget = previewId ? getMiniWidget(previewId, { theme, accentColor, match: matchPreview }) : null
 
   return (
     <div className="wc-layout">
