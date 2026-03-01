@@ -38,6 +38,11 @@ interface AISidebarProps {
 export function AISidebar({ editor, onGenerate, prefilledPrompt, autoGenerate }: AISidebarProps) {
   const [prompt, setPrompt] = useState(prefilledPrompt || '')
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
+
+  // Sync prompt when prefilledPrompt changes (e.g. user navigated to a different article)
+  useEffect(() => {
+    setPrompt(prefilledPrompt ?? '')
+  }, [prefilledPrompt])
   const [wordCount, setWordCount] = useState(800)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)

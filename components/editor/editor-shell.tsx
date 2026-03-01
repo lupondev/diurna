@@ -113,11 +113,13 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
     }
   }, [title, subtitle, content, categoryId, slug, metaTitle, metaDesc, featuredImage, articleTags, sendNewsletter])
 
-  // Sync articleId from prop (e.g. after navigation)
+  // Sync articleId from prop (e.g. after navigation); reset AI sidebar prompt when article changes
   useEffect(() => {
     if (initialArticleId && initialArticleId !== articleIdRef.current) {
       articleIdRef.current = initialArticleId
       setArticleId(initialArticleId)
+      setPrefilledPrompt('')
+      setLoading(true)
     }
   }, [initialArticleId])
 
@@ -162,6 +164,7 @@ export function EditorShell({ articleId: initialArticleId }: { articleId?: strin
         if (data.versions) setVersions(data.versions)
         if (data.tags) setArticleTags(data.tags.map((t: ArticleTag) => t.tag))
         if (data.categoryId) setCategoryId(data.categoryId)
+        setPrefilledPrompt(data.title ? `Improve this article: ${data.title}` : '')
         setLoading(false)
         initialLoadDone.current = true
       })
